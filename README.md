@@ -9,7 +9,7 @@ include:
   
 - Slowloris DoS Vulnerabilities.
   
-- SqlInjection Vulnerabilities.
+- SQL Injection Vulnerabilities.
   
 - XSS Vulnerabilities (cross-site scripting).
   
