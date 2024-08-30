@@ -13,7 +13,9 @@ include:
   
 - XSS Vulnerabilities (cross-site scripting).
   
-- Hardcoded Secrets, Tokens, etc. And other interesting Vulnerabilities.
+- Hardcoded Secrets, Tokens, etc.
+
+- And other interesting Vulnerabilities.
 
 ===========================================================================
 
