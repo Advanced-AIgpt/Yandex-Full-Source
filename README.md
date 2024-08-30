@@ -16,6 +16,7 @@ include:
 - Hardcoded Secrets, Tokens, etc. And other interesting Vulnerabilities.
 
 ===========================================================================
+
 This corporation is still very vulnerable, they have a lot of holes and all ports are open!!!
 
 For example:
