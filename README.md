@@ -28,4 +28,7 @@ For example:
 + Target Hostname:    yandex.ru
 + Open ports: 80 and 443
 ---------------------------------------------------------------------------
+
 ===========================================================================
+
+- This source code is best suited for beginners who are starting a career in cybersecurity or want to learn how these vulnerabilities are created. -
