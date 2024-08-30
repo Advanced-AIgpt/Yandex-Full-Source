@@ -1,4 +1,4 @@
-# Yandex Corporation (IT-technology Giant)
+# Yandex is Russian IT-technology Giant (Corporation)
 
 !!!_WARGNING_!!!
 [Very vulnerable source code]
