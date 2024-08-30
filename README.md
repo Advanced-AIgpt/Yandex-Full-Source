@@ -1,2 +1,2 @@
-# Yandex-Full-Source
-Yandex Corporation - IT technology Giant
+# Yandex Corporation (IT-technology Giant)
+
