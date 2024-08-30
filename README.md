@@ -10,5 +10,6 @@ include:
 - SqlInjection Vulnerabilities.
 - XSS Vulnerabilities (cross-site scripting).
 - Hardcoded Secrets, Tokens, etc.
-- and other interesting Vulnerabilities.
-- 
+  
+  and other interesting Vulnerabilities.
+  
