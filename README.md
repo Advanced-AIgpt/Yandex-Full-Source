@@ -21,7 +21,7 @@ include:
 
 This corporation is still very vulnerable, they have a lot of holes and all ports are open!!!
 
-For example:
+Corporation Data:
 ---------------------------------------------------------------------------
 + Multiple IPs found: 77.88.55.88, 77.88.44.55, 5.255.255.77, 2a02:6b8:a::a
 + Target IP:          77.88.55.88
