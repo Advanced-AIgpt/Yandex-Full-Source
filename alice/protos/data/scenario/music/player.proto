@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package NAlice.NData;
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/music";
+option java_package = "ru.yandex.alice.protos.data.scenario.music";
+
+import "alice/protos/data/scenario/music/content_id.proto";
+import "alice/protos/data/scenario/music/content_info.proto";
+import "alice/protos/data/scenario/objects/music.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TQueueItem {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TTrackInfo {
+        enum ELikeStatus {
+            Undefined = 0;
+            None = 1;
+            Liked = 2;
+            Disliked = 3;
+        }
+
+        reserved 1; reserved "IsLiked";
+        ELikeStatus LikeStatus = 2 [json_name = "like_status", (NYT.column_name) = "like_status"];
+        string AlbumId = 3 [json_name = "album_id", (NYT.column_name) = "album_id"];
+    }
+
+    message TFmRadioInfo {
+        string Frequency = 1 [json_name = "frequency", (NYT.column_name) = "frequency"];
+        string Color = 2 [json_name = "color", (NYT.column_name) = "color"];
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+    string Subtype = 3 [json_name = "subtype", (NYT.column_name) = "subtype"];
+    string ArtImageUrl = 4 [json_name = "art_image_url", (NYT.column_name) = "art_image_url"];
+    repeated TArtist Artists = 5 [json_name = "artists", (NYT.column_name) = "artists"];
+    uint32 DurationMs = 6 [json_name = "duration_ms", (NYT.column_name) = "duration_ms"];
+    oneof ItemInformation {
+        option (NYT.variant_field_name) = "item_information";
+        TTrackInfo TrackInfo = 7 [json_name = "track_info", (NYT.column_name) = "track_info"];
+        TFmRadioInfo FmRadioInfo = 8 [json_name = "fm_radio_info", (NYT.column_name) = "fm_radio_info"];
+    }
+}
+
+message TColors {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    string MainColor = 1 [json_name = "main_color", (NYT.column_name) = "main_color"];
+    string SecondColor = 2 [json_name = "second_color", (NYT.column_name) = "second_color"];
+}
+
+enum ERepeatMode {
+    NONE = 0;
+    TRACK = 1;
+    // album/artist/playlist
+    ALL = 2;
+};
+
+message TMusicPlayerData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TTrack Track = 1 [json_name = "track", (NYT.column_name) = "track"];
+    // is shuffle mode on
+    bool ShuffleModeOn = 2 [json_name = "shuffle_mode_on", (NYT.column_name) = "shuffle_mode_on"];
+    ERepeatMode RepeatMode = 3 [json_name = "repeat_mode", (NYT.column_name) = "repeat_mode"];
+    NMusic.TContentId ContentId = 4 [json_name = "content_id", (NYT.column_name) = "content_id"];
+    NMusic.TContentInfo ContentInfo = 5 [json_name = "content_info", (NYT.column_name) = "content_info"];
+    repeated TQueueItem QueueItems = 6 [json_name = "queue_items", (NYT.column_name) = "queue_items"];
+    TColors Colors = 7 [json_name = "colors", (NYT.column_name) = "colors"];
+}

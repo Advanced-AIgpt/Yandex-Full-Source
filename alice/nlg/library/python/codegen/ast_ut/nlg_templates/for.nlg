@@ -1,0 +1,31 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common.nlg" import get_action_url_for_additional_card %}
+
+{% macro render_composers(music_answer, case, icons, short=False)  %}
+  {% set composers = [] %}
+  {% for artist in music_answer.artists %}
+    {% if artist.composer %}
+      Test 1 {% do composers.append(artist) %}
+    {% endif %}
+  {% endfor %}
+  {% for i in range(rating) %}
+    Test 2 {% do icons.append(fill_star_icon) %}
+{% endfor %}
+{% endmacro %}
+
+{% macro render_search_app_track_card(music_answer) -%}
+    {% for additionalTrack in music_answer.additionalTracks -%}
+        {% if loop.index <= 5 %}
+            {
+                "type": "additional_card",
+                "image_url": "{{ additionalTrack.imageUri }}",
+                "text": "{{ additionalTrack.title | div2_escape }}",
+                {% if music_answer.artists %}
+                    "action_url": "{{ get_action_url_for_additional_card(music_answer.artists[0].name + ' ' + additionalTrack.title) }}"
+                {% else %}
+                    "action_url": "{{ get_action_url_for_additional_card(additionalTrack.title) }}" + "{{ loop.index }}"
+                {% endif %}
+            }
+            {{ "," if not loop.last and loop.index <= 4 -}}
+            {% endif %}
+    {% endfor %}
+{% endmacro %}

@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "NotificationState";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/scenarios/frame.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TNotification {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text", (FieldAccess) = A_PRIVATE_REQUEST];
+    string Voice = 3 [json_name = "voice", (NYT.column_name) = "voice", (FieldAccess) = A_PRIVATE_REQUEST];
+    TSemanticFrame Frame = 4 [json_name = "frame", (NYT.column_name) = "frame", deprecated = true, (NYT.flags) = SERIALIZATION_PROTOBUF];
+    string Timestamp = 5 [json_name = "timestamp", (NYT.column_name) = "timestamp"];
+    string FrameUtterance = 6 [json_name = "frame_utterance", (NYT.column_name) = "frame_utterance", deprecated = true, (FieldAccess) = A_PRIVATE_REQUEST];
+    NScenarios.TParsedUtterance ParsedUtterance = 7 [json_name = "parsed_utterance", (NYT.column_name) = "parsed_utterance", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    string SubscriptionId = 8 [json_name = "subscription_id", (NYT.column_name) = "subscription_id"];
+}
+
+message TSubscription {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    string Timestamp = 3 [json_name = "timestamp", (NYT.column_name) = "timestamp"];
+}
+
+message TDeviceSubscription {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // DeviceId is from IoT devices->quasar_info->device_id
+    string DeviceId = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    bool Subscribed = 2 [json_name = "subscribed", (NYT.column_name) = "subscribed"];
+}
+
+message TNotificationState {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TUnsubscribedDevice {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // DeviceId is from IoT devices->quasar_info->device_id
+        string DeviceId = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    }
+
+    repeated TNotification Notifications = 1 [json_name = "notifications", (NYT.column_name) = "notifications"];
+    // all user subscriptions
+    repeated TSubscription Subscriptions = 2 [json_name = "subscriptions", (NYT.column_name) = "subscriptions"];
+    uint32 CountArchived = 3 [json_name = "count_archived", (NYT.column_name) = "count_archived"];
+
+    // WARNING: This field has been broken for a very long time ZION-272
+    // And, moreover, its name was misleading because it only contained unsubscribed devices
+    // So this field is left broken and will always be empty, use UnsubscribedDevices instead
+    repeated TDeviceSubscription DeviceSubscriptions = 4 [json_name = "device_subscriptions", (NYT.column_name) = "device_subscriptions", deprecated = true];
+
+    repeated TUnsubscribedDevice UnsubscribedDevices = 5 [json_name = "unsubscribed_devices", (NYT.column_name) = "unsubscribed_devices"];
+}

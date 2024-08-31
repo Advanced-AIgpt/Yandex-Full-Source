@@ -1,0 +1,32 @@
+
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/div";
+option java_package = "ru.yandex.alice.protos.div";
+option java_outer_classname = "Div2PatchProto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+import "google/protobuf/struct.proto";
+
+import "alice/protos/div/div2id.proto";
+
+message TDiv2Patch {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    
+    // The standard body of the patch, as described in the docs.
+    oneof Div2PatchBody {
+        option (NYT.variant_field_name) = "div2_patch_body";
+        google.protobuf.Struct Body = 1 [json_name = "body", (NYT.column_name) = "body"];
+        string StringBody = 5 [json_name = "string_body", (NYT.column_name) = "string_body"];
+    }
+    // Templates for the patch
+    string Templates = 4 [json_name = "templates", (NYT.column_name) = "templates"];
+
+    // NOTE: this identifiers is which div view this patch should be added to
+    //       but lays in patch self, it is not clear, so we moved such identifiers to directives
+    //       in terms of TDiv2Id and ApplyTo
+    string CardName = 2 [json_name = "card_name", (NYT.column_name) = "card_name", deprecated = true];
+    string CardId = 3 [json_name = "card_id", (NYT.column_name) = "card_id", deprecated = true];
+}

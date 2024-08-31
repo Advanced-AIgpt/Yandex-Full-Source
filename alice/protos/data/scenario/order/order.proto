@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package NAlice.NOrder;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/order";
+option java_package = "ru.yandex.alice.protos.data.scenario.order";
+
+import "alice/protos/data/lat_lon.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+
+enum ENotificationType {
+    EN_UNDEFINED = 0;
+    EN_COURIER_IS_COMMING = 1;
+    EN_ORDER_BEING_LATE = 2;
+    EN_ORDER_CANCELED = 3;
+    EN_ORDER_UNDER_THE_DOOR = 4;
+}
+
+message TOrder {
+    enum EStatus {
+        UnknownStatus = 0;
+        Created = 1;
+        Assembling = 2;
+        Assembled = 3;
+        PerformerFound = 4;
+        Delivering = 5;
+        DeliveryArrived = 6;
+        Succeeded = 7;
+        Canceled = 8;
+        Failed = 9;
+    }
+
+    enum ECurrency {
+        UnknownCurrency = 0;
+        Rub = 1;
+    }
+
+    enum EDeliveryType {
+        UnknownDeliveryType = 0;
+        FootCurier = 1;
+        AutoCurier = 2;
+        Curier = 7;
+        Rover = 3;
+        Self = 4;
+        SelfPostamat = 5;
+        SelfPickupPoint = 6;
+        // next free value: 8
+    }
+
+    message TContacts {
+        string Phone = 1 [json_name = "phone", (NYT.column_name) = "phone"];
+        string Auto = 2 [json_name = "auto", (NYT.column_name) = "auto"];
+    }
+
+    message TAddress {
+        NData.TLatLon LatLon = 1 [json_name = "lat_lon", (NYT.column_name) = "lat_lon"];
+        string Country = 2 [json_name = "country", (NYT.column_name) = "country"];
+        string City = 3 [json_name = "city", (NYT.column_name) = "city"];
+        string Street = 4 [json_name = "street", (NYT.column_name) = "street"];
+        string House = 5 [json_name = "house", (NYT.column_name) = "house"];
+        string Entrance = 6 [json_name = "entrance", (NYT.column_name) = "entrance"];
+    }
+
+    message TDelivery {
+        EDeliveryType DeliveryType = 1 [json_name = "delivery_type", (NYT.column_name) = "delivery_type"];
+        TContacts CurierContacts = 2 [json_name = "curier_contacts", (NYT.column_name) = "curier_contacts"];
+        NData.TLatLon CurierLatLon = 3 [json_name = "curier_lat_lon", (NYT.column_name) = "curier_lat_lon"];
+    }
+
+    message TPrice {
+        double Value = 1 [json_name = "value", (NYT.column_name) = "value"];
+        ECurrency Currency = 2 [json_name = "currency", (NYT.column_name) = "currency"];
+    }
+
+    message TItem {
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+        reserved 3; reserved "Price";
+        double Quantity = 4 [json_name = "quantity", (NYT.column_name) = "quantity"];
+        TPrice ActualPrice = 5 [json_name = "actual_price", (NYT.column_name) = "actual_price"];
+        TPrice FullPrice = 6 [json_name = "full_price", (NYT.column_name) = "full_price"];
+    }
+
+    message TDateRange {
+        string FromDate = 2 [json_name = "from_date", (NYT.column_name) = "from_date"];
+        string ToDate = 3 [json_name = "to_date", (NYT.column_name) = "to_date"];
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string CreatedDate = 2 [json_name = "created_date", (NYT.column_name) = "created_date"];
+    oneof Eta {
+        option (NYT.variant_field_name) = "eta";
+
+        int32 EtaSeconds = 3 [json_name = "eta_seconds", (NYT.column_name) = "eta_seconds"];
+        TDateRange EtaDateRange = 4 [json_name = "eta_date_range", (NYT.column_name) = "eta_date_range"];
+    }
+    EStatus Status = 5 [json_name = "status", (NYT.column_name) = "status"];
+    TPrice Price = 6 [json_name = "price", (NYT.column_name) = "price"];
+    TAddress TargetAddress = 7 [json_name = "target_address", (NYT.column_name) = "target_address"];
+    repeated TItem Items = 8 [json_name = "items", (NYT.column_name) = "items"];
+    TDelivery DeliveryType = 9 [json_name = "delivery_type", (NYT.column_name) = "delivery_type"];
+}
+
+message TProviderOrderResponse {
+    string ProviderName = 1 [json_name = "provider_name", (NYT.column_name) = "provider_name"];
+    repeated TOrder Orders = 2 [json_name = "orders", (NYT.column_name) = "orders"];
+}

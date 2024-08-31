@@ -1,0 +1,62 @@
+PRAGMA yt.InferSchema;
+PRAGMA OrderedColumns;
+
+USE hahn;
+
+
+-------------------------------------------------------------------------------------------------------------
+
+$OUTPUT_TABLE = '//home/<user_path>';
+$SCENARIO = 'Video';
+
+-- не раньше 2022-03-17
+$BEGIN_DATE = '2022-05-01';
+$END_DATE = '2022-05-01';
+
+$SAMPLE_SIZE = 5000;
+$TOP_K = 1000000;
+
+-------------------------------------------------------------------------------------------------------------
+
+
+$get_smth = ($message, $path) -> {
+    $app_id = Yson::YPath($message, $path);
+    RETURN IF(Yson::IsEntity($app_id), "", Yson::ConvertToString($app_id));
+};
+
+
+INSERT INTO @tmp0
+SELECT
+    request_id,
+    utterance_text,
+    $get_smth(analytics_info, "/winner_scenario/name") AS scenario,
+    $get_smth(response, "/quality_storage/scenarios_information/" || $SCENARIO || "/reason") AS lose_reason,
+FROM RANGE(`//home/voice/vins/logs/dialogs`, $BEGIN_DATE, $END_DATE)
+WHERE request_id NOT REGEXP 'ffffffff-ffff-ffff'
+    AND utterance_text IS NOT NULL
+    AND do_not_use_user_logs == false
+    AND (
+        $get_smth(response, "/quality_storage/scenarios_information/" || $SCENARIO || "/classification_stage") == "ECS_POST" 
+        OR $get_smth(analytics_info, "/winner_scenario/name") == $SCENARIO
+        );
+
+COMMIT;
+
+INSERT INTO @tmp1
+SELECT
+    COUNT(*) AS frequency,
+    utterance_text,
+    SOME(lose_reason) AS lose_reason,
+    SOME(scenario) AS scenario
+FROM @tmp0
+GROUP BY utterance_text
+ORDER BY frequency DESC
+LIMIT $TOP_K;
+
+DROP TABLE $OUTPUT_TABLE;
+COMMIT;
+
+INSERT INTO $OUTPUT_TABLE
+SELECT *
+FROM @tmp1
+SAMPLE $SAMPLE_SIZE * 1.0 / $TOP_K;

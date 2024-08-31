@@ -1,0 +1,82 @@
+PROTO_LIBRARY()
+SET(PROTOC_TRANSITIVE_HEADERS "no")
+
+OWNER(
+    alkapov
+    g:megamind
+)
+
+INCLUDE_TAGS(GO_PROTO)
+
+PEERDIR(
+    alice/library/censor/protos
+    alice/library/client/protos
+    alice/library/field_differ/protos
+    alice/library/geo/protos
+    alice/library/video_common/protos
+    alice/megamind/protos/analytics/combinators
+    alice/megamind/protos/analytics/scenarios/advisers
+    alice/megamind/protos/analytics/scenarios/dialogovo
+    alice/megamind/protos/analytics/scenarios/general_conversation
+    alice/megamind/protos/analytics/scenarios/iot
+    alice/megamind/protos/analytics/scenarios/music
+    alice/megamind/protos/analytics/scenarios/search
+    alice/megamind/protos/analytics/scenarios/taxi
+    alice/megamind/protos/analytics/scenarios/video
+    alice/megamind/protos/analytics/scenarios/vins
+    alice/megamind/protos/blackbox
+    alice/megamind/protos/common
+    alice/megamind/protos/div
+    alice/megamind/protos/guest
+    alice/megamind/protos/nlg
+    alice/megamind/protos/property
+    alice/megamind/protos/quasar
+    alice/megamind/protos/scenarios/features
+    alice/memento/proto
+    alice/protos/analytics/dummy_response
+    alice/protos/analytics/goods
+    alice/protos/api/matrix
+    alice/protos/api/renderer
+    alice/protos/api/rpc
+    alice/protos/data
+    alice/protos/data/device
+    alice/protos/data/droideka
+    alice/protos/data/language
+    alice/protos/data/scenario
+    alice/protos/data/scenario/music
+    alice/protos/data/scenario/centaur/teasers
+    alice/protos/data/video
+    alice/protos/div
+    alice/protos/endpoint
+    alice/protos/endpoint/capabilities/audio_file_player
+    alice/protos/endpoint/capabilities/div_view
+    alice/protos/endpoint/capabilities/iot_scenarios
+    alice/protos/endpoint/capabilities/layered_div_ui
+    alice/protos/endpoint/capabilities/route_manager
+    alice/protos/extensions
+    mapreduce/yt/interface/protos
+)
+
+SRCS(
+    action_space.proto
+    analytics_info.proto
+    begemot.proto
+    combinator_request.proto
+    combinator_response.proto
+    directives.proto
+    external_markup.proto
+    frame.proto
+    iot.proto
+    layout.proto
+    notification_state.proto
+    push.proto
+    request.proto
+    request_meta.proto
+    response.proto
+    stack_engine.proto
+    typed_callback_request_data.proto
+    user_info.proto
+    web_search_source.proto
+)
+
+END()

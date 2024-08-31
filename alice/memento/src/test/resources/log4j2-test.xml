@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+
+    <Appenders>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT" follow="true">
+            <!--PatternLayout pattern="${JSON_LOG_PATTERN}"/-->
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+        <UnifiedAgent name="Setrace" host="localhost" port="16402" messageMetaEnabled="true">
+            <AgentProperty name="MaxInflightBytes" value="10485760"/>
+            <SessionMetaItem name="is_proto" value="true"/>
+            <SetraceThreadContextFilter/>
+            <SetraceLayout printDebugToStderr="false" validateProto="true" addMagicAndLength="false"/>
+        </UnifiedAgent>
+
+    </Appenders>
+
+    <Loggers>
+        <AsyncLogger name="com.yandex.ydb.core.grpc.YdbNameResolver" level="warn"/>
+        <AsyncRoot level="info">
+            <AppenderRef ref="ConsoleAppender"/>
+        </AsyncRoot>
+        <AsyncLogger name="ru.yandex.alice.paskills.common.logging.protoseq.SetraceEventLogger" additivity="false">
+            <AppenderRef ref="Setrace"/>
+        </AsyncLogger>
+
+    </Loggers>
+
+</Configuration>

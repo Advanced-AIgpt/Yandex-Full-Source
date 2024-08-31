@@ -1,0 +1,208 @@
+{% macro tts_pause_raw(n) %}
+  .sil<[{{n}}]>
+{% endmacro %}
+
+{% macro tts_pause(n) %}
+  {% voice %} {{ tts_pause_raw(n) }} {% endvoice %}
+{% endmacro %}
+
+{% macro render_call() %}
+  {% chooseline %}
+    Just a minute.
+    Just a second.
+    One minute.
+    One second.
+    Give me a minute.
+    Give me a second.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro calls_not_supported() %}
+  {% chooseitem 1 %}
+    I'd be better at this on your phone.
+  {% or 1 %}
+    I can do that, but it would be better from your phone.
+  {% or 1 %}
+    Your phone is way better for calls, so why don't I try it there?
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro not_supported__can_do_action() %}
+  {% chooseline %}
+    play music
+    turn on music
+    turn on movie
+    find movie
+    tell joke
+    talk about the weather
+    play a city game with you
+    play believe or not with you
+    go through a fantasy quest together
+    say something interesting
+    tell an interesting fact
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__do_you_want_action() %}
+  {% chooseline %}
+    I'll play music
+    I'll turn on music
+    I'll turn on the movie
+    I'll tell you a joke
+    I'll tell you about the weather
+    I'll tell you something interesting
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__can_search() %}
+  {% chooseline %}
+    find
+    look for
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__phone_or_desktop() %}
+  {% chooseline %}
+    phone
+    computer
+  {% endchooseline %}
+{% endmacro %}
+
+{%macro nothing_found() %}
+  {% chooseline %}
+    At your request
+    Unfortunately,
+  {% endchooseline %}
+  {% chooseline %}
+    I couldn't find anything
+    nothing found
+    couldn't find anything
+    nothing came up
+  {% endchooseline %}
+  .
+{% endmacro %}
+
+{% macro showing_news_details_not_supported() %}
+  {% chooseitem 1 %}
+    That's not something I can go into quickly. Why don't you ask Yandex?
+  {% or 1 %}
+    I'd be better at that from a computer or phone.
+  {% or 1 %}
+    Ask me from your phone. That would feel better.
+  {% or 0.1 %}
+    The news just ruins your appetite. Instead, why don't I {{ not_supported__do_you_want_action() }}?
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro showing_search_results_not_supported() %}
+  {% chooseline %}
+    I'm sorry, I don't have a good answer for you.
+    I don't have an answer for that question.
+    I don't know how to answer questions like that yet.
+    I'm sorry, I don't know what to answer.
+    I can't answer that.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro showing_serp_not_supported() %}
+  {% chooseitem %}
+    I'd be better at that from your phone or computer.
+  {% or %}
+    Ask me about that on your phone. Or computer.
+  {% or %}
+    If you ask me about that on your phone, I'll give you a better answer.
+  {% or %}
+    Ask me from your phone. That would feel better.
+  {% or %}
+    I can {{ not_supported__can_do_action() }}. I can {{ not_supported__can_search() }} on your phone.
+  {% or %}
+    I can {{ not_supported__can_do_action() }}. I can {{ not_supported__can_search() }} in Yandex, so only from your phone.
+  {% or %}
+    I can {{ not_supported__can_do_action() }}, while I can {{ not_supported__can_search() }} from your phone.
+  {% or %}
+    There's a lot I can do, but it's not everything, unfortunately. Not yet, at least. Want me to {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    There's a lot I can do, but it's not everything, unfortunately. Why don't I {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    There's a lot I can do, but it's not everything, unfortunately. Although, maybe that's for the better.  Want me to {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    Ask me that from your phone. From here, I can {{ not_supported__can_do_action() }}.
+  {% or %}
+    Is there really nothing more interesting for us to talk about?
+  {% or %}
+    I'd check Yandex, but my search module is getting looked at right now.
+  {% or %}
+    Not here, not now.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro showing_map_not_supported() %}
+  {% chooseitem %}
+    I'd be better at that from a computer or phone.
+  {% or %}
+    I'd love to show you, only I can't. I would have to do that on {{ not_supported__phone_or_desktop() }}.
+  {% or %}
+    I'd love to show you, but I can't. Ask me on {{ not_supported__phone_or_desktop() }} since that would feel better.
+  {% or %}
+    I'd love to, but it would need more than me just talking.
+  {% or %}
+    I can {{ not_supported__can_do_action() }}.
+  {% or %}
+    I don't have a map here at my fingertips. I don't have fingertips either, actually. Why don't we change the subject?
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_serp_caption() %}
+  Check Yandex
+{% endmacro %}
+
+{% macro render_serp_invitation_message() %}
+  {% chooseline %}
+    Looking for an answer
+    Everything will come to light eventually!
+    I'm checking Yandex
+    Let me see
+    We'll find that in a second
+    One second...
+    I'm opening search
+    I'm trying to find the answer for you
+    Let's look into that
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro opening_sites_or_apps_not_supported(info = None, simple_open_link = False, send_push = False) %}
+  {% if info and info.nav and info.nav['fallback_tts'] and info.nav['fallback_text'] %}
+    {% tx %}{{ info.nav['fallback_text'] }}{% etx %}{% vc %}{{ info.nav['fallback_tts'] }}{% evc %}
+    {% if send_push %}
+      I sent you a link in the Yandex app.
+    {% endif %}
+  {% elif info and info.nav and info.nav['voice_name'] and info.nav['text_name'] %}
+    {% if send_push %}
+      Unfortunately, I can't open {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} here, though I sent you a link in the Yandex app!
+    {% elif simple_open_link %}
+      {% chooseline %}
+        Unfortunately, I can't open {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} here, though it's easy enough in the Yandex app if you {% tx %}ask{% etx %}{% vc %}ask{% evc %} there!
+        Ooph, I can't open {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} here, though I'll do it in the Yandex app if you {% tx %}ask{% etx %}{% vc %}ask{% evc %} there!
+      {% endchooseline %}
+    {% else %}
+      Unfortunately, I can't open {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} here.
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      I'm sorry, I don't have a good answer for you.
+      I don't have an answer for that question.
+      I don't know how to answer questions like that yet.
+      I'm sorry, I don't know what to answer.
+      I can't answer that.
+      I can't open sites or apps from this device.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    It's hard to pull off that kind of thing with clocks.
+    I'd love to, but I can't. Mm.
+    That's definitely not going to work.
+  {% endchooseline %}
+{% endmacro %}

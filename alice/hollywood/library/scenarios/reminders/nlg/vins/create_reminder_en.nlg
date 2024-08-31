@@ -1,0 +1,69 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_en.nlg" %}
+{% from "alice/hollywood/library/scenarios/reminders/nlg/vins/reminders__common_en.nlg" import reminders_unsupported_device with context %}
+{% nlgimport "alice/hollywood/library/scenarios/reminders/nlg/vins/reminders__common_en.nlg" %}
+
+{% macro ask_time() %}
+  What time should I set the reminder for?
+{% endmacro %}
+
+{% phrase ask__time %}
+  {{ ask_time() }}
+{% endphrase %}
+
+{% phrase ask__what %}
+  {% chooseline %}
+    What
+    What
+  {% endchooseline %}
+  {% chooseline %}
+    do you
+    need
+    do you need
+  {% endchooseline %}
+  to be reminded about?
+{% endphrase %}
+
+{% phrase ask_to_turn_on_pushes %}
+  {% chooseline %}
+    Okay, just don't forget to enable notifications in the Yandex app. You can find them in the Notifications section of your iPhone settings.
+    Okay. You've enabled notifications in the Yandex app, right? They're in the Notifications section of your iPhone settings.
+    All right, just enable notifications in the Yandex app. Check the Notifications section of your iPhone settings.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.is_forbidden %}
+    I'm sorry, but notifications are only available in the Stations and speakers I live in.
+  {% elif 'incomplete_datetime' in context.attentions %}
+    Tell me the full date
+    {% if not form.time %}
+      and time
+    {% endif %}
+    for the reminder.
+  {% elif 'no_time' in context.attentions %}
+    {{ ask_time() }}
+  {% elif form.answer.type == 'ok' and not form.answer.silent %}
+    I set the reminder "{{ form.what }}" {{ form.date | render_date_with_on_preposition }} at {{ form.time | human_time_raw }}
+  {% elif form.answer.type == 'authorization' %}
+    You'll need to authorize yourself, after which you can just tell me what to do one more time.
+  {% elif 'request_push_permission' in context.attentions %}
+    Before you can set notifications, you need to give your phone permission to show notifications.
+  {% elif 'request_reminders_permission' in context.attentions %}
+    Give me permission to set notifications. I'll open your phone settings.
+  {% elif form.answer.type == 'cancel' %}
+    {% if form.answer.is_set == 'yes' and not form.answer.silent %}
+      I canceled that reminder.
+    {% elif form.answer.is_set == 'no' %}
+      You can't cancel something you never made.
+    {% elif form.answer.is_set == 'ellipsis' and not form.answer.silent %}
+      Okay, consider it canceled.
+    {% endif %}
+  {% elif form.answer.type == 'push' %}
+    Today at
+    {{ form.answer.time | human_time_raw }}
+    you wanted {{ form.answer.what }}.
+  {% elif form.answer.silent %}
+  {% else %}
+    {{ reminders_unsupported_device() }}
+  {% endif %}
+{% endphrase %}

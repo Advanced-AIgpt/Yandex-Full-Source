@@ -1,0 +1,308 @@
+import: common/filler.grnt
+
+form personal_assistant.scenarios.video_command.change_track:
+    lemma: true
+    slots:
+        audio:
+            type:
+                custom.audio
+                string
+            source: $AudioEnum
+        subtitles:
+            type:
+                custom.subtitles
+                string
+            source: $SubtitlesEnum
+        firstNumber:
+            source: $FirstNumber
+            type:
+                sys.num
+                string
+        secondNumber:
+            source: $SecondNumber
+            type:
+
+                sys.num
+                string
+    root:
+        [$On* $AudioEnum язык*]
+        [$On* $DummyAudio (на $AudioEnum) язык*]
+        [$On* $SubtitlesEnum язык*]
+        [$On* $AudioEnum и* $SubtitlesEnum язык*]
+        [$FirstNumber и* $SecondNumber? ($AudioWithNumbers | $Subtitles | $OnNumber)* номер* язык*]
+        %negative
+        [давай (в | на)+ $sys.num+]
+
+$On:
+    %lemma
+    включи
+    переключи
+    переключись
+    добавь
+    сделай
+    давай
+    выбери
+    смени
+    измени
+    поменяй
+    поставь
+    скажи
+    покажи
+
+$OnNumber:
+    %lemma
+    включи
+    переключи
+    переключись
+    добавь
+    давай
+    сделай
+    выбери
+    смени
+    измени
+    поменяй
+    поставь
+    покажи
+
+$Off:
+    %lemma
+    без
+    выключи
+    отключи
+    отключись
+    убери
+    не надо
+
+$LangEng:
+    %lemma
+    английский
+    иностранный
+    по-английски
+    американский
+    по-американски
+    англоязычный
+
+$LangRus:
+    %lemma
+    русский
+    российский
+    по-русски
+    русскоязычный
+
+$LangFra:
+    %lemma
+    французский
+    по-французски
+    французскоязычный
+
+$LangDeu:
+    %lemma
+    немецкий
+    германский
+    по-немецки
+    немецкоязычный
+
+$LangTur:
+    %lemma
+    турецкий
+    по-турецки
+    турецкоязычный
+
+$LangKor:
+    %lemma
+    корейский
+    по-корейски
+    корейскоязычный
+
+$LangKubik:
+    %lemma
+    кубик в кубе
+    кубик в кубике
+    кубик
+
+$LangTitles:
+    %lemma
+    [перевод надписи]
+
+$Lang18plus:
+    %lemma
+    18 плюс
+    без цензуры
+    нецензурный
+    с матом
+    матерный
+
+$Subtitles:
+    %lemma
+    субтитры
+    сабы
+    надписи
+
+$Audio:
+    %lemma
+    дорожка
+    аудиодорожка
+    аудио
+    звуковой
+    звук
+    озвучка
+    перевод
+    язык
+
+$AudioWithNumbers:
+    %lemma
+    дорожка
+    аудиодорожка
+    аудио
+    озвучка
+    перевод
+
+$AudioEnum:
+    %lemma
+    %type "custom.audio"
+
+    %value "eng"
+    [$LangEng+ $ContentType* $Audio*]
+
+    %value "rus"
+    [$LangRus+ $ContentType* $Audio*]
+
+    %value "fra"
+    [$LangFra+ $ContentType* $Audio*]
+
+    %value "deu"
+    [$LangDeu+ $ContentType* $Audio*]
+
+    %value "tur"
+    [$LangTur+ $ContentType* $Audio*]
+
+    %value "kor"
+    [$LangKor+ $ContentType* $Audio*]
+
+    %value "rus-x-sndk"
+    [сыендук+ $ContentType* $Audio*]
+
+    %value "rus-x-kubik"
+    [$LangKubik+ $ContentType* $Audio*]
+
+    %value "18plus"
+    [$Lang18plus+ $ContentType* $Audio* $LangRus*]
+
+    %negative
+    $LangEng+ $ContentType+
+    $LangRus+ $ContentType+
+    $LangFra+ $ContentType+
+    $LangDeu+ $ContentType+
+    $LangTur+ $ContentType+
+    $LangKor+ $ContentType+
+
+# Should be the same as AudioEnum
+$DummyAudio:
+    %lemma
+    [$LangEng+ $ContentType* $Audio*]
+
+    [$LangRus+ $ContentType* $Audio*]
+
+    [$LangFra+ $ContentType* $Audio*]
+
+    [$LangDeu+ $ContentType* $Audio*]
+
+    [$LangTur+ $ContentType* $Audio*]
+
+    [$LangKor+ $ContentType* $Audio*]
+
+    [сыендук+ $ContentType* $Audio*]
+
+    [$LangKubik+ $ContentType* $Audio*]
+
+    [$Lang18plus+ $ContentType* $Audio* $LangRus*]
+
+$SubtitlesEnum:
+    %lemma
+    %type "custom.subtitles"
+
+    %value "eng"
+    [$LangEng+ $ContentType* $Subtitles+]
+
+    %value "rus"
+    [$LangRus+ $ContentType* $Subtitles+]
+
+    %value "fra"
+    [$LangFra+ $ContentType* $Subtitles+]
+
+    %value "deu"
+    [$LangDeu+ $ContentType* $Subtitles+]
+
+    %value "kor"
+    [$LangKor+ $ContentType* $Subtitles+]
+
+    %value "rus-x-kubik"
+    [$LangKubik+ $ContentType* $Subtitles+]
+
+    %value "rus-x-titles"
+    [$LangTitles+ $ContentType*]
+
+    %value "any"
+    [$Subtitles+ $ContentType*]
+
+    %value "18plus"
+    [$Lang18plus+ $ContentType* $Subtitles+ $LangRus*]
+
+    %value "off"
+    [$Off+ $ContentType* $LangEng* $Subtitles+]
+    [$Off+ $ContentType* $LangRus* $Subtitles+]
+    [$Off+ $ContentType* $LangFra* $Subtitles+]
+    [$Off+ $ContentType* $LangDeu* $Subtitles+]
+    [$Off+ $ContentType* $LangKor* $Subtitles+]
+    [$Off+ $ContentType* $LangKubik* $Subtitles+]
+    [$Off+ $ContentType* $LangTitles+ $Subtitles*]
+    [$Off+ $ContentType* $Lang18plus* $Subtitles+]
+
+$FirstNumber:
+    $sys.num
+
+$SecondNumber:
+    $sys.num
+
+$ContentType:
+    %lemma
+    ролик
+    видео
+    фильм
+    сериал
+    мультфильм
+    сезон
+
+filler:
+    %lemma
+    $Common.Filler
+    на
+    в
+    с
+    у
+    к
+    актеры
+    версию
+    есть
+    это
+    этот
+    мой
+    данный
+    текущий
+    как
+    который
+    чтобы
+    попробуй
+    можешь
+    слушай
+    попросить
+    просить
+    говорить
+    смотреть
+    хотеть
+    пожалуйста
+    быстро
+    да
+    я
+    %negative
+    раз

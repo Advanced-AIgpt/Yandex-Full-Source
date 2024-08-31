@@ -1,0 +1,37 @@
+version: '3'
+services:
+  nginx:
+    container_name: nginx
+    restart: always
+    build: ./nginx
+    image: nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - api
+
+  api:
+    container_name: api
+    restart: always
+    build: ./app
+    image: api
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+    command: gunicorn --bind :8000 -c /app/config.py app.smart_home_api:app
+
+  front:
+    container_name: front
+    restart: always
+    build: ./iot-provider-preview
+    image: front
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+    command: serve -s build -p 8080
+    depends_on:
+      - nginx
+      - api

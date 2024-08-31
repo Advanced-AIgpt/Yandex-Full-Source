@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package NAlice.NMegamind;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/modifiers";
+option java_package = "ru.yandex.alice.megamind.protos.modifiers";
+option java_outer_classname = "ModifierResponseProto";
+
+import "alice/megamind/protos/analytics/modifiers/analytics_info.proto";
+import "alice/megamind/protos/modifiers/modifier_body.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TModifierResponse {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TModifierAnalyticsInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // postroll, voice doodle or smth else
+        string ModifierType = 1 [json_name = "modifier_type", (NYT.column_name) = "modifier_type"];
+
+        string ProductModifierName = 2 [json_name = "product_modifier_name", (NYT.column_name) = "product_modifier_name"];
+    }
+
+    message TAnalyticsInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // analytics info for each applied modifier
+        repeated TModifierAnalyticsInfo ModifierAnalyticsInfo = 1 [json_name = "modifier_analytics_info", (NYT.column_name) = "modifier_analytics_info"];
+    }
+
+    TModifierBody ModifierBody = 1 [json_name = "modifier_body", (NYT.column_name) = "modifier_body"];
+    TAnalyticsInfo AnalyticsInfo = 2 [json_name = "analytics_info", (NYT.column_name) = "analytics_info", deprecated = true];
+    NModifiers.TAnalyticsInfo Analytics = 3 [json_name = "analytics", (NYT.column_name) = "analytics"];
+}

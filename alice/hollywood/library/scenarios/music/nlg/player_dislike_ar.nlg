@@ -1,0 +1,45 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" import render_supported_only_on_music with context %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_repeated_skip with context %}
+
+{% macro dislike_confirm() %}
+  {% if context.attentions.get('unknown_music') %}
+    {% chooseline %}
+      لا أستطيع أن أفهم لأي أغنية أضع عدم إعجاب.
+      كان ذلك سيسعدني، لكنني لا أعرف لأي أغنية أضع عدم إعجاب.
+    {% endchooseline %}
+  {% elif context.is_generative %}
+    وضعت عدم إعجاب. أنا أؤلف لك مقطوعة جديدة.
+  {% elif context.is_fm_radio %}
+    {{ render_supported_only_on_music() }}
+  {% elif context.is_shot %}
+    وضعت عدم إعجاب.
+  {% else %}
+    {% chooseline %}
+      تم قبول عدم الإعجاب.
+      حسناً، سأضع عدم إعجاب.
+      حسناً لن أضع شيئاً كهذا.
+      فهمت. لن أشغله بعد الآن.
+      لا مشكلة، وضعت عدم إعجاب.
+    {% endchooseline %}
+  {% endif %}
+  {{ render_repeated_skip() }}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('biometry_guest') %}
+    {% if context.user_name is not none %}
+      {% chooseitem 1 %}
+        عذراً، أهم دي جي هنا هو — {{ context.user_name | capitalize }}.
+      {% or 1 %}
+        البوت المهذب ينفذ أوامر صاحبه فقط. اعذرني.
+      {% or 1 %}
+        كنت سأضع عدم إعجاب، ولكن فقط إن طلب {{ context.user_name | capitalize }}.
+      {% endchooseitem %}
+    {% else %}
+      البوت المهذب ينفذ أوامر صاحبه فقط. اعذرني.
+    {% endif %}
+  {% else %}
+    {{ dislike_confirm() }}  # TODO(vitvlkv): Support do_authorized(dislike_confirm())
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,664 @@
+{% ext_from "alice/hollywood/library/common_nlg/macros_ar.nlg" import inability %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_ya_plus_required, render_artists, track_keyword %}
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ar.nlg" import render_fairytale_answer, render_poem_answer, render_audiobook_answer, render_ambient_sound_answer,
+                                                                                 render_fairytale_answer_beginning, render_poem_answer_beginning, render_audiobook_answer_beginning, render_ambient_sound_answer_beginning with context %}
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ar.nlg" import render_podcast_answer, render_podcast_answer_beginning with context %}
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/cards__ar.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_before_redirect_to_fm_radio, render_music_answer, render_generative_answer, render_music_tags_default, render_music_tags,
+    render_simple_music_answer, launch, own_song_joke, ya_plus, render_authorization_from_music_play, render_suggest_yaplus, render_suggest_station_promo, alice_shots_stub with context %}
+
+{% macro init(ns) %}
+  {% set ns.explicit_attention = context.attentions.get('explicit_content') %}
+  {% set ns.music_filters_attention = context.attentions.get('music_filters') %}
+  {% set ns.search_result_with_filters = ns.music_filters_attention and ns.music_filters_attention.data.code == 'search_result_with_filters' %}
+  {% set ns.uncertainty_preambula_needed = ns.music_filters_attention and not ns.search_result_with_filters %}
+{% endmacro %}
+
+{% phrase render_inability %}
+  {{ inability() }}
+{% endphrase %}
+
+{% phrase render_unauthorized %}
+  لم تقم بالدخول.
+{% endphrase %}
+
+{% phrase render_fallback_to_music_vertical %}
+  {% chooseline %}
+    هذه الموسيقى بالذات غير موجودة، لكن جرّب الاستماع إلى شيء من هذا.
+    مقطع جيد، للأسف غير متاح. لنستمع إلى شيء آخر.
+  {% endchooseline %}
+{% endphrase %}
+
+{% macro render_additional_traits(with_turn_on=False) %}
+  {% if not context.no_shuffle_repeat_in_nlg %}
+    {% set type = (form.answer or context.slots.answer)|get_item('type') %}
+    {% set order_slot = form.order or context.slots.order %}
+    {% set repeat_slot = form.repeat or context.slots.repeat %}
+    {% if order_slot == 'shuffle' and type != 'track' %}
+      بشكل عشوائي
+    {% endif %}
+    {% if repeat_slot == 'repeat' and with_turn_on %}
+      على التكرار
+    {% elif repeat_slot == 'repeat' %}
+      على التكرار
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_turn_on() %}
+  {% if context.attentions.get('used_saved_progress') %}
+    سأتابع
+  {% else %}
+    جاري التشغيل.
+  {% endif %}
+  {{ render_additional_traits(True) }}
+{% endmacro %}
+
+{% macro render_personal_playlist_nlg_list() %}
+{% set traits = render_additional_traits().strip() %}
+{% set traits_with_turn_on = render_additional_traits(True).strip() %}
+  سنستمع إلى المفضلة لديك {{ traits }}.
+  جاري تشغيل أغانيك المفضلة {{ traits_with_turn_on }}.
+  حسناً. قائمة التشغيل مع موسيقاك المفضلة {{ traits }}.
+  {% if not traits %}
+    أحب الأغاني التي تحبها.
+    حسناً. الأغاني التي أعجبتك.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_personal_playlist_nlg() %}
+  {% chooseline %}
+    {{ render_personal_playlist_nlg_list() }}
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_payment_required() %}
+  {% if context.attentions.get('payment-required') %}
+    {% if context.attentions.get('plus_push') %}
+      تحتاج إلى اشتراك {{ ya_plus() }}، للاستماع إلى الموسيقى.
+      سيصلك رابط الشراء على هاتفك — لقد أرسلته.
+    {% else %}
+      للاستماع إلى موسيقى يجب شراء اشتراك على {{ ya_plus() }}.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_explicit_filtered(ns) %}
+  {% if ns.explicit_attention and ns.explicit_attention.data.code == 'explicit-content-filtered' %}
+    {% chooseline %}
+      بأي حال، وضع الأطفال يعمل عندك.
+      وضع البحث الخاص بالأطفال مشغل لديك.
+      هذا ما عثرت عليه في وضع الأطفال.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_preambula(ns) %}
+  {% if ns.uncertainty_preambula_needed %}
+    {% chooseline %}
+      قد يناسبك هذا.
+      لست متأكدة تماماً، لكن
+      على الأرجح ستناسبك هذه.
+      أتمنى أن يفي هذا بالغرض.
+      هذا ما عثرت عليه.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_filtered_stream(radio_seeds) %}
+  {% set streams = {
+    "[\'user:onyourwave\']": 'قائمة "موجتي"',
+    "[\'personal:recent-tracks\']": 'قائمة "الجديد"',
+    "[\'personal:never-heard\']": 'مجموعة "الشاب خالد"',
+    "[\'mood:discovery\']": 'مجموعة "الشاب خالد"',
+    "[\'personal:missed-likes\']": 'قائمة "النسيان"',
+    "[\'personal:collection\']": 'قائمة "المفضلات"',
+    "[\'personal:hits\']": 'قائمة "المعروفة"',
+    "{\'user\': [\'onyourwave\']}": 'قائمة "موجتي"',
+    "{\'personal\': [\'recent-tracks\']}": 'قائمة "الجديد"',
+    "{\'personal\': [\'never-heard\']}": 'مجموعة "الشاب خالد"',
+    "{\'mood\': [\'discovery\']}": 'مجموعة "الشاب خالد"',
+    "{\'personal\': [\'missed-likes\']}": 'قائمة "النسيان"',
+    "{\'personal\': [\'collection\']}": 'قائمة "المفضلات"',
+    "{\'personal\': [\'hits\']}": 'قائمة "المعروفة"'
+  } %}
+  {% set stream = radio_seeds|string %}
+  {% if stream in streams %}
+    جاري التشغيل {{ streams[stream] }}.
+  {% else %}
+    سأقوم بالتشغيل.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_explicit_may_be_contained(ns) %}
+  {% if ns.explicit_attention and ns.explicit_attention.data.code == 'may-contain-explicit-content' %}
+    .
+    {% chooseline %}
+      حذار! الأفضل أن لا يستمع الأطفال لهذا.
+      انتبه! هذا ليس للأطفال.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_dance_phrase() %}
+  {% set activity_slot = form.activity or context.slots.activity %}
+  {% set playlist_slot = form.playlist or context.slots.playlist %}
+  {% if activity_slot == 'party' or playlist_slot and 'حفلة' in playlist_slot %}
+    .
+    {% maybe 0.25 %}
+      هلا نرقص؟
+    {% endmaybe %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_yamusic_audiobranding() %}
+  {% chooseitem %}
+    {% text %}
+      هذا ما عثرت عليه على موسيقى.ياندكس. أتمنى أن يعجبك.
+    {% endtext %}
+    {% voice %}
+      هذا ما وجدته لأجلك على موسيقى ياندكس. أتمنى أن يعجبك.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      يوجد الكثير على موسيقى ياندكس لكنني اخترت لك مقطعاً مميزاً.
+    {% endtext %}
+    {% voice %}
+      يوجد الكثير على موسيقى ياندكس لكنني اخترت لك مقطعاً مميزاً.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      لحظة، دخلت على موسيقى.ياندكس. ها هي استمع إلى هذه.
+    {% endtext %}
+    {% voice %}
+      لحظة، سأدخل على موسيقى ياندكس. ها هي، استمع إلى هذا.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      لحظة، سأختار لك شيئاً على موسيقى.ياندكس. لنقل، هذا.
+    {% endtext %}
+    {% voice %}
+      ثانية، سأختار لك شيئاً على موسيقى.ياندكس لنقل ذلك.
+    {% endvoice %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{# It is used in combination with div cards #}
+{% phrase music_start %}
+{% set answer_slot = form.answer or context.slots.answer %}
+{% set type = answer_slot|get_item('type') %}
+{% set is_album_or_track = type == 'album' or type == 'track' %}
+{% set first_track = answer_slot|get_item('first_track') %}
+{% set genre = answer_slot|get_item('album')|get_item('genre') or answer_slot|get_item('genre') or first_track|get_item('album')|get_item('genre') %}
+{% set subtype = answer_slot|get_item('subtype') %}
+  {% text %}
+    {% if context.attentions.get('unauthorized') and context.attentions.get('suggest_authorization_from_music_play') %}
+      {{ render_authorization_from_music_play() }}
+    {% elif context.attentions.get('suggest_yaplus') %}
+      {{ render_suggest_yaplus() }}
+    {% elif context.attentions.get('station_promo') %}
+      {{ render_suggest_station_promo() }}
+    {% elif (is_album_or_track and genre == 'fairytales') or (answer_slot and context.is_fairy_tale_subscenario and context.is_ondemand_fairytale) %}
+      {{ render_fairytale_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and genre == 'poemsforchildren' %}
+      {{ render_poem_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and subtype == 'audiobook' %}
+      {{ render_audiobook_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and (subtype == 'podcast' or subtype == 'podcast-episode') %}
+      {{ render_podcast_answer_beginning(answer_slot) }}
+    {% elif genre == 'naturesounds' %}
+      {{ render_ambient_sound_answer_beginning(answer_slot) }}
+    {% else %}
+      {{ render_turn_on() }}
+      {% if type == 'album' %}
+        ألبوم
+      {% elif type == 'playlist' %}
+        قائمة تشغيل
+      {% elif type == 'artist' %}
+        المغني
+      {% endif %}
+    {% endif %}
+  {% endtext %}
+{% endphrase %}
+
+{% phrase render_thin_client_subscription_required %}
+  {{ render_ya_plus_required() }}
+{% endphrase %}
+
+
+{% phrase render_result %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {% set type = answer_slot|get_item('type') %}
+  {% set is_album_or_track = type == 'album' or type == 'track' %}
+  {% set first_track = answer_slot|get_item('first_track') %}
+  {% set genre = answer_slot|get_item('album')|get_item('genre') or answer_slot|get_item('genre') or first_track|get_item('album')|get_item('genre') %}
+  {% set subtype = answer_slot|get_item('subtype') %}
+  {% set ns = namespace() %}
+  {% do init(ns) %}
+
+  {% if context.attentions.get('launch_youtube_app') %}
+    لحظة.
+  {% elif context.attentions.get('unauthorized') and not context.attentions.get('suggest_authorization_from_music_play') %}
+    لم تقم بالدخول.
+  {% elif context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% elif context.attentions.get('alice_shots_intro') %}
+    {{ alice_shots_stub() }}
+  {% elif context.attentions.get('multiroom_not_supported') %}
+    {% chooseline %}
+        لا زلت لم أتعلم كيف أشغل الموسيقى على عدة أجهزة في وقت واحد
+    {% endchooseline %}
+  {% elif context.attentions.get('multiroom_rooms_not_supported') %}
+    {% chooseline %}
+        لم أتعلم بعد كيفية تشغيل الموسيقى في غرف مختلفة، لكن يمكنك أن تطلب مني تشغيل الموسيقى في كل مكان
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical') %}
+    {% chooseline %}
+      هذه الموسيقى بالذات غير موجودة، لكن جرّب الاستماع إلى شيء من هذا.
+      مقطع جيد، للأسف غير متاح. لنستمع إلى شيء آخر.
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical_nothing_found') %}
+    {% chooseline %}
+      هذه الموسيقى بالذات غير موجودة، لكن جرّب الاستماع إلى شيء من هذا.
+      موسيقى جيدة، لكن للأسف فهي غير متاحة. هيا نستمع لشيء آخر.
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical_general') %}
+    {% if context.attentions.get('suggest_authorization_from_music_play') %}
+      {% text %}
+        {{ render_authorization_from_music_play() }}
+        \n
+      {% endtext %}
+    {% endif %}
+    {% chooseline %}
+      حاول اختيار شيء من هنا لتستمع إليه.
+      هيا نستمع إلى شيء ما.
+    {% endchooseline %}
+  {% elif context.attentions.get('simplistic_turn_on_message') %}
+    سأقوم بالتشغيل.
+  {% elif form.personality == 'is_personal' or context.slots.personality == 'is_personal' %}
+    {{ render_personal_playlist_nlg() }}
+  {% elif (is_album_or_track and genre == 'fairytales') or (answer_slot and context.is_fairy_tale_subscenario and context.is_ondemand_fairytale) %}
+    {{ render_fairytale_answer(req_info, answer_slot) }}
+  {% elif is_album_or_track and genre == 'poemsforchildren' %}
+    {{ render_poem_answer(answer_slot) }} .
+  {% elif is_album_or_track and subtype == 'audiobook' %}
+    {{ render_audiobook_answer(answer_slot) }}
+  {% elif is_album_or_track and (subtype == 'podcast' or subtype == 'podcast-episode') %}
+    {{ render_podcast_answer(answer_slot) }}
+  {% elif genre == 'naturesounds' %}
+    {{ render_ambient_sound_answer(answer_slot) }} .
+  {% elif context.attentions.get('morning_show') %}
+    {# The first track in morning show already contains a greeting, so we don't need any NLG at all #}
+  {% elif context.attentions.get('is_general_playlist') and not context.attentions.get('radio_filtered_stream') %}
+    {% if context.attentions.get('yamusic_audiobranding') and randuniform(0, 1) < context.attentions.get('yamusic_audiobranding').data %}
+      {{ render_yamusic_audiobranding() }}
+    {% else %}
+      سأقوم بالتشغيل.
+    {% endif %}
+  {% elif context.attentions.get('unverified_playlist') %}
+    {% chooseline %}
+      إليك ما وجدته بين قوائم تشغيل مستخدمين آخرين. سأقوم بتشغيل "{{ answer_slot.title }}"
+      عثرت على شيء مناسب بين قوائم تشغيل المستخدمين الآخرين. جاري تشغيل "{{ answer_slot.title }}"
+    {% endchooseline %}
+    {{ render_additional_traits().strip() }}
+    .
+  {% else %}
+    {% set filters_answer = answer_slot.type == 'filters' and 'need_similar' not in context.attentions %}
+    {% set genre_filters_count = filters_answer and (answer_slot.filters.genre|length) %}
+    {% set mood_filters_count = filters_answer and (answer_slot.filters.mood|length) %}
+    {% set activity_filters_count = filters_answer and (answer_slot.filters.activity|length) %}
+    {% set epoch_filters_count = filters_answer and (answer_slot.filters.epoch|length) %}
+    {% set music_filters_count = genre_filters_count + mood_filters_count + activity_filters_count + epoch_filters_count %}
+    {% set filter = "" if not music_filters_count else 'genre' if genre_filters_count else 'mood' if mood_filters_count else 'activity' if activity_filters_count else 'epoch' %} {# if epoch_filters_count #}
+    {% set tag = "" if not filter else answer_slot.filters.get(filter)[0] | replace('-', '_') %}
+    {% set filters_reply = req_info.experiments.get('new_music_radio_nlg') != None and music_filters_count %}
+    {% set radio_seeds = filters_answer and (answer_slot.filters.radioSeeds or answer_slot.filters) %}
+
+    {% set use_full_answer = namespace() %}
+
+    {% set special_playlist_slot = form.special_playlist or context.slots.special_playlist %}
+
+    {% if context.attentions.get('music_play_not_supported_on_device') %}
+      {% if context.is_tv_device %}
+        {% if special_playlist_slot == 'ambient_sounds_default' %}
+          {% chooseline %}
+            عذراً، لكنني لا أستطيع تشغيل أصوات الطبيعة هنا. اطلب مني ذلك عبر المكبر الذكي أو في تطبيق ياندكس.
+            أخ، لم أحمل أصوات الطبيعة على التلفاز بعد. لكن يسعدني تشغيلها في التطبيق أو عبر المكبر إذا طلبت.
+          {% endchooseline %}
+        {% elif special_playlist_slot == 'fairy_tales_default' %}
+          {% chooseline %}
+            اعذرني لكنني لا أستطيع تشغيل القصة هنا. اطلب مني ذلك على المكبر الذكي أو تطبيق ياندكس.
+            لم يتم تحميل القصص على التلفاز، ولكن يسرّني أن أحكيها لك عبر التطبيق أو عبر المكبر إن طلبت.
+          {% endchooseline %}
+        {% elif special_playlist_slot == 'podcasts_default' %}
+          {% chooseline %}
+            عذراً، لا يمكنني تشغيل برنامج إذاعي هنا. اطلب مني ذلك عبر المكبر الذكي أو في تطبيق ياندكس.
+            أخ، لم أحمل البرامج الإذاعية على التلفاز. لكن يسعدني تشغيله في التطبيق أو عبر المكبر إذا طلبت.
+          {% endchooseline %}
+        {% else %}
+          {% chooseline %}
+            أستطيع تشغيل الموسيقى بلا تلفاز، أستطيع هنا إيجاد كليب مناسب.
+            من الواضح أن هذا لن ينجح دون صور. دعني أشغل كليباً موسيقياً.
+            لا أستطيع تشغيل الموسيقى هنا فقط، جرّب البحث عن كليب مناسب.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        اعذرني، لا أستطيع البحث عن الموسيقى الآن.
+      {% endif %}
+    {% else %}
+      {% set full_answer %}
+        {% if context.attentions.get('radio_filtered_stream') %}
+          {{ render_filtered_stream(radio_seeds) }}
+        {% elif context.is_smart_speaker %}
+          {% if special_playlist_slot == 'origin' %}
+            {% set traits_with_turn_on = render_additional_traits(True).strip() %}
+            {% chooseline %}
+              جاري تشغيل قائمة أليسا {{ traits_with_turn_on }} — جمعت فيها الموسيقى التي تعجبك، وأضفت إليها شيئاً من عندي - أودُّ أن تشعر أنك على الراديو.
+              جاري تشغيل قائمة التشغيل مع أليسا {{ traits_with_turn_on }} — لقد جمعت فيها الموسيقى، التي تحبها وأضفت تعليقات، لكي يصبح الاستماع إليها أكثر متعة.
+              جاري تشغيل قائمة أليسا {{ traits_with_turn_on }} — جمعت فيها موسيقى خصيصاً لك وأضفت لها تعليقاتي.
+            {% endchooseline %}
+          {% elif special_playlist_slot == 'ny_alice_playlist' %}
+            {{ own_song_joke() }}
+          {% elif special_playlist_slot == 'ambient_sounds_default' %}
+            جاري تشغيل أصوات الطبيعة
+          {% elif special_playlist_slot == 'fairy_tales_default' or context.is_fairy_tale_subscenario %}
+            {% set use_full_answer.flag = True %}
+            {{ render_fairytale_answer(req_info, answer_slot, True) }}
+          {% elif special_playlist_slot == 'podcasts_default' %}
+            {% set use_full_answer.flag = True %}
+            {{ render_podcast_answer(answer_slot) }}
+          {% else %}
+            {% vc %}
+              {{ render_payment_required() }}
+              {{ render_explicit_filtered(ns) }}
+              {{ render_preambula(ns) }}
+            {% evc %}
+            {% if not filters_answer and not intent_name.endswith(('more','less')) and not search_result_with_filters %}
+              {% if answer_slot.type == 'generative' %}
+                {{ render_generative_answer(answer_slot) }}
+              {% else %}
+                {{ render_turn_on() }}
+                {{ render_music_answer(answer_slot, 'acc', render_album=False, shorten=True) }}
+              {% endif %}
+            {% elif filters_reply %}
+              {% set use_full_answer.flag = True %}
+              {% if music_filters_count > 1 %}
+                {{ render_music_tags_default() }}
+              {% else %}
+                {{ render_music_tags(filter, tag) }}
+              {% endif %}
+            {% elif 'first_track' in answer_slot and req_info.experiments.get('music_show_first_track') != None %}
+              {% if not ns.uncertainty_preambula_needed %}
+                {% chooseline %}
+                  قد تعجبك
+                  يمكنني أن أقترح
+                  اسمع
+                {% endchooseline %}
+              {% else %}
+                {{ render_turn_on() }}
+              {% endif %}
+              {{ render_music_answer(answer_slot.first_track, 'acc', render_album=False, shorten=True) }}
+            {% else %}
+              {{ render_turn_on() }}
+            {% endif %}
+          {% endif %}
+          {% vc %}
+            {{ render_explicit_may_be_contained(ns) }}
+            {{ render_dance_phrase() }}
+          {% evc %}
+        {% else %}
+          {{ launch(form.action_request or context.slots.action_request or context.attentions.get('supports_music_player')) }}
+        {% endif %}
+      {% endset %}
+
+      {% if use_full_answer.flag %}
+        {{ full_answer }}
+      {% else %}
+        {% if req_info.experiments.get('tts_domain_music') != None %}
+          {{ full_answer | tts_domain('music') | only_voice }}
+        {% else %}
+          {{ full_answer | only_voice }}
+        {% endif %}
+        {% text %}
+          {% if answer_slot.type == 'generative' %}
+            {{ render_generative_answer(answer_slot) }}
+          {% else %}
+            {{ launch(form.action_request or context.slots.action_request or context.attentions.get('supports_music_player')) }}
+            {% if not answer_slot.omit_object_name %}
+              {% if answer_slot.type in ['track','album','artist'] %}
+                :
+              {% elif answer_slot.type == 'filters' and 'need_similar' in context.attentions %}
+                :
+              {% endif %}
+            {% endif %}
+            {{ render_music_answer(answer_slot, 'acc') }}.
+          {% endif %}
+        {% endtext %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro ask_what_short(missing_type) %}
+  {% if missing_type == 'Album' %}
+    أي ألبوم؟
+  {% elif missing_type == 'Artist' %}
+    أي مغنٍ؟
+  {% else %}
+    أية أغنية؟
+  {% endif %}
+{% endmacro %}
+
+{% macro ask_what_simple(missing_type) %}
+  {% if missing_type == 'Artist' %}
+    من أشغل؟
+  {% else %}
+    ماذا أشغل؟
+  {% endif %}
+{% endmacro %}
+
+{% phrase ask_again %}
+  {% if context.reask_count == 0 %}
+    {% chooseline %}
+      {{ ask_what_short(context.missing_type).strip() }}
+      لم أفهم. {{ ask_what_short(context.missing_type).strip() }}
+      {{ ask_what_simple(context.missing_type).strip() }}
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      أبطأ، لم أفهم!
+      كرر بشكل أوضح، رجاءً!
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase interactive_fairytale %}
+  {% if context.max_reasks_exceeded %}
+    إذا سأشغل قصة، مفاجأة!
+  {% else %}
+    {% chooseline %}
+      هل أشغل لك قصة "{{ context.fairytale_name }}" أم أبحث أكثر؟
+      يمكنني اقتراح قصة "{{ context.fairytale_name }}" أو البحث أكثر؟
+      ما رأيك بقصة "{{ context.fairytale_name }}" أم أبحث أكثر؟
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase alice_show %}
+{% endphrase %}
+
+{% phrase meditation %}
+  {{ 'جاري التشغيل.' | only_text }}
+{% endphrase %}
+
+{% phrase lite_hardcoded_playlist %}
+    {%- if context.promo_type == "PT_GREEN_PERSONALITY" -%}
+        جاري تشغيل. سأضعك في جو القدود الحلبية
+    {%- elif context.promo_type == "PT_PURPLE_PERSONALITY" -%}
+        جاري التشغيل. كل ما تحتاجه ليحمل بلا توقف.
+    {%- elif context.promo_type == "PT_RED_PERSONALITY" -%}
+        جاري التشغيل. كل ما ترغبه على الهواء.
+    {%- elif context.promo_type == "PT_BEIGE_PERSONALITY" -%}
+        جاري التشغيل. لم يكن الوضع في المنزل جيداً هكذا من قبل
+    {%- elif context.promo_type == "PT_YELLOW_PERSONALITY" -%}
+        جاري التشغيل. يجب أن يزيد هذا من سعادتك.
+    {%- elif context.promo_type == "PT_PINK_PERSONALITY" -%}
+        سأشغل. مرحباً بكم في عالم الموسيقى السحري
+    {%- endif -%}
+{% endphrase %}
+
+{% phrase fixlist %}
+  {{ context.fixlist.nlg }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__open_uri %}
+  الاستماع على ياندكس.موسيقى
+{% endphrase %}
+
+{% phrase render_suggest_uri__music__open_uri %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ answer_slot.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_radio %}
+  {{ render_music_answer(context.music__suggest_radio.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_radio %}
+  شغل {{ render_music_answer(context.music__suggest_radio.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_track %}
+  {{ render_music_answer(context.music__suggest_track.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_track %}
+  شغل {{ render_music_answer(context.music__suggest_track.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_artist %}
+  {{ render_music_answer(context.music__suggest_artist.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_artist %}
+  شغل {{ render_music_answer(context.music__suggest_artist.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_album %}
+  {{ render_music_answer(context.music__suggest_album.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_album %}
+  شغل {{ render_music_answer(context.music__suggest_album.data, 'acc') }}
+{% endphrase %}
+
+{% macro shuffle_confirm() %}
+  {% chooseline %}
+    خلطت جميع المقاطع.
+    أحبُّ الفوضى.
+    طيب
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro alicesdk_player_response(text) %}
+  {{ text | only_text }}
+{% endmacro %}
+
+{% macro render_shuffle_result(context) %}
+  {% if context.has_alicesdk_player %}
+    {{ alicesdk_player_response(shuffle_confirm()) }}
+  {% else %}
+    {{ shuffle_confirm() }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_player %}
+  {# TODO(sparkle): probably won't work with context.slots #}
+  {% set raw_form_slot = form.raw_form or context.slots.raw_form %}
+  {% if raw_form_slot.name == 'personal_assistant.scenarios.player_shuffle' %}
+    {{ render_shuffle_result(context) }}
+  {% endif %}
+  {% if context.attentions.get('nothing_is_playing') %}
+    {% chooseline %}
+      لا يمكنني القيام بذلك، إذ لا يوجد شيء قيد التشغيل الآن.
+      لن ينفع. لا يوجد شيء قيد التشغيل الآن.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_album(album) %}
+  {% if 'ألبوم' not in album.lower() %}
+    ألبوم
+  {% endif %}
+  "{{ album }}"
+{% endmacro %}
+
+{% macro render_track(answer, title) %}
+  {{ track_keyword(answer, title) }}
+  "{{ title }}"
+{% endmacro %}
+
+{% phrase track_announce %}
+  {% set first_play = context.first_play %}
+  {% set genre = context.answer|get_item('genre') %}
+  {% set type = context.answer|get_item('type') %}
+  {% set subtype = context.answer|get_item('subtype') %}
+
+  {% if subtype not in ('fm_radio', 'shot', 'audiobook', 'podcast', 'podcast-episode')
+     and genre not in ('fairytales', 'poemsforchildren')
+     and type not in ('generative', 'track') %}
+
+    {% set title = context.answer|get_item('track_title') %}
+
+    {% set announce %}
+      {% if not first_play %}
+        {% maybe 0.4 %}
+          {% chooseline %}
+            والآن
+            ومن ثمّ ينتظرنا
+            والآن سأضع
+            اسمع
+            لنستمع إلى التالي
+            من أجلك -
+            المسار التالي -
+            الفقرة التالية من برنامجنا
+            التالي -
+            والآن
+          {% endchooseline %}
+        {% endmaybe %}
+      {% endif %}
+
+      {% if type != 'artist' and type != 'album' %}
+        {% set artists = render_artists(context.answer, short=True) | trim %}
+        {% if artists %}
+          {{ artists }},
+        {% endif %}
+        {% set album = context.answer|get_item('album_title') %}
+        {% set same_album = (album and title.lower() == album.lower()) %}
+        {% if album and not same_album and (album|number_of_readable_tokens) <= 6 %}
+          {{ render_album(album) }},
+        {% endif %}
+      {% endif %}
+
+      {{ render_track(context.answer, title | music_title_shorten) }}
+      {% if same_album %}
+        {% maybe %}
+          من الألبوم ذو نفس الاسم
+        {% endmaybe %}
+      {% endif %}
+      .
+    {% endset %}
+
+    {{ announce | trim | capitalize_first | tts_domain('music') }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase tandem_follower_not_supported %}
+  {% chooseline %}
+    أنا أشغل الموسيقى فقط في مكبر الصوت. من فضلك اطلب مني تشغليها هناك.
+    أشغل جميع الطلبات الموسيقية فقط من خلال مكبر الصوت. اطلب مني تنفيذ الأمر هناك من فضلك.
+  {% endchooseline %}
+{% endphrase %}

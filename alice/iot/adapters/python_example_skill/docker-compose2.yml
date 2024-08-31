@@ -1,0 +1,31 @@
+version: '3'
+services:
+  nginx:
+    restart: always
+    image: cr.yandex/crpomu66r37dm87u8ked/nginx
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - api
+
+  api:
+    restart: always
+    image: cr.yandex/crpomu66r37dm87u8ked/api
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+    command: gunicorn --bind 0.0.0.0:8000 -c /app/config.py app.smart_home_api:app
+
+  front:
+    restart: always
+    image: cr.yandex/crpomu66r37dm87u8ked/front
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+    command: serve -s build -p 8080
+    depends_on:
+      - nginx
+      - api

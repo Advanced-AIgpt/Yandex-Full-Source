@@ -1,0 +1,194 @@
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import calls_not_supported%}
+
+{% phrase no_such_device %}
+  {% chooseline %}
+    Не могу найти ни одного подходящего устройства.
+    Не нахожу подходящего устройства.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase no_such_callable_device %}
+  {% chooseline %}
+    Не могу найти ни одного подходящего для звонка устройства.
+    Не нахожу подходящего для звонка устройства.
+  {% endchooseline %}
+  Пока что я умею звонить только на умные Станции Яндекса.
+{% endphrase %}
+
+{% phrase cant_call_to_device %}
+  {% chooseline %}
+    Пока я умею звонить на колонки только из приложения Яндекс.
+    Пока что я могу позвонить на колонку только из приложения Яндекс.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase who_calls_response %}
+  {% if "incoming_call_from_station" in context.attentions %}
+    {% if context.mics_muted %}
+      Звонок с Яндекс станции. Включите микрофон, чтобы ответить.
+    {% else %}
+      Звонок с Яндекс станции.
+    {% endif %}
+  {% else %}
+    {% if context.mics_muted %}
+      Вам звонит {{ context.peer_name }}. Включите микрофон, чтобы ответить на звонок.
+    {% else %}
+      Вам звонит {{ context.peer_name }}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase irrelevant_response %}
+  {% chooseline %}
+    Извините, я не понимаю.
+    Извините, я вас не поняла.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase call_to_device_response_single %}
+  {% if "device_call_no_supported_directive" in context.attentions %}
+    Пока что я не умею звонить на устройства.
+  {% else %}
+    {% with target = context.target_device | capitalize_first %}
+      {% chooseline %}
+        {{ target }}, набираю.
+        {{ target }}, звоню.
+        {{ target }}, уже набираю.
+        {{ target }}, сейчас позвоним.
+        Набираю {{ target }}.
+        Звоню {{ target }}.
+      {% endchooseline %}
+    {% endwith %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase call_to_device_response_open_quasar %}
+  {% if "push_open_quasar_screen" in context.attentions %}
+      Не понимаю, на какое устройство нужно позвонить. Уточните название, пожалуйста. Отправила ссылку - откройте приложение Яндекса, чтобы посмотреть настройки.
+  {% else %}
+      Не понимаю, на какое устройство нужно позвонить. Уточните название, пожалуйста.
+  {% endif %}
+{% endphrase %}
+
+{% phrase open_quasar_no_such_callable_device %}
+  {% if "push_open_quasar_screen" in context.attentions %}
+      Не нашла устройство, на которое можно было бы позвонить. Отправила ссылку - откройте приложение Яндекса, чтобы посмотреть список устройств.
+  {% else %}
+      Не нашла устройство, на которое можно было бы позвонить. Проверьте список Ваших устройств.
+  {% endif %}
+{% endphrase %}
+
+{% macro call_suggest_impl() %}
+  {% chooseline %}
+    Позвонить в
+    Вызвать
+    Вызывай
+    Вызови
+    Позвони в
+  {% endchooseline %}
+  {{ context.emergency_service_suggest_title | inflect('acc') }}
+{% endmacro %}
+
+{% phrase emergency_suggest_caption %}
+  {{ call_suggest_impl() }}
+{% endphrase %}
+
+{% phrase emergency_suggest_utterance %}
+  {{ call_suggest_impl() }}
+{% endphrase %}
+
+{% macro elari_watch_call_emergency() %}
+  {% chooseline %}
+    Если что-то случилось, нажми и держи яркую кнопку. Родители получат сигнал.
+    Звонить я пока не умею. Если что-то не так, нужно долго держать яркую кнопку.
+    Пока не умею. Но если срочно нужна помощь, нажми и держи яркую кнопку.
+  {% endchooseline %}
+  {% with title = context.emergency_service.title, phone = context.emergency_service.phone %}
+    {% chooseline %}
+      А телефон {{ title | inflect('gen') }} — {{ phone }}, можно позвонить с телефона.
+      Телефон {{ title | inflect('gen') }} — {{ phone }}, можно звонить с телефона.
+      Телефон {{ title | inflect('gen') }} — {{ phone }}, можно набрать с телефона.
+      Телефон {{ title | inflect('gen') }} — {{ phone }}, можно позвонить с телефона.
+    {% endchooseline %}
+  {% endwith %}
+{% endmacro %}
+
+{% phrase emergency_call_response %}
+  {% if "calls_not_supported_on_device" in context.attentions %}
+    {% if context.is_elari_watch %}
+      {{ elari_watch_call_emergency() }}
+    {% else %}
+      {% with title = context.emergency_service.title, phone = context.emergency_service.phone %}
+        {% chooseline %}
+          Телефон {{ title | inflect('gen') }} — {{ phone }}, звоните скорее со своего телефона.
+          {{ title | capitalize_first }} — номер {{ phone }}, наберите на телефоне.
+          {{ phone }} — номер {{ title | inflect('gen') }}, наберите скорее со своего телефона.
+          Я волнуюсь за вас, {{ title }} - номер {{ phone }}, звоните скорее с телефона.
+          Звоните с телефона в {{ title | inflect('acc') }} по номеру {{ phone }} скорее, я за вас переживаю.
+        {% endchooseline %}
+      {% endwith %}
+    {% endif %}
+  {% else %}
+    {% with title = context.emergency_service.title %}
+      {% chooseline %}
+        Набираю {{ title|inflect('acc') }}
+        Звоню {{ title|inflect('dat') }}
+        Уже набираю {{ title|inflect('acc') }}
+        Сейчас позвоним {{ title|inflect('dat') }}
+      {% endchooseline %} ...
+    {% endwith %}
+  {% endif %}
+{% endphrase %}
+
+{% macro elari_watch_calls_not_supported() %}
+  {% chooseline %}
+    Я научусь звонить с часов, но пока не умею.
+    С этим в часах пока не помогу. Но только пока.
+    Я бы и рада, но ещё не научилась. Всё будет.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase no_target_call_response %}
+  {% chooseline %}
+    Куда нужно позвонить?
+    Куда будем звонить?
+    Куда вам нужно позвонить?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase unknown_target_call_response %}
+  {% if "calls_not_supported_on_device" in context.attentions %}
+    {% if context.is_elari_watch %}
+      {{ elari_watch_calls_not_supported() }}
+    {% else %}
+      {{ calls_not_supported() }}
+    {% endif %}
+  {% elif "messenger_calls_enabled" in context.attentions and "messenger_calls_not_supported_on_device" not in context.attentions %}
+    {% chooseline %}
+      Пока что я умею звонить только в экстренные службы и умные Станции Яндекса.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Пока что я умею звонить только в экстренные службы.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase device_shortcut_response %}
+  {% if "unsupported_feature" in context.attentions %}
+    К сожалению, не могу открыть страницу устройств Яндекса здесь.
+  {% else %}
+    {% text %}
+      Без проблем! Давайте выберем, в какую?
+    {% endtext %}
+    {% voice %}
+      Открываю
+    {% endvoice %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase call_to_operator_response %}
+  {% chooseline %}
+    Звоню оператору.
+  {% endchooseline %}
+{% endphrase %}

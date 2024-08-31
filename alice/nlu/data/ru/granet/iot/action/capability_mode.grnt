@@ -1,0 +1,343 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/verbs.grnt
+    iot/action/common.grnt
+    iot/action/modes.grnt
+    iot/common.grnt
+
+form alice.iot.action.capability.mode.ifexp.bg_enable_iot_action_forms:
+    slots:
+        intent_parameters:
+            source:
+                $SetModeSimple
+                $SetPreviousMode
+                $SetNextMode
+                $SetHighFanSpeedMode
+                $SetLowFanSpeedMode
+                $SetMediumFanSpeedMode
+                $SetAutoFanSpeedMode
+                $SetCoffeeMode
+                $SetTeaMode
+                $SetDishwashingMode
+                $SetGlassDishwashingMode
+                $SetRinseDishwashingMode
+                $SetSwingMode
+                $SetProgramMode
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+        mode_value:
+            source:
+                $IotMode
+                $IotNumMode
+                $ShortCommandMode
+                $CookingMode
+                $CoffeeMode
+                $TeaMode
+                $PreRinseMode
+                $GlassMode
+                $SetHighFanSpeedMode.HighFanSpeed
+                $SetLowFanSpeedMode.LowFanSpeed
+                $SetMediumFanSpeedMode.MediumFanSpeed
+                $SetAutoFanSpeedMode.AutoFanSpeed
+                $SetRinseDishwashingMode.RinseDishes
+            type: custom.iot.mode.value
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+        for_datetime:
+            keep_variants: true
+            source: $ForDateTime
+            type: sys.datetime_range
+    root:
+        $SetModeSimple
+        $SetPreviousMode
+        $SetNextMode
+        $SetHighFanSpeedMode
+        $SetLowFanSpeedMode
+        $SetMediumFanSpeedMode
+        $SetAutoFanSpeedMode
+        $SetCoffeeMode
+        $SetTeaMode
+        $SetDishwashingMode
+        $SetGlassDishwashingMode
+        $SetRinseDishwashingMode
+        $SetSwingMode
+        $SetProgramMode
+
+    $SetModeSimple:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode"
+        }
+        [$Set+ $TheMode+ $IotMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Set+ [$ModePreposition* $TheMode+ ((под|с)* $Common.TheNumber)* $IotNumMode+] ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [$Set+ $ShortCommandMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetPreviousMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "relativity_type": "decrease"
+        }
+        [$Set* $Common.Previous+ $TheMode+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetNextMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "relativity_type": "increase"
+        }
+        [$Set* $Common.Next+ $TheMode+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetHighFanSpeedMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "fan_speed"
+        }
+        [($Set|$Common.Increase)+ $HighFanSpeed+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $HighFanSpeed:
+            %type custom.iot.mode.value
+            %value high
+            [($MaxValue|(на|в|до)* $High)+ $FanSpeed+]
+
+        $MaxValue:
+            %lemma
+            [((на|в|до)* (максимум|максимальный|максимально)) ($Unit|$Common.TheLevel)*]
+            %exact
+            на (всю|полную) катушку*
+            до упора
+            до предела
+
+    $SetLowFanSpeedMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "fan_speed"
+        }
+        [($Set|$Common.Decrease)+ $LowFanSpeed+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $LowFanSpeed:
+            %type custom.iot.mode.value
+            %value low
+            [($MinValue|((на|в|до)* максимально* ($Common.Small|$Common.Low|$Common.Weak)))+ $FanSpeed+]
+
+        $MinValue:
+            %lemma
+            [((на|в|до)* (минимум|минимальный)) ($Unit|$Common.TheLevel)*]
+
+    $SetMediumFanSpeedMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "fan_speed"
+        }
+        [($Set|$Common.Decrease|$Common.Increase)+ $MediumFanSpeed+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $MediumFanSpeed:
+            %type custom.iot.mode.value
+            %value medium
+            [$MediumValue+ $FanSpeed+]
+
+        $MediumValue:
+            %lemma
+            [((на|в|до)* средний) ($Unit|$Common.TheLevel)*]
+
+    $SetAutoFanSpeedMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "fan_speed"
+        }
+        [$Set+ $AutoFanSpeed+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $AutoFanSpeed:
+            %type custom.iot.mode.value
+            %value auto
+            [$AutoValue+ $FanSpeed+]
+
+        $AutoValue:
+            %lemma
+            (на|в|до)* $Auto
+
+    $SetCoffeeMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "coffee_mode"
+        }
+        [$MakeCoffee+ $TheMode+ $CoffeeMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Set* $TheMode+ $CoffeeMaking+ $CoffeeMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Common.MakeTeaOrCoffee+ $CoffeeMode+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|кофе|$ModePreposition)*]
+
+        $MakeCoffee:
+            %lemma
+            [$Common.MakeTeaOrCoffee* (кофе|кофейку)]
+
+        $CoffeeMaking:
+            %lemma
+            [(готовка|варка|приготовление)* (кофе|кофейку)]
+
+    $SetTeaMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "tea_mode"
+        }
+        [$MakeTea+ $TheMode+ $TeaMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Set* $TheMode+ $TeaMaking+ $TeaMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Common.MakeTeaOrCoffee+ $TeaMode+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|чай|$ModePreposition)*]
+
+        $MakeTea:
+            %lemma
+            [$Common.MakeTeaOrCoffee* (чай|чайку)]
+
+        $TeaMaking:
+            %lemma
+            [(готовка|варка|приготовление)* (чай|чайку)]
+
+    $SetDishwashingMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "dishwashing"
+        }
+        [$Common.ToWash+ $Common.TheTableware+ ($TheMode|$TheProgram)+ $IotMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Set* ($TheMode|$TheProgram)+ $Dishwashing+ $IotMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetGlassDishwashingMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "dishwashing"
+        }
+        [$Common.ToWash+ $GlassMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Set* ($TheMode|$TheProgram)+ $Common.TheWashing+ $GlassMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetRinseDishwashingMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "dishwashing"
+        }
+        $RinseDishes
+        [$Set* ($TheMode|$TheProgram)+ $PreRinseMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $RinseDishes:
+            %type custom.iot.mode.value
+            %value pre_rinse
+            %lemma
+            [$Common.ToRinse+ $Common.TheTableware+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+    $SetSwingMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "swing"
+        }
+        %lemma
+        [$Set* ($TheMode|$TheProgram)+ $Swing+ $IotMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [направить+ ((направление|поток|обдув|струя)|$Common.TheAir)+ $IotMode+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $Swing:
+            %lemma
+            (направление|поток|обдув|струя) $Common.TheAir*
+
+    $SetProgramMode:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "program"
+        }
+        %lemma
+        [$Set+ $TheProgram+ $IotMode+ ($TheMode|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+        [$Cook+ $CookingMode+ ($TheMode|$TheProgram|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$ModePreposition)*]
+
+        $Cook:
+            $Common.ToBake
+            $Common.ToBoil
+            $Common.ToCook
+            $Common.ToFry
+            $Common.ToStew
+            %force_negative
+            $CookNegative
+
+
+$High:
+    $Common.Big
+    $Common.High
+    $Common.Strong
+
+$FanSpeed:
+    %lemma
+    [($Common.TheSpeed|мощность)* (вентилятор|вентиляция|обдув)]
+
+$Dishwashing:
+    %lemma
+    [$Common.TheWashing $Common.TheTableware]
+
+$CookNegative:
+    %exact
+    (варил|варила|варили|варило|варю|варит|варят)
+    (заварил|заварила|заварили|заварило|заварю|заварит|заварят)
+    (отварил|отварила|отварили|отварило|отварю|отварит|отварят)
+    (сварил|сварила|сварили|сварило|сварю|сварит|сварят)
+    (потушил|потушила|потушили|потушило|потушу|потушит|потушат)
+    (тушил|тушила|тушили|тушило|тушу|тушит|тушат)
+    (выпек|выпекла|выпекли|выпекло|выпеку|выпечет|выпекут)
+    (запек|запекла|запекли|запекло|запеку|запечет|запекут)
+    (испек|испекла|испекли|испекло|испеку|испечет|испекут)
+    (пек|пекла|пекли|пекло)
+    (жарил|жарила|жарили|жарило)
+    (зажарил|зажарила|зажарили|зажарило|зажарю|зажарит|зажарят)
+    (пожарил|пожарила|пожарили|пожарило|пожарю|пожарит|пожарят)
+    (готовил|готовила|готовили|готовило|готовлю|готовит|готовят)
+    (приготовил|приготовила|приготовили|приготовило|приготовлю|приготовит|приготовят)
+    (сготовил|сготовила|сготовили|сготовило|сготовлю|сготовит|сготовят)
+    (делал|делала|делали|делало|делаю|делает|делают)
+    (сделал|сделала|сделали|сделало|сделаю|сделает|сделают)
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Lets
+    $Common.Little
+    все

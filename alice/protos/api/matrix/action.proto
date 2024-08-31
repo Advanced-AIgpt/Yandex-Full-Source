@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "alice/protos/api/matrix/delivery.proto";
+import "alice/protos/api/matrix/technical_push.proto";
+import "alice/protos/api/matrix/user_device.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+// [BEGIN TAction]
+message TAction {
+    // For internal tests
+    // [BEGIN TMockAction]
+    message TMockAction {
+        string Name = 1;
+        uint64 FailUntilConsecutiveFailuresCounterLessThan = 2;
+    }
+    // [END TMockAction]
+
+    // [BEGIN TSendTechnicalPush]
+    message TSendTechnicalPush {
+        NMatrix.NApi.TUserDeviceIdentifier UserDeviceIdentifier = 1;
+
+        // WARNING: TechnicalPushId will be modified for each action attempt
+        // However, it is guaranteed that the new TechnicalPushId will contain the original
+        // TechnicalPushId as a substring
+        NMatrix.NApi.TTechnicalPush TechnicalPush = 2;
+    }
+    // [END TSendTechnicalPush]
+
+    oneof ActionType {
+        TMockAction MockAction = 1;
+        TSendTechnicalPush SendTechnicalPush = 2;
+    }
+}
+// [END TAction]

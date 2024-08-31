@@ -1,0 +1,27 @@
+# Использование версии 2.4 — осознанное: «Version 3 no longer supports the condition form of depends_on».
+
+
+
+version: '2.4'
+services:
+  ydb:
+    image: "registry.yandex.net/yandex-docker-local-ydb:stable"
+    hostname: "localhost"
+    ports:
+      - "2135:2135"
+      - "8765:8765"
+    # Проверяем, что local_ydb полностью запустилась и может обрабатывать запросы
+    healthcheck:
+      test: ["CMD", "/Berkanavt/kikimr/bin/kikimr", "whoami"]
+      interval: 6s
+      timeout: 1s
+      retries: 3
+      start_period: 45s
+
+  # Этот контейнер заставляет `docker-compose up -d` дождаться запуска local_ydb
+  blocker:
+    image: "registry.yandex.net/yandex-docker-local-ydb:stable"
+    command: echo OK
+    depends_on:
+      ydb:
+        condition: service_healthy

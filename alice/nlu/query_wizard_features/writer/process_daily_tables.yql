@@ -1,0 +1,45 @@
+$script = @@
+allowed_wizards = {
+    'wiz-video',
+    'wiz-images',
+    'wiz-weather',
+    'wiz-musicplayer',
+    'wiz-entity_search-all_serp',
+    'wiz-entity_search',
+    'wiz-maps',
+    'wiz-companies',
+    'src-BNO-fair',
+    'wiz-market',
+}
+
+def to_surplus_data(raw_data):
+    surpluses = dict(
+        (wiz, (1, raw_data[wiz].win - raw_data[wiz].loss))
+        for wiz
+        in allowed_wizards
+        if wiz in raw_data
+    )
+    return surpluses
+@@;
+
+$to_surplus_data = Python::to_surplus_data(@@
+    (
+        Dict<String, Struct<avg_pos:Double, click_loss:Double, click_win:Double, loss:Double,
+                            noclick_win:Double, rere_loss:Double, short_click_penalty:Double, win:Double>>
+    ) -> Dict<String, Tuple<Int64, Double>>
+@@, $script);
+
+$distinct_uid = (COUNT(DISTINCT uid));
+$surplus_data = (UDAF($to_surplus_data(surplus), $create_sd, $add_sd, $merge_sd));
+
+INSERT INTO [$OUTPUT_TABLE] WITH TRUNCATE
+SELECT
+    query as key,
+    $distinct_uid as users,
+    COUNT(*) as requests,
+    $surplus_data as surplus_data
+    from [$INPUT_TABLE]
+WHERE LENGTH(query) < 1000 AND service == "www.yandex" AND locale == "ru"
+GROUP BY query
+HAVING $distinct_uid > 2 AND YQL::HasItems($surplus_data);
+

@@ -1,0 +1,57 @@
+package NPersonalCards;
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+message TYDBClientConfig {
+    required string Address = 1 [(NProtoConfig.Help) = "YDB Address."];
+    required string DBName = 2 [(NProtoConfig.Help) = "Name of DB."];
+    required string Path = 3 [(NProtoConfig.Help) = "Path where table will be located."];
+    optional uint32 MaxRetries = 4 [(NProtoConfig.Help) = "Operations' max retries count.", default = 3];
+    optional string OperationTimeout = 5 [(NProtoConfig.Help) = "Operation level timeout.", default = "500ms"];
+    optional string ClientTimeout = 6 [(NProtoConfig.Help) = "Transport level timeout.", default = "1s"];
+    optional string CancelAfter = 7 [(NProtoConfig.Help) = "Cancel after timeout.", default = "500ms"];
+    optional bool PartitioningByLoad = 8 [(NProtoConfig.Help) = "Enable table partitioning by load.", default = true];
+    optional uint32 MinPartitionsCount = 9 [(NProtoConfig.Help) = "Min partotions count if partitioning is enabled.", default = 10];
+    optional uint32 MaxPartitionsCount = 10 [(NProtoConfig.Help) = "Max partotions count if partitioning is enabled.", default = 20];
+    optional uint32 MaxActiveSessions = 11 [(NProtoConfig.Help) = "Max active sessions count in sessions' pool.", default = 1000];
+    optional bool PreferLocalDc = 12 [(NProtoConfig.Help) = "Prefer local dc(NYdb::EBalancingPolicy::UsePreferableLocation).", default = true];
+    optional string ReadReplicasSettings = 13 [(NProtoConfig.Help) = "'READ_REPLICAS_SETTINGS' param's value.", default = "PER_AZ:2"];
+}
+
+message TTvmConfig {
+    optional int32 LogLevel = 1 [(NProtoConfig.Help) = "Log level.", default = 6]; // syslog level: 0(Emergency) ... 7(Debug)
+    repeated uint32 TrustedServicesTvmIds = 2 [(NProtoConfig.Help) = "Tvm ids of trusted services."];
+    optional string Alias = 3 [(NProtoConfig.Help) = "Alias for tvm client, which specified in tvmtool config."];
+
+    message TApi {
+        required uint32 SelfTvmId = 1 [(NProtoConfig.Help) = "Self tvm service id."];
+        // https://wiki.yandex-team.ru/passport/tvm2/user-ticket/#0-opredeljaemsjasokruzhenijami
+        required string BlackboxEnv = 2 [(NProtoConfig.Help) = "Env for blackbox(e.g. 'Prod', 'Test'....)."];
+        optional string DiskCacheDir = 3 [(NProtoConfig.Help) = "Dir where tvm client's cache will be stored.", default = "."];
+    }
+    optional TApi Api = 4 [(NProtoConfig.Help) = "TVM-API options. Ignored if tvm client alias is provided."];
+
+    optional string Host = 5 [(NProtoConfig.Help) = "Host address for tvm client to override."];
+    optional uint32 Port = 6 [(NProtoConfig.Help) = "Port for tvm client to override."];
+    optional uint32 CreationRetriesCount = 7 [(NProtoConfig.Help) = "Retries count to create tvm client.", default = 5];
+}
+
+message TLoggerConfig {
+    optional string Dir = 1 [(NProtoConfig.Help) = "Logs' directory path.", default = "console"];
+    // https://a.yandex-team.ru/arc/trunk/arcadia/library/cpp/logger/priority.h?rev=7890931#L3
+    optional string Level = 2 [(NProtoConfig.Help) = "Log level.", default = "DEBUG"];
+}
+
+message THttpServerConfig {
+    required uint32 Port = 1 [(NProtoConfig.Help) = "Http server port."];
+    required uint32 Threads = 2 [(NProtoConfig.Help) = "Http server threads."];
+}
+
+message TConfig {
+    optional TLoggerConfig Logger = 1 [(NProtoConfig.Help) = "Logger options."];
+    required THttpServerConfig HttpServer = 2 [(NProtoConfig.Help) = "Http server options."];
+    required TYDBClientConfig YDBClient = 3 [(NProtoConfig.Help) = "YDB client options."];
+    required TTvmConfig Tvm = 4 [(NProtoConfig.Help) = "Tvm logic options."];
+    optional bool LockAllMemory = 5 [(NProtoConfig.Help) = "Lock all memory - current and future.", default = true];
+    optional string RequestTimeLimit = 6 [(NProtoConfig.Help) = "Execution time limit for one request.", default = "60ms"];
+}

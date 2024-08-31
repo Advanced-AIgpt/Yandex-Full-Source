@@ -1,0 +1,149 @@
+USE hahn;
+
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA YSON.DisableStrict = 'true';
+
+$from = SELECT max(CAST(substring(Path,Length('home/voice/dialog/skills_discovery') + 1u) as Date)
+           + Interval('P1D'))
+       FROM folder('//home/voice/dialog/skills_discovery')
+       WHERE Type = 'table';
+
+-- $from = CAST('2021-07-29' as Date);
+-- $to = CAST('2021-07-29' as Date);
+$to = CurrentUtcDate();
+
+$script = @@
+from yql.typing import *
+import cyson
+
+def get_skill_id_from_action_name(action_name):
+    return action_name.split(b"__")[-1]
+
+def get_relevant_skills(req):
+    """ try to get list of shown skills. If req is not a discovery card, return None """
+    if b"cards" in req and req[b"cards"] is not None:
+        for card in req[b"cards"]:
+            if b"card_id" in card and card[b"card_id"] == b"relevant_skills" and card.get(b"actions"):
+                return list(map(get_skill_id_from_action_name, card[b"actions"]))
+
+def get_relevant_skills_debug(req):
+    return 'cards' in req and req['cards'] is not None
+
+# todo: script to separate file to arc
+def extract_discovery(session):
+
+    relevant_skills = []
+    clicked_skill = []
+    request_id = None
+    utterance_text = None
+
+    for request in session:
+        maybe_relevant_skills = get_relevant_skills(request.other)
+        if maybe_relevant_skills is not None:
+            # if this req is a discovery
+            if relevant_skills != [] and request_id is not None:
+                # if it is not a first discovery in session, yield all clicks seen so far
+                return {'relevant_skills':relevant_skills,
+                                'clicked_skill':clicked_skill,
+                                'request_id':request_id,
+                                'utterance_text': utterance_text if utterance_text is not None else ""}
+            relevant_skills = maybe_relevant_skills
+            request_id = request.request_id
+            utterance_text = request.utterance_text
+            clicked_skill = []
+        elif (relevant_skills != [] and
+                b"callback" in request.other and
+                request.other[b"callback"] is not None and
+                b"card_id" in request.other[ b"callback"] and
+                request.other[b"callback"][b"card_id"] == b"relevant_skills" and
+                b"action_name" in request.other[b"callback"] and
+                get_skill_id_from_action_name(request.other[b"callback"][b"action_name"]) in relevant_skills):
+            # if we received a callback that indicates a click on discovery
+            clicked_skill.append(get_skill_id_from_action_name(request.other[b"callback"][b"action_name"]))
+        elif (relevant_skills != [] and
+                request.intent and
+                request.intent == "personal_assistant\tscenarios\texternal_skill\tactivate_only" and
+                request.skill_id in request and
+                request.skill_id in relevant_skills):
+            # if we simply saw a skill in session that was in a discovery
+            clicked_skill.append(request.skill_id)
+    if relevant_skills != [] and request_id is not None:
+        # after the session ends, don't forget to yield saved results
+        return {'relevant_skills': relevant_skills,
+                        'clicked_skill': clicked_skill,
+                        'request_id': request_id,
+                        'utterance_text': utterance_text if utterance_text is not None else ""}
+
+extract_discovery._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$extract_discovery = Python3::extract_discovery(
+    Callable<(List<Struct<
+        'request_id':String?,
+        'utterance_text':String?,
+        'intent':String?,
+        'skill_id':String?,
+        'other':Yson?>>)->Struct<
+            'relevant_skills':List<String?>?,
+            'clicked_skill':List<String?>?,
+            'request_id':String?,
+            'utterance_text':String?
+            >>,
+            $script);
+
+$target_folder = 'home/voice/dialog/skills_discovery/';
+$prepared_logs_folder = 'home/alice/dialog/prepared_logs_expboxes';
+
+DEFINE ACTION $insert_discovery_skills_clicks($date) AS
+    $curr_date = CAST($date AS String);
+    $target_path = $target_folder || $curr_date;
+    $alice_logs = $prepared_logs_folder || '/' || $curr_date;
+    -- debug:
+    -- $alice_logs = "home/paskills/kuptservol/prepared_logs_expboxes-example_with_discovery_skill_clicks";
+
+    INSERT INTO $target_path WITH TRUNCATE
+        SELECT
+            result.clicked_skill as clicked_skill,
+            result.relevant_skills as relevant_skills,
+            result.request_id as request_id,
+            result.utterance_text as utterance_text,
+            `uuid`
+        FROM (
+            SELECT
+                $extract_discovery(session) as result,
+                `uuid`
+            FROM(
+                SELECT
+                    AGGREGATE_LIST(AsStruct(
+                        req_id as request_id
+                        ,query as utterance_text
+                        ,intent as intent
+                        ,skill_id as skill_id
+                        ,other as other
+                    )) as session
+                    , `uuid`
+                FROM
+                    $alice_logs
+            GROUP BY `uuid`))
+        WHERE 
+            result.relevant_skills is not null AND
+            result.utterance_text is not null AND
+            result.request_id is not null
+        ;
+
+    COMMIT;
+    -- DISCARD select Ensure(count(distinct fielddate),
+    --     count(distinct fielddate)==1,
+    --     'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', values: '||(ListConcat(ListMap(aggregate_list_distinct(fielddate), ($x) -> {return cast($x as String); }))??'none'))
+    -- FROM $target_path;
+END DEFINE;
+
+$dates = (SELECT ListSortAsc(aggregate_list(d)) FROM (
+    SELECT CAST(substring(Path,Length($prepared_logs_folder) + 1u) as Date) as d
+    FROM folder($prepared_logs_folder)
+    ) as T
+    WHERE d BETWEEN $from and $to);
+
+SELECT $dates;
+EVALUATE FOR $date IN $dates DO $insert_discovery_skills_clicks($date);

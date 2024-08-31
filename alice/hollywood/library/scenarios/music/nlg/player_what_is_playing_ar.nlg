@@ -1,0 +1,72 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import do_not_know,
+                                                                               render_simple_music_answer,
+                                                                               render_music_answer %}
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ar.nlg" import
+  render_fairytale_answer,
+  render_poem_answer,
+  render_audiobook_answer,
+  render_podcast_answer with context %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" import render_radio_title %}
+
+{% phrase render_result %}
+  {% if context.answer %}
+    {% set voice_answer %}
+      {% if not context.is_smart_speaker %}
+        {% set answer = render_simple_music_answer(context.answer) %}
+        {% chooseitem %}
+          أعتقد أن هذا {{ answer }}
+        {% or %}
+          ربما، هذا {{ answer }}
+        {% or %}
+          {{ answer }}، على الأغلب.
+        {% endchooseitem %}
+      {% else %}
+        {% set genre = context.answer|get_item('genre') %}
+        {% set subtype = context.answer|get_item('subtype') %}
+
+        {% if subtype == 'fm_radio' %}
+          الآن يشتغل {{ render_radio_title(context.answer|get_item('title')) }}.
+        {% elif subtype == 'shot' %}
+          {% chooseline %}
+            الآن صورتي على الهواء.
+            سنستمع الآن إلى لقطة مميزة.
+            وهذه لقطتي - خصيصاً لك.
+            هذه لقطتي. أنا سعيدة أنها أثارت اهتمامك.
+          {% endchooseline %}
+        {% elif genre == 'fairytales' %}
+          {{ render_fairytale_answer(req_info, context.answer, what_is_playing=True) }} .
+        {% elif genre == 'poemsforchildren' %}
+          {{ render_poem_answer(context.answer, what_is_playing=True) }} .
+        {% elif subtype == 'audiobook' %}
+          {{ render_audiobook_answer(context.answer, what_is_playing=True) }}
+        {% elif subtype == 'podcast' or subtype == 'podcast-episode' %}
+          {{ render_podcast_answer(context.answer, what_is_playing=True) }}
+        {% else %}
+          {% chooseline %}
+            هذا
+            الآن يشتغل
+          {% endchooseline %}
+          {% if subtype == 'generative' %}
+            موسيقى للأعصاب "{{ context.answer|get_item('title') }}"
+          {% else %}
+            {{ render_music_answer(context.answer, 'nom', False, True) }}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% endset %}
+
+    {% tx %}
+      {{ voice_answer }}
+    {% etx %}
+
+    {% vc %}
+      {{ voice_answer | tts_domain('music') }}
+    {% evc %}
+
+  {% else %}
+    {{ do_not_know() }}
+  {% endif %}
+
+{% endphrase %}

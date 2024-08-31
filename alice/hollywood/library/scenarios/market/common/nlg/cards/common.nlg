@@ -1,0 +1,90 @@
+{% from "alice/hollywood/library/scenarios/market/common/nlg/common.nlg" import
+  market_short_name, currency_sign %}
+
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import
+  font_color, logged_action_url with context %}
+
+{% set REASON_TO_BUY_COLOR = "#29AD2E" %}
+{% set SHOP_COLOR = "#007700" %}
+{% set FADED_COLOR = "#999999" %}
+{% set VIOLET_COLOR = "#6839CF" %}
+{% set BOARDER_COLOR = "#E6E8EB" %}
+
+{% set REASON_TO_BUY_ICON = "https://avatars.mds.yandex.net/get-mpic/1884605/icon02.png/orig" %}
+{% set ADVISER_PERCENTAGE_ICON = "https://avatars.mds.yandex.net/get-mpic/1603927/icon01.png/orig" %}
+
+{% macro render_block(prepend_comma=False, append_comma=False) %}
+  {% set block = caller().strip() %}
+  {% if block %}
+    {% if prepend_comma %}
+      ,
+    {% endif %}
+    {{ block }}
+    {% if append_comma %}
+      ,
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro bold(text) -%}
+  <b>{{- text -}}</b>
+{%- endmacro %}
+
+{% macro render_review_count_text(count) -%}
+  {%- if count -%}
+    {{- count }} {{ "отзыв" | pluralize(count) -}}
+  {%- else -%}
+    Отзывов нет
+  {%- endif -%}
+{% endmacro %}
+
+{% macro _render_price(value, currency) -%}
+  {{- value | int }} {{ currency_sign(currency) -}}
+{%- endmacro %}
+
+{% macro render_price(price) -%}
+  {%- if price.is_from_price -%}
+    от {{ _render_price(price.value, price.currency) -}}
+  {%- else -%}
+    {{- _render_price(price.value, price.currency) -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_sale_price(price) -%}
+  {%- set label -%}
+    было {{ _render_price(price.before_discount, price.currency) -}}
+  {%- endset -%}
+  {{- font_color("#A0A0A0", label) -}}
+{%- endmacro %}
+
+{% macro reduce_text(text, max_len) -%}
+  {%- if text | length <= max_len -%}
+    {{- text -}}
+  {%- else -%}
+    {{- text[: max_len - 3] -}}...
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro calc_ratio(picture) -%}
+  {% if picture.height > 0 %}
+    {{- picture.width / picture.height -}}
+  {% else %}
+    1.0
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_picture(picture, box_ratio = 0.0) %}
+  {
+    "type": "div-image-element",
+    "ratio": {{- [calc_ratio(picture)|float, box_ratio]|max -}},
+    "image_url": "{{- picture.url -}}"
+  }
+{% endmacro %}
+
+{% macro render_action(url) %}
+  "action": {
+    "url": "{{- url -}}",
+    {#- TODO(bas1330) consider using more clever log_ids if it needed -#}
+    "log_id": "market"
+  }
+{% endmacro %}

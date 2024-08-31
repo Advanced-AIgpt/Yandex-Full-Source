@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/extensions;extensionspb";
+option java_package = "ru.yandex.alice.protos.extensions";
+option java_outer_classname = "ExtensionsProto";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MessageOptions {
+    string SpeechKitName = 51234;
+}
+
+extend google.protobuf.MessageOptions {
+    string promo_template_name = 57333;
+}
+
+extend google.protobuf.MessageOptions {
+    string SemanticFrameName = 57331;
+}
+
+extend google.protobuf.MessageOptions {
+    string MMTypedCallbackName = 57335;
+}
+
+extend google.protobuf.FieldOptions {
+    string SlotName = 57431;
+    string SlotType = 57432;
+}
+
+//
+// Options for codegeneration
+//
+
+// SupportedFeatures possible types
+message TFeatureType {
+    enum EFeatureType {
+        // Just return IsSupported("xxx")
+        SimpleSupport = 0;
+        // Check buth IsSupported("xxx") and IsUnsupported("xxx"), return true by default
+        SupportUnsupportTrue = 1;
+        // Check buth IsSupported("xxx") and IsUnsupported("xxx"), return false by default
+        SupportUnsupportFalse = 2;
+        // This feature requires custom user-defined code
+        CustomCode = 3;
+    }
+
+}
+
+//
+// Type of language dependent String fileds (may contain actual localized texts)
+//
+message TLanguageDependent {
+    enum EType {
+        // This string field doesn't contain any language specific values
+        None = 0;
+        // This string must be created from NLG, use <Text> channel
+        NlgText = 1;
+    }
+}
+
+extend google.protobuf.MessageOptions {
+    // Use this option for directives that can't be repeated in response (like tts_play_placeholder)
+    bool single_directive = 56501;
+}
+
+extend google.protobuf.FieldOptions {
+    string feature = 57531;
+    TFeatureType.EFeatureType feature_type = 57532;
+    // Use this option to mark fields containing language specific text.
+    // These fields can't be set directly from C++ code and MUST BE handled via NLG phrase output
+    TLanguageDependent.EType LanguageDependent = 57533;
+
+    // Used to drop fields MessageToStruct serialization if unset (instaed of setting empty by default)
+    bool SkipDefaultSerialization = 52674;
+}

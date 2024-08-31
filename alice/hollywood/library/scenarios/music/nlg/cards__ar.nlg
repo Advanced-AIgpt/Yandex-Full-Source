@@ -1,0 +1,1463 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ar.nlg" import font_color, logged_action_url, open_uri_action with context %}
+
+{% set yandex_music_logo_white = "https://avatars.mds.yandex.net/get-bass/1961516/logo/orig" %}
+{% set yandex_music_logo_black = "https://avatars.mds.yandex.net/get-bass/787408/logo/orig" %}
+
+{% macro get_artists(artists, html_escape=True) -%}
+    {% if artists -%}
+        {% for artist in artists -%}
+            {%- if html_escape -%}
+                {{ artist.name | html_escape -}}
+            {%- else -%}
+                {{ artist.name | div2_escape -}}
+            {%- endif -%}
+            {{ ", " if not loop.last -}}
+        {% endfor %}
+    {%- endif %}
+{%- endmacro %}
+
+
+{% macro render_track_card(music_answer) -%}
+  {% set subtitle = get_artists(music_answer.artists) if music_answer.subtype != 'podcast-episode' else music_answer.album.title %}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'البحث في ياندكس' if context.data.not_available else ('تشغيل' if context.data.play_inside_app else 'الاستماع إلى ياندكس.موسيقى') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.title | html_escape }}",
+            "title_style": "title_s",
+            "text": "{{ font_color('#7f7f7f', subtitle | div2_escape) }}",
+            "text_style": "text_m",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text | div2_escape) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo_black }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+
+{% macro render_artist_card(music_answer) -%}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'البحث في ياندكس' if context.data.not_available else ('تشغيل' if context.data.play_inside_app else 'الاستماع إلى ياندكس.موسيقى') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.name | html_escape }}",
+            "title_style": "title_s",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text | div2_escape) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo_black }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+
+{% macro render_playlist_card(music_answer) -%}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'البحث في ياندكس' if context.data.not_available else ('تشغيل' if context.data.play_inside_app else 'الاستماع إلى ياندكس.موسيقى') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.title | html_escape }}",
+            "title_style": "title_s",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text | div2_escape) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo_black }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+{% macro render_background_and_yamusic_log(music_answer) -%}
+    {
+        "background": [
+            {
+                "angle": 94,
+
+                {% if music_answer.mainColor and music_answer.secondColor %}
+                    "colors": [
+                        "{{ music_answer.mainColor }}",
+                        "{{ music_answer.secondColor }}"
+                    ],
+                {% else %}
+                    "colors": [
+                        "{{ '#F2F3F5' }}",
+                        "{{ '#F2F3F5' }}"
+                    ],
+                {% endif %}
+
+                "type": "gradient"
+            }
+        ],
+        "delimiter_style": {
+            "color": "{{ '#00000000' }}"
+        },
+        "height": {
+            "type": "fixed",
+            "unit": "sp",
+            "value": 102
+        },
+        "type": "separator",
+        "width": {
+            "type": "match_parent"
+        }
+    },
+    {
+        "height": {
+            "type": "fixed",
+            "unit": "sp",
+            "value": 14
+        },
+
+        {% if music_answer.mainColor and music_answer.secondColor and not music_answer.blackLogoNeeded %}
+            "image_url": "{{ yandex_music_logo_white }}",
+        {% else %}
+            "image_url": "{{ yandex_music_logo_black }}",
+        {% endif %}
+
+        "margins": {
+            "right": 16,
+            "top": 16
+        },
+        "alignment_horizontal": "right",
+        "scale": "fit",
+        "type": "image",
+        "alpha": 0.4,
+        "width": {
+            "type": "fixed",
+            "unit": "sp",
+            "value": 88
+        }
+    }
+{%- endmacro %}
+
+{% macro get_action_url_for_additional_card(search_text) -%}
+    {{
+        logged_action_url([
+            client_action_directive(
+                name="type_silent",
+                sub_name="music_type_silent",
+                payload={
+                    "text": search_text
+                }
+            ),
+            server_action_directive(
+                name="@@mm_semantic_frame",
+                payload={
+                    "typed_semantic_frame": {
+                        "music_play_semantic_frame": {
+                            "search_text": {
+                                "string_value": search_text
+                            }
+                        }
+                    },
+                    "analytics": {
+                        "origin": "Scenario",
+                        "purpose": "Play from Music new search app card " + search_text
+                    }
+                }
+            )
+        ], additional_logged_payload=dict(intent_name="music_play")) }}
+{%- endmacro %}
+
+{% macro additional_card_template() -%}
+    {
+        "type": "container",
+        "background": [
+            {
+                "color": "{{ '#F2F3F5' }}",
+                "type": "solid"
+            }
+        ],
+        "border": {
+            "corner_radius": 12
+        },
+        "height": {
+            "type": "match_parent"
+        },
+        "width": {
+            "type": "fixed",
+            "unit": "sp",
+            "value": 180
+        },
+        "orientation": "horizontal",
+        "action": {
+            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+            "$url": "action_url"
+        },
+        "items": [
+            {
+                "type": "image",
+                "$image_url": "image_url",
+                "height": {
+                    "type": "match_parent"
+                },
+                "width": {
+                    "type": "fixed",
+                    "unit": "sp",
+                    "value": 60
+                },
+                "scale": "fit"
+            },
+            {
+                "font_size": 13,
+                "font_weight": "medium",
+                "line_height": 16,
+                "margins": {
+                    "left": 10,
+                    "top": 15
+                },
+                "height": {
+                    "type": "fixed",
+                    "unit": "sp",
+                    "value": 32
+                },
+                "width": {
+                    "type": "fixed",
+                    "unit": "sp",
+                    "value": 100
+                },
+                "$text": "text",
+                "text_color": "{{ '#CC000000' }}",
+                "text_alignment_vertical": "center",
+                "max_lines": 2,
+                "type": "text"
+            }
+        ]
+    }
+{%- endmacro %}
+
+{% macro render_search_app_track_card(music_answer) -%}
+    {% set subtitle = get_artists(music_answer.artists, html_escape=False) if music_answer.subtype != 'podcast-episode' else music_answer.album.title %}
+    {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+    {
+        "templates": {
+            "additional_card":
+                {{ additional_card_template() }}
+        },
+        "card": {
+            "log_id": "card",
+            "states": [
+                {
+                    "div": {
+                        "alignment_horizontal": "left",
+                        "alignment_vertical": "top",
+                        "background": [
+                            {
+                                "color": "{{ '#ffffff' }}",
+                                "type": "solid"
+                            }
+                        ],
+                        "border": {
+                            "corner_radius": 16,
+                            "stroke": {
+                                "color": "{{ '#E2E4EB' }}"
+                            }
+                        },
+                        "content_alignment_horizontal": "left",
+                        "content_alignment_vertical": "top",
+                        "orientation": "vertical",
+                        "type": "container",
+                        {% if not context.is_ios %}
+                            "margins": {
+                                "left": 12,
+                                "right": 12,
+                                "top": 0
+                            },
+                        {% endif %}
+                        "paddings": {
+                            "bottom": 20
+                        },
+                        "items": [
+                            {
+                                "type": "container",
+                                "orientation": "overlap",
+                                "items": [
+
+                                    {{ render_background_and_yamusic_log(music_answer) }}
+                                    ,
+
+                                    {
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        },
+                                        "image_url": "https://avatars.mds.yandex.net/get-bass/1961516/rectangle/orig",
+                                        "margins": {
+                                            "left": 0,
+                                            "top": 0
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        }
+                                    },
+                                    {
+                                        "action": {
+                                            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                            "url": "{{ action_url + '&fullScreen=true' }}"
+                                        },
+                                        "border": {
+                                            "corner_radius": 12
+                                        },
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        },
+                                        "image_url": "{{ context.data.coverUri }}",
+                                        "margins": {
+                                            "left": 16,
+                                            "top": 16
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "container",
+                                "width": {
+                                    "type": "wrap_content"
+                                },
+                                "orientation": "horizontal",
+                                "margins": {
+                                    "left": 16,
+                                    "top": 0
+                                },
+                                "content_alignment_vertical": "center",
+                                "items": [
+                                    {
+                                        "font_size": 16,
+                                        "font_weight": "medium",
+                                        "line_height": 20,
+                                        "text": "{{ music_answer.title | div2_escape }}",
+                                        "text_color": "{{ '#CC000000' }}",
+                                        "text_alignment_vertical": "center",
+                                        "type": "text"
+                                    }
+                                    {% if music_answer.contentWarning and music_answer.contentWarning == 'explicit' %}
+                                        ,
+                                        {
+                                            "type": "image",
+                                            "image_url": "https://avatars.mds.yandex.net/get-bass/934837/explicit/orig",
+                                            "height": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 11
+                                            },
+                                            "width": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 11
+                                            },
+                                            "margins": {
+                                                "left": 8
+                                            },
+                                            "alignment_vertical": "center",
+                                            "scale": "fit"
+                                        }
+                                    {% endif %}
+                                ]
+                            },
+                            {
+                                "font_size": 13,
+                                "font_weight": "regular",
+                                "line_height": 16,
+                                "margins": {
+                                    "left": 16,
+                                    "top": 4
+                                },
+                                "text": "{{ subtitle | div2_escape }}",
+                                "text_color": "{{ '#919CB5' }}",
+                                "type": "text"
+                            }
+                            {% if music_answer.artists %}
+                                ,
+                                {
+                                    "type": "container",
+                                    "orientation": "horizontal",
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 12
+                                    },
+                                    "items": [
+                                        {
+                                            "action": {
+                                                "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                                "url":
+                                                    "{{
+                                                    logged_action_url([
+                                                        client_action_directive(
+                                                            name="type_silent",
+                                                            sub_name="music_artist_type_silent",
+                                                            payload={
+                                                                "text": music_answer.artists[0].name
+                                                            }
+                                                        ),
+                                                        server_action_directive(
+                                                            name="@@mm_semantic_frame",
+                                                            payload={
+                                                                "typed_semantic_frame": {
+                                                                    "music_play_semantic_frame": {
+                                                                        "search_text": {
+                                                                            "string_value": music_answer.artists[0].name
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "analytics": {
+                                                                    "origin": "Scenario",
+                                                                    "purpose": "Play artist"
+                                                                }
+                                                            }
+                                                        )
+                                                    ], additional_logged_payload=dict(intent_name="music_play")) }}"
+                                            },
+                                            "background": [
+                                                {
+                                                    "color": "{{ '#6839CF' }}",
+                                                    "type": "solid"
+                                                }
+                                            ],
+                                            "border": {
+                                                "corner_radius": 12
+                                            },
+                                            "font_size": 16,
+                                            "font_weight": "medium",
+                                            "height": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 40
+                                            },
+                                            "line_height": 20,
+                                            "text": "المنشد",
+                                            "text_alignment_horizontal": "center",
+                                            "text_alignment_vertical": "center",
+                                            "text_color": "{{ '#FFFFFF' }}",
+                                            "type": "text",
+                                            "width": {
+                                                "type": "wrap_content"
+                                            },
+                                            "paddings": {
+                                                "left": 12,
+                                                "right": 12,
+                                                "bottom": 2
+                                            }
+                                        }
+                                        {% if music_answer.lyricsSearchUri %}
+                                            ,
+                                            {
+                                                "action": {
+                                                    "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                                    "url": "{{ music_answer.lyricsSearchUri }}"
+                                                },
+                                                "background": [
+                                                    {
+                                                        "color": "{{ '#F2F3F5' }}",
+                                                        "type": "solid"
+                                                    }
+                                                ],
+                                                "border": {
+                                                    "corner_radius": 12
+                                                },
+                                                "font_size": 16,
+                                                "font_weight": "medium",
+                                                "height": {
+                                                    "type": "fixed",
+                                                    "unit": "sp",
+                                                    "value": 40
+                                                },
+                                                "line_height": 20,
+                                                "text": "نص الأغنية",
+                                                "text_alignment_horizontal": "center",
+                                                "text_alignment_vertical": "center",
+                                                "text_color": "{{ '#6839CF' }}",
+                                                "type": "text",
+                                                "width": {
+                                                    "type": "wrap_content"
+                                                },
+                                                "paddings": {
+                                                    "left": 12,
+                                                    "right": 12,
+                                                    "bottom": 2
+                                                },
+                                                "margins": {
+                                                    "left": 8
+                                                }
+                                            }
+                                        {% elif not context.is_ios %}
+                                            ,
+                                            {
+                                                "action": {
+                                                    "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                                    "url": "{{ context.data.redirectUri }}"
+                                                },
+                                                "background": [
+                                                    {
+                                                        "color": "{{ '#F2F3F5' }}",
+                                                        "type": "solid"
+                                                    }
+                                                ],
+                                                "border": {
+                                                    "corner_radius": 12
+                                                },
+                                                "font_size": 16,
+                                                "font_weight": "medium",
+                                                "height": {
+                                                    "type": "fixed",
+                                                    "unit": "sp",
+                                                    "value": 40
+                                                },
+                                                "line_height": 20,
+                                                "text": "في ياندكس.موسيقى",
+                                                "text_alignment_horizontal": "center",
+                                                "text_alignment_vertical": "center",
+                                                "text_color": "{{ '#6839CF' }}",
+                                                "type": "text",
+                                                "width": {
+                                                    "type": "wrap_content"
+                                                },
+                                                "paddings": {
+                                                    "left": 12,
+                                                    "right": 12,
+                                                    "bottom": 2
+                                                },
+                                                "margins": {
+                                                    "left": 8
+                                                }
+                                            }
+                                        {% endif %}
+                                    ]
+                                }
+                            {% endif %}
+                            {% if music_answer.additionalTracks or music_answer.additionalArtists %}
+                                ,
+                                {
+                                    "font_size": 13,
+                                    "font_weight": "regular",
+                                    "line_height": 16,
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 20
+                                    },
+                                    "text": "قد تعجبك",
+                                    "text_color": "{{ '#919CB5' }}",
+                                    "type": "text"
+                                },
+                                {
+                                    "type": "gallery",
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 12
+                                    },
+                                    "item_spacing": 8,
+                                    "height": {
+                                        "type": "fixed",
+                                        "unit": "sp",
+                                        "value": 60
+                                    },
+                                    "items": [
+                                        {% if music_answer.additionalTracks %}
+                                            {% for additionalTrack in music_answer.additionalTracks -%}
+                                                {% if loop.index <= 5 %}
+                                                    {
+                                                        "type": "additional_card",
+                                                        "image_url": "{{ additionalTrack.imageUri }}",
+                                                        "text": "{{ additionalTrack.title | div2_escape }}",
+                                                        {% if music_answer.artists %}
+                                                            "action_url": "{{ get_action_url_for_additional_card(music_answer.artists[0].name + ' ' + additionalTrack.title) }}"
+                                                        {% else %}
+                                                            "action_url": "{{ get_action_url_for_additional_card(additionalTrack.title) }}"
+                                                        {% endif %}
+                                                    }
+                                                    {{ "," if not loop.last and loop.index <= 4 -}}
+                                                 {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for additionalArtist in music_answer.additionalArtists -%}
+                                                {% if loop.index <= 5 %}
+                                                    {
+                                                        "type": "additional_card",
+                                                        "image_url": "{{ additionalArtist.imageUri }}",
+                                                        "text": "{{ additionalArtist.name | div2_escape }}",
+                                                        "action_url": "{{ get_action_url_for_additional_card(additionalArtist.name) }}"
+                                                    }
+                                                    {{ "," if not loop.last and loop.index <= 4 -}}
+                                                 {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    ]
+                                }
+                            {% endif %}
+                        ]
+                    },
+                    "state_id": 1
+                }
+            ],
+            "type": "div2"
+        },
+        "hide_borders" : {% if context.is_ios %} false {% else %} true {% endif %}
+    }
+{%- endmacro %}
+
+{% macro render_search_app_artist_card(music_answer) -%}
+    {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+    {
+        "templates": {
+            "additional_card":
+                {{ additional_card_template() }}
+        },
+        "card": {
+            "log_id": "card",
+            "states": [
+                {
+                    "div": {
+                        "alignment_horizontal": "left",
+                        "alignment_vertical": "top",
+                        "background": [
+                            {
+                                "color": "{{ '#ffffff' }}",
+                                "type": "solid"
+                            }
+                        ],
+                        "border": {
+                            "corner_radius": 16,
+                            "stroke": {
+                                "color": "{{ '#E2E4EB' }}"
+                            }
+                        },
+                        "content_alignment_horizontal": "left",
+                        "content_alignment_vertical": "top",
+                        "orientation": "vertical",
+                        "type": "container",
+                        {% if not context.is_ios %}
+                            "margins": {
+                                "left": 12,
+                                "right": 12,
+                                "top": 0,
+                                "bottom": 0
+                            },
+                        {% endif %}
+                        "paddings": {
+                            "bottom": 20
+                        },
+                        "items": [
+                            {
+                                "type": "container",
+                                "orientation": "overlap",
+                                "items": [
+
+                                    {{ render_background_and_yamusic_log(music_answer) }}
+                                    ,
+
+                                    {
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        },
+                                        "image_url": "https://avatars.mds.yandex.net/get-bass/1961516/rectangle/orig",
+                                        "margins": {
+                                            "left": 0,
+                                            "top": 0
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        }
+                                    },
+                                    {
+                                        "action": {
+                                            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                            "url": "{{ action_url + '&fullScreen=true' }}"
+                                        },
+                                        "border": {
+                                            "corner_radius": 12
+                                        },
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        },
+                                        "image_url": "{{ context.data.coverUri }}",
+                                        "margins": {
+                                            "left": 16,
+                                            "top": 16
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "font_size": 16,
+                                "font_weight": "medium",
+                                "line_height": 20,
+                                "text": "{{ music_answer.name | div2_escape }}",
+                                "text_color": "{{ '#CC000000' }}",
+                                "text_alignment_vertical": "center",
+                                "type": "text",
+                                "margins": {
+                                    "left": 16,
+                                    "top": 0
+                                }
+                            },
+                            {% if music_answer.likesCount %}
+                                {
+                                    "type": "container",
+                                    "width": {
+                                        "type": "wrap_content"
+                                    },
+                                    "orientation": "horizontal",
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 4
+                                    },
+                                    "content_alignment_vertical": "center",
+                                    "items": [
+                                        {
+                                            "type": "image",
+                                            "image_url": "https://avatars.mds.yandex.net/get-bass/1593034/heart_filled/orig",
+                                            "height": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 17
+                                            },
+                                            "width": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 16
+                                            },
+                                            "margins": {
+                                                "left": 1.33
+                                            },
+                                            "alignment_vertical": "center",
+                                            "scale": "fit"
+                                        },
+                                        {
+                                            "font_size": 13,
+                                            "font_weight": "regular",
+                                            "line_height": 16,
+                                            "text": "{{ music_answer.likesCount }}",
+                                            "text_color": "{{ '#919CB5' }}",
+                                            "text_alignment_vertical": "center",
+                                            "margins": {
+                                                "left": 5.33
+                                            },
+                                            "type": "text"
+                                        }
+                                    ]
+                                },
+                            {% endif %}
+                            {
+                                "type": "container",
+                                "orientation": "horizontal",
+                                "margins": {
+                                    "left": 16,
+                                    "top": 12
+                                },
+                                "items": [
+                                    {
+                                        "action": {
+                                            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                            "url": "{{ action_url + '&fullScreen=true' }}"
+                                        },
+                                        "background": [
+                                            {
+                                                "color": "{{ '#6839CF' }}",
+                                                "type": "solid"
+                                            }
+                                        ],
+                                        "border": {
+                                            "corner_radius": 12
+                                        },
+                                        "font_size": 16,
+                                        "font_weight": "medium",
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 40
+                                        },
+                                        "line_height": 20,
+                                        "text": "جميع المقاطع",
+                                        "text_alignment_horizontal": "center",
+                                        "text_alignment_vertical": "center",
+                                        "text_color": "{{ '#FFFFFF' }}",
+                                        "type": "text",
+                                        "width": {
+                                            "type": "wrap_content"
+                                        },
+                                        "paddings": {
+                                            "left": 12,
+                                            "right": 12,
+                                            "bottom": 2
+                                        }
+                                    }
+                                    {% if not context.is_ios %}
+                                        ,
+                                        {
+                                            "action": {
+                                                "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                                "url": "{{ context.data.redirectUri }}"
+                                            },
+                                            "background": [
+                                                {
+                                                    "color": "{{ '#F2F3F5' }}",
+                                                    "type": "solid"
+                                                }
+                                            ],
+                                            "border": {
+                                                "corner_radius": 12
+                                            },
+                                            "font_size": 16,
+                                            "font_weight": "medium",
+                                            "height": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 40
+                                            },
+                                            "line_height": 20,
+                                            "text": "في ياندكس.موسيقى",
+                                            "text_alignment_horizontal": "center",
+                                            "text_alignment_vertical": "center",
+                                            "text_color": "{{ '#6839CF' }}",
+                                            "type": "text",
+                                            "width": {
+                                                "type": "wrap_content"
+                                            },
+                                            "paddings": {
+                                                "left": 12,
+                                                "right": 12,
+                                                "bottom": 2
+                                            },
+                                            "margins": {
+                                                "left": 8
+                                            }
+                                        }
+                                    {% endif %}
+                                ]
+                            }
+                            {% if music_answer.additionalArtists %}
+                                ,
+                                {
+                                    "font_size": 13,
+                                    "font_weight": "regular",
+                                    "line_height": 16,
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 20
+                                    },
+                                    "text": "قد تعجبك",
+                                    "text_color": "{{ '#919CB5' }}",
+                                    "type": "text"
+                                },
+                                {
+                                    "type": "gallery",
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 12
+                                    },
+                                    "item_spacing": 8,
+                                    "height": {
+                                        "type": "fixed",
+                                        "unit": "sp",
+                                        "value": 60
+                                    },
+                                    "items": [
+                                        {% for additionalArtist in music_answer.additionalArtists -%}
+                                            {% if loop.index <= 5 %}
+                                                {
+                                                    "type": "additional_card",
+                                                    "image_url": "{{ additionalArtist.imageUri }}",
+                                                    "text": "{{ additionalArtist.name | div2_escape }}",
+                                                    "action_url": "{{ get_action_url_for_additional_card(additionalArtist.name) }}"
+                                                }
+                                                {{ "," if not loop.last and loop.index <= 4 -}}
+                                            {% endif %}
+                                        {% endfor %}
+                                    ]
+                                }
+                            {% endif %}
+                        ]
+                    },
+                    "state_id": 1
+                }
+            ],
+            "type": "div2"
+        },
+        "hide_borders" : {% if context.is_ios %} false {% else %} true {% endif %}
+    }
+{%- endmacro %}
+
+{% macro render_search_app_playlist_card(music_answer) -%}
+    {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+    {
+        "templates": {
+            "additional_card":
+                {{ additional_card_template() }}
+        },
+        "card": {
+            "log_id": "card",
+            "states": [
+                {
+                    "div": {
+                        "alignment_horizontal": "left",
+                        "alignment_vertical": "top",
+                        "background": [
+                            {
+                                "color": "{{ '#ffffff' }}",
+                                "type": "solid"
+                            }
+                        ],
+                        "border": {
+                            "corner_radius": 16,
+                            "stroke": {
+                                "color": "{{ '#E2E4EB' }}"
+                            }
+                        },
+                        "content_alignment_horizontal": "left",
+                        "content_alignment_vertical": "top",
+                        "orientation": "vertical",
+                        "type": "container",
+                        {% if not context.is_ios %}
+                            "margins": {
+                                "left": 12,
+                                "right": 12,
+                                "top": 0,
+                                "bottom": 0
+                            },
+                        {% endif %}
+                        "paddings": {
+                            "bottom": 20
+                        },
+                        "items": [
+                            {
+                                "type": "container",
+                                "orientation": "overlap",
+                                "items": [
+
+                                    {{ render_background_and_yamusic_log(music_answer) }}
+                                    ,
+
+                                    {
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        },
+                                        "image_url": "https://avatars.mds.yandex.net/get-bass/1961516/rectangle/orig",
+                                        "margins": {
+                                            "left": 0,
+                                            "top": 0
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 142
+                                        }
+                                    },
+                                    {
+                                        "action": {
+                                            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                            "url": "{{ action_url + '&fullScreen=true' }}"
+                                        },
+                                        "border": {
+                                            "corner_radius": 12
+                                        },
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        },
+                                        "image_url": "{{ context.data.coverUri }}",
+                                        "margins": {
+                                            "left": 16,
+                                            "top": 16
+                                        },
+                                        "scale": "fit",
+                                        "type": "image",
+                                        "width": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 110
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "font_size": 16,
+                                "font_weight": "medium",
+                                "line_height": 20,
+                                "text": "{{ music_answer.title | div2_escape }}",
+                                "text_color": "{{ '#CC000000' }}",
+                                "text_alignment_vertical": "center",
+                                "type": "text",
+                                "margins": {
+                                    "left": 16,
+                                    "top": 0
+                                }
+                            },
+                            {
+                                "type": "container",
+                                "orientation": "horizontal",
+                                "margins": {
+                                    "left": 16,
+                                    "top": 12
+                                },
+                                "items": [
+                                    {
+                                        "action": {
+                                            "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                            "url": "{{ action_url + '&fullScreen=true' }}"
+                                        },
+                                        "background": [
+                                            {
+                                                "color": "{{ '#6839CF' }}",
+                                                "type": "solid"
+                                            }
+                                        ],
+                                        "border": {
+                                            "corner_radius": 12
+                                        },
+                                        "font_size": 16,
+                                        "font_weight": "medium",
+                                        "height": {
+                                            "type": "fixed",
+                                            "unit": "sp",
+                                            "value": 40
+                                        },
+                                        "line_height": 20,
+                                        "text": "جميع المقاطع",
+                                        "text_alignment_horizontal": "center",
+                                        "text_alignment_vertical": "center",
+                                        "text_color": "{{ '#FFFFFF' }}",
+                                        "type": "text",
+                                        "width": {
+                                            "type": "wrap_content"
+                                        },
+                                        "paddings": {
+                                            "left": 12,
+                                            "right": 12,
+                                            "bottom": 2
+                                        }
+                                    }
+                                    {% if not context.is_ios %}
+                                        ,
+                                        {
+                                            "action": {
+                                                "log_id": "{{ context.data.log_id or 'music_recognizer' }}",
+                                                "url": "{{ context.data.redirectUri }}"
+                                            },
+                                            "background": [
+                                                {
+                                                    "color": "{{ '#F2F3F5' }}",
+                                                    "type": "solid"
+                                                }
+                                            ],
+                                            "border": {
+                                                "corner_radius": 12
+                                            },
+                                            "font_size": 16,
+                                            "font_weight": "medium",
+                                            "height": {
+                                                "type": "fixed",
+                                                "unit": "sp",
+                                                "value": 40
+                                            },
+                                            "line_height": 20,
+                                            "text": "في ياندكس.موسيقى",
+                                            "text_alignment_horizontal": "center",
+                                            "text_alignment_vertical": "center",
+                                            "text_color": "{{ '#6839CF' }}",
+                                            "type": "text",
+                                            "width": {
+                                                "type": "wrap_content"
+                                            },
+                                            "paddings": {
+                                                "left": 12,
+                                                "right": 12,
+                                                "bottom": 2
+                                            },
+                                            "margins": {
+                                                "left": 8
+                                            }
+                                        }
+                                    {% endif %}
+                                ]
+                            }
+                            {% if music_answer.additionalPlaylists %}
+                                ,
+                                {
+                                    "font_size": 13,
+                                    "font_weight": "regular",
+                                    "line_height": 16,
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 20
+                                    },
+                                    "text": "قد تعجبك",
+                                    "text_color": "{{ '#919CB5' }}",
+                                    "type": "text"
+                                },
+                                {
+                                    "type": "gallery",
+                                    "margins": {
+                                        "left": 16,
+                                        "top": 12
+                                    },
+                                    "item_spacing": 8,
+                                    "height": {
+                                        "type": "fixed",
+                                        "unit": "sp",
+                                        "value": 60
+                                    },
+                                    "items": [
+                                        {% for additionalPlaylist in music_answer.additionalPlaylists -%}
+                                            {% if loop.index <= 5 %}
+                                                {
+                                                    "type": "additional_card",
+                                                    "image_url": "{{ additionalPlaylist.imageUri }}",
+                                                    "text": "{{ additionalPlaylist.title | div2_escape }}",
+                                                    "action_url": "{{ get_action_url_for_additional_card('قائمة تشغيل ' + additionalPlaylist.title) }}"
+                                                }
+                                                {{ "," if not loop.last and loop.index <= 4 -}}
+                                            {% endif %}
+                                        {% endfor %}
+                                    ]
+                                }
+                            {% endif %}
+                        ]
+                    },
+                    "state_id": 1
+                }
+            ],
+            "type": "div2"
+        },
+        "hide_borders" : {% if context.is_ios %} false {% else %} true {% endif %}
+    }
+{%- endmacro %}
+
+{% card music__track %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_track_card(answer_slot) }}
+{% endcard %}
+
+{% card music__album %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_track_card(answer_slot) }}
+{% endcard %}
+
+{% card music__artist %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_artist_card(answer_slot) }}
+{% endcard %}
+
+{% card music__playlist %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_playlist_card(answer_slot) }}
+{% endcard %}
+
+{% card music_search_app__track %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_search_app_track_card(answer_slot) }}
+{% endcard %}
+
+{% card music_search_app__album %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_search_app_track_card(answer_slot) }}
+{% endcard %}
+
+{% card music_search_app__artist %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_search_app_artist_card(answer_slot) }}
+{% endcard %}
+
+{% card music_search_app__playlist %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ render_search_app_playlist_card(answer_slot) }}
+{% endcard %}

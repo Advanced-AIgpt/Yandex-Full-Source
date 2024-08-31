@@ -1,0 +1,78 @@
+LIBRARY()
+
+OWNER(g:alice)
+
+COMPILE_NLG(
+    action_directives_ru.nlg
+    assign_self_ru.nlg
+    block_assign_ru.nlg
+    block_assign_nested_ru.nlg
+    block_assign_selfref_ru.nlg
+    block_filter_ru.nlg
+    builtin_methods_ru.nlg
+    call_block_ru.nlg
+    caller_params_ru.nlg
+    card_ru.nlg
+    chooseitem_ru.nlg
+    concat_ru.nlg
+    cond_ru.nlg
+    cond_expr_ru.nlg
+    dates_ar.nlg
+    dates_ru.nlg
+    dates_tr.nlg
+    do_stmt_ru.nlg
+    error_runtime_ru.nlg
+    experiment_flag_ru.nlg
+    filter_random_ru.nlg
+    filters_ru.nlg
+    for_loop_ru.nlg
+    form_ru.nlg
+    from_import_first_ru.nlg
+    global_builtin_ru.nlg
+    global_for_ru.nlg
+    global_macro_def_ru.nlg
+    global_macro_usage_ru.nlg
+    global_var_ru.nlg
+    globals_base_ru.nlg
+    globals_from_import_ru.nlg
+    globals_import_ru.nlg
+    import_ru.nlg
+    import_base_ru.nlg
+    import_intransitive_ru.nlg
+    imports_ru.nlg
+    inflect_ru.nlg
+    intent_name_ru.nlg
+    literals_ru.nlg
+    macro_params_ru.nlg
+    macro_params_unused_ru.nlg
+    macros_ru.nlg
+    maybe_ru.nlg
+    multiple_newlines_ru.nlg
+    nlgimport_bottom_ru.nlg
+    nlgimport_middle_ru.nlg
+    nlgimport_top_ru.nlg
+    operators_ru.nlg
+    scope_ru.nlg
+    with_shadowing_ru.nlg
+    slice_ru.nlg
+    subscript_ru.nlg
+    test_datetime_ru.nlg
+    tests_ru.nlg
+    truth_value_ru.nlg
+    tts_domain_ru.nlg
+    tuple_assign_ru.nlg
+    unary_operators_ru.nlg
+    undefined_in_ru.nlg
+    voice_text_ru.nlg
+    voice_text_chooseline_ru.nlg
+    voice_text_filters_ru.nlg
+    voice_text_macros_ru.nlg
+)
+
+END()
+
+RECURSE_FOR_TESTS(
+    localized_example/ut
+    import_example/ut
+    ut
+)

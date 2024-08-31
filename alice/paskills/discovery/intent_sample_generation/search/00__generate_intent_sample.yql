@@ -1,0 +1,57 @@
+USE hahn;
+
+$from_date = '2020-01-20';
+$to_date = '2020-02-05';
+
+$sample_size = 20000000;
+
+$alisa_skills_rec_logs_folder = '//home/logfeller/logs/alisa-skills-rec-log/1d';
+$out_results = String::JoinFromList(AsList('//home/paskills/discovery/datasets/markup/raw/search/',$from_date,'-',$to_date), "");
+
+$utterance_capture = Re2::Capture(".*utterance=(?P<utterance>[^&]*)");
+
+$alisa_skills_rec_logs_intent_search = (
+    SELECT
+        *
+    FROM
+        RANGE($alisa_skills_rec_logs_folder,$from_date, $to_date)
+    WHERE
+        CgiParams LIKE 'card_name=discovery_bass_search%');
+
+$count = SELECT COUNT(*) FROM $alisa_skills_rec_logs_intent_search;
+
+SELECT $count;
+
+$alisa_skills_rec_logs_intent_search = (
+    SELECT
+        "Timestamp",
+        RequestId,
+        CgiParams,
+        Url::Decode($utterance_capture(CgiParams).utterance) as utterance
+    FROM
+        $alisa_skills_rec_logs_intent_search);
+
+$count = SELECT COUNT(*) FROM $alisa_skills_rec_logs_intent_search;
+
+$sample_ratio = SELECT CAST($sample_size AS Float)/$count;
+
+$alisa_skills_rec_logs_intent_search_sample = (
+    SELECT
+        utterance
+    FROM
+        $alisa_skills_rec_logs_intent_search
+    TABLESAMPLE BERNOULLI($sample_ratio)
+);
+
+SELECT COUNT(*) FROM $alisa_skills_rec_logs_intent_search_sample;
+
+$alisa_skills_rec_logs_intent_search_weighted = (
+    SELECT
+        utterance,
+        COUNT(*) as weight
+    FROM $alisa_skills_rec_logs_intent_search_sample
+        GROUP BY utterance
+);
+
+INSERT INTO $out_results WITH TRUNCATE
+SELECT DISTINCT weight, utterance FROM $alisa_skills_rec_logs_intent_search_weighted;

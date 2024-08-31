@@ -1,0 +1,301 @@
+use hahn;
+
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma yson.DisableStrict = 'true';
+
+$target_folder = 'home/paskills/recipes/filtered_requests';
+$target_folder2 = 'home/paskills/recipes/sessions';
+$from1 = select max(cast(substring(Path,Length($target_folder||'/')) as Date))
+ from folder($target_folder)
+ where Type = 'table';
+$from2 = select max(cast(substring(Path,Length($target_folder2||'/')) as Date))
+ from folder($target_folder2)
+ where Type = 'table';
+$from = unwrap(min_of($from1, $from2));
+--$from = Date('2020-09-30'); -- LAUNCH!
+--$from = Date('2020-10-17');
+$to = CurrentUtcDate();
+
+
+$time_to_think_ms = 3*60*1000;
+
+$get_sc_info = ($analyticsInfo) -> { RETURN $analyticsInfo.analytics_info.ExternalSkillRecipes.scenario_analytics_info; };
+$get_recipe_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::ConvertToString($obj.id) == 'recipe'; }
+    )[0];
+};
+$get_session_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::ConvertToString($obj.id) == 'recipe.session'; }
+    )[0];
+};
+--$get_postroll = ($analyticsInfo) -> { RETURN $analyticsInfo.modifiers_info.proactivity };
+$get_postroll = ($analyticsInfo) -> {
+    $tags = Yson::ConvertToStringList($analyticsInfo.modifiers_info.proactivity.tags);
+    return if(ListHas($tags, 'recipes'),
+    <|
+        item_id: Yson::ConvertToString($analyticsInfo.modifiers_info.proactivity.item_id),
+        item_info: Yson::ConvertToString($analyticsInfo.modifiers_info.proactivity.item_info),
+        tags: $tags,
+    |>);
+};
+$app_group = ($app) -> {
+    RETURN case
+                when $app in ('quasar', 'small_smart_speakers'/*, 'tv'*/) then 'all_speakers'
+                when $app in ('search_app_prod','search_app_beta', 'browser_alpha', 'browser_beta', 'browser_prod', 'yabro_beta', 'yabro_prod') then 'with_screen'
+                when $app in ('auto','navigator') then 'in_car'
+                else 'other'
+            end;
+};
+
+$source_folder = 'home/alice/dialog/prepared_logs_expboxes';
+$load_date = unwrap(cast(CurrentUtcDate() as String));
+
+define action $insert_sessions($date) as
+    $source_from = cast($date - Interval('P1D') as String);
+    $source_to = cast($date + Interval('P1D') as String);
+    $target_path = $target_folder || '/' || CAST($date as String);
+    $target_path2 = $target_folder2 || '/' || CAST($date as String);
+
+    $filtered_session  = select T.*,
+    T2.start_fielddate as fielddate,
+    Yson::ConvertToString($get_session_obj(analytics_info).name) as recipe_session_id,
+    Yson::ConvertToString($get_sc_info(T.analytics_info).intent) as ai_intent,
+    $get_postroll(analytics_info) as postroll,
+    without T.fielddate
+    FROM range($source_folder, $source_from, $source_to) as T
+    join (select `uuid2`, session_id2, min(cast(fielddate as Date)) as start_fielddate
+        from range($source_folder, $source_from, $source_to)
+        where mm_scenario == 'ExternalSkillRecipes'
+        group compact by `uuid` as `uuid2`, session_id as session_id2
+        having min(cast(fielddate as Date)) == $date
+    ) as T2 on T.`uuid` = T2.`uuid2` and T.session_id = T2.session_id2;
+
+    $recipe_sessions =
+    select `uuid`,
+        unwrap(recipe_session_id) as recipe_session_id,
+        unwrap(min(server_time_ms)) as recipe_session_start_time_ms,
+        unwrap(max(server_time_ms)) as recipe_session_end_time_ms,
+        unwrap(min(session_sequence)) as recipe_session_start_session_sequence,
+        unwrap(max(session_sequence)) as recipe_session_end_session_sequence,
+        unwrap(min_by(req_id, server_time_ms)) as recipe_first_request_id,
+        unwrap(max_by(req_id, server_time_ms)) as recipe_last_request_id,
+        unwrap(min_by(session_id, server_time_ms)) as recipe_session_start_session_id,
+        unwrap(max_by(session_id, server_time_ms)) as recipe_session_end_session_id,
+        unwrap(min_by(Yson::ConvertToString($get_recipe_obj(analytics_info).name),  server_time_ms)) as recipe_name,
+        unwrap(min_by(Yson::ConvertToInt64($get_recipe_obj(analytics_info).recipe.number_of_steps),  server_time_ms)) as recipe_number_of_steps,
+    from $filtered_session
+    where recipe_session_id is not null
+    group by `uuid`, recipe_session_id;
+
+    $rounded_recipe_session =
+    select T.*,
+        if (generic_scenario == 'external_skill_recipes' and inside_recipe_session,
+            max_of(if (next_request_server_time_ms - server_time_ms < $time_to_think_ms,
+                next_request_server_time_ms,
+                alice_speech_end_ms??server_time_ms
+            ) - server_time_ms, 0)
+        ) as request_timespent_duration,
+
+        if (generic_scenario == 'external_skill_recipes' and inside_recipe_session,
+            max_of(if (next_recipe_request_server_time_ms - server_time_ms < $time_to_think_ms,
+                next_recipe_request_server_time_ms,
+                alice_speech_end_ms??server_time_ms
+            ) - server_time_ms, 0)
+        ) as request_timespent_duration_v2,
+    from (select
+        unwrap(T.fielddate) as fielddate, -- start date for the recipe session
+        unwrap(server_time_ms) as server_time_ms,
+        unwrap(session_id) as session_id,
+        unwrap(T.`uuid`) as `uuid`,
+        unwrap(app) as app,
+        unwrap(req_id) as req_id,
+        unwrap($app_group(app)) as app_group,
+        alice_speech_end_ms,
+        analytics_info,
+        cohort,
+        input_type,
+        intent,
+        query,
+        reply,
+        voice_text, generic_scenario, mm_scenario,
+        country_id,
+        is_new,
+        testids,
+        other,
+        first_day,
+        T2.*,
+        (T.server_time_ms between T2.recipe_session_start_time_ms and T2.recipe_session_end_time_ms)??false as inside_recipe_session,
+        case
+            when T.server_time_ms < T2.recipe_session_start_time_ms then 'before'
+            when T.server_time_ms between T2.recipe_session_start_time_ms and T2.recipe_session_end_time_ms then 'inside'
+            when T.server_time_ms > T2.recipe_session_end_time_ms then 'after'
+            else 'unknown'
+        end as request_position,
+        ai_intent,
+        last_value(if(T.server_time_ms between T2.recipe_session_start_time_ms and T2.recipe_session_end_time_ms,
+            Yson::ConvertToInt64($get_session_obj(analytics_info).recipe_session.current_step_id)+1
+        )) ignore nulls over w as current_step,
+        postroll,
+        if (req_id == T2.recipe_first_request_id, last_value(postroll) ignore nulls over w) as pre_start_postroll,
+        if (req_id == T2.recipe_first_request_id, lag(ai_intent) over w) as pre_start_intent,
+        -- последний запрос в сценарий рецептов, который случился до начала текущей сессии готовки
+        (generic_scenario == 'external_skill_recipes' and server_time_ms < T2.recipe_session_start_time_ms
+            and T2.recipe_first_request_id == last_value(if (generic_scenario == 'external_skill_recipes', req_id)) ignore nulls over w3) ?? false as is_last_pre_session_recipe_request,
+
+        last_value(server_time_ms) ignore nulls over w3 as next_request_server_time_ms,
+        last_value(if (generic_scenario == 'external_skill_recipes', server_time_ms)) ignore nulls over w3 as next_recipe_request_server_time_ms,
+        without T2.`uuid`
+        from $filtered_session as T
+        join $recipe_sessions as T2 on T.`uuid` = T2.`uuid`
+        where (
+            (T.server_time_ms between T2.recipe_session_start_time_ms - 300000 and T2.recipe_session_end_time_ms + 300000
+            --and T.session_sequence between T2.recipe_session_start_session_sequence - 5 and T2.recipe_session_end_session_sequence + 5
+            )
+        or
+            -- gather all requests before recipe session started
+            (T.session_id = T2.recipe_session_start_session_id and T.server_time_ms < T2.recipe_session_start_time_ms)
+        )
+        window w as (partition compact by T.`uuid`, T2.recipe_session_id order by T.server_time_ms),
+        --w2 as (partition compact by T.`uuid`, T2.recipe_session_id order by T.server_time_ms rows between unbounded preceding and 1 preceding),
+        w3 as (partition compact by T.`uuid`, T2.recipe_session_id order by T.server_time_ms desc rows between unbounded preceding and 1 preceding)
+    ) as T;
+
+    --discard select `uuid`, req_id, ensure(null, count(*)==1,'Uuid+req_id duplicate: uuid='||`uuid`||' req_id = '||req_id||', cnt='||cast(count(*) as String)||', date='||cast($date as String)) from $rounded_recipe_session where inside_recipe_session = true group by `uuid`, req_id having count(*)>1;
+    DISCARD select Ensure(count(distinct fielddate), count(distinct fielddate)==1, 'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', date='||cast($date as String)) from $rounded_recipe_session;
+    --select * from $rounded_recipe_session where pre_start_postroll is not null limit 100;
+
+    insert into $target_path with truncate
+    SELECT
+        fielddate,
+        session_id,
+        `uuid`,
+        app,
+        app_group,
+        req_id,
+        server_time_ms,
+        alice_speech_end_ms,
+        analytics_info,
+        cohort,
+        input_type,
+        intent,
+        query,
+        reply,
+        voice_text, generic_scenario, mm_scenario,
+        $load_date as load_date,
+        country_id,
+        is_new,
+        testids,
+        other,
+        first_day,
+        ai_intent,
+        recipe_name,
+        recipe_session_id,
+        recipe_number_of_steps,
+        current_step,
+        postroll,
+        recipe_session_start_time_ms,
+        recipe_session_end_time_ms,
+        recipe_session_start_session_sequence,
+        recipe_session_end_session_sequence,
+        recipe_session_start_session_id,
+        recipe_session_end_session_id,
+        recipe_first_request_id,
+        recipe_last_request_id,
+        pre_start_postroll,
+        pre_start_intent,
+        request_position,
+        next_request_server_time_ms,
+        next_recipe_request_server_time_ms,
+        request_timespent_duration,
+        request_timespent_duration_v2,
+        is_last_pre_session_recipe_request,
+    from $rounded_recipe_session
+    --window w as (partition by `uuid`, recipe_session_id order by server_time_ms)
+    --order by recipe_session_id, server_time_ms
+    ;
+
+    insert into $target_path2 with truncate
+    select fielddate, `uuid`, recipe_session_id, load_date,
+        app,
+        app_group,
+        recipe_session_start_time_ms,
+        recipe_session_end_time_ms,
+        recipe_session_start_session_sequence,
+        recipe_session_end_session_sequence,
+        recipe_first_request_id,
+        recipe_last_request_id,
+        recipe_session_start_session_id,
+        recipe_session_end_session_id,
+        recipe_name,
+        recipe_number_of_steps,
+        max_step,
+        pre_start_postroll,
+        pre_start_intent,
+        cohort,
+        interactions_count,
+        session_total_duration_minutes,
+        timespent_minutes,
+        timespent_minutes_v2,
+        real_duration_minutes,
+        max_of(recipe_number_of_steps - max_step, 0) as left_steps,
+        ListFilter(requests, ($x) -> {return $x.request_position == 'before'}) as before_session_requests,
+        ListFilter(requests, ($x) -> {return $x.request_position == 'inside'}) as inside_session_requests,
+        ListFilter(requests, ($x) -> {return $x.request_position == 'after'})  as after_session_requests,
+        ListLast(ListFilter(requests, ($x) -> {return $x.is_last_pre_session_recipe_request})) as last_pre_session_recipe_request,
+    from (
+    SELECT fielddate, `uuid`, recipe_session_id, $load_date as load_date,
+        Ensure(some(app), count(distinct app) == 1) as app,
+        Ensure(some(app_group), count(distinct app_group) == 1) as app_group,
+        Ensure(some(recipe_session_start_time_ms), count(distinct recipe_session_start_time_ms) == 1) as recipe_session_start_time_ms,
+        Ensure(some(recipe_session_end_time_ms), count(distinct recipe_session_end_time_ms) == 1) as recipe_session_end_time_ms,
+        Ensure(some(recipe_session_start_session_sequence), count(distinct recipe_session_start_session_sequence) == 1) as recipe_session_start_session_sequence,
+        Ensure(some(recipe_session_end_session_sequence), count(distinct recipe_session_end_session_sequence) == 1) as recipe_session_end_session_sequence,
+        Ensure(some(recipe_first_request_id), count(distinct recipe_first_request_id) == 1) as recipe_first_request_id,
+        Ensure(some(recipe_last_request_id), count(distinct recipe_last_request_id) == 1) as recipe_last_request_id,
+        Ensure(some(recipe_session_start_session_id), count(distinct recipe_session_start_session_id) == 1) as recipe_session_start_session_id,
+        Ensure(some(recipe_session_end_session_id), count(distinct recipe_session_end_session_id) == 1) as recipe_session_end_session_id,
+        Ensure(some(recipe_name), count(distinct recipe_name) == 1) as recipe_name,
+        Ensure(some(recipe_number_of_steps), count(distinct recipe_number_of_steps) == 1) as recipe_number_of_steps,
+        max(if(request_position == 'inside', current_step)) as max_step,
+        some(if(req_id == recipe_first_request_id,pre_start_postroll)) as pre_start_postroll,
+        some(if(req_id == recipe_first_request_id,pre_start_intent)) as pre_start_intent,
+        min_by(cohort, server_time_ms) as cohort,
+        count_if(ai_intent is not null) as interactions_count,
+        cast(some(recipe_session_end_time_ms) - some(recipe_session_start_time_ms) as Double)/1000/60 as session_total_duration_minutes,
+        (max(if(ai_intent == 'alice.recipes.next_step' and request_position == 'inside', server_time_ms)) - some(recipe_session_start_time_ms))/1000/60 as real_duration_minutes,
+        cast(sum(request_timespent_duration) as Double)/1000/60 as timespent_minutes,
+        cast(sum(request_timespent_duration_v2) as Double)/1000/60 as timespent_minutes_v2,
+        ListSort(aggregate_list(<|
+            req_id: req_id,
+            query: query,
+            reply: reply,
+            server_time_ms: server_time_ms,
+            generic_scenario: generic_scenario,
+            current_step: current_step,
+            alice_speech_end_ms: alice_speech_end_ms,
+            next_request_server_time_ms: next_request_server_time_ms,
+            request_position: request_position,
+            session_id: session_id,
+            ai_intent: ai_intent,
+            next_recipe_request_server_time_ms: next_recipe_request_server_time_ms,
+            is_last_pre_session_recipe_request: is_last_pre_session_recipe_request
+        |>), ($x) -> {return $x.server_time_ms}) as requests,
+    from $rounded_recipe_session
+    group compact by fielddate, `uuid`, recipe_session_id
+    ) as T;
+
+    --commit;
+end define;
+
+$dates = (SELECT ListSortAsc(aggregate_list(d)) from (
+select cast(substring(Path,Length($source_folder) + 1u) as Date) as d
+from folder($source_folder)
+) as T
+where d between cast($from as Date) and cast($to as Date));
+
+EVALUATE FOR $date IN $dates DO $insert_sessions($date);

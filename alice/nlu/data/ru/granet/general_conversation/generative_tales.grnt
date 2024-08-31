@@ -1,0 +1,444 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/filler.grnt
+    common/persons.grnt
+    common/prepositions.grnt
+    common/pronouns.grnt
+    common/questions.grnt
+    common/quit.grnt
+    common/scenarios.grnt
+    common/surfaces.grnt
+    common/topics.grnt
+    common/verbs.grnt
+
+
+form alice.generative_tale.activate:
+    lemma: true
+    enable_synonyms: all
+    disable_synonyms: synset
+    slots:
+        character:
+            source: $Character
+            type: string
+
+    root:
+        $Common.LeftFiller* [$Common.Compose+ $Common.FairyTale+ ($Common.About $Character)*]
+
+
+form alice.generative_tale.character:
+    is_action: true
+    slots:
+        character:
+            source: $FilteredCharacter
+            type: string
+    root:
+        $Common.LeftFiller* [$Common.Compose* $FilteredCharacter*]
+    filler:
+        $Common.About
+        $Common.Filler
+        $Common.FairyTale
+        $Common.ToWant
+        $nonsense
+        %lemma
+        быть
+        будет
+        выбираю
+        (главный|основной|наш)
+        (герой|персонаж)
+        моя
+        может
+        пусть
+        сделаем
+
+
+form alice.generative_tale.confirm_sharing:
+    is_action: true
+    root:
+        $Common.LeftFiller* ($Common.Agree|$SendDownloadShare)
+        $Common.LeftFiller* [$SlightlyIrrelevantVerb* ($OurTale|$ToSearchApp|текст)+]
+    filler:
+        $FairyTalesCommandsCommonFiller
+        $ToSearchApp
+        $SendDownloadShare
+        $ToSomeone
+        $Common.Agree
+        текст
+        к
+
+    $SlightlyIrrelevantVerb:
+        пройти к
+        $Common.Open
+
+    $ToSomeone:
+        %lemma
+        [($Common.PronounMe|$Common.PronounYou|$Common.PronounThis)? (ребенок|дитя|мальчик|девочка|папа|мама|брат|сестра|бабушка|дедушка)]
+
+
+form alice.generative_tale.stop:
+    root:
+        $Common.LeftFiller* (притормози|$StopTheScenario|$Common.IAmDone|$Common.LetsDoSomething)+
+        $Common.LeftFiller* [$Common.DontWant+ $FurtherMore* $Generate*]
+        .* $StopTheScenario
+    filler:
+        $FairyTalesCommandsCommonFiller
+        $Generate
+        $Common.ConjunctionBecause? $Common.IAmDone
+        $Common.LetsDoSomething
+        $Common.Lets
+        $StopTheScenario
+        $Common.Immediately
+        пока
+        $Common.Little
+        ничего
+        сама
+        свою
+        сочинение
+        кофе брейк
+        без меня
+        на (этом|сегодня)
+
+    $StopTheScenario:
+        %lemma
+        конец сказки
+        (вот и)? сказочке конец
+        ((на этом)? $Common.Stop|$Common.Exit|$Common.Pause) (из? (сценарий|режим|сказка)+)?
+        %negative
+        дом
+        домой
+
+
+form alice.generative_tale.continue_generating_tale:
+    is_action: true
+    root:
+        $Common.LeftFiller* [$Common.ToWant* ($Common.Again|$Continue|$FurtherMore|$Common.Lets)+ $Generate* $Together*]
+        $Common.LeftFiller* [$Generate+ $Continuation* $FurtherMore* $Together*]
+        $Common.LeftFiller* [$Continuation+ ($WillComeInHandy|$Common.ToDemand|$Common.ToPropose|$Common.ToWant)+]
+        $Common.LeftFiller* [$Common.QuestionWhat еще* $Continuation.NextPart $Common.Can ($Common.ToTurnOut|быть|$Common.ToHave) $Continuation.ForOurTale?]
+    filler:
+        $FairyTalesCommandsCommonFiller
+        $TheStoryIsTooShort
+        $Common.Little
+        [($Common.DontWant ($SendDownloadShare|$Common.Stop $Generate?) $Common.FairyTale?) $Common.Still*]
+        нет
+
+    $Continue:
+        %lemma
+        продолжить
+
+
+    $Continuation:
+        $NextPart:
+            %lemma
+            продолжение
+            вторую часть
+            следующую часть
+            концовку
+            окончание
+            конец
+        $ForOurTale:
+            (у|к|для)? $OurTale
+        $NextPart $ForOurTale?
+
+    $WillComeInHandy:
+        %lemma
+        пригодится
+        (никак|совсем|вовсе)? не помешает
+        будет полезным
+
+    $TheStoryIsTooShort:
+        [$Common.FairyTale $Common.ToTurnOut+ $Common.Very* $Common.Short]
+
+
+form alice.generative_tale.tale_name:
+    is_action: true
+    slots:
+        tale_name:
+            source: $TaleName
+            type: string
+    root:
+        $Common.LeftFiller* $TaleName
+    filler:
+        $Common.Filler
+        $nonsense
+        назовем
+        ($Common.PronounMe|$Common.PronounThis|$Common.PronounYou)? сказку
+
+
+form alice.generative_tale.send_me_my_tale:
+    root:
+        $Common.LeftFiller* [($Common.Open|$Common.ToSee|$Common.ToSend|$Common.ToShow|$WantToGet)+ $OurTaleStrict+]
+        $Common.LeftFiller* [$ToShareText+ $OurTale.Tale+]
+        $Common.LeftFiller* [$Common.QuestionWhat+ $Composition+ $WeGot+]
+
+        %negative
+        $Common.TurnOn .*
+
+    filler:
+        $Common.At
+        $Common.Children
+        $Common.Filler
+        $nonsense
+        $Common.PronounMe
+        $Common.PronounThis
+        $Common.PronounYou
+        $Common.PronounPossessive3Person
+        $ToSearchApp
+        $SendMeMyTaleSpecificFiller
+
+    $SendMeMyTaleSpecificFiller:
+        не могла бы?
+        %lemma
+        $Common.About
+        $Common.Again
+        $Common.Compose
+        $Common.From
+        $Common.Very
+        $custom.day_part
+        $sys.datetime
+        [вид? формат? текстовый] вариант? версия? документ?
+        вид? печатный? текст
+        вместе
+        дословно
+        итог
+        как
+        конечный? (вариант|результат)
+        которая
+        окончательный
+        переведи
+        полностью
+        получилось
+        помнишь
+        почитать
+        сказка
+        только что
+        у
+        экран
+
+    $ToShareText:
+        $Common.ToSend
+        $Common.ToShare
+        (выдай|дай) текст
+        получить
+        %lemma
+        напечатать
+        печатать
+
+    $WantToGet:
+        $Common.ToWant (увидеть|посмотреть|почитать|прочитать|получить)?
+
+    $WeGot:
+        %lemma
+        у нас получилась
+        ($Common.PronounMe|$Common.PronounYou) $Common.Compose
+
+
+$Character:
+    .+
+
+$FilteredCharacter:
+    .+
+    %negative
+    [$Common.WayToCallAlice* $Common.Stop]
+    [.* $sys.swear]
+    [.* $Common.Politics]
+
+
+$TaleName:
+    .+
+    %negative
+    [$Common.WayToCallAlice* $Common.Stop]
+    [.* $sys.swear]
+    [.* $Common.Politics]
+
+
+$Generate:
+    %lemma
+    $Common.Compose
+    по? (рассказывать|додумывать|записать|записывать|читать|насочинять|сделать)
+    (порассказывать|почитать)
+
+
+$Composition:
+    %lemma
+    ($Common.FairyTale|история|рассказ|произведение|творчество)
+
+
+$OurTale:
+    [$Content* ($Our* $Tale|$ThatSomeoneHasGenerated)+]
+
+    $ThatSomeoneHasGenerated:
+        [$That $Someone? (здесь|тут|там|сейчас)? $Together* $Generate]
+    $Tale:
+        %lemma
+        [$Composed* $TaleCharacteristic* $Composition]
+        %negative
+        аудиосказка
+    $Content:
+        %lemma
+        (содержание|текст|история|сюжет|сценарий)
+    $Our:
+        %lemma
+        ($Common.PronounMe|$Common.PronounThis|$Common.PronounYou|совместная) (с тобой)?
+        %negative
+        (мне|нам|ему|ей|себе|тебе)
+    $That:
+        %lemma
+        (ту|то)? $Common.ConjunctionThat
+
+
+$OurTaleStrict:
+    [($ThatSomeoneHasComposed|($OurStrict|$Composed ($OurStrict|с тобой)?) $OurTale.Tale)+ $Filler*]
+
+    $OurStrict:
+        (нашу|наш|нашей|нашего|мою|мой|моей|моего|совместную|совместной|совместный) (с тобой)?
+
+    $DidComposeStrict:
+        (придумали|сочинили|написали|записали|сфантазировали|сгенерировали)
+        по? на? (придумали|придумывали|выдумали|выдумывали|сочиняли|писали|записывали|записали|генерировали)
+        по? (напридумывали|навыдумывали|насочиняли|написали|назаписывали|нагенерировали)
+        (понапридумывали|понавыдумывали|понасочиняли|поназаписывали|понафантазировали|понагенерировали)
+
+    $ThatSomeoneHasComposed:
+        [$OurTale.That? $Someone? (здесь|тут|там|сейчас)? $Together* $DidComposeStrict]
+
+    $Filler:
+        %lemma
+        $OurTale.Content
+        $OurTale.Tale
+        $OurTale.That
+        $Someone
+        $Together
+        ($Common.PronounThis|$Common.PronounThat)
+        ($Common.Here|$Common.Now|$Common.There)
+        получилось
+        результат
+
+
+$TaleCharacteristic:
+    %lemma
+    %enable_synonyms all
+    веселая
+    волшебная
+    добрая
+    захватывающая
+    интересная
+    красивая
+    любая
+    необычная
+    новая
+    поучительная
+    романтичная
+    сказочная
+    совместная
+    содержательная
+    странная
+    удивительная
+    фантастическая
+    чудесная
+
+
+$Composed:
+    (придуманная|придуманный|придуманное|придуманной|придуманного|придуманную)
+    (сочиненная|сочиненный|сочиненное|сочиненной|сочиненного|сочиненную)
+    (выдуманная|выдуманный|выдуманное|выдуманной|выдуманного|выдуманную)
+    (записанная|записанный|записанное|записанной|записанного|записанную)
+    (созданная|созданный|созданное|созданной|созданного|созданную)
+
+
+$SendDownloadShare:
+    $Common.Download
+    $Common.ToSend
+    $Common.ToShare ((со|с) ($Someone))?
+    сделай сохранение
+    выведи на экран телефона
+
+
+$Someone:
+    [($Common.PronounMe|$Common.PronounYou|$Common.Pronoun3Person) вместе?]
+    [($Common.PronounMe|$Common.PronounYou|$Common.PronounThis)? (ребенок|дитя|мальчик|девочка|папа|мама|брат|сестра|бабушка|дедушка)]
+
+
+$Together:
+    (совместно|вместе|с ($Common.PronounMe|$Common.PronounYou))+
+
+
+$FurtherMore:
+    ещё? (дальше|больше|подальше|побольше)
+
+
+$ToSearchApp:
+    %lemma
+    (с|в|на|из|к)  (приложение яндекса?|телефон)
+
+
+$FairyTalesCommandsCommonFiller:
+    $PositiveFeedbackOnGeneratingFairytales
+    $WeGotWonderfulFairytale
+    $Common.Filler
+    $Common.PronounMe
+    $Common.PronounThat
+    $Common.PronounThis
+    $Common.PronounYou
+    $Common.PronounPossessive3Person
+    $Common.FairyTale
+    $OurTale
+    $TaleCharacteristic
+    $Common.ToWant (чтобы ты)?
+    $Common.ToPropose
+    $Common.ToDemand
+    $Common.ToWant
+    $nonsense
+
+    $WeGotWonderfulFairytale:
+        %lemma
+        $OurTale получилась? $TaleCharacteristic
+
+    $PositiveFeedbackOnGeneratingFairytales:
+        [$Cool+ $Generate+ $OurTale*]
+        $Cool:
+            (очень|супер|мега)* (интересно|замечательно|прикольно|необычно|потрясающе|здорово|весело|клево|классно|круто)
+
+
+filler:
+    $Common.Agree
+    $Common.At
+    $Common.Children
+    $Common.Filler
+    $Common.For
+    $Common.Lets
+    $Common.Play
+    $Common.PlayGame
+    $Common.PronounMe
+    $Common.PronounPossessive3Person
+    $Common.PronounThis
+    $Common.PronounYou
+    $Common.QuestionWhat
+    $Common.SmartDevice
+    $Common.Something
+    $Common.Tell
+    $Common.WayToCallAlice
+    $Common.With
+    $TaleCharacteristic
+    $nonsense
+    %lemma
+    быть
+    вместе
+    еще
+    заодно
+    интересно
+    конец
+    не существовало
+    не существует
+    несуществующая
+    ночь
+    нужная
+    персонажи
+    помоги
+    тема
+    только
+    сам
+    умеешь
+    участие

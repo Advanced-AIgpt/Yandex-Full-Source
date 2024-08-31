@@ -1,0 +1,69 @@
+{% ext_nlgimport "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" %}
+{% ext_from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_music_answer, render_music_tags_default, render_music_tags, ya_plus with context %}
+{% ext_from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_radio_title %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" import stoit, alarm_stoit, set_sound_phrase %}
+{% macro repeat() -%}
+  {% if 'alarm_sound__repeat' in context.attentions %}
+    {% chooseline %}
+      на повторе
+      на репите
+    {% endchooseline %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_filtered_success(combo_render=False) %}
+  {% set filters_count = context.data.music_result.filters | length %}
+  {% if filters_count > 1 %}
+    {{ render_music_tags_default() }}
+  {% elif filters_count == 1 %}
+    {# there can only be one key-value pair in this dict #}
+    {% for filter, tag in context.data.music_result.filters.items() %}
+      {% set tag = tag | replace('-', '_') %}
+      {{ render_music_tags(filter, tag) }}
+    {% endfor %}
+  {% else %}
+    Что-то во мне драматично надломилось.
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('alarm_sound__unauthorized') %}
+    Вы не авторизовались.
+  {% elif context.attentions.get('alarm_sound__payment_required') %}
+    Чтобы ставить на будильник музыку, необходимо купить подписку на {{ ya_plus() }}.
+  {% elif context.attentions.get('alarm_sound__supported') %}
+    {% if context.data.radio_result %}
+      {% set radio_title = context.data.radio_result | get_item('title', 'радио') %}
+      {{ alarm_stoit() }} {{ render_radio_title(radio_title) }}.
+    {% elif not context.data.music_result %}
+      Кажется, я поломалась. Пойду ещё посплю что ли.
+    {% elif context.data.music_result.filters %}
+      {{ render_filtered_success() }}
+    {% else %}
+      {% chooseline %}
+        Хорошо. Вас разбудит
+        Отличный выбор. Теперь на вашем будильнике
+        Запомнила. Вас разбудит
+        Отличный выбор. Вас разбудит
+        Установила. На будильнике
+      {% endchooseline %}
+      {{ repeat() }}
+      {% vc %}
+        {{ render_music_answer(context.data.music_result, 'nom', render_album=False, shorten=True) | tts_domain('music') }}
+      {% evc %}
+      {% tx %}
+        {{ render_music_answer(context.data.music_result, 'nom') }}
+      {% etx %}
+      .
+    {% endif %}
+    {% if 'no_alarms' in context.attentions %}
+      А самих будильников у вас нет. Можете попросить меня завести.
+    {% endif %}
+  {% else %}
+    Извините, я пока не умею изменять звук будильника на этом устройстве.
+  {% endif %}
+{% endphrase %}
+
+{% phrase not_supported %}
+    Я так пока не умею.
+{% endphrase %}

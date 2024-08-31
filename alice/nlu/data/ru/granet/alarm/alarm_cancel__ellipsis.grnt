@@ -1,0 +1,50 @@
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.alarm_cancel__ellipsis:
+    slots:
+        date:
+            source:
+                $sys.date
+                $sys.weekdays
+
+            type:
+                sys.date
+                sys.weekdays
+        time:
+            source: $sys.time
+
+            type: sys.time
+        alarm_id:
+            source:
+                $sys.num
+                $custom.selection
+
+            type:
+                sys.num
+                custom.selection
+    root:
+        [$Common.CancelRemoveReset $Alarm? (номер? $sys.num|$custom.selection)?]
+        [$Alarm? (номер? $sys.num|$custom.selection)]
+        [$Common.CancelRemoveReset $Alarm? (на? $sys.time|на? ($sys.date|$sys.weekdays))*]
+        [$Alarm? (на? $sys.time|на? ($sys.date|$sys.weekdays))+]
+        [$Common.CancelRemoveReset? 'оба|каждый'(alarm_id/custom.selection:all) $Alarm?]
+        [$Common.Yes+ $Common.CancelRemoveReset*]
+        [$Common.Yes+ $Common.CancelRemoveReset+ $Alarm+]
+
+        %negative
+        $Alarm
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        %force_negative
+        $custom.selection
+
+    $Alarm:
+        %lemma
+        будильник
+        звонок
+        сигнал

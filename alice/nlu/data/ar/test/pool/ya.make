@@ -1,0 +1,11 @@
+OWNER(
+    moath-alali
+    g:alice_quality
+)
+
+UNION()
+
+FROM_SANDBOX(FILE 2887186842 OUT_NOAUTO alice_ar_v1.tsv)
+FROM_SANDBOX(FILE 2932490352 OUT_NOAUTO alice_ar_v2.tsv)
+FROM_SANDBOX(FILE 2986683777 OUT_NOAUTO alice_ar_v3.tsv)
+END()

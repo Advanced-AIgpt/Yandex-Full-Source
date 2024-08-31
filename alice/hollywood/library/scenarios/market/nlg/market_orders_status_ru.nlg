@@ -1,0 +1,94 @@
+{% nlgimport "alice/hollywood/library/scenarios/market/nlg/common.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/market/nlg/market_login.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/market/nlg/suggests/open_blue.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/market/nlg/common.nlg" import
+  render_big_number, render_market %}
+
+{% set statuses_map = { 'UNPAID': 'Оформлен, но не оплачен',
+                        'DELIVERY': 'Передан в доставку',
+                        'DELIVERED': 'Доставлен',
+                        'CANCELLED': 'Отменен',
+                        'PROCESSING': 'В обработке',
+                        'PICKUP': 'Доставлен в пункт выдачи',
+                        'CANCEL_BY_USER': 'Вы отменили заказ',
+                        'PENDING': 'Пока не подтверждён'}
+%}
+
+{% phrase market_order_status__user_have_orders_unfinished  %}
+  {% if (context.data.not_delivered_orders | length) == 1 %}
+    Вот статус вашего незавершенного заказа:
+  {% else %}
+    Вот статусы ваших незавершенных заказов:
+  {% endif %}
+  {% for order in context.data.not_delivered_orders %}
+    \n-
+    {% if not context.is_smart_speaker %}
+      {% text %}
+        {% if order.parcels_count_more_than_one %}
+          {{ render_status(order.id, 'ERROR', False) }}
+        {% elif not order.parcel_status.is_common %}
+          {{ order.id -}}
+          {%- if order.shop_order_id -%}
+            /{{- order.shop_order_id }}
+          {% endif %}
+          : {{ order.parcel_status.status }}.
+        {% else %}
+          {{ render_status(order.id, order.parcel_status.status, order.shop_order_id, False) }}
+        {% endif %}
+      {% endtext %}
+    {% elif order.parcels_count_more_than_one %}
+      {{ render_status(order.id, 'ERROR', shop_order_id = None) }}
+    {% elif not order.parcel_status.is_common %}
+      {{ render_big_number(order.id) -}}
+      {%- if order.shop_order_id -%}
+        /{{- render_big_number(order.shop_order_id) }}
+      {% endif %}
+      : {{ order.parcel_status.status }}.
+    {% else %}
+      {{ render_status(order.id, order.parcel_status.status, order.shop_order_id) }}
+    {% endif %}
+  {% endfor %}
+{% endphrase %}
+
+{% phrase market_order_status__user_have_orders_only_finished  %}
+  Вот статус вашего последнего заказа:
+  \n-
+  {% if not context.is_smart_speaker %}
+    {% text %}
+      {{ render_status(context.data.last_delivered_order.id, context.data.last_delivered_order.status,
+                       context.data.last_delivered_order.shop_order_id, False) }}
+    {% endtext %}
+  {% else %}
+   {{ render_status(context.data.last_delivered_order.id, context.data.last_delivered_order.status,
+                    context.data.last_delivered_order.shop_order_id) }}.
+  {% endif %}
+{% endphrase %}
+
+{% phrase market_order_status__user_have_not_orders %}
+  К сожалению, у вас нет заказов на {{ render_market('abl') -}}. Но вы можете что-нибудь выбрать!
+{% endphrase %}
+
+{% macro render_status(id, status, shop_order_id,  with_voice = True) %}
+  {% if with_voice %}
+    {{ render_big_number(id) -}}
+    {%- if shop_order_id -%}
+      /{{- render_big_number(shop_order_id) }}
+    {% endif %}
+    {% if status not in statuses_map %}
+      : Такие заказы я пока не встречала. Лучше проверьте его самостоятельно на {{ render_market('abl') -}}.
+    {% else %}
+      : {{ statuses_map[status] }}.
+    {% endif %}
+  {% else %}
+    {{ id -}}
+    {%- if shop_order_id -%}
+      /{{- shop_order_id }}
+    {% endif %}
+    {% if status not in statuses_map %}
+      : Такие заказы я пока не встречала. Лучше проверьте его самостоятельно на {{ render_market('abl') -}}.
+    {% else %}
+      : {{ statuses_map[status] }}.
+    {% endif %}
+  {% endif %}
+{% endmacro %}

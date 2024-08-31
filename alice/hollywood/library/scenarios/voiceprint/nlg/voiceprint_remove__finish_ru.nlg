@@ -1,0 +1,33 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import get_alice_name with context %}
+{% ext_from "alice/hollywood/library/common_nlg/error_ru.nlg" import render_error %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('server_error') %}
+    {{ render_error() }}
+  {% else %}
+      {% if form.is_removed %}
+        {% if form.is_multiaccount_enabled %}
+          Готово, выкинула из головы. Но если что — мы всегда можем снова подружиться в приложении «Дом с Алисой».
+        {% else %}
+          {% chooseitem %}
+            Всё, забыла. Если что, мы можем познакомиться снова в любой момент. Просто скажите: «{{ get_alice_name() }}, запомни мой голос».
+          {% or %}
+            Готово, выкинула из головы. Но если что — познакомиться снова можно в любой момент. Просто скажите: «{{ get_alice_name() }}, запомни мой голос».
+          {% endchooseitem %}
+        {% endif %}
+      {% else %}
+        {% chooseitem %}
+          Хорошо-хорошо. Ничего не трогаем.
+        {% or %}
+          Окей, оставляем как есть.
+        {% or %}
+          Ладно, не буду удалять.
+        {% endchooseitem %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

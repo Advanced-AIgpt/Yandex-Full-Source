@@ -1,0 +1,295 @@
+{% macro sorry_didnt_catch_it() %}
+  {% chooseline %}
+    Плохо слышно.
+    Прости, не услышала.
+    Извини, не очень тебя поняла.
+    Прости, я отвлеклась.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro this_tale_name_is_no_good() %}
+  Я думаю, для нашей сказки это не очень подходит.
+{% endmacro %}
+
+{% macro how_do_we_call_the_fairytale() %}
+  {% chooseline %}
+    Как назовем нашу сказку?
+    Как назовем эту сказку?
+    Как назовем сказку?
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro your_turn() %}
+  {% chooseline %}
+    Что случилось дальше? Теперь ты{%vc%}<[accented]>{%evc%} расскажи!
+    А что случилось дальше, расскажешь{%vc%}<[accented]>{%evc%}?
+    Твоя{%vc%}<[accented]>{%evc%} очередь, что случилось дальше?
+    А как дальше развивались события, может ты{%vc%}<[accented]>{%evc%} расскажешь?
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro make_tale_and_question(context) %}
+  {{ context.tale }}\n\n
+  {% vc %} .sil<[600]> {% evc %}
+  {% if context.user_turn %}
+    {{ your_turn() }}
+  {% else %}
+    {% voice %}
+      {{ context.question_voice }}
+    {% endvoice %}
+    {% text %}
+      {{ context.question }}
+    {% endtext %}
+  {% endif %}
+{% endmacro %}
+
+{% macro okay() %}
+  {% chooseline %}
+    Хорошо.
+    Окей.
+    А кто слушал - молодец.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro get_back_bye_now() %}
+  {% chooseline %}
+    Когда захочешь придумывать со мной снова сказку - скажи «Алиса, давай придумаем сказку».
+    Когда захочешь снова что-нибудь сочинить, скажи «Алиса, давай придумаем сказку».
+    Если захочешь попробовать еще раз, так и скажи: "Алиса, давай придумаем сказку".
+    Если снова захочешь придумать сказку, скажи: "Алиса, сочини сказку про змею и сыр".
+  {% endchooseline %}
+  {% chooseitem 2 %}
+  	Пока!
+  {% or 2 %}
+  	До новых встреч!
+  {% or 1 %}
+  	Бай-бай!
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_sharing_stage_question(context) %}
+  {% if context.client_can_render_div2_cards %}
+    Хочешь продолжим придумывать или отправить текст сказки?
+  {% elif context.is_logged_in %}
+    Хочешь продолжим придумывать или отправить текст сказки на телефон?
+  {% else %}
+    Продолжим придумывать или хватит?
+  {% endif %}
+{% endmacro %}
+
+{% macro i_ve_come_up_with_a_good_tale_name(tale_name) %}
+  {% chooseline %}
+    О, придумала! Назовём нашу сказку «{{ tale_name }}».
+    Но я уже придумала сама: «{{ tale_name }}».
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro your_tale_name_is_good(tale_name) %}
+  {% chooseline %}
+    «{{ tale_name }}» - звучит здорово!
+    «{{ tale_name }}» - звучит отлично!
+    «{{ tale_name }}» - мне нравится!
+    «{{ tale_name }}» - отличная фантазия!
+    «{{ tale_name }}» - отличная мысль!
+  {% endchooseline %}
+{% endmacro %}
+
+{% set characters_nom = [
+    "Аладдин или Дядя Федор",
+    "Алладин или Красная Шапочка",
+    "Белоснежка или Чеширский кот",
+    "Бэтмен или Рапунцель",
+    "Дед Мороз или другой герой",
+    "Динозавр или кто-то другой",
+    "Дядя Федор или Красная Шапочка",
+    "Киборг или Слонёнок",
+    "Кикимора или Незнайка",
+    "Котёнок, Ящерица или кто-то другой",
+    "Кролик или Мудрая Сова",
+    "Матроскин или Чебурашка",
+    "Нолик или Киборг",
+    "Рапунцель или Белоснежка",
+    "Рапунцель или Гермиона Грейнджер",
+    "Рон Уизли или Тимур и его команда",
+    "Самосвал или Крош",
+    "Спанч Боб или пожарный",
+    "хитрый Лисёнок или смелый Пожарный",
+    "Чебурашка или Незнайка",
+    "Чебурашка или Черепашка",
+    "Чеширский кот или Том Сойер",
+    "Эльза или Симба",
+  ]
+%}
+
+{% set characters_acc = [
+    "про Железного человека или Рапунцель",
+    "про Кролика или Мудрую Сову",
+    "про Лисёнка или Чёрного кота",
+    "про Лягушонка или Чёрного кота",
+    "про Медведя или Бельчонка",
+    "про Медведя или Муми-Тролля",
+    "про милиционера или пожарного",
+    "про Слонёнка или Котёнка Борю",
+    "про Тома Сойера или Незнайку",
+    "про Чебурашку или Бэтмена",
+  ]
+%}
+
+{% set characters_abl = [
+    "о Белоснежке или Лосяше",
+    "о Гермионе Грейнджер или о Железном Человеке",
+    "о Лягушонке или о Муми-маме",
+    "о Нолике или о Кроше",
+    "о Паровозике или о сером волке",
+    "о Пони или о Железном человеке",
+    "о Слонёнке или о Кроше",
+  ]
+%}
+
+
+{% macro render_generative_tale(context) %}
+  {%vc%}<speaker voice="fairy_tales" speed="1.05">{%evc%}
+  {% if context.stage == "SharingDone" %}
+    {% if context.social_sharing_link %}
+      {% if context.got_tale_name_from_user %}
+        {{ your_tale_name_is_good(context.tale_name) }}
+      {% else %}
+        {% if context.has_obscene %}
+          {{ this_tale_name_is_no_good() }}
+        {% elif not context.has_silence %}
+          {{ sorry_didnt_catch_it() }}
+        {% endif %}
+        {{ i_ve_come_up_with_a_good_tale_name(context.tale_name) }}
+      {% endif %}
+      {% if context.client_can_render_div2_cards %}
+        Отправила тебе ссылку на сказку. Лови в приложении.
+      {% else %}
+        Отправила тебе сказку в приложение Яндекса. Открой его, пожалуйста.
+      {% endif %}
+      {{ get_back_bye_now() }}
+    {% else %}
+      Ой, прости, кажется, я потеряла нашу сказку. Когда захочешь сочинить ещё одну - скажи "Алиса, давай сочиним сказку". До новых встреч!
+    {% endif %}
+  {% elif context.stage == "Sharing" %}
+    {% if context.obscene_prefix %}
+      Снова за своё. Попробую сама продолжить сказку. \n\n {%vc%}.sil<[400]>{%evc%}
+    {% endif %}
+    {{ context.tale }} \n\n
+    {% voice %}  .sil<[600]> {% endvoice %}
+    {% chooseline %}
+      Классная сказка у нас получается!
+      Сказки - твоё призвание!
+      Получилось прямо, как в книжке!
+      Ух, как интересно все складывается!
+    {% endchooseline %}
+    {{ render_sharing_stage_question(context) }}
+  {% elif context.stage == "SharingReask" %}
+    {{ sorry_didnt_catch_it() }}
+    {{ render_sharing_stage_question(context) }}
+  {% elif context.stage == "SharingAskTaleName" %}
+    {% if context.no_action_frame_received %}
+      {{ sorry_didnt_catch_it() }}
+      Давай сохраним!
+    {% else %}
+      {% chooseline %}
+        Отлично.
+        Договорились.
+        Шедевр.
+        Я в восторге.
+        Супер.
+      {% endchooseline %}
+    {% endif %}
+    {{ how_do_we_call_the_fairytale() }}
+  {% elif context.stage == "Stop" %}
+    {{ okay() }} {{ get_back_bye_now() }}
+  {% elif context.obscene_question %}
+    Я думаю, для нашей сказки это не очень подходит. Давай попробуем еще раз. \n\n 
+    {%vc%}.sil<[400]>{%evc%}
+    {{ context.obscene_question }}
+  {% elif context.obscene_prefix and context.tale and context.question %}
+    Снова за своё. Попробую сама продолжить сказку. \n\n {%vc%}.sil<[400]>{%evc%} {{ make_tale_and_question(context) }}
+  {% elif context.obscene_prefix %}
+    Снова за своё. Давай попробуем еще раз.
+  {% elif context.character %}
+    {% if context.onboarding %}
+      Сейчас мы с тобой вместе сочиним сказку про {{ context.character }}! Иногда я буду задавать вопросы: простые или с вариантами ответа.  Обязательно отвечай на них или придумывай что-то своё, чтобы у нас все получилось. {%vc%}.sil<[400]>{%evc%} Когда надоест, просто скажи: "Алиса, хватит". {%vc%}.sil<[400]>{%evc%} Поехали!
+    {% else %}
+      {% chooseline %}
+        Здорово придумано!
+        У тебя отличная фантазия!
+        Вот это интересно!
+        Отличный выбор!
+        Сразу видно: будущий писатель!
+      {% endchooseline %}
+      {%vc%}.sil<[200]>{%evc%} Начинаем сказку про {{ context.character }}.
+    {% endif %}
+    \n\n {{ make_tale_and_question(context) }}
+  {% elif context.tale and context.question %}
+    {{ make_tale_and_question(context) }}
+  {% elif context.stage == "UndefinedCharacter" %}
+    {% if context.onboarding %}
+      Сейчас мы с тобой вместе сочиним сказку! Иногда я буду задавать вопросы: простые или с вариантами ответа. Обязательно отвечай на них или придумывай что-то своё, чтобы у нас все получилось. {%vc%}.sil<[400]>{%evc%} Когда надоест, просто скажи: "Алиса, хватит". {%vc%}.sil<[400]>{%evc%} Поехали!
+      \n\n {%vc%}.sil<[600]>{%evc%}
+      {% chooseline %}
+        Выбирай героя - {{ characters_nom | random }} ?
+        Давай выберем главного героя - это {{ characters_nom | random }} ?
+        Каждой сказке нужен герой. Какой будет у нас - {{ characters_nom | random }} ?
+        Кто будет главным героем - {{ characters_nom | random }} ?
+        Кто будет главным героем - {{ characters_nom | random }} ?
+        Кто будет главным героем нашей сказки - {{ characters_nom | random }} ?
+        Кто будет главным персонажем - {{ characters_nom | random }} ?
+        Кто же будет главным героем - {{ characters_nom | random }} ?
+        Кто же наш главный герой - {{ characters_nom | random }} ?
+        Начнем с выбора главного героя - {{ characters_nom | random }} ?
+        Начнём с главного героя: это {{ characters_nom | random }} ?
+        О ком будет наша история - {{ characters_abl | random }} ?
+        О ком придумаем историю - {{ characters_abl | random }} ?
+        О ком сегодня придумаем историю - {{ characters_abl | random }} ?
+        О ком сочиним с тобой историю, {{ characters_abl | random }} ?
+        Про кого будем сочинять историю - {{ characters_acc | random }} ?
+        Про кого придумаем сказку - {{ characters_acc | random }} ?
+        Про кого придумаем сказку на этот раз - {{ characters_acc | random }} ?
+        Про кого это будет сказка - {{ characters_acc | random }} ?
+        Сначала решим, кто будет главным героем - {{ characters_nom | random }} ?
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Жили-были... \n\n {%vc%}.sil<[600]>{%evc%} хотя нет, давай сначала решим, про кого будет сказка. Выбирай героя — {{ characters_nom | random }} ?
+        Итак, сочиняем. \n\n {%vc%}.sil<[600]>{%evc%} Кто будет главным героем нашей сказки - {{ characters_nom | random }} ?
+        Итак, сочиняем. \n\n {%vc%}.sil<[600]>{%evc%} Про кого это будет сказка - {{ characters_acc | random }} ?
+        Начнем наше устное народное творчество. \n\n {%vc%}.sil<[600]>{%evc%} Кто будет главным героем - {{ characters_nom | random }} ?
+        Ну что, начинаем сочинять. \n\n {%vc%}.sil<[600]>{%evc%} Давай выберем главного героя - это {{ characters_nom | random }} ?
+        Ну что, начинаем сочинять. \n\n {%vc%}.sil<[600]>{%evc%} Сначала решим, кто будет главным героем — {{ characters_nom | random }} ?
+        Отлично, давай сочинять. \n\n {%vc%}.sil<[600]>{%evc%} Кто будет главным героем - {{ characters_nom | random }} ?
+        Отлично, давай сочинять. \n\n {%vc%}.sil<[600]>{%evc%} О ком будет наша история - {{ characters_abl | random }} ?
+        Отлично, давай сочинять. \n\n {%vc%}.sil<[600]>{%evc%} О ком придумаем историю - {{ characters_abl | random }} ?
+        Отлично, начинаем. \n\n {%vc%}.sil<[600]>{%evc%} Каждой сказке нужен герой. Какой будет у нас — {{ characters_nom | random }} ?
+        Поехали! \n\n {%vc%}.sil<[600]>{%evc%} Кто же наш главный герой - {{ characters_nom | random }} ?
+        Поехали! \n\n {%vc%}.sil<[600]>{%evc%} Начнём с главного героя: это {{ characters_nom | random }} ?
+        Поехали! \n\n {%vc%}.sil<[600]>{%evc%} О ком сочиним с тобой историю, {{ characters_abl | random }} ?
+        Про кого придумаем сказку - {{ characters_acc | random }} ?
+        Про кого придумаем сказку на этот раз - {{ characters_acc | random }} ?
+        Что ж, давай сочинять сказку. \n\n {%vc%}.sil<[600]>{%evc%} Кто будет главным персонажем - {{ characters_nom | random }} ?
+        Что ж, давай сочинять сказку. \n\n {%vc%}.sil<[600]>{%evc%} Кто же будет главным героем - {{ characters_nom | random }} ?
+      {% endchooseline %}
+    {% endif %}
+  {% elif context.stage == "Error" %}
+    Кажется, сказочный сервер сломался. Попробуйте, пожалуйста, позже.
+  {% elif context.stage == "Undefined" %}
+    Прости, я не поняла. Если захочешь сочинить со мной сказку - скажи "Алиса, давай сочиним сказку про про змею и сыр".
+  {% elif context.stage == "UndefinedQuestion" %}
+    Извини, я не смогла продолжить. {{ your_turn() }}
+  {% elif context.stage == "SendMeMyTale" %}
+    {% if context.has_tale_name_and_text %}
+      Отправила сказку, которую мы сочинили в прошлый раз, в приложение Яндекса.
+    {% else %}
+      Извините, мы не сочиняли с вами сказок. Если хотите попробовать - скажите "Алиса, давай придумаем сказку".
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      Прости, я тебя не поняла. Скажи иначе и попробуем еще раз.
+      Прости, я не смогла продолжить сказку. Попробуй сказать по-другому.
+      Этот ответ мне не подходит. Попробуй другой вариант.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}

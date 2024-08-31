@@ -1,0 +1,2837 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios.directive";
+option java_outer_classname = "DirectivesProto";
+option java_multiple_files = true;
+
+import "alice/megamind/protos/common/app_type.proto";
+import "alice/megamind/protos/common/directive_channel.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/common/permissions.proto";
+import "alice/megamind/protos/scenarios/layout.proto";
+import "alice/megamind/protos/scenarios/push.proto";
+import "alice/memento/proto/api.proto";
+import "alice/protos/api/matrix/schedule_action.proto";
+import "alice/protos/api/matrix/scheduler_api.proto";
+import "alice/protos/data/device/info.proto";
+import "alice/protos/data/droideka/droideka.proto";
+import "alice/protos/data/layer.proto";
+import "alice/protos/data/video/video.proto";
+import "alice/protos/data/scenario/centaur/teasers/teaser_settings.proto";
+import "alice/protos/div/div2card.proto";
+import "alice/protos/div/div2id.proto";
+import "alice/protos/div/div2patch.proto";
+import "alice/protos/endpoint/capabilities/audio_file_player/capability.proto";
+import "alice/protos/extensions/extensions.proto";
+import "alice/protos/endpoint/capabilities/div_view/capability.proto";
+import "alice/protos/endpoint/capabilities/iot_scenarios/capability.proto";
+import "alice/protos/endpoint/capabilities/layered_div_ui/capability.proto";
+import "alice/protos/endpoint/capabilities/route_manager/route_manager.proto";
+import "alice/protos/endpoint/capability.proto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+extend google.protobuf.FieldOptions {
+    bool OuterField = 51235;
+}
+
+message TDirective {
+    // YT serialization does not support recursive schema
+    // option (NYT.default_field_flags) = SERIALIZATION_YT;
+    reserved 14, 15, 16, 17, 18, 55, 76;
+    reserved "OnboardingStartingCriticalUpdateDirective"; reserved 122;
+    reserved "RemindersCreateDirective"; reserved 142;
+    reserved "ClientPushTypedSemanticFrameDirective"; reserved 169;
+
+    // EndpointId can be filled with id of destination in device's environment.
+    // It can hold
+    // - id of local device (the device itself)
+    // - empty (considered as local device)
+    // - id of remote device in the environment
+    google.protobuf.StringValue EndpointId = 154 [json_name = "endpoint_id", (NYT.column_name) = "endpoint_id"];
+    oneof Directive {
+        TCallbackDirective CallbackDirective = 1 [json_name = "callback_directive", (NYT.column_name) = "callback_directive"];
+        TOpenDialogDirective OpenDialogDirective = 2 [json_name = "open_dialog_directive", (NYT.column_name) = "open_dialog_directive"];
+        TUpdateDialogInfoDirective UpdateDialogInfoDirective = 3 [json_name = "update_dialog_info_directive", (NYT.column_name) = "update_dialog_info_directive"];
+        TOpenUriDirective OpenUriDirective = 4 [json_name = "open_uri_directive", (NYT.column_name) = "open_uri_directive"];
+        TEndDialogSessionDirective EndDialogSessionDirective = 5 [json_name = "end_dialog_session_directive", (NYT.column_name) = "end_dialog_session_directive"];
+        TTypeTextDirective TypeTextDirective = 6 [json_name = "type_text_directive", (NYT.column_name) = "type_text_directive"];
+        TTypeTextSilentDirective TypeTextSilentDirective = 7 [json_name = "type_text_silent_directive", (NYT.column_name) = "type_text_silent_directive"];
+        TCloseDialogDirective CloseDialogDirective = 8 [json_name = "close_dialog_directive", (NYT.column_name) = "close_dialog_directive"];
+        TStartImageRecognizerDirective StartImageRecognizerDirective = 9 [json_name = "start_image_recognizer_directive", (NYT.column_name) = "start_image_recognizer_directive"];
+        TThereminPlayDirective ThereminPlayDirective = 10 [json_name = "theremin_play_directive", (NYT.column_name) = "theremin_play_directive"];
+        TMordoviaShowDirective MordoviaShowDirective = 11 [json_name = "mordovia_show", (NYT.column_name) = "mordovia_show"];
+        TMordoviaCommandDirective MordoviaCommandDirective = 12 [json_name = "mordovia_command", (NYT.column_name) = "mordovia_command"];
+        TMusicPlayDirective MusicPlayDirective = 13 [json_name = "music_play_directive", (NYT.column_name) = "music_play_directive"];
+        TSoundSetLevelDirective SoundSetLevelDirective = 19 [json_name = "sound_set_level_directive", (NYT.column_name) = "sound_set_level_directive"];
+        TCarDirective CarDirective = 20 [json_name = "car_directive", (NYT.column_name) = "car_directive"];
+        TYandexNaviDirective YandexNaviDirective = 21 [json_name = "yandexnavi_directive", (NYT.column_name) = "yandexnavi_directive"];
+        TPlayerNextTrackDirective PlayerNextTrackDirective = 22 [json_name = "player_next_track_directive", (NYT.column_name) = "player_next_track_directive"];
+        TPlayerPreviousTrackDirective PlayerPreviousTrackDirective = 23 [json_name = "player_previous_track_directive", (NYT.column_name) = "player_previous_track_directive"];
+        TPlayerPauseDirective PlayerPauseDirective = 24 [json_name = "player_pause_directive", (NYT.column_name) = "player_pause_directive"];
+        TPlayerContinueDirective PlayerContinueDirective = 25 [json_name = "player_continue_directive", (NYT.column_name) = "player_continue_directive"];
+        TPlayerLikeDirective PlayerLikeDirective = 26 [json_name = "player_like_directive", (NYT.column_name) = "player_like_directive"];
+        TPlayerDislikeDirective PlayerDislikeDirective = 27 [json_name = "player_dislike_directive", (NYT.column_name) = "player_dislike_directive"];
+        TPlayerShuffleDirective PlayerShuffleDirective = 28 [json_name = "player_shuffle_directive", (NYT.column_name) = "player_shuffle_directive"];
+        TPlayerOrderDirective PlayerOrderDirective = 29 [json_name = "player_order_directive", (NYT.column_name) = "player_order_directive"];
+        TPlayerReplayDirective PlayerReplayDirective = 30 [json_name = "player_replay_directive", (NYT.column_name) = "player_replay_directive"];
+        TPlayerRepeatDirective PlayerRepeatDirective = 31 [json_name = "player_repeat_directive", (NYT.column_name) = "player_repeat_directive"];
+        TPlayerRewindDirective PlayerRewindDirective = 32 [json_name = "player_rewind_directive", (NYT.column_name) = "player_rewind_directive"];
+        TSoundQuiterDirective SoundQuiterDirective = 33 [json_name = "sound_quiter_directive", (NYT.column_name) = "sound_quiter_directive"];
+        TSoundLouderDirective SoundLouderDirective = 34 [json_name = "sound_louder_directive", (NYT.column_name) = "sound_louder_directive"];
+        TSoundMuteDirective SoundMuteDirective = 35 [json_name = "sound_mute_directive", (NYT.column_name) = "sound_mute_directive"];
+        TSoundUnmuteDirective SoundUnmuteDirective = 36 [json_name = "sound_unmute_directive", (NYT.column_name) = "sound_unmute_directive"];
+        TStartMusicRecognizerDirective StartMusicRecognizerDirective = 37 [json_name = "start_music_recognizer_directive", (NYT.column_name) = "start_music_recognizer_directive"];
+        TAlarmSetSoundDirective AlarmSetSoundDirective = 38 [json_name = "alarm_set_sound_directive", (NYT.column_name) = "alarm_set_sound_directive"];
+        TAlarmResetSoundDirective AlarmResetSoundDirective = 39 [json_name = "alarm_reset_sound_directive", (NYT.column_name) = "alarm_reset_sound_directive"];
+        TAlarmNewDirective AlarmNewDirective = 40 [json_name = "alarm_new_directive", (NYT.column_name) = "alarm_new_directive"];
+        TShowAlarmsDirective ShowAlarmsDirective = 41 [json_name = "show_alarms_directive", (NYT.column_name) = "show_alarms_directive"];
+        TShowTimersDirective ShowTimersDirective = 42 [json_name = "show_timers_directive", (NYT.column_name) = "show_timers_directive"];
+        TFindContactsDirective FindContactsDirective = 43 [json_name = "find_contacts_directive", (NYT.column_name) = "find_contacts_directive"];
+        TSetCookiesDirective SetCookiesDirective = 44 [json_name = "set_cookies_directive", (NYT.column_name) = "set_cookies_directive"];
+        TSetSearchFilterDirective SetSearchFilterDirective = 45 [json_name = "search_filter_directive", (NYT.column_name) = "search_filter_directive"];
+        TAlarmsUpdateDirective AlarmsUpdateDirective = 46 [json_name = "alarms_update_directive", (NYT.column_name) = "alarms_update_directive"];
+        TResumeTimerDirective ResumeTimerDirective = 47 [json_name = "resume_timer_directive", (NYT.column_name) = "resume_timer_directive"];
+        TCancelTimerDirective CancelTimerDirective = 48 [json_name = "cancel_timer_directive", (NYT.column_name) = "cancel_timer_directive"];
+        TSetTimerDirective SetTimerDirective = 49 [json_name = "set_timer_directive", (NYT.column_name) = "set_timer_directive"];
+        TStopBluetoothDirective StopBluetoothDirective = 50 [json_name = "stop_bluetooth_directive", (NYT.column_name) = "stop_bluetooth_directive"];
+        TStartBluetoothDirective StartBluetoothDirective = 51 [json_name = "start_bluetooth_directive", (NYT.column_name) = "start_bluetooth_directive"];
+        TReadPageDirective ReadPageDirective = 52 [json_name = "read_page_directive", (NYT.column_name) = "read_page_directive"];
+        TReadPagePauseDirective ReadPagePauseDirective = 53 [json_name = "read_page_pause_directive", (NYT.column_name) = "read_page_pause_directive"];
+        TReadPageContinueDirective ReadPageContinueDirective = 54 [json_name = "read_page_continue_directive", (NYT.column_name) = "read_page_continue_directive"];
+        TSearchLocalDirective SearchLocalDirective = 56 [json_name = "search_local_directive", (NYT.column_name) = "search_local_directive"];
+        TOpenFolderDirective OpenFolderDirective = 57 [json_name = "open_folder_directive", (NYT.column_name) = "open_folder_directive"];
+        TOpenFileDirective OpenFileDirective = 58 [json_name = "open_file_directive", (NYT.column_name) = "open_file_directive"];
+        TOpenSoftDirective OpenSoftDirective = 59 [json_name = "open_soft_directive", (NYT.column_name) = "open_soft_directive"];
+        TPowerOffDirective PowerOffDirective = 60 [json_name = "power_off_directive", (NYT.column_name) = "power_off_directive"];
+        THibernateDirective HibernateDirective = 61 [json_name = "hibernate_directive", (NYT.column_name) = "hibernate_directive"];
+        TRestartPcDirective RestartPcDirective = 62 [json_name = "restart_pc_directive", (NYT.column_name) = "restart_pc_directive"];
+        TMuteDirective MuteDirective = 63 [json_name = "mute_directive", (NYT.column_name) = "mute_directive"];
+        TUnmuteDirective UnmuteDirective = 64 [json_name = "unmute_directive", (NYT.column_name) = "unmute_directive"];
+        TOpenDefaultBrowserDirective OpenDefaultBrowserDirective = 65 [json_name = "open_default_browser_directive", (NYT.column_name) = "open_default_browser_directive"];
+        TOpenYaBrowserDirective OpenYaBrowserDirective = 66 [json_name = "open_ya_browser_directive", (NYT.column_name) = "open_ya_browser_directive"];
+        TOpenFlashCardDirective OpenFlashCardDirective = 67 [json_name = "open_flash_card_directive", (NYT.column_name) = "open_flash_card_directive"];
+        TOpenStartDirective OpenStartDirective = 68 [json_name = "open_start_directive", (NYT.column_name) = "open_start_directive"];
+        TOpenDiskDirective OpenDiskDirective = 69 [json_name = "open_disk_directive", (NYT.column_name) = "open_disk_directive"];
+        TOpenSettingsDirective OpenSettingsDirective = 70 [json_name = "open_settings_directive", (NYT.column_name) = "open_settings_directive"];
+        TGoForwardDirective GoForwardDirective = 71 [json_name = "go_forward_directive", (NYT.column_name) = "go_forward_directive"];
+        TGoBackwardDirective GoBackwardDirective = 72 [json_name = "go_backward_directive", (NYT.column_name) = "go_backward_directive"];
+        TGoToTheBeginningDirective GoToTheBeginningDirective = 73 [json_name = "go_to_the_beginning_directive", (NYT.column_name) = "go_to_the_beginning_directive"];
+        TGoToTheEndDirective GoToTheEndDirective = 74 [json_name = "go_to_the_end_directive", (NYT.column_name) = "go_to_the_end_directive"];
+        TGoHomeDirective GoHomeDirective = 75 [json_name = "go_home_directive", (NYT.column_name) = "go_home_directive"];
+        TShowVideoDescriptionDirective ShowVideoDescriptionDirective = 77 [json_name = "show_description_directive", (NYT.column_name) = "show_description_directive"];
+        TVideoPlayDirective VideoPlayDirective = 78 [json_name = "video_play_directive", (NYT.column_name) = "video_play_directive"];
+        TShowGalleryDirective ShowGalleryDirective = 79 [json_name = "show_gallery_directive", (NYT.column_name) = "show_gallery_directive"];
+        TShowPayPushScreenDirective ShowPayPushScreenDirective = 80 [json_name = "show_pay_push_screen_directive", (NYT.column_name) = "show_pay_push_screen_directive"];
+        TShowSeasonGalleryDirective ShowSeasonGalleryDirective = 81 [json_name = "show_season_gallery_directive", (NYT.column_name) = "show_season_gallery_directive"];
+        TPauseTimerDirective PauseTimerDirective = 82 [json_name = "pause_timer_directive", (NYT.column_name) = "pause_timer_directive"];
+        TTimerStopPlayingDirective TimerStopPlayingDirective = 83 [json_name = "timer_stop_playing_directive", (NYT.column_name) = "timer_stop_playing_directive"];
+        TNavigateBrowserDirective NavigateBrowserDirective = 84 [json_name = "navigate_browser_directive", (NYT.column_name) = "navigate_browser_directive"];
+        TRadioPlayDirective RadioPlayDirective = 85 [json_name = "radio_play_directive", (NYT.column_name) = "radio_play_directive"];
+        TGoDownDirective GoDownDirective = 86 [json_name = "go_down_directive", (NYT.column_name) = "go_down_directive"];
+        TGoTopDirective GoTopDirective = 87 [json_name = "go_top_directive", (NYT.column_name) = "go_top_directive"];
+        TGoUpDirective GoUpDirective = 88 [json_name = "go_up_directive", (NYT.column_name) = "go_up_directive"];
+        TScreenOffDirective ScreenOffDirective = 89 [json_name = "screen_off_directive", (NYT.column_name) = "screen_off_directive"];
+        TShowTvGalleryDirective ShowTvGalleryDirective = 90 [json_name = "show_tv_gallery_directive", (NYT.column_name) = "show_tv_gallery_directive"];
+        TAlarmStopDirective AlarmStopDirective = 91 [json_name = "alarm_stop_directive", (NYT.column_name) = "alarm_stop_directive"];
+        TAlarmSetMaxLevelDirective AlarmSetMaxLevelDirective = 92 [json_name = "alarm_set_max_level_directive", (NYT.column_name) = "alarm_set_max_level_directive"];
+        TMusicRecognitionDirective MusicRecognitionDirective = 93 [json_name = "music_recognition_directive", (NYT.column_name) = "music_recognition_directive"];
+        TMessengerCallDirective MessengerCallDirective = 94 [json_name = "messenger_call_directive", (NYT.column_name) = "messenger_call_directive"];
+        TSaveVoiceprintDirective SaveVoiceprintDirective = 95 [json_name = "save_voiceprint_directive", (NYT.column_name) = "save_voiceprint_directive"];
+        TAudioPlayDirective AudioPlayDirective = 96 [json_name = "audio_play_directive", (NYT.column_name) = "audio_play_directive"];
+        TAudioStopDirective AudioStopDirective = 97 [json_name = "audio_stop_directive", (NYT.column_name) = "audio_stop_directive"];
+        TRemoveVoiceprintDirective RemoveVoiceprintDirective = 98 [json_name = "remove_voiceprint_directive", (NYT.column_name) = "remove_voiceprint_directive"];
+        TChangeAudioDirective ChangeAudioDirective = 99 [json_name = "change_audio_directive", (NYT.column_name) = "change_audio_directive"];
+        TChangeSubtitlesDirective ChangeSubtitlesDirective = 100 [json_name = "change_subtitles_directive", (NYT.column_name) = "change_subtitles_directive"];
+        TDrawLedScreenDirective DrawLedScreenDirective = 101 [json_name = "draw_led_screen_directive", (NYT.column_name) = "draw_led_screen_directive"];
+        TSendBugReportDirective SendBugReportDirective = 102 [json_name = "send_bug_report", (NYT.column_name) = "send_bug_report"];
+        TAudioRewindDirective AudioRewindDirective = 103 [json_name = "audio_rewind_directive", (NYT.column_name) = "audio_rewind_directive"];
+        TNotifyDirective NotifyDirective = 104 [json_name = "notify_directive", (NYT.column_name) = "notify_directive"];
+        TUpdateNotificationSubscriptionDirective UpdateNotificationSubscriptionDirective = 105 [json_name = "update_notification_subscription_directive", (NYT.column_name) = "update_notification_subscription_directive"];
+        TStartMultiroomDirective StartMultiroomDirective = 106 [json_name = "start_multiroom_directive", (NYT.column_name) = "start_multiroom_directive"];
+        TMarkNotificationAsReadDirective MarkNotificationAsReadDirective = 107 [json_name = "mark_notification_as_read_directive", (NYT.column_name) = "mark_notification_as_read_directive"];
+        TShowVideoSettingsDirective ShowVideoSettingsDirective = 108 [json_name = "show_video_settings_directive", (NYT.column_name) = "show_video_settings_directive"];
+        TStartBroadcastDirective StartBroadcastDirective = 109 [json_name = "start_broadcast_directive", (NYT.column_name) = "start_broadcast_directive"];
+        TStopBroadcastDirective StopBroadcastDirective = 110 [json_name = "stop_broadcast_directive", (NYT.column_name) = "stop_broadcast_directive"];
+        TTtsPlayPlaceholderDirective TtsPlayPlaceholderDirective = 111 [json_name = "tts_play_placeholder", (NYT.column_name) = "tts_play_placeholder"];
+        TSetupRcuDirective SetupRcuDirective = 112 [json_name = "setup_rcu_directive", (NYT.column_name) = "setup_rcu_directive"];
+        TSetupRcuAutoDirective SetupRcuAutoDirective = 113 [json_name = "setup_rcu_auto_directive", (NYT.column_name) = "setup_rcu_auto_directive"];
+        TSetupRcuCheckDirective SetupRcuCheckDirective = 114 [json_name = "setup_rcu_check_directive", (NYT.column_name) = "setup_rcu_check_directive"];
+        TSetupRcuManualDirective SetupRcuManualDirective = 115 [json_name = "setup_rcu_manual_directive", (NYT.column_name) = "setup_rcu_manual_directive"];
+        TSetupRcuAdvancedDirective SetupRcuAdvancedDirective = 116 [json_name = "setup_rcu_advanced_directive", (NYT.column_name) = "setup_rcu_advanced_directive"];
+        TForceDisplayCardsDirective ForceDisplayCardsDirective = 117 [json_name = "force_display_cards", (NYT.column_name) = "force_display_cards"];
+        TScreenOnDirective ScreenOnDirective = 118 [json_name = "screen_on_directive", (NYT.column_name) = "screen_on_directive"];
+        TIoTDiscoveryStartDirective IoTDiscoveryStartDirective = 119 [json_name = "iot_discovery_start_directive", (NYT.column_name) = "iot_discovery_start_directive"];
+        TIoTDiscoveryCredentialsDirective IoTDiscoveryCredentialsDirective = 120 [json_name = "iot_discovery_credentials_directive", (NYT.column_name) = "iot_discovery_credentials_directive"];
+        TIoTDiscoveryStopDirective IoTDiscoveryStopDirective = 121 [json_name = "iot_discovery_stop_directive", (NYT.column_name) = "iot_discovery_stop_directive"];
+        TClearQueueDirective ClearQueueDirective = 123 [json_name = "clear_queue_directive", (NYT.column_name) = "clear_queue_directive"];
+        TSuccessStartingOnboardingDirective SuccessStartingOnboardingDirective = 124 [json_name = "success_starting_onboarding_directive", (NYT.column_name) = "success_starting_onboarding_directive"];
+        TAddCardDirective AddCardDirective = 125 [json_name = "add_card", (NYT.column_name) = "add_card"];
+        TRotateCardsDirective RotateCardsDirective = 126 [json_name = "rotate_cards", (NYT.column_name) = "rotate_cards"];
+        TListenDirective ListenDirective = 127 [json_name = "listen", (NYT.column_name) = "listen"];
+        TShowViewDirective ShowViewDirective = 128 [json_name = "show_view", (NYT.column_name) = "show_view", deprecated = true];
+        TSetMainScreenDirective SetMainScreenDirective = 129 [json_name = "set_main_screen", (NYT.column_name) = "set_main_screen"];
+        TShowLoginDirective ShowLoginDirective = 130 [json_name = "show_login", (NYT.column_name) = "show_login"];
+        TShowPlusPurchaseDirective ShowPlusPurchaseDirective = 131 [json_name = "show_plus_purchase", (NYT.column_name) = "show_plus_purchase"];
+        TShowPlusPromoDirective ShowPlusPromoDirective = 132 [json_name = "show_plus_promo", (NYT.column_name) = "show_plus_promo"];
+        TSetSmartTvCategoriesDirective SetSmartTvCategoriesDirective = 133 [json_name = "set_smart_tv_categories", (NYT.column_name) = "set_smart_tv_categories"];
+        TTvOpenSearchScreenDirective TvOpenSearchScreenDirective = 134 [json_name = "tv_open_search_screen_directive", (NYT.column_name) = "tv_open_search_screen_directive"];
+        TTvOpenDetailsScreenDirective TvOpenDetailsScreenDirective = 135 [json_name = "tv_open_details_screen_directive", (NYT.column_name) = "tv_open_details_screen_directive"];
+        TTvOpenSeriesScreenDirective TvOpenSeriesScreenDirective = 136 [json_name = "tv_open_series_screen_directive", (NYT.column_name) = "tv_open_series_screen_directive"];
+        TTvOpenPersonScreenDirective TvOpenPersonScreenDirective = 137 [json_name = "tv_open_person_screen_directive", (NYT.column_name) = "tv_open_person_screen_directive"];
+        TTvOpenCollectionScreenDirective TvOpenCollectionScreenDirective = 138 [json_name = "tv_open_collection_screen_directive", (NYT.column_name) = "tv_open_collection_screen_directive"];
+        TShowButtonsDirective ShowButtonsDirective = 139 [json_name = "show_buttons", (NYT.column_name) = "show_buttons"];
+        TSetGlagolMetadataDirective SetGlagolMetadataDirective = 140 [json_name = "set_glagol_metadata", (NYT.column_name) = "set_glagol_metadata"];
+        TFindRcuDirective FindRcuDirective = 141 [json_name = "find_rcu_directive", (NYT.column_name) = "find_rcu_directive"];
+        TRemindersCancelDirective RemindersCancelDirective = 143 [json_name = "reminders_cancel_directive", (NYT.column_name) = "reminders_cancel_directive"];
+        TRequestPermissionsDirective RequestPermissionsDirective = 144 [json_name = "request_permissions", (NYT.column_name) = "request_permissions"];
+        TRemindersSetDirective RemindersSetDirective = 145 [json_name = "reminders_set_directive", (NYT.column_name) = "reminders_set_directive"];
+        TTvSetCarouselsDirective TvSetCarouselsDirective = 146 [json_name = "tv_set_carousels_directive", (NYT.column_name) = "tv_set_carousels_directive"];
+        TTvSetSingleCarouselDirective TvSetSingleCarouselDirective = 147 [json_name = "tv_set_single_carousel_directive", (NYT.column_name) = "tv_set_single_carousel_directive"];
+        TSendAndroidAppIntentDirective SendAndroidAppIntentDirective = 148 [json_name = "send_android_app_intent", (NYT.column_name) = "send_android_app_intent"];
+        TDrawScledAnimationsDirective DrawScledAnimationsDirective = 149 [json_name = "draw_scled_animations", (NYT.column_name) = "draw_scled_animations"];
+        TStopMultiroomDirective StopMultiroomDirective = 150 [json_name = "stop_multiroom_directive", (NYT.column_name) = "stop_multiroom_directive"];
+        TShowClockDirective ShowClockDirective = 151 [json_name = "show_clock_directive", (NYT.column_name) = "show_clock_directive"];
+        THideClockDirective HideClockDirective = 152 [json_name = "hide_clock_directive", (NYT.column_name) = "hide_clock_directive"];
+        TFillCloudUiDirective FillCloudUiDirective = 153 [json_name = "fill_cloud_ui_directive", (NYT.column_name) = "fill_cloud_ui_directive"];
+        // 154 field is EndpointId
+        TOnOffCapability.TOnOffDirective OnOffDirective = 155 [json_name = "on_off_directive", (NYT.column_name) = "on_off_directive"];
+        TIotDiscoveryCapability.TStartDiscoveryDirective IotStartDiscoveryDirective = 156 [json_name = "iot_start_discovery_directive", (NYT.column_name) = "iot_start_discovery_directive"];
+        TIotDiscoveryCapability.TFinishDiscoveryDirective IotFinishDiscoveryDirective = 157 [json_name = "iot_finish_discovery_directive", (NYT.column_name) = "iot_finish_discovery_directive"];
+        TIotDiscoveryCapability.TForgetDevicesDirective IotForgetDevicesDirective = 158 [json_name = "iot_forget_devices_directive", (NYT.column_name) = "iot_forget_devices_directive"];
+        TDoNotDisturbOnDirective DoNotDisturbOnDirective = 159 [json_name = "do_not_disturb_on_directive", (NYT.column_name) = "do_not_disturb_on_directive"];
+        TDoNotDisturbOffDirective DoNotDisturbOffDirective = 160 [json_name = "do_not_disturb_off_directive", (NYT.column_name) = "do_not_disturb_off_directive"];
+        TSetUpperShutterDirective SetUpperShutterDirective = 161 [json_name = "set_upper_shutter_directive", (NYT.column_name) = "set_upper_shutter_directive"];
+        TLevelCapability.TSetAbsoluteLevelDirective SetAbsoluteLevelDirective = 162 [json_name = "set_absolute_level_directive", (NYT.column_name) = "set_absolute_level_directive"];
+        TLevelCapability.TSetRelativeLevelDirective SetRelativeLevelDirective = 163 [json_name = "set_relative_level_directive", (NYT.column_name) = "set_relative_level_directive"];
+        TLevelCapability.TStartMoveLevelDirective StartMoveLevelDirective = 164 [json_name = "start_move_level_directive", (NYT.column_name) = "start_move_level_directive"];
+        TLevelCapability.TStopMoveLevelDirective StopMoveLevelDirective = 165 [json_name = "stop_move_level_directive", (NYT.column_name) = "stop_move_level_directive"];
+        TEnrollmentStartDirective EnrollmentStartDirective = 166 [json_name = "enrollment_start_directive", (NYT.column_name) = "enrollment_start_directive"];
+        TEnrollmentCancelDirective EnrollmentCancelDirective = 167 [json_name = "enrollment_cancel_directive", (NYT.column_name) = "enrollment_cancel_directive"];
+        TEnrollmentFinishDirective EnrollmentFinishDirective = 168 [json_name = "enrollment_finish_directive", (NYT.column_name) = "enrollment_finish_directive"];
+        TColorCapability.TSetColorSceneDirective SetColorSceneDirective = 170 [json_name = "set_color_scene_directive", (NYT.column_name) = "set_color_scene_directive"];
+        TWebOSCapability.TWebOSLaunchAppDirective WebOSLaunchAppDirective = 171 [json_name = "web_os_launch_app_directive", (NYT.column_name) = "web_os_launch_app_directive"];
+        TWebOSCapability.TWebOSShowGalleryDirective WebOSShowGalleryDirective = 172 [json_name = "web_os_show_gallery_directive", (NYT.column_name) = "web_os_show_gallery_directive"];
+        TIotDiscoveryCapability.TStartTuyaBroadcastDirective IotStartTuyaBroadcastDirective = 173 [json_name = "iot_start_tuya_broadcast_directive", (NYT.column_name) = "iot_start_tuya_broadcast_directive"];
+        TIotDiscoveryCapability.TRestoreNetworksDirective IotRestoreNetworksDirective = 174 [json_name = "iot_restore_networks_directive", (NYT.column_name) = "iot_restore_networks_directive"];
+        TIotDiscoveryCapability.TCancelDiscoveryDirective IotCancelDiscoveryDirective = 175 [json_name = "iot_cancel_discovery_directive", (NYT.column_name) = "iot_cancel_discovery_directive"];
+        TIotDiscoveryCapability.TDeleteNetworksDirective IotDeleteNetworksDirective = 176 [json_name = "iot_delete_networks_directive", (NYT.column_name) = "iot_delete_networks_directive"];
+        TMultiroomSemanticFrameDirective MultiroomSemanticFrameDirective = 177 [json_name = "multiroom_semantic_frame_directive", (NYT.column_name) = "multiroom_semantic_frame_directive"];
+        TColorCapability.TSetTemperatureKDirective SetTemperatureKDirective = 178 [json_name = "set_temperature_k_directive", (NYT.column_name) = "set_temperature_k_directive"];
+        TAnimationCapability.TDrawAnimationDirective DrawAnimationDirective = 179 [json_name = "draw_animation_directive", (NYT.column_name) = "draw_animation_directive"];
+        TEqualizerCapability.TSetAdjustableEqualizerBandsDirective SetAdjustableEqualizerBandsDirective = 180 [json_name = "set_adjustable_equalizer_bands_directive", (NYT.column_name) = "set_adjustable_equalizer_bands_directive"];
+        TEqualizerCapability.TSetFixedEqualizerBandsDirective SetFixedEqualizerBandsDirective = 181 [json_name = "set_fixed_equalizer_bands_directive", (NYT.column_name) = "set_fixed_equalizer_bands_directive"];
+        TVideoCallCapability.TStartVideoCallLoginDirective StartVideoCallLoginDirective = 182 [json_name = "start_video_call_login_directive", (NYT.column_name) = "start_video_call_login_directive"];
+        TVideoCallCapability.TStartVideoCallDirective StartVideoCallDirective = 183 [json_name = "start_video_call_directive", (NYT.column_name) = "start_video_call_directive"];
+        TVideoCallCapability.TAcceptVideoCallDirective AcceptVideoCallDirective = 184 [json_name = "accept_video_call_directive", (NYT.column_name) = "accept_video_call_directive"];
+        TVideoCallCapability.TDiscardVideoCallDirective DiscardVideoCallDirective = 185 [json_name = "discard_video_call_directive", (NYT.column_name) = "discard_video_call_directive"];
+        TRouteManagerCapability.TStartDirective RouteManagerStartDirective = 186 [json_name = "route_manager_start_directive", (NYT.column_name) = "route_manager_start_directive"];
+        TRouteManagerCapability.TStopDirective RouteManagerStopDirective = 187 [json_name = "route_manager_stop_directive", (NYT.column_name) = "route_manager_stop_directive"];
+        TRouteManagerCapability.TShowDirective RouteManagerShowDirective = 188 [json_name = "route_manager_show_directive", (NYT.column_name) = "route_manager_show_directive"];
+        TWebViewMediaSessionPlayDirective WebViewMediaSessionPlayDirective = 189 [json_name = "web_view_media_session_play_directive", (NYT.column_name) = "web_view_media_session_play_directive"];
+        TWebViewMediaSessionPauseDirective WebViewMediaSessionPauseDirective = 190 [json_name = "web_view_media_session_pause_directive", (NYT.column_name) = "web_view_media_session_pause_directive"];
+        TRouteManagerCapability.TContinueDirective RouteManagerContinueDirective = 191 [json_name = "route_manager_continue_directive", (NYT.column_name) = "route_manager_continue_directive"];
+        TOpenScreensaverDirective OpenScreensaverDirective = 192 [json_name = "open_screensaver_directive", (NYT.column_name) = "open_screensaver_directive"];
+        TPatchViewDirective PatchViewDirective = 193 [json_name = "patch_view_directive", (NYT.column_name) = "patch_view_directive", deprecated = true];
+        TAudioMultiroomAttach AudioMultiroomAttach = 194 [json_name = "audio_multiroom_attach", (NYT.column_name) = "audio_multiroom_attach"];
+        TDivViewCapability.TStashViewDirective StashViewDirective = 195 [json_name = "stash_view_directive", (NYT.column_name) = "stash_view_directive", deprecated = true];
+        TDivViewCapability.TUnstashViewDirective UnstashViewDirective = 196 [json_name = "unstash_view_directive", (NYT.column_name) = "unstash_view_directive", deprecated = true];
+        THideViewDirective HideViewDirective = 197 [json_name = "hide_view", (NYT.column_name) = "hide_view", deprecated = true];
+        TShowPromoDirective ShowPromoDirective = 198 [json_name = "show_promo_directive", (NYT.column_name) = "show_promo_directive"];
+        TIotScenariosCapability.TAddIotScenariosDirective AddIotScenariosDirective = 199 [json_name = "add_iot_scenarios_directive", (NYT.column_name) = "add_iot_scenarios_directive"];
+        TIotScenariosCapability.TRemoveIotScenariosDirective RemoveIotScenariosDirective = 200 [json_name = "remove_iot_scenarios_directive", (NYT.column_name) = "remove_iot_scenarios_directive"];
+        TIotScenariosCapability.TSyncIotScenariosDirective SyncIotScenariosDirective = 201 [json_name = "sync_iot_scenarios_directive", (NYT.column_name) = "sync_iot_scenarios_directive"];
+        TMultiaccountRemoveAccountDirective MultiaccountRemoveAccountDirective = 202 [json_name = "multiaccount_remove_account_directive", (NYT.column_name) = "multiaccount_remove_account_directive"];
+        TVideoCallCapability.TMuteMicDirective VideoCallMuteMicDirective = 203 [json_name = "video_call_mute_mic_directive", (NYT.column_name) = "video_call_mute_mic_directive"];
+        TVideoCallCapability.TUnmuteMicDirective VideoCallUnmuteMicDirective = 204 [json_name = "video_call_unmute_mic_directive", (NYT.column_name) = "video_call_unmute_mic_directive"];
+        TVideoCallCapability.TTurnOnVideoDirective VideoCallTurnOnVideoDirective = 205 [json_name = "video_call_turn_on_video_directive", (NYT.column_name) = "video_call_turn_on_video_directive"];
+        TVideoCallCapability.TTurnOffVideoDirective VideoCallTurnOffVideoDirective = 206 [json_name = "video_call_turn_off_video_directive", (NYT.column_name) = "video_call_turn_off_video_directive"];
+        TAnimationCapability.TEnableScreenDirective EnableScreenDirective = 207 [json_name = "enable_screen_directive", (NYT.column_name) = "enable_screen_directive"];
+        TAnimationCapability.TDisableScreenDirective DisableScreenDirective = 208 [json_name = "disable_screen_directive", (NYT.column_name) = "disable_screen_directive"];
+        TAudioFilePlayerCapability.TLocalAudioFilePlayDirective LocalAudioFilePlayDirective = 209 [json_name = "local_audio_file_play_directive", (NYT.column_name) = "local_audio_file_play_directive"];
+        TAudioFilePlayerCapability.TLocalAudioFileStopDirective LocalAudioFileStopDirective = 210 [json_name = "local_audio_file_stop_directive", (NYT.column_name) = "local_audio_file_stop_directive"];
+        TLayeredDivUICapability.TDivUIShowViewDirective DivUIShowViewDirective = 211 [json_name = "divui_show_view_directive", (NYT.column_name) = "divui_show_view_directive"];
+        TLayeredDivUICapability.TDivUIPatchViewDirective DivUIPatchViewDirective = 212 [json_name = "divui_patch_view_directive", (NYT.column_name) = "divui_patch_view_directive"];
+        TLayeredDivUICapability.TDivUIHideViewDirective DivUIHideViewDirective = 213 [json_name = "divui_hide_view_directive", (NYT.column_name) = "divui_hide_view_directive"];
+        TLayeredDivUICapability.TDivUIStashViewDirective DivUIStashViewDirective = 214 [json_name = "divui_stash_view_directive", (NYT.column_name) = "divui_stash_view_directive"];
+        TLayeredDivUICapability.TDivUIUnstashViewDirective DivUIUnstashViewDirective = 215 [json_name = "divui_unstash_view_directive", (NYT.column_name) = "divui_unstash_view_directive"];
+        TOnOffCapability.TToggleDirective ToggleOnOffDirective = 216 [json_name = "toggle_on_off_directive", (NYT.column_name) = "toggle_on_off_directive"];
+
+        // next free number is 217
+    }
+}
+
+message TLocationInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated string RoomsIds = 1 [json_name = "rooms_ids", (NYT.column_name) = "rooms_ids"];
+    repeated string GroupsIds = 2 [json_name = "groups_ids", (NYT.column_name) = "groups_ids"];
+    repeated string DevicesIds = 3 [json_name = "devices_ids", (NYT.column_name) = "devices_ids"];
+    bool Everywhere = 4 [json_name = "everywhere", (NYT.column_name) = "everywhere"];
+    repeated EUserDeviceType SmartSpeakerModels = 6 [json_name = "smart_speaker_models", (NYT.column_name) = "smart_speaker_models"];
+    bool IncludeCurrentDeviceId = 7 [json_name = "include_current_device_id", (NYT.column_name) = "include_current_device_id"];
+
+    // Indicates, that a command must be run on all the devices in the current group
+    // Most probably should not be mixed up with the other fields
+    bool CurrentGroup = 5 [json_name = "current_group", (NYT.column_name) = "current_group"];
+}
+
+message TCallbackDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__callback__";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    bool IgnoreAnswer = 2 [json_name = "ignore_answer", (NYT.column_name) = "ignore_answer", deprecated = true];
+    google.protobuf.Struct Payload = 3 [json_name = "payload", (NYT.column_name) = "payload", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    string MultiroomSessionId = 4 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+    bool IsLedSilent = 5 [json_name = "is_led_silent", (NYT.column_name) = "is_led_silent", (OuterField) = true];
+    bool IsParallel = 6 [json_name = "is_parallel", (NYT.column_name) = "is_parallel", (OuterField) = true];
+}
+
+message TOpenDialogDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_dialog";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string DialogId = 2 [json_name = "dialog_id", (NYT.column_name) = "dialog_id"];
+    repeated TDirective Directives = 3 [json_name = "directives", (NYT.column_name) = "directives"];
+}
+
+message TUpdateDialogInfoDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "update_dialog_info";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TStyle {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string SuggestBorderColor = 1 [json_name = "suggest_border_color", (NYT.column_name) = "suggest_border_color"];
+        string UserBubbleFillColor = 2 [json_name = "user_bubble_fill_color", (NYT.column_name) = "user_bubble_fill_color"];
+        string SuggestTextColor = 3 [json_name = "suggest_text_color", (NYT.column_name) = "suggest_text_color"];
+        string SuggestFillColor = 4 [json_name = "suggest_fill_color", (NYT.column_name) = "suggest_fill_color"];
+        string UserBubbleTextColor = 5 [json_name = "user_bubble_text_color", (NYT.column_name) = "user_bubble_text_color"];
+        string SkillActionsTextColor = 6 [json_name = "skill_actions_text_color", (NYT.column_name) = "skill_actions_text_color"];
+        string SkillBubbleFillColor = 7 [json_name = "skill_bubble_fill_color", (NYT.column_name) = "skill_bubble_fill_color"];
+        string SkillBubbleTextColor = 8 [json_name = "skill_bubble_text_color", (NYT.column_name) = "skill_bubble_text_color"];
+        string OknyxLogo = 9 [json_name = "oknyx_logo", (NYT.column_name) = "oknyx_logo"];
+        repeated string OknyxErrorColors = 10 [json_name = "oknyx_error_colors", (NYT.column_name) = "oknyx_error_colors"];
+        repeated string OknyxNormalColors = 11 [json_name = "oknyx_normal_colors", (NYT.column_name) = "oknyx_normal_colors"];
+    }
+    TStyle Style = 2 [json_name = "style", (NYT.column_name) = "style"];
+    string Title = 3 [json_name = "title", (NYT.column_name) = "title"];
+    string Url = 4 [json_name = "url", (NYT.column_name) = "url"];
+    string ImageUrl = 6 [json_name = "image_url", (NYT.column_name) = "image_url"];
+
+    message TMenuItem {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Url = 1 [json_name = "url", (NYT.column_name) = "url"];
+        string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+    }
+    repeated TMenuItem MenuItems = 7 [json_name = "menu_items", (NYT.column_name) = "menu_items"];
+
+    TStyle DarkStyle = 8 [json_name = "dark_style", (NYT.column_name) = "dark_style"];
+    string AdBlockId = 9 [json_name = "ad_block_id", (NYT.column_name) = "ad_block_id"];
+}
+
+message TOpenUriDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_uri";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Uri = 2 [json_name = "uri", (NYT.column_name) = "uri"];
+    oneof OptionalScreenId {
+        string ScreenId = 3 [json_name = "screen_id", (NYT.column_name) = "screen_id"];
+    }
+}
+
+message TEndDialogSessionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "end_dialog_session";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string DialogId = 2 [json_name = "dialog_id", (NYT.column_name) = "dialog_id"];
+}
+
+message TTypeTextDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "type";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text", (LanguageDependent) = NlgText];
+}
+
+message TTypeTextSilentDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "type_silent";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text", (LanguageDependent) = NlgText];
+}
+
+message TCloseDialogDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "close_dialog";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string DialogId = 2 [json_name = "dialog_id", (NYT.column_name) = "dialog_id"];
+
+    oneof OptionalScreenId {
+        option (NYT.variant_field_name) = "optional_screen_id";
+        string ScreenId = 3 [json_name = "screen_id", (NYT.column_name) = "screen_id"];
+    }
+}
+
+message TStartImageRecognizerDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "start_image_recognizer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    oneof OptionalCameraType {
+        string CameraType = 2 [json_name = "camera_type", (NYT.column_name) = "camera_type"];
+    }
+    oneof OptionalImageSearchMode {
+        int32 ImageSearchMode = 3 [json_name = "image_search_mode", (NYT.column_name) = "image_search_mode"];
+    }
+    oneof OptionalImageSearchModeName {
+        string ImageSearchModeName = 4 [json_name = "image_search_mode_name", (NYT.column_name) = "image_search_mode_name"];
+    }
+}
+
+message TThereminPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "theremin_play";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TInternalSet {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        int32 Mode = 1 [json_name = "mode", (NYT.column_name) = "mode"];
+    }
+    message TSample {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Url = 1 [json_name = "url", (NYT.column_name) = "url"];
+    }
+    message TExternalSet {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TSample Samples = 1 [json_name = "samples", (NYT.column_name) = "samples"];
+        bool RepeatSoundInside = 2 [json_name = "repeat_sound_inside", (NYT.column_name) = "repeat_sound_inside"];
+        bool NoOverlaySamples = 3 [json_name = "no_overlay_samples", (NYT.column_name) = "no_overlay_samples"];
+        bool StopOnCeil = 4 [json_name = "stop_on_ceil", (NYT.column_name) = "stop_on_ceil"];
+    }
+    oneof TSet {
+        TInternalSet InternalSet = 2 [json_name = "internal_set", (NYT.column_name) = "internal_set"];
+        TExternalSet ExternalSet = 3 [json_name = "external_set", (NYT.column_name) = "external_set"];
+    }
+}
+
+message TMordoviaShowDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "mordovia_show";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Url = 2 [json_name = "url", (NYT.column_name) = "url"];
+    bool IsFullScreen = 3 [json_name = "is_full_screen", (NYT.column_name) = "is_full_screen"];
+    string ViewKey = 4 [json_name = "view_key", (NYT.column_name) = "view_key"];
+    reserved 5;
+    string SplashDiv = 6 [json_name = "splash_div", (NYT.column_name) = "splash_div"];
+    TCallbackDirective CallbackPrototype = 7 [json_name = "callback_prototype", (NYT.column_name) = "callback_prototype"];
+    bool GoBack = 8 [json_name = "go_back", (NYT.column_name) = "go_back"];
+}
+
+message TMordoviaCommandDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "mordovia_command";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Command = 2 [json_name = "command", (NYT.column_name) = "command"];
+    google.protobuf.Struct Meta = 3 [json_name = "meta", (NYT.column_name) = "meta"];
+    string ViewKey = 4 [json_name = "view_key", (NYT.column_name) = "view_key"];
+}
+
+message TMusicPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "music_play";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Uid = 2 [json_name = "uid", (NYT.column_name) = "uid"];
+    string SessionId = 3 [json_name = "session_id", (NYT.column_name) = "session_id"];
+    double Offset = 4 [json_name = "offset", (NYT.column_name) = "offset"];
+    string AlarmId = 5 [json_name = "alarm_id", (NYT.column_name) = "alarm_id"];
+    string FirstTrackId = 6 [json_name = "first_track_id", (NYT.column_name) = "first_track_id", deprecated = true]; // NOTE: It is used only for deprecated analytics info mechanism
+    string RoomId = 7 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+    TLocationInfo LocationInfo = 8 [json_name = "location_info", (NYT.column_name) = "location_info"];
+}
+
+message TRemindersSetDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "reminders_set";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    // Reminder id which is a guid for newly created reminder.
+    string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+    string Text = 3 [json_name = "text", (NYT.column_name) = "text"];
+    // The time (time_t, epoch) when reminder appears.
+    string Epoch = 4 [json_name = "epoch", (NYT.column_name) = "epoch"];
+    oneof OptionalOnSuccessCallback {
+        option (NYT.variant_field_name) = "optional_on_success_callback";
+        TCallbackDirective OnSuccessCallback = 5 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback"];
+    }
+    oneof OptionalOnFailCallback {
+        option (NYT.variant_field_name) = "optional_on_fail_callback";
+        TCallbackDirective OnFailCallback = 6 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback"];
+    }
+    oneof OptionalOnShootFrame {
+        option (NYT.variant_field_name) = "optional_on_shoot_frame";
+        TSemanticFrameRequestData OnShootFrame = 7 [json_name = "on_shoot_frame", (NYT.column_name) = "on_shoot_frame"];
+    }
+    string TimeZone = 8 [json_name = "timezone", (NYT.column_name) = "timezone"];
+}
+
+// The One Directive to rule them all
+message TDrawScledAnimationsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "draw_scled_animations";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TAnimation {
+
+        // type of Base64EncodedValue
+        enum ECompressionType {
+            Unknown = 0;
+            None = 1; // Base64EncodedValue contains direct scled binary data with EncodeBase64
+            // see https://wiki.yandex-team.ru/quasar/mini2/format-ledpatternov-chasov-mini-2/#binarnyjjformatdljaledpatternov
+            Gzip = 2; // The same as None, but scled binary data compressed with gzpi before EncodeBase64
+        }
+
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        ECompressionType Compression = 2 [json_name = "compression_type", (NYT.column_name) = "compression_type"];
+
+        message TS3Directory {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // bucket + fqdn, for example https://blablabla.s3.mds.yandex.net
+            string Bucket = 1 [json_name = "bucket", (NYT.column_name) = "bucket"];
+            string Path = 2 [json_name = "path", (NYT.column_name) = "path"];
+        }
+
+        oneof Value {
+            option (NYT.variant_field_name) = "value";
+            // required supported feature is "scled_animations" (yandex mini 2, etc)
+            // see https://wiki.yandex-team.ru/quasar/mini2/format-ledpatternov-chasov-mini-2
+            // String format depends of ECompressionType
+            string Base64EncodedValue = 3 [json_name = "base64_encoded_value", (NYT.column_name) = "base64_encoded_value"];
+            // in this case all animation data is stored on S3
+            // required supported feature is "s3_led_animation" (yandex midi, etc)
+            TS3Directory S3Directory = 4 [json_name = "s3_directory", (NYT.column_name) = "s3_directory"];
+        }
+    }
+    repeated TAnimation Animations = 2 [json_name = "animations", (NYT.column_name) = "animations"];
+
+    enum EAnimationStopPolicy {
+        Unknown = 0;
+        PlayOnce = 1;
+        PlayOnceTillEndOfTTS = 2;
+        RepeatLastTillEndOfTTS = 3;
+        RepeatLastTillNextDirective = 4;
+    }
+    reserved 3; reserved "IsEndless"; // was: bool is_endless, converted to EAnimationStopPolicy before production
+    EAnimationStopPolicy AnimationStopPolicy = 4 [json_name = "animation_stop_policy", (NYT.column_name) = "animation_stop_policy"];
+
+    enum ESpeakingAnimationPolicy {
+        PlaySpeakingUnknown = 0; // Undefined (default) mode
+        PlaySpeakingEndOfTts = 1; // Play "speaking" animation if TTS is longer than server scled animation
+        ShowClockImmediately = 2; // Don't play "speaking" animation, switch to "show clock" immediately
+    }
+    ESpeakingAnimationPolicy SpeakingAnimationPolicy = 5 [json_name = "speaking_animation_policy", (NYT.column_name) = "speaking_animation_policy"];
+}
+
+message TShowClockDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_clock";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message THideClockDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "hide_clock";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TRemindersCancelDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "reminders_cancel";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    reserved 2; reserved "Id";
+    // Guids of reminders to cancel.
+    repeated string Ids = 3 [json_name = "id", (NYT.column_name) = "ids"];
+    // Action of how to cancel reminders:
+    // "id" - use of Id field to get reminders to cancel.
+    // "all" - cancel all reminders, Id field is not used.
+    string Action = 4 [json_name = "action", (NYT.column_name) = "action"];
+    oneof OptionalOnSuccessCallback {
+        option (NYT.variant_field_name) = "optional_on_success_callback";
+        TCallbackDirective OnSuccessCallback = 5 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback"];
+    }
+    oneof OptionalOnFailCallback {
+        option (NYT.variant_field_name) = "optional_on_fail_callback";
+        TCallbackDirective OnFailCallback = 6 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback"];
+    }
+}
+
+message TAudioPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "audio_play";
+
+    message TStream {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum TStreamFormat {
+            Unknown = 0;
+            MP3 = 1;
+            HLS = 2;
+        }
+
+        // Stream.Id for Shots is now is represented as "shot_id", adding type to turn off such behaviour
+        enum TStreamType {
+            Track = 0;
+            Shot = 1;
+        }
+
+        message TNormalization{
+            double IntegratedLoudness = 1 [json_name = "integrated_loudness", (NYT.column_name) = "integrated_loudness"];
+            double TruePeak = 2 [json_name = "true_peak", (NYT.column_name) = "true_peak"];
+        }
+
+        // This field is used as an id on client to cache audio data
+        // So "next" and "previous" Alice commands could start faster
+        // using buffered audio data
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Url = 2 [json_name = "url", (NYT.column_name) = "url"];
+        int32 OffsetMs = 3 [json_name = "offset_ms", (NYT.column_name) = "offset_ms"];
+        TStreamFormat StreamFormat = 4 [json_name = "format", (NYT.column_name) = "format"];
+        TStreamType StreamType = 5 [json_name = "type", (NYT.column_name) = "type"];
+        TNormalization Normalization = 6 [json_name = "normalization", (NYT.column_name) = "normalization"];
+        uint64 ExpiringAtMs = 7 [json_name = "expiring_at_ms", (NYT.column_name) = "expiring_at_ms"];
+    }
+
+    message TAudioPlayMetadata {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+        string SubTitle = 2 [json_name = "subtitle", (NYT.column_name) = "subtitle"];
+        string ArtImageUrl = 3 [json_name = "art_image_url", (NYT.column_name) = "art_image_url"];
+
+        enum EContentType {
+            Track = 0;
+            Album = 1;
+            Artist = 2;
+            Playlist = 3;
+            Radio = 4;
+            Generative = 5;
+            FmRadio = 6;
+        }
+
+        message TPrevNextTrackInfo {
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            TStream.TStreamType StreamType = 2 [json_name = "type", (NYT.column_name) = "type"];
+        }
+
+        enum ERepeatMode {
+            Unknown = 0;
+            None = 1;
+            One = 2;
+            All = 3;
+        }
+
+        message TMusicMetadata {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            EContentType Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+            string Description = 3 [json_name = "description", (NYT.column_name) = "description"];
+            TPrevNextTrackInfo PrevTrackInfo = 4 [json_name = "prev_track_info", (NYT.column_name) = "prev_track_info"];
+            TPrevNextTrackInfo NextTrackInfo = 5 [json_name = "next_track_info", (NYT.column_name) = "next_track_info"];
+            oneof OptionalShuffled {
+                option (NYT.variant_field_name) = "optional_shuffled";
+                bool Shuffled = 6 [json_name = "shuffled", (NYT.column_name) = "shuffled"];
+            }
+            oneof OptionalRepeatMode {
+                option (NYT.variant_field_name) = "optional_repeat_mode";
+                ERepeatMode RepeatMode = 7 [json_name = "repeat_mode", (NYT.column_name) = "repeat_mode"];
+            }
+        }
+
+        message TGlagolMetadata {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            oneof TInnerGlagolMetadata {
+                TMusicMetadata MusicMetadata = 1 [json_name = "music_metadata", (NYT.column_name) = "music_metadata"];
+            }
+        }
+
+        TGlagolMetadata GlagolMetadata = 4 [json_name = "glagol_meta_data", (NYT.column_name) = "glagol_metadata"];
+        bool HideProgressBar = 5 [json_name = "hide_progress_bar", (NYT.column_name) = "hide_progress_bar"];
+    }
+
+    message TCallbacks {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TCallbackDirective OnPlayStartedCallback = 1 [json_name = "on_started", (NYT.column_name) = "on_started"];
+        TCallbackDirective OnPlayStoppedCallback = 2 [json_name = "on_stopped", (NYT.column_name) = "on_stopped"];
+        TCallbackDirective OnPlayFinishedCallback = 3 [json_name = "on_finished", (NYT.column_name) = "on_finished"];
+        TCallbackDirective OnFailedCallback = 4 [json_name = "on_failed", (NYT.column_name) = "on_failed"];
+    }
+
+    enum TBackgroundMode {
+        Ducking = 0;
+        Pause = 1;
+    }
+
+    enum EScreenType {
+        Default = 0;
+        Music = 1;
+        Radio = 2;
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    TStream Stream = 2 [json_name = "stream", (NYT.column_name) = "stream"];
+    TAudioPlayMetadata AudioPlayMetadata = 3 [json_name = "metadata", (NYT.column_name) = "metadata"];
+    TCallbacks Callbacks = 4 [json_name = "callbacks", (NYT.column_name) = "callbacks"];
+    map<string, string> ScenarioMeta = 5 [json_name = "scenario_meta", (NYT.column_name) = "scenario_meta"];
+    TBackgroundMode BackgroundMode = 6 [json_name = "background_mode", (NYT.column_name) = "background_mode"];
+    string ProviderName = 7 [json_name = "provider_name", (NYT.column_name) = "provider_name"];
+    EScreenType ScreenType = 8 [json_name = "screen_type", (NYT.column_name) = "screen_type"];
+    bool SetPause = 9 [json_name = "set_pause", (NYT.column_name) = "set_pause"];
+    string MultiroomToken = 10 [json_name = "multiroom_token", (NYT.column_name) = "multiroom_token"];
+}
+
+message TAudioStopDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "audio_stop";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    bool Smooth = 2 [json_name = "smooth", (NYT.column_name) = "smooth"];
+}
+
+message TAudioRewindDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "audio_player_rewind";
+
+    enum EType {
+        Forward = 0;
+        Backward = 1;
+        Absolute = 2;
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    EType Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+    uint64 AmountMs = 3 [json_name = "amount_ms", (NYT.column_name) = "amount_ms"];
+}
+
+message TSetGlagolMetadataDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "set_glagol_metadata";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    TAudioPlayDirective.TAudioPlayMetadata.TGlagolMetadata GlagolMetadata = 2 [json_name = "glagol_metadata", (NYT.column_name) = "glagol_metadata"];
+}
+
+message TSoundSetLevelDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "sound_set_level";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    int32 NewLevel = 2 [json_name = "new_level", (NYT.column_name) = "new_level"];
+    string MultiroomSessionId = 3 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+    string RoomId = 4 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+    TLocationInfo LocationInfo = 5 [json_name = "location_info", (NYT.column_name) = "location_info"];
+}
+
+message TCarDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "car";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Application = 2 [json_name = "application", (NYT.column_name) = "application"];
+    string Intent = 3 [json_name = "intent", (NYT.column_name) = "intent"];
+    google.protobuf.Struct Params = 4 [json_name = "params", (NYT.column_name) = "params"];
+}
+
+message TYandexNaviDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "yandexnavi";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Application = 2 [json_name = "application", (NYT.column_name) = "application"];
+    string Intent = 3 [json_name = "intent", (NYT.column_name) = "intent"];
+    google.protobuf.Struct Params = 4 [json_name = "params", (NYT.column_name) = "params"];
+}
+
+message TPlayerNextTrackDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_next_track";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Player = 2 [json_name = "player", (NYT.column_name) = "player"];
+    string Uid = 3 [json_name = "uid", (NYT.column_name) = "uid"];
+    string MultiroomSessionId = 4 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+}
+
+message TPlayerPreviousTrackDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_previous_track";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Player = 2 [json_name = "player", (NYT.column_name) = "player"];
+    string MultiroomSessionId = 3 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+}
+
+message TPlayerPauseDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_pause";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    bool Smooth = 2 [json_name = "smooth", (NYT.column_name) = "smooth"];
+    string MultiroomSessionId = 3 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+    string RoomId = 4 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+    TLocationInfo LocationInfo = 5 [json_name = "location_info", (NYT.column_name) = "location_info"];
+}
+
+message TPlayerContinueDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_continue";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Player = 2 [json_name = "player", (NYT.column_name) = "player"];
+}
+
+message TPlayerLikeDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_like";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Uid = 2 [json_name = "uid", (NYT.column_name) = "uid"];
+}
+
+message TPlayerDislikeDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_dislike";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Uid = 2 [json_name = "uid", (NYT.column_name) = "uid"];
+}
+
+message TPlayerShuffleDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_shuffle";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TPlayerOrderDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_order";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TPlayerReplayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_replay";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TPlayerRepeatDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_repeat";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TPlayerRewindDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "player_rewind";
+
+    enum EType {
+        Forward = 0;
+        Backward = 1;
+        Absolute = 2;
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    EType Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+    uint64 Amount = 3 [json_name = "amount", (NYT.column_name) = "amount"];
+}
+
+message TSoundQuiterDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "sound_quiter";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MultiroomSessionId = 2 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+    string RoomId = 3 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+    TLocationInfo LocationInfo = 4 [json_name = "location_info", (NYT.column_name) = "location_info"];
+}
+
+message TSoundLouderDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "sound_louder";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MultiroomSessionId = 2 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+    string RoomId = 3 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+    TLocationInfo LocationInfo = 4 [json_name = "location_info", (NYT.column_name) = "location_info"];
+}
+
+message TSoundMuteDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "sound_mute";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSoundUnmuteDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "sound_unmute";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TStartMusicRecognizerDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "start_music_recognizer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TAlarmSetSoundDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarm_set_sound";
+
+    message TSettings {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TInfo {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TAlbum {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+                string Genre = 3 [json_name = "genre", (NYT.column_name) = "genre"];
+                string Type = 4 [json_name = "type", (NYT.column_name) = "type"];
+            }
+            message TArtist {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+                bool Composer = 3 [json_name = "composer", (NYT.column_name) = "composer"];
+                bool IsVarious = 4 [json_name = "is_various", (NYT.column_name) = "is_various"];
+            }
+            message TTrack {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+                string Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+                string Subtype = 4 [json_name = "subtype", (NYT.column_name) = "subtype"];
+                string CoverUri = 5 [json_name = "coverUri", (NYT.column_name) = "coverUri"];
+                string Uri = 6 [json_name = "uri", (NYT.column_name) = "uri"];
+                TAlbum Album = 7 [json_name = "album", (NYT.column_name) = "album"];
+                repeated TArtist Artists = 8 [json_name = "artists", (NYT.column_name) = "artists"];
+            }
+
+            bool Active = 1 [json_name = "active", (NYT.column_name) = "active"];
+            bool Available = 2 [json_name = "available", (NYT.column_name) = "available"];
+            string Color = 3 [json_name = "color", (NYT.column_name) = "color"];
+            reserved 4;
+            TTrack FirstTrack = 5 [json_name = "first_track", (NYT.column_name) = "first_track"];
+            string FirstTrackUri = 6 [json_name = "first_track_uri", (NYT.column_name) = "first_track_uri"];
+            bool ForAlarm = 7 [json_name = "for_alarm", (NYT.column_name) = "for_alarm"];
+            string Frequency = 8 [json_name = "frequency", (NYT.column_name) = "frequency"];
+            string Genre = 9 [json_name = "genre", (NYT.column_name) = "genre"];
+            string ImageUrl = 10 [json_name = "imageUrl", (NYT.column_name) = "imageUrl"];
+            string Name = 11 [json_name = "name", (NYT.column_name) = "name"];
+            string OfficialSiteUrl = 12 [json_name = "officialSiteUrl", (NYT.column_name) = "officialSiteUrl"];
+            string PartnerId = 13 [json_name = "partnerId", (NYT.column_name) = "partnerId"];
+            string RadioId = 14 [json_name = "radioId", (NYT.column_name) = "radioId"];
+            string SessionId = 15 [json_name = "session_id", (NYT.column_name) = "session_id"];
+            bool ShowRecognition = 16 [json_name = "showRecognition", (NYT.column_name) = "showRecognition"];
+            string StreamUrl = 17 [json_name = "streamUrl", (NYT.column_name) = "streamUrl"];
+            string TechName = 18 [json_name = "techName", (NYT.column_name) = "techName"];
+            string Uuid = 19 [json_name = "uuid", (NYT.column_name) = "uuid"];
+            google.protobuf.Struct Filters = 20 [json_name = "filters", (NYT.column_name) = "filters"];
+
+            string Id = 21 [json_name = "id", (NYT.column_name) = "id"];
+            string Title = 22 [json_name = "title", (NYT.column_name) = "title"];
+            string Type = 23 [json_name = "type", (NYT.column_name) = "type"];
+            string Subtype = 24 [json_name = "subtype", (NYT.column_name) = "subtype"];
+            string CoverUri = 25 [json_name = "coverUri", (NYT.column_name) = "coverUri"];
+            string Uri = 26 [json_name = "uri", (NYT.column_name) = "uri"];
+            TAlbum Album = 27 [json_name = "album", (NYT.column_name) = "album"];
+            repeated TArtist Artists = 28 [json_name = "artists", (NYT.column_name) = "artists"];
+        }
+
+        TInfo Info = 1 [json_name = "info", (NYT.column_name) = "info"];
+        bool Repeat = 2 [json_name = "repeat", (NYT.column_name) = "repeat"];
+        string Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    TCallbackDirective Callback = 2 [json_name = "server_action", (NYT.column_name) = "server_action"];
+    TSettings Settings = 3 [json_name = "sound_alarm_setting", (NYT.column_name) = "sound_alarm_setting"];
+}
+
+message TAlarmResetSoundDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarm_reset_sound";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TAlarmNewDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarm_new";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string State = 2 [json_name = "state", (NYT.column_name) = "state"];
+    google.protobuf.Struct OnSuccessCallbackPayload = 3 [json_name = "on_success", (NYT.column_name) = "on_success"];
+    google.protobuf.Struct OnFailureCallbackPayload = 4 [json_name = "on_fail", (NYT.column_name) = "on_fail"];
+}
+
+message TShowAlarmsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_alarms";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TShowTimersDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_timers";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TFindContactsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "find_contacts";
+
+    message TMimeTypesWhitelist {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated string Column = 1 [json_name = "column", (NYT.column_name) = "column"];
+        repeated string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TRequestPart {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Tag = 1 [json_name = "tag", (NYT.column_name) = "tag"];
+        repeated string Values = 2 [json_name = "values", (NYT.column_name) = "values"];
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    TMimeTypesWhitelist MimeTypesWhitelist = 2 [json_name = "mimetypes_whitelist", (NYT.column_name) = "mimetypes_whitelist"];
+    google.protobuf.Struct OnPermissionDeniedCallbackPayload = 3 [json_name = "on_permission_denied_payload", (NYT.column_name) = "on_permission_denied_payload"];
+    repeated TRequestPart Request = 4 [json_name = "request", (NYT.column_name) = "request"];
+    repeated string Values = 5 [json_name = "values", (NYT.column_name) = "values"];
+    bool AddAsrContactBook = 6 [json_name = "add_contact_book_asr", (NYT.column_name) = "add_contact_book_asr"];
+    string CallbackName = 7 [json_name = "callback_name", (NYT.column_name) = "callback_name"];
+}
+
+message TSetCookiesDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "set_cookies";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+}
+
+message TSetSearchFilterDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "set_search_filter";
+
+    enum ESearchLevel {
+        None = 0;
+        Strict = 1;
+        Moderate = 2;
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    ESearchLevel Level = 2 [json_name = "new_level", (NYT.column_name) = "new_level"];
+}
+
+message TAlarmsUpdateDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarms_update";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string State = 2 [json_name = "state", (NYT.column_name) = "state"];
+    bool ListeningIsPossible = 3 [json_name = "listening_is_possible", (NYT.column_name) = "listening_is_possible"];
+}
+
+message TResumeTimerDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "resume_timer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string TimerId = 2 [json_name = "timer_id", (NYT.column_name) = "timer_id"];
+}
+
+message TPauseTimerDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "pause_timer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string TimerId = 2 [json_name = "timer_id", (NYT.column_name) = "timer_id"];
+}
+
+message TCancelTimerDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "cancel_timer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string TimerId = 2 [json_name = "timer_id", (NYT.column_name) = "timer_id"];
+}
+
+message TTimerStopPlayingDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "timer_stop_playing";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string TimerId = 2 [json_name = "timer_id", (NYT.column_name) = "timer_id"];
+}
+
+message TSetTimerDirective {
+    option (SpeechKitName) = "set_timer";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    uint64 Duration = 2 [json_name = "duration", (NYT.column_name) = "duration"];
+    bool ListeningIsPossible = 3 [json_name = "listening_is_possible", (NYT.column_name) = "listening_is_possible"];
+    uint64 Timestamp = 4 [json_name = "timestamp", (NYT.column_name) = "timestamp"];
+    google.protobuf.Struct OnSuccessCallbackPayload = 5 [json_name = "on_success", (NYT.column_name) = "on_success"];
+    google.protobuf.Struct OnFailureCallbackPayload = 6 [json_name = "on_fail", (NYT.column_name) = "on_fail"];
+    repeated TDirective Directives = 7 [json_name = "directives", (NYT.column_name) = "directives"];
+}
+
+message TStopBluetoothDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "stop_bluetooth";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TStartBluetoothDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "start_bluetooth";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TReadPageDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "read_page";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TReadPagePauseDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "read_page_pause";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TReadPageContinueDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "read_page_continue";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSearchLocalDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "search_local";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text"];
+}
+
+message TOpenFolderDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_folder";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Folder = 2 [json_name = "folder", (NYT.column_name) = "folder"];
+}
+
+message TOpenFileDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_file";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string File = 2 [json_name = "file", (NYT.column_name) = "file"];
+}
+
+message TOpenSoftDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_soft";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Soft = 2 [json_name = "soft", (NYT.column_name) = "soft"];
+}
+
+message TPowerOffDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "power_off";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message THibernateDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "hibernate";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TRestartPcDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "restart_pc";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TMuteDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "mute";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TUnmuteDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "unmute";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TOpenDefaultBrowserDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_default_browser";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TOpenYaBrowserDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_ya_browser";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TOpenFlashCardDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_flash_card";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TOpenStartDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_start";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TOpenDiskDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_disk";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Disk = 2 [json_name = "disk", (NYT.column_name) = "disk"];
+}
+
+message TOpenSettingsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_settings";
+
+    enum ESettingsTarget {
+        // Специальные возможности
+        Accessibility = 0;
+        // Настройки архивации
+        Archiving = 1;
+        // Настройки цвета
+        Colors = 2;
+        // Настройки даты и времени
+        Datetime = 3;
+        // Настройки программ по умолчанию
+        DefaultApps = 4;
+        // Настройки защитника Windows
+        Defender = 5;
+        // Настройки рабочего стола
+        Desktop = 6;
+        // Настройки дисплея
+        Display = 7;
+        // Настройки брандмауэра
+        Firewall = 8;
+        // Настройки папок
+        Folders = 9;
+        // Настройки домашней группы
+        HomeGroup = 10;
+        // Настройки индексирования
+        Indexing = 11;
+        // Настройки клавиатуры
+        Keyboard = 12;
+        // Параметры языка
+        Language = 13;
+        // Настройки экрана блокировки
+        LockScreen = 14;
+        // Настройки микрофона
+        Microphone = 15;
+        // Настройки мыши
+        Mouse = 16;
+        // Настройки сети
+        Network = 17;
+        // Настройки уведомлений
+        Notifications = 18;
+        // Настройки электропитания
+        Power = 19;
+        // Настройки принтера
+        Print = 20;
+        // Настройки конфиденциальности
+        Privacy = 21;
+        // Настройки звука
+        Sound = 22;
+        // Настройки меню пуск
+        StartMenu = 23;
+        // Настройки системы
+        System = 24;
+        // Настройки режима планшета
+        TabletMode = 25;
+        // Панель управления
+        Tablo = 26;
+        // Настройки темы
+        Themes = 27;
+        // Настройки учётных записей пользователей
+        UserAccount = 28;
+        // Настройки громкости
+        Volume = 29;
+        // Настройки VPN
+        Vpn = 30;
+        // Настройки WiFi
+        WiFi = 31;
+        // Настройки обновлений
+        WinUpdate = 32;
+        // Удаление приложений
+        AddRemove = 33;
+        // Диспетчер задач
+        TaskManager = 34;
+        // Диспетчер устройств
+        DeviceManager = 35;
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    ESettingsTarget Target = 2 [json_name = "target", (NYT.column_name) = "target"];
+}
+
+message TGoForwardDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_forward";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TGoBackwardDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_backward";
+
+    message TVisualMode {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    }
+    message THistoricalMode {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string HistoryUrl = 1 [json_name = "history_url", (NYT.column_name) = "history_url"];
+    }
+    message TNativeMode {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    oneof Mode {
+        TVisualMode VisualMode = 2 [json_name = "visual", (NYT.column_name) = "visual"];
+        THistoricalMode HistoricalMode = 3 [json_name = "historical", (NYT.column_name) = "historical"];
+        TNativeMode NativeMode = 4 [json_name = "native", (NYT.column_name) = "native"];
+    }
+}
+
+message TGoToTheBeginningDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_to_the_beginning";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TGoToTheEndDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_to_the_end";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TGoHomeDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_home";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSaveTaxiHistoryDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__none__";
+    string History = 1 [json_name = "history", (NYT.column_name) = "history"];
+}
+
+message TShowVideoDescriptionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_description";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    TVideoItem Item = 2 [json_name = "item", (NYT.column_name) = "item"];
+    TVideoItem TvShowItem = 3 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item"];
+}
+
+message TShowGalleryDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_gallery";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string Background16x9 = 2 [json_name = "background_16x9", (NYT.column_name) = "background_16x9"];
+    repeated TVideoItem Items = 3 [json_name = "items", (NYT.column_name) = "items"];
+    TVideoItem TvShowItem = 4 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item"];
+    uint32 Season = 5 [json_name = "season", (NYT.column_name) = "season"];
+    TVideoGalleryDebugInfo DebugInfo = 6 [json_name = "debug_info", (NYT.column_name) = "debug_info"];
+    string Entref = 7 [json_name = "entref", (NYT.column_name) = "entref"]; // gallery entref ('entity reference' in terms of entity search)
+}
+
+message TShowSeasonGalleryDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_season_gallery";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string Background16x9 = 2 [json_name = "background_16x9", (NYT.column_name) = "background_16x9"];
+    repeated TVideoItem Items = 3 [json_name = "items", (NYT.column_name) = "items"];
+    TVideoItem TvShowItem = 4 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item"];
+    uint32 Season = 5 [json_name = "season", (NYT.column_name) = "season"];
+    TVideoGalleryDebugInfo DebugInfo = 6 [json_name = "debug_info", (NYT.column_name) = "debug_info"];
+}
+
+message TShowPayPushScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_pay_push_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    TVideoItem Item = 2 [json_name = "item", (NYT.column_name) = "item"];
+    // Needed only when item is a tv_show_episode.
+    TVideoItem TvShowItem = 3 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item"];
+}
+
+message TVideoPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "video_play";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string Uri = 2 [json_name = "uri", (NYT.column_name) = "uri"];
+    // Needed to pass any aux info from video provider to video player.
+    string Payload = 3 [json_name = "payload", (NYT.column_name) = "payload"];
+    string SessionToken = 4 [json_name = "session_token", (NYT.column_name) = "session_token"];
+    TVideoItem Item = 5 [json_name = "item", (NYT.column_name) = "item"];
+    TVideoItem NextItem = 6 [json_name = "next_item", (NYT.column_name) = "next_item"];
+    TVideoItem TvShowItem = 7 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item"];
+    double StartAt = 8 [json_name = "start_at", (NYT.column_name) = "start_at"];
+    google.protobuf.StringValue AudioLanguage = 9 [json_name = "audio_language", (NYT.column_name) = "audio_language"];
+    google.protobuf.StringValue SubtitlesLanguage = 10 [json_name = "subtitles_language", (NYT.column_name) = "subtitles_language"];
+}
+
+message TNavigateBrowserDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "navigate_browser";
+
+    enum ECommand {
+        ClearHistory = 0;
+        CloseBrowser = 1;
+        GoHome = 2;
+        NewTab = 3;
+        OpenBookmarksManager = 4;
+        OpenHistory = 5;
+        OpenIncognitoMode = 6;
+        RestoreTab = 7;
+    }
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    ECommand Command = 2 [json_name = "command", (NYT.column_name) = "command"];
+}
+
+message TRadioPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "radio_play";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    bool IsActive = 2 [json_name = "active", (NYT.column_name) = "active"];
+    bool IsAvailable = 3 [json_name = "available", (NYT.column_name) = "available"];
+    string Color = 4 [json_name = "color", (NYT.column_name) = "color"];
+    string Frequency = 5 [json_name = "frequency", (NYT.column_name) = "frequency"];
+    string ImageUrl = 6 [json_name = "imageUrl", (NYT.column_name) = "imageUrl"];
+    string OfficialSiteUrl = 7 [json_name = "officialSiteUrl", (NYT.column_name) = "officialSiteUrl"];
+    string RadioId = 8 [json_name = "radioId", (NYT.column_name) = "radioId"];
+    double Score = 9 [json_name = "score", (NYT.column_name) = "score"];
+    bool ShowRecognition = 10 [json_name = "showRecognition", (NYT.column_name) = "showRecognition"];
+    string StreamUrl = 11 [json_name = "streamUrl", (NYT.column_name) = "streamUrl"];
+    string Title = 12 [json_name = "title", (NYT.column_name) = "title"];
+
+    oneof OptionalAlarmId {
+        string AlarmId = 13 [json_name = "alarm_id", (NYT.column_name) = "alarm_id"];
+    }
+}
+
+message TGoDownDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_down";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TGoTopDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_top";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TGoUpDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "go_up";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TScreenOnDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "screen_on";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TScreenOffDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "screen_off";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TClearQueueDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "clear_queue";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TShowTvGalleryDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_tv_gallery";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    repeated TVideoItem Items = 2 [json_name = "items", (NYT.column_name) = "items"];
+}
+
+message TAlarmStopDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarm_stop";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TAlarmSetMaxLevelDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "alarm_set_max_level";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    int32 NewLevel = 2 [json_name = "new_level", (NYT.column_name) = "new_level"];
+}
+
+message TMusicRecognitionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "music_recognition";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TAlbum {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Genre = 1 [json_name = "genre", (NYT.column_name) = "genre"];
+        string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+        string Title = 3 [json_name = "title", (NYT.column_name) = "title"];
+    }
+    message TArtist {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        bool Composer = 1 [json_name = "composer", (NYT.column_name) = "composer"];
+        string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+        bool IsVarious = 3 [json_name = "is_various", (NYT.column_name) = "is_various"];
+        string Name = 4 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    TAlbum Album = 2 [json_name = "album", (NYT.column_name) = "album"];
+    repeated TArtist Artists = 3 [json_name = "artists", (NYT.column_name) = "artists"];
+    string CoverUri = 4 [json_name = "coverUri", (NYT.column_name) = "coverUri"];
+    string Id = 5 [json_name = "id", (NYT.column_name) = "id"];
+    string Subtype = 6 [json_name = "subtype", (NYT.column_name) = "subtype"];
+    string Title = 7 [json_name = "title", (NYT.column_name) = "title"];
+    string Type = 8 [json_name = "type", (NYT.column_name) = "type"];
+    string Uri = 9 [json_name = "uri", (NYT.column_name) = "uri"];
+}
+
+message TMessengerCallDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "messenger_call";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TRecipient {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        string Guid = 2 [json_name = "guid", (NYT.column_name) = "guid"];
+        string DeviceId = 3 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    }
+
+    message TCallToRecipient {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TRecipient Recipient = 1 [json_name = "recipient", (NYT.column_name) = "recipient"];
+        string Payload = 2 [json_name = "payload", (NYT.column_name) = "payload"];
+
+        repeated TDirective OnAccepted = 3 [json_name = "on_accepted", (NYT.column_name) = "on_accepted"];
+        repeated TDirective OnEnded = 4 [json_name = "on_ended", (NYT.column_name) = "on_ended"];
+    }
+
+    message TCallToOperator {
+    }
+
+    message TAcceptCall {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string CallGuid = 1 [json_name = "call_guid", (NYT.column_name) = "call_guid"];
+
+        repeated TDirective OnEnded = 2 [json_name = "on_ended", (NYT.column_name) = "on_ended"];
+    }
+
+    message TDeclineCurrentCall {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string CallGuid = 1 [json_name = "call_guid", (NYT.column_name) = "call_guid"];
+    }
+
+    message TDeclineIncomingCall {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string CallGuid = 1 [json_name = "call_guid", (NYT.column_name) = "call_guid"];
+    }
+
+    oneof Action {
+        TCallToRecipient CallToRecipient = 2 [json_name = "call_to_recipient", (NYT.column_name) = "call_to_recipient"];
+        TAcceptCall AcceptCall = 3 [json_name = "accept_call", (NYT.column_name) = "accept_call"];
+        TDeclineCurrentCall DeclineCurrentCall = 4 [json_name = "decline_current_call", (NYT.column_name) = "decline_current_call"];
+        TDeclineIncomingCall DeclineIncomingCall = 5 [json_name = "decline_incoming_call", (NYT.column_name) = "decline_incoming_call"];
+        TCallToOperator CallToOperator = 6 [json_name = "call_to_operator", (NYT.column_name) = "call_to_operator"];
+    }
+}
+
+message TAddCardDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "add_card";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string CarouselId = 2 [json_name = "carousel_id", (NYT.column_name) = "carousel_id"];
+    string CardId = 3 [json_name = "card_id", (NYT.column_name) = "card_id"];
+    uint32 CardShowTimeSec = 4 [json_name = "card_show_time_sec", (NYT.column_name) = "card_show_time_sec"];
+    string Title = 5 [json_name = "title", (NYT.column_name) = "title", deprecated = true];
+    string ImageUrl = 6 [json_name = "image_url", (NYT.column_name) = "image_url", deprecated = true];
+    string Type = 7 [json_name = "type", (NYT.column_name) = "type", deprecated = true];
+    TDiv2Card Div2Card = 8 [json_name = "div2_card", (NYT.column_name) = "div2_card"];
+    google.protobuf.Struct Div2Templates = 9 [json_name = "div2_templates", (NYT.column_name) = "div2_templates"];
+    // The ActionSpaceId is used to find corresponding ActionSpace to add deeplinks and generate nlu hints
+    string ActionSpaceId = 10 [json_name = "action_space_id", (NYT.column_name) = "action_space_id"];
+    NAlice.NData.TCentaurTeaserConfigData TeaserConfig = 13 [json_name = "teaser_config", (NYT.column_name) = "teaser_config"];
+
+    enum EChromeLayerType {
+        // chrome.layer.type.default
+        Default = 0;
+        None = 1;
+    }
+
+    oneof ChromeLayer {
+        option (NYT.variant_field_name) = "chrome_layer";
+
+        TDiv2Card ChromeDivCard = 11 [json_name = "chrome_div_card", (NYT.column_name) = "chrome_div_card"];
+        EChromeLayerType ChromeLayerType = 12 [json_name = "chrome_layer_type", (NYT.column_name) = "chrome_layer_type"];
+    }
+}
+
+message TSetUpperShutterDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "set_upper_shutter";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    oneof DivCard {
+        option (NYT.variant_field_name) = "div_card";
+
+        TDiv2Card Div2Card = 2 [json_name = "div2_card", (NYT.column_name) = "div2_card"];
+        string CardId = 3 [json_name = "card_id", (NYT.column_name) = "card_id"];
+    }
+}
+
+// NOTE: deprecated, use TLayeredDivUICapability.TDivUIShowViewDirective
+message TShowViewDirective {
+    // Directive to set device screen on certain view layer
+    // New devices with screen should consider this directive to show view layer
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "show_view";
+    option deprecated = true;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    oneof DivCard {
+        TDiv2Card Div2Card = 2 [json_name = "div2_card", (NYT.column_name) = "div2_card"];
+        // CardId - link to Response.CardData; used when card rendering occures outside of scenario code; at now field do not serialized to client;
+        string CardId = 6 [json_name = "card_id", (NYT.column_name) = "card_id"];
+    }
+
+    message TLayer {
+        message TContentLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TAlarmLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TDialogLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        oneof Layer {
+            TContentLayer Content = 1 [json_name = "content", (NYT.column_name) = "content"];
+            TDialogLayer Dialog = 2 [json_name = "dialog", (NYT.column_name) = "dialog"];
+            TAlarmLayer Alarm = 3 [json_name = "alarm", (NYT.column_name) = "alarm"];
+        }
+    }
+
+    TLayer Layer = 3 [json_name = "layer", (NYT.column_name) = "layer"];
+
+    // time of on-screen inactivity after which view dies
+    enum EInactivityTimeout {
+        Short = 0;
+        Medium = 1;
+        Long = 2;
+        Infinity = 3;
+    }
+    EInactivityTimeout InactivityTimeout = 4 [json_name = "inactivity_timeout", (NYT.column_name) = "inactivity_timeout"];
+    // Deprecated field. Default value - true
+    bool DoNotShowCloseButton = 5 [json_name = "do_not_show_close_button", (NYT.column_name) = "do_not_show_close_button", deprecated = true];
+    string ActionSpaceId = 7 [json_name = "action_space_id", (NYT.column_name) = "action_space_id"];
+
+    // special field to interact with Мешок i.e. Stash, when true and card exists in stash, keep new version in stash
+    bool KeepStashedIfPossible = 8 [json_name = "keep_stashed_if_possible", (NYT.column_name) = "keep_stashed_if_possible"];
+
+    oneof OptionalScreenId {
+        option (NYT.variant_field_name) = "optional_screen_id";
+        string ScreenId = 9 [json_name = "screen_id", (NYT.column_name) = "screen_id"];
+    }
+
+    string LayerName = 10 [json_name = "layer_name", (NYT.column_name) = "layer_name"];
+}
+
+// NOTE: deprecated, use TLayeredDivUICapability.TDivUIPatchViewDirective
+message TPatchViewDirective {
+    // Directive to patch already existed card somewhere on the screen by server intent
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "patch_view";
+    option deprecated = true;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // actual div2 patch
+    TDiv2Patch Div2Patch = 2 [json_name = "div2_patch", (NYT.column_name) = "div2_patch"];
+
+    // predicate to search already existing div cards to apply this patch
+    TDiv2Id ApplyTo = 3 [json_name = "apply_to", (NYT.column_name) = "apply_to"];
+}
+
+// NOTE: deprecated, use TLayeredDivUICapability.TDivUIHideViewDirective
+message THideViewDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "hide_view";
+    option deprecated = true;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TLayer {
+        message TContentLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TAlarmLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TDialogLayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        oneof Layer {
+            option (NYT.variant_field_name) = "layer";
+            TContentLayer Content = 1 [json_name = "content", (NYT.column_name) = "content"];
+            TDialogLayer Dialog = 2 [json_name = "dialog", (NYT.column_name) = "dialog"];
+            TAlarmLayer Alarm = 3 [json_name = "alarm", (NYT.column_name) = "alarm"];
+        }
+    }
+
+    TLayer Layer = 3 [json_name = "layer", (NYT.column_name) = "layer"];
+}
+
+message TRotateCardsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "rotate_cards";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string CarouselId = 2 [json_name = "carousel_id", (NYT.column_name) = "carousel_id"];
+    uint32 CarouselShowTimeSec = 3 [json_name = "carousel_show_time_sec", (NYT.column_name) = "carousel_show_time_sec"];
+}
+
+message TSetMainScreenDirective {
+    // Directive to update main screen panels (aka "верхняя штора")
+    // Normally used by devices with screen to cache main screen with recommendations, control panels, etc.
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "set_main_screen";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TTab {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+
+        message TBlock {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+
+            message TWidgetBlock {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                message TWidget {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    string CardId = 1 [json_name = "id", (NYT.column_name) = "id"];
+                    TDiv2Card Card = 2 [json_name = "card", (NYT.column_name) = "card"];
+                    // measurement - dp
+                    int32 Width = 3 [json_name = "width", (NYT.column_name) = "width"];
+                    // measurement - dp
+                    int32 Height = 4 [json_name = "height", (NYT.column_name) = "height"];
+                }
+
+                repeated TWidget Widgets = 1 [json_name = "widgets", (NYT.column_name) = "widgets"];
+            }
+
+            message THorizontalMediaGalleryBlock {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                reserved 1; reserved "Id";
+                reserved 2; reserved "Card";
+
+                // measurement - dp
+                int32 Height = 3 [json_name = "height", (NYT.column_name) = "height"];
+
+                message TGalleryCard {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                    // measurement - dp
+                    int32 Width = 2 [json_name = "width", (NYT.column_name) = "width"];
+                    TDiv2Card Card = 3 [json_name = "card", (NYT.column_name) = "card"];
+                }
+
+                repeated TGalleryCard Cards = 4 [json_name = "cards", (NYT.column_name) = "cards"];
+            }
+
+            message TDivBlock {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                TDiv2Card Card = 1 [json_name = "card", (NYT.column_name) = "card"];
+                string CardId = 2 [json_name = "id", (NYT.column_name) = "id"];
+            }
+
+            oneof TBlockType {
+                TWidgetBlock WidgetBlock = 3 [json_name = "widget_block", (NYT.column_name) = "widget_block"];
+                THorizontalMediaGalleryBlock HorizontalMediaGalleryBlock = 4 [json_name = "horizontal_mediagallery_block", (NYT.column_name) = "horizontal_mediagallery_block"];
+                TDivBlock DivBlock = 5 [json_name = "div_block", (NYT.column_name) = "div_block"];
+            }
+        }
+
+        repeated TBlock Blocks = 3 [json_name = "blocks", (NYT.column_name) = "blocks"];
+    }
+
+    repeated TTab Tabs = 2 [json_name = "tabs", (NYT.column_name) = "tabs"];
+}
+
+message TSaveVoiceprintDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__none__";
+
+    enum EUserType {
+        Owner = 0;
+        Guest = 1;
+    }
+
+    string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+    repeated string RequestIds = 2 [json_name = "requests", (NYT.column_name) = "requests"];
+    EUserType UserType = 3 [json_name = "user_type", (NYT.column_name) = "user_type"];
+    string PersId = 4 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+}
+
+message TRemoveVoiceprintDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__none__";
+    string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+    string PersId = 2 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+}
+
+message TMultiaccountRemoveAccountDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "multiaccount_remove_account";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    uint64 Puid = 2 [json_name = "puid", (NYT.column_name) = "puid"];
+}
+
+message TUpdateNotificationSubscriptionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__none__";
+    bool Unsubscribe = 1 [json_name = "unsubscribe", (NYT.column_name) = "unsubscribe"];
+    int32 SubscriptionId = 2 [json_name = "subscription_id", (NYT.column_name) = "subscription_id"];
+}
+
+message TMarkNotificationAsReadDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "__none__";
+    string NotificationId = 1 [json_name = "notification_id", (NYT.column_name) = "notification_id", deprecated = true];
+    repeated string NotificationIds = 2 [json_name = "notification_ids", (NYT.column_name) = "notification_ids"];
+}
+
+message TChangeAudioDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "change_audio";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Language = 2 [json_name = "language", (NYT.column_name) = "language"];
+    string Title = 3 [json_name = "title", (NYT.column_name) = "title"];
+}
+
+message TChangeSubtitlesDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "change_subtitles";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    google.protobuf.StringValue Language = 2 [json_name = "language", (NYT.column_name) = "language"];
+    google.protobuf.StringValue Title = 3 [json_name = "title", (NYT.column_name) = "title"];
+    bool Enable = 4 [json_name = "enable", (NYT.column_name) = "enable"];
+}
+
+message TShowVideoSettingsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_video_settings";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TDrawLedScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "draw_led_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    message TDrawItem {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string FrontalLedImage = 1 [json_name = "frontal_led_image", (NYT.column_name) = "frontal_led_image"];
+        bool Endless = 2 [json_name = "endless", (NYT.column_name) = "endless"];
+    }
+    repeated TDrawItem DrawItem = 2 [json_name = "animation_sequence", (NYT.column_name) = "animation_sequence"];
+    bool TillEndOfSpeech = 3 [json_name = "till_end_of_speech", (NYT.column_name) = "till_end_of_speech"];
+}
+
+message TSendBugReportDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "send_bug_report";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string RequestId = 2 [json_name = "id", (NYT.column_name) = "id"];
+}
+
+message TNotifyDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "notify";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TNotification {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Text = 1[json_name = "text", (NYT.column_name) = "text"];
+        string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+        string SubscriptionId = 3 [json_name = "subscription_id", (NYT.column_name) = "subscription_id"];
+    }
+    repeated TNotification Notifications = 2 [json_name = "notifications", (NYT.column_name) = "notifications"];
+
+    enum ERingType {
+        // Звук уведомления отсутствует
+        NoSound = 0;
+        // Звук уведомления проигрывается, если не включен режим "Не беспокоить"
+        Delicate = 1;
+        // Звук уведомления играется в любом случае, даже если включен режим "Не беспокоить"
+        Proactive = 2;
+    }
+    ERingType Ring = 3 [json_name = "ring", (NYT.column_name) = "ring"];
+    string VersionId = 4 [json_name = "version_id", (NYT.column_name) = "version_id"];
+}
+
+message TStartMultiroomDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "start_multiroom";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    reserved "LocationId"; reserved 3;
+    oneof Where {
+        option (NYT.variant_field_name) = "where";
+        string RoomId = 2 [json_name = "room_id", (NYT.column_name) = "room_id", deprecated = true];
+        TLocationInfo LocationInfo = 4 [json_name = "location_info", (NYT.column_name) = "location_info"];
+    }
+    string MultiroomToken = 5 [json_name = "multiroom_token", (NYT.column_name) = "multiroom_token"];
+}
+
+// Deprecated
+message TStartBroadcastDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "start_broadcast";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    // Timeout on speaker broadcasting.
+    int32 TimeoutMs = 2 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms"];
+}
+
+message TStopBroadcastDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "stop_broadcast";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TIoTDiscoveryStartDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "iot_discovery_start";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    // Timeout on speaker broadcasting token.
+    int32 TimeoutMs = 2 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms"];
+    // Device type being discovered
+    string DeviceType = 3 [json_name = "device_type", (NYT.column_name) = "device_type"];
+    // SSID of wifi network used for broadcasting
+    string SSID = 4 [json_name = "ssid", (NYT.column_name) = "ssid"];
+}
+
+message TIoTDiscoveryCredentialsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "iot_discovery_credentials";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    // Fields used to run start_config_wifi
+    string SSID = 2 [json_name = "ssid", (NYT.column_name) = "ssid"];
+    string Password = 3 [json_name = "password", (NYT.column_name) = "password"];
+    string Token = 4 [json_name = "token", (NYT.column_name) = "token"];
+    string Cipher = 5 [json_name = "cipher", (NYT.column_name) = "cipher"];
+}
+
+message TIoTDiscoveryStopDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "iot_discovery_stop";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TTtsPlayPlaceholderDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tts_play_placeholder";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    reserved 2; reserved "Channel";
+    TDirectiveChannel.EDirectiveChannel DirectiveChannel = 3 [json_name = "channel", (NYT.column_name) = "channel"];
+}
+
+// Directive to start setting up a rcu (remote control unit aka пультик) on station
+message TSetupRcuDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "setup_rcu";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSetupRcuAutoDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "setup_rcu_auto";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string TvModel = 2 [json_name = "tv_model", (NYT.column_name) = "tv_model"];
+}
+
+message TSetupRcuCheckDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "setup_rcu_check";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSetupRcuManualDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "setup_rcu_manual";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSetupRcuAdvancedDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "setup_rcu_advanced";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TFindRcuDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "find_rcu";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TForceDisplayCardsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "force_display_cards";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TSuccessStartingOnboardingDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "success_starting_onboarding";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TListenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "listen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // Overrides corresponding speechkit param:
+    // https://a.yandex-team.ru/arc_vcs/speechkit/core/include/speechkit/RecognizerSettings.h?rev=bd0ac4293049cc55311abbb61fc46ee90ade3453#L185
+    oneof OptionalStartingSilenceTimeoutMs {
+        option (NYT.variant_field_name) = "optional_starting_silence_timeout_ms";
+        uint32 StartingSilenceTimeoutMs = 2 [json_name = "starting_silence_timeout_ms", (NYT.column_name) = "starting_silence_timeout_ms"];
+    }
+}
+
+message TSetSmartTvCategoriesDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "set_smarttv_categories";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    message TCategory {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string CategoryId = 1 [json_name = "category_id", (NYT.column_name) = "category_id"];
+        string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+        string Icon = 3 [json_name = "icon", (NYT.column_name) = "icon"];
+        uint32 Rank = 4 [json_name = "rank", (NYT.column_name) = "rank"];
+    }
+    repeated TCategory Categories = 2 [json_name = "categories", (NYT.column_name) = "categories"];
+}
+
+/* Provides multiple carousels to client
+ * 'carousels' - recommended list of 'carousel' items
+ *
+ * Pagination is beig performed with next group of parameters: (categoryId, offset, limit, cacheHash)
+ * Request for the first portion of data(offset = 0) doesn't require cache hash, for all futher requests it must be sent
+ * */
+message TTvSetCarouselsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "tv_set_carousels";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    repeated TCarousel Carousels = 2 [json_name = "carousels", (NYT.column_name) = "carousels"];
+    reserved 3; reserved "CacheHash";
+    string Reqid = 4 [json_name = "reqid", (NYT.column_name) = "reqid"];
+    reserved 5; reserved "UserData";
+    reserved 6; reserved "More";
+    TVideohostingBalancerRequestInfo VideohostingBalancerRequestInfo = 7 [json_name = "user_data",
+        (NYT.column_name) = "user_data"];
+    string MoreUrl = 8 [json_name = "more", (NYT.column_name) = "more"];
+    string ShownCarouselHistory = 9 [json_name = "cache_hash", (NYT.column_name) = "cache_hash"];
+}
+
+/* Provides an item, named 'carousel' which contains recommended documents(movies, series, channels, music)
+ * in personalized order
+ * usually, 'carousel' is used for getting new portion of 'carousel' which came from 'carousels' response, but in
+ * some cases, client may request 'carousel' object directly:
+ * - continue watching(contains documents, which already started watching, but haven't finished yet)
+ * - mixed carousel(top most carousel, which contains movies, series, blogger's episodes)
+ *
+ * Pagination is beig performed with next group of parameters: (carouselId, offset, limit, cacheHash)
+ * Request for the first portion of data(offset = 0) doesn't require cache hash, for all futher requests it must be sent
+ */
+message TTvSetSingleCarouselDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "tv_set_carousel";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string CarouselId = 2 [json_name = "carousel_id", (NYT.column_name) = "carousel_id"];
+    string CacheHash = 3 [json_name = "cache_hash", (NYT.column_name) = "cache_hash"];
+    reserved 4; reserved "More";
+    reserved 5; reserved "MoreInfo";
+    reserved 6; reserved "Reqid";
+    repeated TCarouselItem Includes = 7 [json_name = "includes", (NYT.column_name) = "includes"];
+    reserved 8; reserved "UserData";
+    string ShownDocumentHistory = 9 [json_name = "cache_hash", (NYT.column_name) = "cache_hash"];
+    string VideohostingRequestId = 11 [json_name = "reqid", (NYT.column_name) = "reqid"];
+    TVideohostingBalancerRequestInfo VideohostingBalancerRequestInfo = 12 [json_name = "user_data",
+        (NYT.column_name) = "user_data"];
+    string NextDocumentsPortionUrl = 14 [json_name = "more", (NYT.column_name) = "more"];
+    TNextPortionInfo NextDocumentsPortionInfo = 15 [json_name = "more_info", (NYT.column_name) = "more_info"];
+}
+
+message TShowLoginDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_login";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TShowPlusPurchaseDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_plus_purchase";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TShowPlusPromoDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_plus_promo";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TTvOpenSearchScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tv_open_search_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string SearchQuery = 2 [json_name = "search_query", (NYT.column_name) = "search_query"];
+}
+
+message TTvOpenDetailsScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tv_open_details_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // for data request
+    string ContentType = 2 [json_name = "content_type", (NYT.column_name) = "content_type"];
+    string VhUuid = 3 [json_name = "vh_uuid", (NYT.column_name) = "vh_uuid"];
+    string SearchQuery = 4 [json_name = "search_query", (NYT.column_name) = "search_query"];
+
+    // for interface
+    message TDetailsData {
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        string Description = 2 [json_name = "description", (NYT.column_name) = "description"];
+        string HintDescription = 3 [json_name = "hint_description", (NYT.column_name) = "hint_description"];
+        TAvatarMdsImage Thumbnail = 4 [json_name = "thumbnail", (NYT.column_name) = "thumbnail"];
+        TAvatarMdsImage Poster = 5 [json_name = "poster", (NYT.column_name) = "poster"];
+        uint32 MinAge = 6 [json_name = "min_age", (NYT.column_name) = "min_age"];
+    }
+
+    TDetailsData Data = 5 [json_name = "data", (NYT.column_name) = "data"];
+}
+
+message TTvOpenSeriesScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tv_open_series_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // for data request
+    string VhUuid = 2 [json_name = "vh_uuid", (NYT.column_name) = "vh_uuid"];
+}
+
+message TTvOpenPersonScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tv_open_person_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // for data request
+    string KpId = 2 [json_name = "kp_id", (NYT.column_name) = "kp_id"];
+
+    // for interface
+    message TPersonData {
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        string Subtitle = 2 [json_name = "subtitle", (NYT.column_name) = "subtitle"];
+        TAvatarMdsImage Image = 3 [json_name = "image", (NYT.column_name) = "image"];
+    }
+
+    TPersonData Data = 3 [json_name = "data", (NYT.column_name) = "data"];
+}
+
+message TTvOpenCollectionScreenDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "tv_open_collection_screen";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    // for data request
+    string SearchQuery = 2 [json_name = "search_query", (NYT.column_name) = "search_query"];
+    string Entref = 3 [json_name = "entref", (NYT.column_name) = "entref"];
+
+    // for interface
+    message TCollectionData {
+        string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+    }
+
+    TCollectionData Data = 4 [json_name = "data", (NYT.column_name) = "data"];
+}
+
+message TShowButtonsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_buttons";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    repeated TButton Buttons = 2 [json_name = "buttons", (NYT.column_name) = "buttons"];
+    oneof OptionalScreenId {
+        option (NYT.variant_field_name) = "optional_screen_id";
+        string ScreenId = 3 [json_name = "screen_id", (NYT.column_name) = "screen_id"];
+    }
+}
+
+message TRequestPermissionsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "request_permissions";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    repeated TPermissions.EValue Permissions = 2 [json_name = "permissions", (NYT.column_name) = "permissions"];
+
+    oneof OptionalOnSuccess {
+        option (NYT.variant_field_name) = "optional_on_success";
+
+        TDirective OnSuccess = 3 [json_name = "on_success", (NYT.column_name) = "on_success"];
+    }
+
+    oneof OptionalOnFail {
+        option (NYT.variant_field_name) = "optional_on_fail";
+
+        TDirective OnFail = 4 [json_name = "on_fail", (NYT.column_name) = "on_fail"];
+    }
+}
+
+message TSendAndroidAppIntentDirective {
+    // Directive for firing ondevice android app intent
+    // https://developer.android.com/reference/android/content/Intent
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "send_android_app_intent";
+
+    message TComponent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Pkg = 1 [json_name = "pkg", (NYT.column_name) = "pkg"];
+        string Cls = 2 [json_name = "cls", (NYT.column_name) = "cls"];
+    }
+
+    message TExtrasValue {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TValue {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            oneof Value {
+                option (NYT.variant_field_name) = "extras_value";
+
+                string StringValue = 1 [json_name = "string_value", (NYT.column_name) = "string_value"];
+                string CharValue = 2 [json_name = "char_value", (NYT.column_name) = "char_value"];
+                bool BoolValue = 3 [json_name = "bool_value", (NYT.column_name) = "bool_value"];
+                int32 ShortValue = 4 [json_name = "short_value", (NYT.column_name) = "short_value"];
+                int32 IntValue = 5 [json_name = "int_value", (NYT.column_name) = "int_value"];
+                int64 LongValue = 6 [json_name = "long_value", (NYT.column_name) = "long_value"];
+                float FloatValue = 7 [json_name = "float_value", (NYT.column_name) = "float_value"];
+                double DoubleValue = 8 [json_name = "double_value", (NYT.column_name) = "double_value"];
+            }
+        }
+
+        repeated TValue ArrayValue = 1 [json_name = "array_value", (NYT.column_name) = "array_value"];
+        TValue SingleValue = 2 [json_name = "single_value", (NYT.column_name) = "single_value"];
+    }
+
+    message TIntentFlags {
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_BROUGHT_TO_FRONT
+        bool FlagActivityBroughtToFront = 1 [json_name = "FLAG_ACTIVITY_BROUGHT_TO_FRONT", (NYT.column_name) = "FLAG_ACTIVITY_BROUGHT_TO_FRONT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_CLEAR_TASK
+        bool FlagActivityClearTask = 2 [json_name = "FLAG_ACTIVITY_CLEAR_TASK", (NYT.column_name) = "FLAG_ACTIVITY_CLEAR_TASK"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_CLEAR_TOP
+        bool FlagActivityClearTop = 3 [json_name = "FLAG_ACTIVITY_CLEAR_TOP", (NYT.column_name) = "FLAG_ACTIVITY_CLEAR_TOP"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
+        bool FlagActivityClearWhenTaskReset = 4 [json_name = "FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET", (NYT.column_name) = "FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+        bool FlagActivityExcludeFromRecents = 5 [json_name = "FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS", (NYT.column_name) = "FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_FORWARD_RESULT
+        bool FlagActivityExcludeForwardResult = 6 [json_name = "FLAG_ACTIVITY_FORWARD_RESULT", (NYT.column_name) = "FLAG_ACTIVITY_FORWARD_RESULT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_LAUNCH_ADJACENT
+        bool FlagActivityLaunchAdjacent = 7 [json_name = "FLAG_ACTIVITY_LAUNCH_ADJACENT", (NYT.column_name) = "FLAG_ACTIVITY_LAUNCH_ADJACENT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_MATCH_EXTERNAL
+        bool FlagActivityMatchExternal = 8 [json_name = "FLAG_ACTIVITY_MATCH_EXTERNAL", (NYT.column_name) = "FLAG_ACTIVITY_MATCH_EXTERNAL"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_MULTIPLE_TASK
+        bool FlagActivityMultipleTask = 9 [json_name = "FLAG_ACTIVITY_MULTIPLE_TASK", (NYT.column_name) = "FLAG_ACTIVITY_MULTIPLE_TASK"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NEW_DOCUMENT
+        bool FlagActivityNewDocument = 10 [json_name = "FLAG_ACTIVITY_NEW_DOCUMENT", (NYT.column_name) = "FLAG_ACTIVITY_NEW_DOCUMENT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NEW_TASK
+        bool FlagActivityNewTask = 11 [json_name = "FLAG_ACTIVITY_NEW_TASK", (NYT.column_name) = "FLAG_ACTIVITY_NEW_TASK"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NO_ANIMATION
+        bool FlagActivityNoAnimation = 12 [json_name = "FLAG_ACTIVITY_NO_ANIMATION", (NYT.column_name) = "FLAG_ACTIVITY_NO_ANIMATION"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NO_HISTORY
+        bool FlagActivityNoHistory = 13 [json_name = "FLAG_ACTIVITY_NO_HISTORY", (NYT.column_name) = "FLAG_ACTIVITY_NO_HISTORY"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NO_USER_ACTION
+        bool FlagActivityNoUserAction = 14 [json_name = "FLAG_ACTIVITY_NO_USER_ACTION", (NYT.column_name) = "FLAG_ACTIVITY_NO_USER_ACTION"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_PREVIOUS_IS_TOP
+        bool FlagActivityPreviousIsTop = 15 [json_name = "FLAG_ACTIVITY_PREVIOUS_IS_TOP", (NYT.column_name) = "FLAG_ACTIVITY_PREVIOUS_IS_TOP"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_REORDER_TO_FRONT
+        bool FlagActivityReorderToFront = 16 [json_name = "FLAG_ACTIVITY_REORDER_TO_FRONT", (NYT.column_name) = "FLAG_ACTIVITY_REORDER_TO_FRONT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_REQUIRE_DEFAULT
+        bool FlagActivityRequireDefault = 17 [json_name = "FLAG_ACTIVITY_REQUIRE_DEFAULT", (NYT.column_name) = "FLAG_ACTIVITY_REQUIRE_DEFAULT"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_REQUIRE_NON_BROWSER
+        bool FlagActivityRequireNonBrowser = 18 [json_name = "FLAG_ACTIVITY_REQUIRE_NON_BROWSER", (NYT.column_name) = "FLAG_ACTIVITY_REQUIRE_NON_BROWSER"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        bool FlagActivityResetTaskIfNeeded = 19 [json_name = "FLAG_ACTIVITY_RESET_TASK_IF_NEEDED", (NYT.column_name) = "FLAG_ACTIVITY_RESET_TASK_IF_NEEDED"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_RETAIN_IN_RECENTS
+        bool FlagActivityRetainInRecents = 20 [json_name = "FLAG_ACTIVITY_RETAIN_IN_RECENTS", (NYT.column_name) = "FLAG_ACTIVITY_RETAIN_IN_RECENTS"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_SINGLE_TOP
+        bool FlagActivitySingleTop = 21 [json_name = "FLAG_ACTIVITY_SINGLE_TOP", (NYT.column_name) = "FLAG_ACTIVITY_SINGLE_TOP"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_TASK_ON_HOME
+        bool FlagActivityTaskOnHome = 22 [json_name = "FLAG_ACTIVITY_TASK_ON_HOME", (NYT.column_name) = "FLAG_ACTIVITY_TASK_ON_HOME"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_FROM_BACKGROUND
+        bool FlagActivityFromBackground = 23 [json_name = "FLAG_FROM_BACKGROUND", (NYT.column_name) = "FLAG_FROM_BACKGROUND"];
+        // https://developer.android.com/reference/android/content/Intent#FLAG_RECEIVER_FOREGROUND
+        bool FlagActivityReceiverForeground = 25 [json_name = "FLAG_RECEIVER_FOREGROUND", (NYT.column_name) = "FLAG_RECEIVER_FOREGROUND"];
+    }
+
+    /**
+     * Flags, which determines the way of passing intent to Android OS
+     * start_activity = https://developer.android.com/reference/android/content/Context#startActivity(android.content.Intent)
+     * send_broadcast = https://developer.android.com/reference/android/content/Context#sendBroadcast(android.content.Intent)
+     *
+     * There are other ways to work with intents, but, most probably they are not applicable for managing
+     * it from backend(because it's too complex or just doesn't make sense)
+     */
+    enum EIntentStartType {
+        StartActivity = 0; // default
+        SendBroadcast = 1;
+    }
+
+    message TAnalytics {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message AppLaunchAnalyticsData {
+            string PackageName = 1 [json_name = "package_name", (NYT.column_name) = "package_name"];
+            string VisibleName = 2 [json_name = "visible_name", (NYT.column_name) = "visible_name"];
+        }
+
+        oneof Value {
+            option (NYT.variant_field_name) = "value";
+
+            AppLaunchAnalyticsData AppLaunch = 1 [json_name = "app_launch", (NYT.column_name) = "app_launch"];
+        }
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Action = 2 [json_name = "action", (NYT.column_name) = "action"];
+    string Uri = 3 [json_name = "uri", (NYT.column_name) = "uri", (SkipDefaultSerialization) = true];
+    string Category = 4 [json_name = "category", (NYT.column_name) = "category"];
+    string Type = 5 [json_name = "type", (NYT.column_name) = "type"];
+    TComponent Component = 6 [json_name = "component", (NYT.column_name) = "component"];
+    // TODO(alex-garmash): SMARTTVBACKEND-1027 return extras when map is supported
+    reserved 7; reserved "Extras";
+    EIntentStartType StartType = 8 [json_name = "start_type", (NYT.column_name) = "start_type"];
+    TIntentFlags Flags = 9 [json_name = "flags", (NYT.column_name) = "flags"];
+    TAnalytics Analytics = 10 [json_name = "analytics", (NYT.column_name) = "analytics"];
+}
+
+message TStopMultiroomDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "stop_multiroom";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MultiroomSessionId = 2 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id", (OuterField) = true];
+}
+
+message TFillCloudUiDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "fill_cloud_ui";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text", (LanguageDependent) = NlgText];
+}
+
+message TDoNotDisturbOnDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "do_not_disturb_on";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TDoNotDisturbOffDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "do_not_disturb_off";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+// ServerDirectives
+
+message TServerDirective {
+
+    message TMeta {
+        enum EApplyFor {
+            Unknown = 0;
+            DeviceOwner = 1; // apply this directive on behalf of device owner
+            CurrentUser = 2; // apply this directive on behalf of current user recognized by Biometry (owner/guest/group account)
+        }
+
+        EApplyFor ApplyFor = 1 [json_name = "apply_for", (NYT.column_name) = "apply_for"];
+    }
+
+    oneof Directive {
+        TUpdateDatasyncDirective UpdateDatasyncDirective = 1;
+        TPushMessageDirective PushMessageDirective = 2 [deprecated = true];
+        TPersonalCardsDirective PersonalCardsDirective = 3 [deprecated = true];
+        TMementoChangeUserObjectsDirective MementoChangeUserObjectsDirective = 4;
+        // instead of TPushMessageDirective & TPersonalCardsDirective
+        TSendPushDirective SendPushDirective = 5;
+        TDeletePushesDirective DeletePushesDirective = 6;
+        TPushTypedSemanticFrameDirective PushTypedSemanticFrameDirective = 7;
+        TAddScheduleActionDirective AddScheduleActionDirective = 8;
+        TSaveUserAudioDirective SaveUserAudioDirective = 9 [(NYT.column_name) = "save_user_audio_directive"];
+        TPatchAsrOptionsForNextRequestDirective PatchAsrOptionsForNextRequestDirective = 10 [(NYT.column_name) = "patch_asr_options_for_next_request_directive"];
+        TCancelScheduledActionDirective CancelScheduledActionDirective = 11 [(NYT.column_name) = "cancel_scheduled_action_directive"];
+        TEnlistScheduledActionDirective EnlistScheduledActionDirective = 12 [(NYT.column_name) = "enlist_scheduled_action_directive"];
+        // Note: there is no NYT.column_name for fields with numbers from 1 to 8
+        // because they were added before the protobuf test was added
+        // We can't just add NYT.column_name to them because it will break the log parser
+        // !! Please add new fields with NYT.column_name option !!
+    }
+
+    TMeta Meta = 13 [json_name = "meta", (NYT.column_name) = "meta"];
+}
+
+message TUpdateDatasyncDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EDataSyncMethod {
+        Put = 0;
+    }
+    string Key = 1 [json_name = "key", (NYT.column_name) = "key"];
+
+    oneof Value {
+        string StringValue = 2 [json_name = "value", (NYT.column_name) = "value"];
+        google.protobuf.Struct StructValue = 4 [json_name = "struct_value", (NYT.column_name) = "struct_value"];
+    }
+
+    EDataSyncMethod Method = 3 [json_name = "method", (NYT.column_name) = "method"];
+}
+
+message TPushMessageDirective {
+    // deprecated. Use TSendPushDirective
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+    string Body = 2 [json_name = "body", (NYT.column_name) = "body"];
+    string Link = 3 [json_name = "link", (NYT.column_name) = "link"];
+    string PushId = 4 [json_name = "push_id", (NYT.column_name) = "push_id"];
+    string PushTag = 5 [json_name = "push_tag", (NYT.column_name) = "push_tag"];
+    string ThrottlePolicy = 6 [json_name = "throttle_policy", (NYT.column_name) = "throttle_policy"];
+    repeated EAppType AppTypes = 7 [json_name = "app_types", (NYT.column_name) = "app_types"];
+    repeated TSendPushDirective.TAction Actions = 8 [json_name = "actions", (NYT.column_name) = "actions"];
+}
+
+message TPersonalCardsDirective {
+    // deprecated. Use TSendPushDirective
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TCard {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string CardId = 1 [json_name = "card_id", (NYT.column_name) = "card_id"];
+        double DateTo = 2 [json_name = "date_to", (NYT.column_name) = "date_to"];
+        double DateFrom = 3 [json_name = "date_from", (NYT.column_name) = "date_from"];
+        string ButtonUrl = 4 [json_name = "button_url", (NYT.column_name) = "button_url"];
+        string Text = 5 [json_name = "text", (NYT.column_name) = "text"];
+
+        message TYandexStationFilmData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            oneof OptionalMinPrice {
+                uint32 MinPrice = 1 [json_name = "min_price", (NYT.column_name) = "min_price"];
+            }
+        }
+
+        oneof Data {
+            TYandexStationFilmData YandexStationFilmData = 6 [json_name = "yandex.station_film"];
+        }
+    }
+    TCard Card = 1 [json_name = "card", (NYT.column_name) = "card"];
+    bool RemoveExistingCards = 2 [json_name = "remove_existing_cards", (NYT.column_name) = "remove_existing_cards"];
+}
+
+message TMementoChangeUserObjectsDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TReqChangeUserObjects {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated ru.yandex.alice.memento.proto.TConfigKeyAnyPair UserConfigs = 1;
+        repeated ru.yandex.alice.memento.proto.TDeviceConfigs DevicesConfigs = 2;
+
+        google.protobuf.Any ScenarioData = 3;
+        ru.yandex.alice.memento.proto.TSurfaceScenarioData SurfaceScenarioData = 4;
+    }
+
+    TReqChangeUserObjects UserObjects = 1 [json_name = "user_objects", (NYT.column_name) = "user_objects"];
+}
+
+message TPushTypedSemanticFrameDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Puid = 1 [json_name = "puid", (NYT.column_name) = "puid"];
+    string DeviceId = 2 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    uint32 Ttl = 3 [json_name = "ttl", (NYT.column_name) = "ttl"];
+
+    TSemanticFrameRequestData SemanticFrameRequestData = 4 [json_name = "semantic_frame_request_data", (NYT.column_name) = "semantic_frame_request_data"];
+}
+
+message TAddScheduleActionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NMatrix.NApi.TScheduleAction ScheduleAction = 1 [json_name = "schedule_action", (NYT.column_name) = "schedule_action"];
+}
+
+message TCancelScheduledActionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NMatrix.NScheduler.NApi.TRemoveScheduledActionRequest RemoveScheduledActionRequest = 1 [json_name = "remove_scheduled_action_request", (NYT.column_name) = "remove_scheduled_action_request"];
+}
+
+message TEnlistScheduledActionDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NMatrix.NScheduler.NApi.TAddScheduledActionRequest AddScheduledActionRequest = 1 [json_name = "scheduled_action_request", (NYT.column_name) = "scheduled_action_request"];
+}
+
+message TSaveUserAudioDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TStorageOptions {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TS3Storage {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // Result audio path will be <bucket>.s3.mds.yandex.net/<path>
+            string Bucket = 1 [json_name = "bucket", (NYT.column_name) = "bucket"];
+            string Path = 2 [json_name = "path", (NYT.column_name) = "path"];
+        }
+
+        oneof Storage {
+            TS3Storage S3Storage = 1 [json_name = "s3_storage", (NYT.column_name) = "s3_storage"];
+        }
+    }
+
+    enum EPartsToSave {
+        Unknown = 0;
+        MainPartOnly = 1;
+        SpotterPartOnly = 2;
+
+        // TODO(VOICESERV-4176) Add "Full" option
+        // opus + opus, wav + wav, etc is not a correct audio file
+        // so we need some special code to create correct audio file that has not yet been written
+    }
+
+    TStorageOptions StorageOptions = 1 [json_name = "storage_options", (NYT.column_name) = "storage_options"];
+    EPartsToSave PartsToSave = 2 [json_name = "parts_to_save", (NYT.column_name) = "parts_to_save"];
+}
+
+message TEnrollmentStartDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "enrollment_start";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string PersId = 2 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+    uint32 TimeoutMs = 3 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms"];
+    uint64 Puid = 4 [json_name = "puid", (NYT.column_name) = "puid"];
+}
+
+message TEnrollmentCancelDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "enrollment_cancel";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string PersId = 2 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+}
+
+message TEnrollmentFinishDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "enrollment_finish";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string PersId = 2 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+    repeated string RequestIds = 3 [json_name = "requests", (NYT.column_name) = "requests"];
+    bool SendGuestEnrollmentFinishFrame = 4 [json_name = "send_guest_enrollment_finish_frame", (NYT.column_name) = "send_guest_enrollment_finish_frame"];
+}
+
+message TMultiroomSemanticFrameDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "multiroom_semantic_frame";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+    string DeviceId = 2 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    TSemanticFrameRequestData Body = 3 [json_name = "body", (NYT.column_name) = "body"];
+}
+
+message TPatchAsrOptionsForNextRequestDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Patch for next request asr options
+    // If you want to add a new field here, you need to get approval from lyalchenko@ and abezhin@
+    // and and add the code that will apply the patch of new fields
+
+    // Patch for https://a.yandex-team.ru/arc/trunk/arcadia/voicetech/asr/engine/proto_api/asr_options.proto?rev=r8919236#L11
+    message TAdvancedASROptionsPatch {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        google.protobuf.Int32Value MaxSilenceDurationMS = 5 [json_name = "max_silence_duration_ms", (NYT.column_name) = "max_silence_duration_ms"];
+        google.protobuf.BoolValue EnableSidespeechDetector = 6 [json_name = "enable_sidespeech_detector", (NYT.column_name) = "enable_sidespeech_detector"];
+        google.protobuf.FloatValue EouThreshold = 7 [json_name = "eou_threshold", (NYT.column_name) = "eou_threshold"];
+        google.protobuf.Int32Value InitialMaxSilenceDurationMS = 8 [json_name = "initial_max_silence_duration_ms", (NYT.column_name) = "initial_max_silence_duration_ms"];
+    }
+
+    TAdvancedASROptionsPatch AdvancedASROptionsPatch = 1 [json_name = "advanced_asr_options_patch", (NYT.column_name) = "advanced_asr_options_patch"];
+}
+
+message TWebViewMediaSessionPlayDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "web_view_media_session_play";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MediaSessionId = 2 [json_name = "media_session_id", (NYT.column_name) = "media_session_id"];
+}
+
+message TWebViewMediaSessionPauseDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SpeechKitName) = "web_view_media_session_pause";
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MediaSessionId = 2 [json_name = "media_session_id", (NYT.column_name) = "media_session_id"];
+}
+
+message TOpenScreensaverDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "open_screensaver";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TShowPromoDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "show_promo";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+}
+
+message TAudioMultiroomAttach {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (SpeechKitName) = "audio_multiroom_attach";
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string MultiroomToken = 2 [json_name = "multiroom_token", (NYT.column_name) = "multiroom_token"];
+}

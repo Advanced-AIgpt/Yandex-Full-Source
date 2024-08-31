@@ -1,0 +1,33 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ru.nlg" %}
+
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import render_call, calls_not_supported %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ru.nlg" import get_search_info  %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not (context.is_smart_speaker or context.is_legatus or context.is_auto)  %}
+    {% if info.factoid_phone_uri %}
+      {{ info.factoid_phone_uri }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if (context.is_smart_speaker or context.is_legatus or context.is_auto) and info.is_factoid_with_phone %}
+    {{ calls_not_supported() }}
+  {% else %}
+    {% if info.factoid_phone_uri %}
+      {{ render_call() }}
+    {% else %}
+      {% chooseline %}
+        Я не понимаю, куда позвонить.
+        Я не нашла никакого номера телефона.
+        Я не понимаю, о каком номере телефона вы говорите.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

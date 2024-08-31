@@ -1,0 +1,90 @@
+USE hahn;
+
+$today = CAST(DateTime::TimestampFromMicroSeconds(YQL::Now()) AS Date);
+$min_date = Unwrap($today - DateTime::IntervalFromDays(1));
+$max_date = Unwrap($today);
+$dates = (
+select 
+    ListMap(
+        ListFlatMap(
+            ListFromRange(
+                CAST($min_date AS Int32),
+                CAST($max_date AS Int32)
+            ), ($x) -> {RETURN CAST($x AS date)}
+        )
+        , ($d) -> { RETURN CAST($d AS String); }
+    ) as dates
+);
+
+
+$regex_options = Re2::Options(true as Utf8);
+$log_entry_match = Re2::FindAndConsume(
+    @@(Skill diagnostic info:\s*{[^}]+})@@
+    , $regex_options
+);
+
+$parse_entry = ($entry) -> {
+    $remove_prefix = Re2::Replace(@@Skill diagnostic info:\s+@@, $regex_options);
+    $parsed = Yson::ParseJson($remove_prefix($entry, ''));
+    -- RETURN $remove_prefix($entry, '');
+    RETURN AsStruct(
+        Yson::LookupString($parsed, 'client_id') AS client_id
+        , COALESCE(Yson::LookupString($parsed, 'error_type'), '') AS error
+        , Yson::LookupString($parsed, 'error_detail') AS error_detail
+        , Yson::LookupString($parsed, 'request_id') AS request_id
+        , Yson::LookupString($parsed, 'session_id') AS session_id
+        , Yson::LookupString($parsed, 'skill_id') AS skill_id
+        , Yson::LookupString($parsed, 'source') AS source
+        , Yson::LookupInt64 ($parsed, 'timestamp_mcr') AS timestamp_mcr
+        , Yson::LookupString($parsed, 'user_id') AS user_id
+        , Yson::LookupInt64 ($parsed, 'zora_response_time_mcr') AS zora_response_time_mcr
+    );
+};
+
+DEFINE ACTION $parse_bass_logs($date) AS 
+    
+    $log_table = 'logs/bass-vins-log/1d/' || $date;
+    
+    $logs = (
+        SELECT 
+            WeakField(content, 'String') AS content
+        FROM
+            $log_table
+    );
+    
+    -- split log entries with multiple 'Skill diagnostic info' records 
+    -- into multiple rows
+    $records = (
+    FROM $logs
+    SELECT 
+        content
+        , $log_entry_match(content) AS log_entries
+    WHERE
+        content like '%Skill diagnostic info%'
+    );
+    
+    $parsed = (
+    SELECT
+        $parse_entry(entry)
+    FROM
+        $records
+    FLATTEN BY log_entries AS entry
+    );
+    
+    $output_table = 'home/paskills/bass-skill-logs/stable/events/' || $date;
+    
+    INSERT INTO $output_table WITH TRUNCATE
+    SELECT
+        *
+    FROM
+        $parsed
+    FLATTEN COLUMNS
+    WHERE
+        skill_id IS NOT NULL
+    ;
+END DEFINE;
+
+EVALUATE FOR $date IN $dates
+DO $parse_bass_logs($date)
+;
+

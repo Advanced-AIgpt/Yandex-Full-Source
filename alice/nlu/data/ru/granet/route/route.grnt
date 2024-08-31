@@ -1,0 +1,1099 @@
+import: common/filler.grnt
+import: traffic/common.grnt
+
+form personal_assistant.scenarios.show_route:
+    enable_alice_tagger: true
+    slots:
+        app:
+            source: $App
+            type:
+                custom.show_route_app
+                string
+        route_action_type:
+            source: $ActionTypeDistanceWeak|$ActionTypeDistanceStrong|$ActionTypeOther|$ActionShow|$RouteAction
+            type:
+                custom.route_action_type
+                string
+        route_type:
+            source: $ByType|$OnTypeCar|$OnTypeTaxi|$OnTypeOther|$ForType|$SimpleType|$SingleTypeRouteIntentExtra|$SingleTypeRouteIntentClassic|$SingleTypeShowOnMap|$SingleTypeOther|$PartViaActions
+            type:
+                custom.route_type
+                string
+        what_from:
+            source: $WhatFromCity|$WhatFrom|$WeakWhatFrom|$Current
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        what_to:
+            source: $WhatToCity|$WhatTo|$WeakWhatTo|$WhatToSpecial|$WhatToFavorite|$CurrentIsHere
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        what_via:
+            source: $WhatViaCity|$WhatVia|$WeakWhatVia|$SlotByRoad
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        where_from:
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+        where_to:
+            source: $WhereTo|$SlotWhereNearTo|$WhereArea|$WhereRegion
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+        where_via:
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+
+    root:
+        [$DistanceFrom $RouteAddon* $RouteIntent* $ActionType+ $WeakArea?] [$DistanceTo $ActionType? $RouteAddon* $RouteIntent* $WeakArea?]
+        [$DistanceFrom $RouteAddon* $RouteIntent* $ActionType? $WeakArea?] [$DistanceTo $ActionType+ $RouteAddon* $RouteIntent* $WeakArea?]
+        [$RouteAddon* $Area $RouteIntent* $WeakFromLocation? $ViaLocation* $ToLocation]
+        [$RouteAddon* $Area? $RouteIntent* $FromLocation $ViaLocation* $ToLocation]
+        [$RouteAddon* $WeakArea? $RouteIntent* $FromLocation $ViaLocation* $WeakToLocation]
+        [$RouteAddon* $Area? $RouteIntent* $FromLocation? $ViaLocation+ $WeakToLocation]
+        [$RouteAddon* $Area? $RouteIntent* $ViaStrongLocation $ViaLocation* $WeakToLocation?]
+        [$RouteAddon* $WeakArea? $RouteIntent+ $SingleType? $WeakToLocation? $WeakFromLocation $ViaLocation*]
+        [$RouteAddon* $WeakArea? $RouteIntent+ $SingleType? $WeakToLocation $WeakFromLocation? $ViaLocation*]
+        [$RouteAddon* $WeakArea? $RouteIntent* $SingleType? $ActionTypeDistance+ $SemiweakToLocation $WeakFromLocation? $ViaLocation*]
+        [$RouteAddon* $WeakArea? $RouteIntent* $SingleType? $ActionTypeDistance+ $WeakToLocation? $WeakFromLocation $ViaLocation*]
+        [$RouteAddon* $WeakArea? $RouteIntent* $SingleTypeRouteIntent $WeakToLocation $WeakFromLocation? $ViaLocation*]
+        [$RouteAddon* $WeakArea? $RouteIntent+ $SingleType? $SemiweakToLocation]
+        [$RouteAddon* $RouteIntent+ $FewStrongPoints]
+        [$RouteAddon* $RouteIntent* $ActionTypeDistanceStrong+ $FewStrongPoints]
+        [$RouteIntent+ $ViaLocation+] [$RouteIntent* $WeakToLocation]
+        [$RouteIntent* $ViaLocation+] [$RouteIntent+ $WeakToLocation]
+        $SingleTypeRouteIntentExtra
+        $RouteIntent? $ViaLocation+ $ViaLastTarget
+        $UseTypeTransportIntent
+    filler:
+        $Filler
+
+$FewStrongPoints:
+    $WhatFromCity $WhatViaCity* $WhatToCity
+
+$FewStrongCountries:
+    $WhatFromCity $WhatViaCity* $WhatToCity
+
+$DistanceFrom:
+    (между | сколько от) $BeetweenType? $WeakWhatFrom
+
+$BeetweenType:
+    %lemma
+    городами
+
+$DistanceTo:
+    (и до? | до) $BeetweenType? $WeakWhatTo
+
+$RouteIntent:
+    $RouteWay
+    %weight 0.15
+    $UseTypeStrong
+
+$ActionShowExtra:
+    $ActionShow мне? $Variants?
+
+$RouteAddon:
+    $ActionShowExtra
+    $ActionType
+    $WhenGo
+    $UseApp
+    по следующему
+    последующим
+    %weight 0.1
+    $UseType
+
+$WhenGo:
+    сейчас
+    сегодня
+
+$Current:
+    отсюда осталось?
+    (от | с) моего? местоположения
+    (от | до) (сода | сюда | суда | нас | меня | этой? точки)
+
+$CurrentIsHere:
+    дотуда
+    досюда
+    сюда
+    туда
+
+$Area:
+    это? (город | города | тоже) $WhereTo (ко мне)?
+    (на | к | до) $SlotWhereNearTo
+    (на | в) моем? районе
+    в пешей доступности
+
+$WeakArea:
+    $Area
+    (как | это)? в $WhereTo (ко мне)?
+    %weight 0.002
+    в? $WhereRegion
+    %weight 0.001
+    который? находится? в? $WhereArea
+#    до $WhereTo
+    $WhereTo
+    $sys.geo (область | области)
+
+$WhereArea:
+    $ProvinceLocations
+
+$WhereRegion:
+    $ner.GeoAddr.Country
+
+$WhereTo:
+    $CityLocations
+
+$SlotWhereNearTo:
+    $WhereCloseToMe
+
+$WhereCloseToMe:
+    $WhereCloseTo (ко мне)?
+
+$WhereCloseTo:
+    %lemma
+    поблизости
+    самый? ближайший
+
+$WeakFromLocation:
+    $PartFrom $SlotWhereNearTo? $WeakWhatFrom
+    $Current
+    %weight 0.22
+    $PartFrom? $SlotWhereNearTo? $WhatFrom
+
+$WeakToLocationWithDetail:
+    $WeakToLocation (на | по) $WhereDetailedLocation
+
+$WhereDetailedLocation:
+    $KnownLocations
+
+$PartToSemi:
+    $PartToIntent
+    $PartToStrong
+    и? до | на
+
+$SemiweakToLocation:
+    $PartToSemi $SlotWhereNearTo? $WeakWhatTo
+    [$WeakWhatTo (а? где находится)]
+    %weight 0.32
+    $PartToSemi? $SlotWhereNearTo? $WhatTo
+    %weight 0.01
+    $CurrentIsHere
+
+$WeakToLocation:
+    $PartTo $SlotWhereNearTo? $WeakWhatTo
+    [$WeakWhatTo (а? где находится)]
+    %weight 0.32
+    $PartTo? $SlotWhereNearTo? $WhatTo
+    %weight 0.01
+    $CurrentIsHere
+
+$FromLocation:
+    $PartFrom $SlotWhereNearTo? $WhatFrom
+    $Current
+
+$WhatFromCity:
+    $CityLocations
+
+$WhatViaCity:
+    $CityLocations
+
+$WhatToCity:
+    $CityLocations
+    $sys.geo
+    %weight 0.01
+    $MissedProvince
+
+$ProvinceLocations:
+    $ner.GeoAddr.Province
+
+$CityLocations:
+    %weight 0.06
+    $ner.GeoAddr.Country
+    %weight 0.04
+    $CityLocationsPrefix? $ner.GeoAddr.City
+    $CityLocationsPrefix? $ner.GeoAddr.City2
+    %weight 0.02
+    $CityLocationsPrefix? $MissedCity
+    %weight 0.01
+    $VillageLocationsPrefix $ExtraWeakLocation
+
+$CityLocationsPrefix:
+    город
+    города
+    в городе
+
+$VillageLocationsPrefix:
+    село | поселок
+    в? (село | селе | поселке)
+    до? поселка
+
+$ToStrongLocation:
+    $PartToStrongPrefix? $UseType? $PartTo? $WhatToFavorite $WeakArea?
+    $PartToStrongPrefix? $UseType? $PartToStrong $WeakWhatTo
+    $PartToStrongPrefix? $UseType? $WhatTo $SlotWhereNearTo
+    $PartToStrongPrefix? $UseType? $PartTo $WhatToSpecial $WeakArea?
+    %weight 0.005
+    $PartToStrongPrefix? $UseType? $PartToIntent $WhatTo
+
+$ToLocation:
+    $PartTo $SlotWhereNearTo? $WhatTo
+
+$ViaStrongLocation:
+    [$PartViaStrong $WeakWhatVia $SlotWhereNearTo?]
+
+$ViaLocation:
+    $ViaStrongLocation
+    $PartVia $SlotWhereNearTo? $WeakWhatVia $SlotWhereNearTo?
+    $WeakWhatVia $PartViaBack
+
+$ViaLastTarget:
+    $ToLocation
+    %weight 0.1
+    $FromLocation
+
+$PartVia:
+    потом? через
+    потом через?
+    [$PartViaVariants $PartViaActionsWeak? $UseType?] $PartViaGoal?
+
+$PartViaBack:
+    $PartViaVariants
+
+$PartViaStrong:
+    [$PartViaVariants? $PartViaActions $UseType?] $PartViaGoal?
+
+$PartViaGoal:
+    до | к | на | в | во
+    по адресу
+
+$PartViaActionsWeak:
+    $PartViaActions
+    едем
+    поехать
+    через
+
+$PartViaActions:
+    заедем
+    заехать
+    зайдем
+    с заездом
+
+$PartViaVariants:
+    нужно? сначала
+    сперва
+    потом
+    по (пути | дороге | адресу | объездной)
+
+$PartFrom:
+    нужно? сначала? (от | с | со | из) адреса?
+    находится от
+
+$PartToStrongPrefix:
+    потом
+    наконец
+
+$PartToStrong:
+    адрес
+    до адреса
+    к адресу
+    по адресу
+    на адрес
+    находится на
+    $SlotWhereNearTo
+
+$PartToIntent:
+    до | к | на
+
+$PartToInto:
+    $PartToStrong
+    до | к | на | в
+
+$PartTo:
+    $PartToStrong
+    $PartToIntent
+    где? находится
+    и? до | на | и | к | по | в
+    (и | а)? (дальше | потом | затем | после этого?) (продолжить | возвращаемся)? ($PartViaActions | $SingleType)? $PartToInto?
+
+$WeakWhatFrom:
+    $WeakAllLocation
+
+$WeakWhatTo:
+    $WeakAllLocation
+
+$WeakWhatVia:
+    $WeakAllLocation
+    %negative
+    в
+    или
+    час можно?
+
+$WeakAllLocation:
+    $AllLocation
+    %weight 0.01
+    $ExtraWeakLocation
+    $RoadNumber
+    %negative
+    $Filler+
+    $Number
+    английски
+    английскому
+
+$ExtraWeakLocation:
+    %weight 0.32
+    $ExtraWeakLocationWord
+    %weight 0.16
+    $ExtraWeakLocationWord $ExtraWeakLocationWord?
+    %weight 0.08
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.04
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.02
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.01
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+
+$NoLocationNonsensitive:
+    (перекрыта | перерыта) что? ли?
+    как его? там?
+    кратчайший
+    мне
+    на (что | чем) можно
+#    сначала
+    сразу же?
+    че
+    что ли?
+    это
+
+$ExtraWeakLocationWord:
+    .
+    %negative
+    $App
+    $Cosmic
+    $Common.Filler
+    $NoLocationNonsensitive
+#    $OnType
+    $RouteAction
+    $ActionShow
+    $SimpleType
+    $SingleType
+    $WhereCloseTo
+    $Time
+#    $WhatLength
+    %lemma
+    машина
+    общественный
+    транспорт
+    адрес
+    барби
+    беби
+    ближайшей
+    брюки
+    будущее
+    валют
+    вам
+    вот
+    время
+    выбрать
+    выведи
+    выключи
+    вырастаю
+    выходят
+    говно
+    говори
+    график
+    денег
+    до
+    добавить
+    доллар
+    думаешь
+    душ
+    евро
+    едят
+    есть
+    ехать
+    жди
+    жопой
+    завтра
+    заказ
+    закат
+    затем
+    злотого
+    играть
+    иду
+    из
+    изображение
+    искать
+    какой
+    картика
+    кататься
+    конца
+    кредит
+    кушать
+    летит
+    майнкрафт
+    нажать
+    напасть
+    напомни
+    нарусуй
+    находится
+    начать
+    найди
+    не
+    номер? телефон
+    онлайн
+    осталось
+    от
+    ответь
+    отойти
+    отстань
+    оценивать
+    парковка
+    пауза
+    пацан
+    пишут
+    перевод
+    по
+    повтор
+    повторяй
+    погода
+    поддельный
+    позвони
+    поиграет
+    поиск
+    покататься
+    получить
+    пополнить
+    пополнении
+    потом
+    почувствовать
+    приехать
+    приложение
+    принесли
+    приходит
+    пробка
+    пытаются
+    работает
+    рассвет
+    рассказывать
+    расстояние
+    режим
+    рельс
+    рисовать
+    рубль
+    садимся
+    садись
+    сайт
+    своей
+    сделаю
+    сегодня
+    сегодняшний
+    секунд
+    сказать
+    скольки
+    сколько
+    спать
+    сросила
+    стал
+    съел
+    такси
+    тебе
+    терни
+    туалет
+    уже
+    упал
+    учись
+    фильм
+    финиш
+    хотел
+    часы
+    чем
+    щека
+    юбка
+    я
+
+$Cosmic:
+    %lemma
+    Венера
+    Земля
+    Луна
+    Макемаке
+    Марс
+    Нептун
+    Плутон
+    Сатурн
+    Солнце
+    Уран
+    Хаумеа
+    Церера
+    Эрида
+    Юпитер
+    черной дыры
+    созвездия
+    туманность
+
+$WhatToFavorite:
+    $FavoritePlace
+
+$WhatToSpecial:
+    $SpecialPlace
+
+$WhatFrom:
+    $AllLocation
+
+$WhatTo:
+    $AllLocation
+    %weight 0.01
+    $CityLocationsPrefix? $CityLocations $AllLocation
+
+$WhatVia:
+    $AllLocation
+
+$AllLocation:
+    $SpecialPlace ($SpecialByAddress $KnownLocations)?
+    $SpecialPlace ($CityLocationsPrefix? $CityLocations)?
+    $KnownLocations $SpecialPlace?
+    $CityLocationsPrefix? $CityLocations
+    %weight 0.2
+    $sys.geo
+    %weight 0.12
+    $WhereGeoBaseOthers
+    %weight 0.10
+    $ProvinceLocations
+    %weight 0.1
+    $MissedProvince
+    %weight 0.01
+    $MissedStreet
+
+$SpecialByAddress:
+    находится? на
+    находится? по адресу
+
+$KnownLocations:
+    $sys.geo
+    $ner.GeoAddr.City
+    $ner.GeoAddr.City2
+    $ner.GeoAddr.Street
+    $WhereGeoBaseOthers
+
+$WhereGeoBaseOthers:
+    $ner.GeoAddr.Address
+    $RegionRu
+    $Country
+    %lemma
+    ленинградка
+    тушино
+    мкад
+    %negative
+    на общественном? транспорте # collision in $ner.GeoAddr.Address
+
+$MissedStreet:
+    паршикова
+
+$MissedCity:
+    %lemma
+    каменск
+    кранштат
+
+$MissedProvince:
+    %lemma
+    арти
+    булгакова
+    вазовского
+    джугбы
+    дивеево
+    дивное
+    добринка
+    костино отдельце
+    новая? купавна
+    панино
+    петропавловск камчатска
+    тарноги
+    утулик
+    %weight 0.1
+    поселок $ExtraWeakLocationWord
+    садового товарищества $ExtraWeakLocationWord
+    село $ExtraWeakLocationWord
+    села $ExtraWeakLocationWord
+
+$FavoritePlace:
+    %lemma
+    дом
+    домой
+    работа
+
+$SpecialPlace:
+    $FavoritePlace
+    %lemma
+    баня
+    библиотека
+    $ExtraMarket? (ашан | глобус | лента | пятерочка)
+    $ExtraMarket? леруа (мерлен | мурлен)?
+    макдональдс
+    мир
+    мойка | самомойка
+    макавто
+    моря
+    нотариус
+    офис
+    .? сити
+    чайхана
+    шаурма
+    шиномонтаж
+    %weight 0.1
+    .? мкад ($Number километр)?
+    $SchoolDetail? школа $SchoolDetail?
+    автосервис .?
+    .? (автовокзал | вокзал) $CityLocations?
+    $ExtraWeakLocationWord? (столовая | гостинница | кафе | ресторан) $ExtraWeakLocation
+    .? [круглосуточная? аптека] $ExtraWeakLocation?
+    .? (храм | мечеть) $ExtraWeakLocation?
+    $ExtraWeakLocationWord? (азс | автозаправка | заправка | автозапчасти) $ExtraWeakLocationWord?
+    .? (магазин | супермаркет) .?
+    $ExtraBank? (сбербанк | банк | банкомат) $ExtraBank?
+    .? .? суд $ExtraWeakLocation?
+    .? .? .? (комплекса | спорткомплекса) $ExtraWeakLocation?
+    $ExtraWeakLocation? завод $ExtraWeakLocation?
+    (тц | торговый? центр) $TradeCenter?
+    кольцевая
+    станция? метро .?
+    $ExtraWeakLocation? станция $ExtraWeakLocation?
+    сизо $ExtraWeakLocation?
+    отель $ExtraWeakLocation?
+    площадь $ExtraWeakLocation?
+    %weight 0.001
+    $MistakeSpecialPlace
+
+$TradeCenter:
+    москва
+    город
+    $ExtraWeakLocation?
+
+$ExtraMarket:
+    большой
+    главный
+    магазин
+    основной
+
+$ExtraBank:
+    %weight 0.03
+    $ExtraBankWord
+    %weight 0.02
+    $ExtraBankWord $ExtraBankWord?
+    %weight 0.01
+    $ExtraBankWord $ExtraBankWord? $ExtraBankWord?
+    %negative
+    на
+
+$ExtraBankWord:
+    зао
+    пао
+    ооо
+    оао
+    $ExtraWeakLocationWord
+    %lemma
+    банк
+    банкомат
+    головной
+    круглосуточный
+    оператор
+    отделение
+    офис
+    россии
+    сбербанк
+    центральный
+
+$SchoolDetail:
+    $Number
+    . языка
+    английского
+    андрияки
+    моей
+    танцев
+
+$Number:
+    [(номер | №)? $sys.num]
+
+$NumberAsk:
+    номер
+    $Number
+
+$MistakeSpecialPlace:
+    аршан
+    фрут сити
+    оксида
+
+$RouteAction:
+    айда
+    вези
+    довези
+    построить
+    построй
+    проложи
+    проложить
+    тронем
+    отвези
+    отправляй
+    отправь
+    укажи
+
+$RouteExtraAction:
+    найди
+    нарисуй
+    открой
+    создай
+    создать
+    составить
+    установи
+
+$RouteWayStrong:
+    поставь $RouteWayExt? $RouteWayType
+
+$RouteWayType:
+    маршут
+    %lemma
+    дорогу
+    по? маршут
+    номер? маршрут
+    курс
+    $WhereCloseToMe путь
+
+$RouteWay:
+    как $SingleType
+    [$RouteAction? $RouteWayType $RouteWayExt* (и $SingleType)?]
+    [$RouteAction $RouteWayType? $RouteWayExt* (и $SingleType)?]
+    [$RouteExtraAction $RouteWayType $RouteWayExt* (и $SingleType)?]
+    [$RouteWayStrong (и $SingleType)?]
+
+$RouteWayExt:
+    пешеходный
+    оптимальный
+
+$Filler:
+    $nonsense
+    $Common.Filler
+    $NoLocationNonsensitive
+    где я нахожусь? сейчас
+    где я нахожусь сейчас?
+    а
+    будет
+    быстрее
+    быстро
+    вот
+    гугл
+    давай
+    если
+    какая
+    меня
+    мне
+    мы
+    надо
+#    найди
+#    напомни # много лишнего попадает
+    например
+    напрямую
+    нас
+    нет
+    нужен
+    нужно
+    обниматься
+    осталось
+    отвечай
+    подскажи
+    сейчас
+    скажи
+    там
+    теперь
+    ты
+    Яндекс
+    я
+    %lemma
+    не понял
+    пуля
+    хуй
+    %negative
+    работа
+    учусь
+
+$UseApp:
+    (на | в | по)? яндекс? $App
+
+$App:
+    %lemma
+    карта
+    навигатор
+
+$ActionType:
+    $ActionTypeDistance
+    $ActionTypeOther
+
+$ActionTypeDistance:
+    $ActionTypeDistanceStrong
+    $ActionTypeDistanceWeak
+
+$ActionTypeDistanceWeak:
+    [$HowMany (осталось | будет)? $WhatLength]
+    (в | за)? $HowMany $WhatLength находится?
+    (в | количество) $WhatLength
+
+$ActionTypeDistanceStrong:
+    [$ActionTypeDistanceIntent+ $WhatLength?]
+
+$HowMany:
+    (сколка | сколька | сколько | скольки)
+
+$ActionTypeDistanceIntent:
+    рассчитать
+    расчет расстояния
+    [(на? (какое | каком) | каково)? (расстояние | расстоянии) онлайн?]
+    [(какой | посчитай)? километраж]
+    [(самая (короткая | быстрая)) дорога]
+    $WhereCloseToMe (дорога | дороги)
+    далеко
+    $TrafficJamPrefix (пробок | пробки)
+    и? время в пути
+    $WhatLength
+
+$TrafficJamPrefix:
+    (из | без) учета?
+    где (нет | меньше)
+
+$ActionTypeOther:
+    (который | далеко ли? | где) находится
+    (далеко | долго) ли?
+    как? долго
+    минуя все? пробки
+    и? $Time
+    $WhatLength
+    %weight 0.1
+    напомни? $HowMuchTime
+
+$HowMuchTime:
+    за? сколько? по времени  займет?
+    за? сколько времени? займет?
+    (через | за)? сколько? $Time
+
+$ActionShow:
+    %lemma
+    покаж
+    покажи
+    покажите
+    покажь
+    показать
+    покеж
+    покежь
+
+$Variants:
+    вариант
+    варианты
+
+$WhatLength:
+    в? $RouteLength
+
+$RouteLength:
+    $Length
+    градусах
+    километра
+    км
+
+$Time:
+    минут
+    часов
+    в часах
+
+$UseTypeStrong:
+    $UseTypeTransportStrong
+    $UseTypeRoad
+
+$UseType:
+    $UseTypeTransportWeak
+    $UseTypeRoad
+
+$UseTypeTransportWeak:
+    $UseTypeTransportStrong
+    [$SimpleType $SingleType?]
+
+$UseTypeTransportStrong:
+    [(или? на своем? $OnType) $SingleType?]
+    (маршрут | по) $ByType
+    для $ForType $ForOverweight?
+
+$UseTypeTransportIntent:
+    [(или? на своем? $OnType) $SingleType]
+
+$UseTypeTransportShowOnMap:
+    [$GoTypeOther $SingleType]
+
+$GoTypeOther:
+    или? на своем? $OnTypeOther
+
+$UseTypeCar:
+    [$GoTypeCar $SingleType]
+
+$GoTypeCar:
+    или? на своем? $OnTypeCar
+
+$UseTypeRoad:
+    (село | с)? как? $TypeWay? $SingleType+
+    через сколько я? сейчас? $SingleType+
+    по $SlotByRoad
+
+$TypeWay:
+    до него
+    лучше
+    можно
+    туда
+
+$OnTypeCar:
+    автомашине
+    автомобиле
+    машине
+
+$OnTypeTaxi:
+    такси
+
+$OnTypeOther:
+    авто
+    $NumberAsk? (автобус | автобусе) $NumberAsk?
+    велосипеде
+    грузовике
+    $Number? маршруткe $Number?
+    метро
+    (грузовом | общественном)? транспорте
+    общественном
+    поезде
+    самолете
+    тачке
+    $Number? трамвае $Number?
+    $Number? троллейбусе $Number?
+    электричке
+    уазике
+
+$OnType:
+    $OnTypeCar
+    $OnTypeTaxi
+    $OnTypeOther
+
+$ForType:
+    (грузового | легкового)? авто | автомобиля
+    (грузового | общественного | легкового)? транспорта
+    (грузовой | легковой)? машины
+    автобуса
+    грузовика
+    поезда
+    самолет
+    такси
+    электрички
+
+$WithType:
+    авто
+    транспортом
+
+$JustType:
+    машину
+    транспорт
+
+$ForOverweight:
+    свыше $sys.num тонн
+
+$ByType:
+    (автомобильной | железной) (дороге | дороги)
+    автодороге
+    морю
+
+$SlotByRoad:
+    мкад
+    $ExtraWeakLocation? мосту
+    автомобильной? трассе $ExtraWeakLocation?
+    $ExtraWeakLocation? шоссе $ExtraWeakLocation?
+    $ner.GeoAddr.Street
+    [(трассе | трасса) $WeakRoadNumber]
+
+$WeakRoadNumber:
+    (а | м | р | к | н)? $Number
+
+$RoadNumber:
+    (а | м | р | к | н) $Number
+
+$SimpleType:
+    авто
+    $NumberAsk? (автобус | автобуса) $NumberAsk?
+    автобусы
+    автомобиль
+    машина
+    маршрутка $Number?
+    общественным? транспортом
+    общественный? транспорт
+    поезд
+    самолет
+    такси
+    трамвай $Number?
+    троллейбус $Number?
+    электричка
+
+$SingleType:
+    $SingleTypeShowOnMap
+    $SingleTypeRouteIntent
+    $SingleTypeOther
+
+$SingleTypeShowOnMap:
+    пешком
+
+$SingleTypeRouteIntent:
+    $SingleTypeRouteIntentClassic
+    $SingleTypeRouteIntentExtra
+
+$SingleTypeRouteIntentExtra:
+    дорога
+    погнали
+    поедем
+    поехать
+    проехать
+    %weight 0.02
+    маршрут
+
+$SingleTypeRouteIntentClassic:
+    поехали
+
+$SingleTypeOther:
+    автодорога
+    автодороги
+    добраться
+    добираться
+    доеду
+    доедет
+    доехать
+    дойти
+    еду
+    едем
+    ездит
+    езды
+    (откуда | куда)? ехать
+    займет
+#    зайти
+    идти
+    направляй
+    найти улицу
+    пилить
+    по (дороге | пути)
+    пойти
+    поездка
+    попасть
+    приехать
+    пройти
+    (в | время) пути
+    этот? путь
+    уехать

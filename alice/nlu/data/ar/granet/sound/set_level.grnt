@@ -1,0 +1,129 @@
+import: common/commands.grnt
+import: common/prepositions.grnt
+import: sound/common.grnt
+
+form personal_assistant.scenarios.sound.set_level:
+    enable_alice_tagger: true
+    slots:
+        level:
+            type:
+                custom.volume_setting
+                sys.num
+                custom.number
+            source:
+                $NumberValue
+                $Common.Sound.VolumeSettingValue
+                $Common.Sound.CustomAbsoluteNumberValue
+                $VolumeSettingUp
+                $VolumeSettingDown
+        denominator:
+            type:
+                sys.num
+                custom.number
+            source:
+                $PercentNumberValue
+                $Common.Sound.CustomAbsoluteNumberValue
+    root:
+        $Root
+
+    filler:
+        $Common.Sound.Filler
+        $FromSoundLevel
+        $SetFiller
+        $Common.Sound.GeneralFiller
+        $FromLevel
+
+$Root:
+    .* ($Common.Commands.Set | $Common.Commands.Change)+ ($Common.Sound.SoundLevel+ | $Common.Sound.Level+) $OptionalToLevel+ .*
+    .* $Common.Commands.TurnUp+ ($Common.Sound.SoundLevel+ | $Common.Sound.Level+) $ToLevelUp+ .*
+    .* $Common.Commands.TurnDown+ ($Common.Sound.SoundLevel+ | $Common.Sound.Level+) $ToLevelDown+ .*
+    $Common.Sound.Level+ $Common.Sound.SoundBlock+ $Common.Sound.Level* $LevelAll
+    ($Common.Sound.SoundLevel+ | $Common.Sound.Level+) $OptionalToLevel
+
+$FromLevel:
+    $Common.Prepositions.From+ $Common.Sound.Level* $sys.num $Common.Sound.PercentWord*
+
+$ToLevelCommon:
+    $To+ ($Common.Sound.Level* | $Common.Sound.SoundLevel*)
+    $Common.Sound.OneWordToLevel+
+
+$ToLevelAll:
+    $ToLevelCommon $LevelAll
+
+$ToLevelUp:
+    $ToLevelCommon $LevelUp
+
+$ToLevelDown:
+    $ToLevelCommon $LevelDown
+
+$OptionalToLevel:
+    $To* ($Common.Sound.Level* | $Common.Sound.SoundLevel*) $LevelAll
+    $Common.Sound.OneWordToLevel* $LevelAll
+
+$To:
+    $Common.Prepositions.To | $Common.Prepositions.In | $Common.Prepositions.At
+
+$LevelCommon:
+    [$NumberValue $Common.Sound.Unit*]
+    [$PercentLevel $Common.Sound.Unit*]
+    $Common.Sound.CustomAbsoluteNumberValue
+
+$LevelAll:
+    $LevelCommon
+    $Common.Sound.VolumeSettingValue
+
+$LevelUp:
+    $LevelCommon
+    $VolumeSettingUp
+
+$LevelDown:
+    $LevelCommon
+    $VolumeSettingDown
+
+$VolumeSettingUp:
+    %type custom.volume_setting
+    %value maximum
+    $Common.Sound.Maximum
+    %value very_high
+    $Common.Sound.VeryHigh
+    %value high
+    $Common.Sound.High
+    %value middle
+    $Common.Sound.Middle
+
+$VolumeSettingDown:
+    %type custom.volume_setting
+    %value middle
+    $Common.Sound.Middle
+    %value quiet
+    $Common.Sound.Quiet
+    %value very_quiet
+    $Common.Sound.VeryQuiet
+    %value minimum
+    $Common.Sound.Minimum
+    
+
+$FromSoundLevel:
+    $Common.Prepositions.From+ $Common.Sound.SoundLevel+
+
+$PercentLevel:
+    $PercentNumberValue $Common.Sound.PercentWord+
+
+$NumberValue:
+    $sys.num
+
+$PercentNumberValue:
+    $sys.num
+
+$SetFiller:
+    بمقدار
+    تفعيل
+    عليك
+    تنفيذ
+    دع
+    عدرجه
+    توقف
+    يصل
+    بدرجه
+    من
+    دائما

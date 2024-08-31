@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "alice/protos/api/matrix/user_device.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+enum EDeviceEnvironmentType {
+    // Any request with this type will be incorrect
+    // It was added to make errors more clear: "type not set" insted of "failed to parse data as TDeviceState"
+    // in case when someone forgot to set any type
+    NOT_SET = 0;
+
+    // TDeviceState (alice/megamind/protos/common/device_state.proto)
+    DEVICE_STATE = 1;
+}
+
+message TUpdateDeviceEnvironmentRequest {
+    EDeviceEnvironmentType Type = 1;
+    TUserDeviceIdentifier UserDeviceIdentifier = 2;
+
+    // Raw data, matrix will parse it itself
+    // Do not use oneof here, we do not want to include almost everything
+    // to this file
+    bytes Data = 3;
+}
+
+message TUpdateDeviceEnvironmentResponse {
+}

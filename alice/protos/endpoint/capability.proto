@@ -1,0 +1,1284 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint;endpointpb";
+option java_package = "ru.yandex.alice.protos.endpoint";
+option java_outer_classname = "CapabilityProto";
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+import "alice/protos/endpoint/common.proto";
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+extend google.protobuf.MessageOptions {
+    TCapability.ECapabilityType CapabilityType = 58500;
+    TCapability.EDirectiveType DirectiveType = 58501;
+    TCapability.EEventType EventType = 58502;
+    repeated TCapability.EEventType ConditionEvents = 58503;
+}
+
+message TCapability {
+
+    message TMeta {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TCapability.EDirectiveType SupportedDirectives = 1 [json_name = "supported_directives", (NYT.column_name) = "supported_directives"];
+        repeated TCapability.EEventType SupportedEvents = 4 [json_name = "supported_events", (NYT.column_name) = "supported_events"];
+        bool Retrievable = 2 [json_name = "retrievable", (NYT.column_name) = "retrievable"];
+        bool Reportable = 3 [json_name = "reportable", (NYT.column_name) = "reportable"];
+    }
+
+    enum ECapabilityType {
+        UnknownCapabilityType = 0;
+        OnOffCapabilityType = 1;
+        IotDiscoveryCapabilityType = 2;
+        LevelCapabilityType = 3;
+        ColorCapabilityType = 4;
+        WebOSCapabilityType = 5;
+        ButtonCapabilityType = 6;
+        EqualizerCapabilityType = 7;
+        AnimationCapabilityType = 8;
+        MotionCapabilityType = 9;
+        VideoCallCapabilityType = 10;
+        RouteManagerCapabilityType = 11;
+        OpeningSensorCapabilityType = 12;
+        VibrationSensorCapabilityType = 13;
+        WaterLeakSensorCapabilityType = 14;
+        BatteryCapabilityType = 15;
+        RangeCheckCapabilityType = 16;
+        DeviceStateCapabilityType = 17;
+        DivViewCapabilityType = 18;
+        BioCapabilityType = 19;
+        ScreensaverCapabilityType = 20;
+        AlarmCapabilityType = 21;
+        IotScenariosCapabilityType = 22;
+        VolumeCapabilityType = 23;
+        AudioFilePlayerCapabilityType = 24;
+        LayeredDivUICapabilityType = 25;
+
+        // next free number is 26
+    }
+
+    enum EEventType {
+        UnknownEventType = 0;
+
+        //buttons, toggles and switches
+        ButtonClickEventType = 1;
+        ButtonDoubleClickEventType = 2;
+        ButtonLongPressEventType = 3;
+        ButtonLongReleaseEventType = 4;
+
+        // audio_player event examples
+        AudioPlayerNextTrackEventType = 5;
+        AudioPlayerPauseEventType = 6;
+
+        // motion events
+        MotionDetectedEventType = 7;
+
+        // water leak sensor events
+        WaterLeakSensorLeakEventType = 8;
+        WaterLeakSensorDryEventType = 9;
+
+        // vibration sensor events
+        VibrationSensorVibrationEventType = 10;
+        VibrationSensorTiltEventType = 11;
+        VibrationSensorFallEventType = 12;
+
+        // opening sensor events
+        OpeningSensorOpenedEventType = 13;
+        OpeningSensorClosedEventType = 14;
+
+        // level capability events
+        LevelUpdateStateEventType = 15;
+
+        // onOff capability events
+        OnOffUpdateStateEventType = 16;
+
+        // color capability events
+        ColorUpdateStateEventType = 17;
+
+        // battery capability events
+        BatteryUpdateStateEventType = 18;
+
+        // range check capability events
+        RangeCheckEventType = 19;
+
+        // iot scenarios capability events
+        LocalStepsFinishedEventType = 20;
+
+        // when adding new event types to this enum
+        // you must add it to TCapabilityEventHolder message
+        // see alice/protos/endpoint/events/all/all.proto
+    }
+
+    enum EDirectiveType {
+        UnknownDirectiveType = 0;
+
+        // OnOffCapability directives
+        OnOffDirectiveType = 1;
+        ToggleOnOffDirectiveType = 54;
+
+        // IotDiscoveryCapability directives
+        IotStartDiscoveryDirectiveType = 2;
+        IotFinishDiscoveryDirectiveType = 3;
+        IotForgetDevicesDirectiveType = 4;
+        IotStartTuyaBroadcastDirectiveType = 10;
+        IotRestoreNetworksDirectiveType = 13;
+        IotCancelDiscoveryDirectiveType = 14;
+        IotDeleteNetworksDirectiveType = 15;
+        IotEnableNetworkDirectiveType = 27;
+
+        // LevelCapability directives
+        SetAbsoluteLevelDirectiveType = 5;
+        SetRelativeLevelDirectiveType = 6;
+        StartMoveLevelDirectiveType = 7;
+        StopMoveLevelDirectiveType = 8;
+
+        // ColorCapability directives
+        SetColorSceneDirectiveType = 9;
+        SetTemperatureKDirectiveType = 19;
+
+        // WebOSCapability directives
+        WebOSLaunchAppDirectiveType = 11;
+        WebOSShowGalleryDirectiveType = 12;
+
+        // EqualizerCapability directives
+        SetAdjustableEqualizerBandsDirectiveType = 16;
+        SetFixedEqualizerBandsDirectiveType = 17;
+
+        // AnimationCapability directives
+        DrawAnimationDirectiveType = 18;
+        EnableScreenDirectiveType = 38;
+        DisableScreenDirectiveType = 39;
+
+        // VideoCallCapability directives
+        StartVideoCallLoginDirectiveType = 20;
+        StartVideoCallDirectiveType = 21;
+        AcceptVideoCallDirectiveType = 22;
+        DiscardVideoCallDirectiveType = 23;
+        VideoCallMuteMicDirectiveType = 42;
+        VideoCallUnmuteMicDirectiveType = 43;
+        VideoCallTurnOnVideoDirectiveType = 44;
+        VideoCallTurnOffVideoDirectiveType = 45;
+
+        // RouteManagerCapability directives
+        StartRouteManagerDirectiveType = 24;
+        StopRouteManagerDirectiveType = 25;
+        ShowRouteManagerDirectiveType = 26;
+        ContinueRouteManagerDirectiveType = 28;
+
+        // ControlsCapability directives
+        OpenScreensaverDirectiveType = 29;
+
+        // DivViewCapability directives
+        StashViewDirectiveType = 30;
+        UnstashViewDirectiveType = 31;
+
+        // AlarmCapabilityType directives
+        AlarmAddDirectiveType = 32;
+        AlarmRemoveDirectiveType = 33;
+        AlarmUpdateDirectiveType = 34;
+
+        // IotScenarioCapability directives
+        AddIotScenariosDirectiveType = 35;
+        RemoveIotScenariosDirectiveType = 36;
+        SyncIotScenariosDirectiveType = 37;
+
+        // VolumeCapability directives
+        VolumeMuteDirectiveType = 40;
+        VolumeUnmuteDirectiveType = 41;
+
+        // BioCapability directives
+        BioStartSoundEnrollmentDirectiveType = 46;
+
+        // AudioFilePlayerCapabilityType directives
+        LocalAudioFilePlayDirectiveType = 47;
+        LocalAudioFileStopDirectiveType = 48;
+
+        // DivCards capabilities
+        DivUIShowViewDirectiveType = 49;
+        DivUIPatchViewDirectiveType = 50;
+        DivUIHideViewDirectiveType = 51;
+        DivUIStashViewDirectiveType = 52;
+        DivUIUnstashViewDirectiveType = 53;
+
+
+        // next free value: 55
+    }
+}
+
+message TOnOffCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = OnOffCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        bool Split = 1 [json_name = "split", (NYT.column_name) = "split"];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        bool On = 1 [json_name = "on", (NYT.column_name) = "on"];
+    }
+
+    // directives
+    message TOnOffDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "on_off_directive";
+        option (DirectiveType) = OnOffDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        bool On = 1 [json_name = "on", (NYT.column_name) = "on"];
+    }
+
+    message TToggleDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "toggle_on_off_directive";
+        option (DirectiveType) = ToggleOnOffDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    // events
+    message TUpdateStateEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = OnOffUpdateStateEventType;
+
+        TOnOffCapability Capability = 1 [json_name = "capability", (NYT.column_name) = "capability"];
+    }
+}
+
+message TIotDiscoveryCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = IotDiscoveryCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TProtocol SupportedProtocols = 1 [json_name = "supported_protocols", (NYT.column_name) = "supported_protocols"];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        bool IsDiscoveryInProgress = 1  [json_name = "is_discovery_in_progress", (NYT.column_name) = "is_discovery_in_progress"];
+    }
+
+    enum TProtocol {
+        Zigbee = 0;
+        WiFi = 1;
+    }
+
+    // todo: remove redundant context
+    message TDiscoveryContext {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string DeviceType = 1 [json_name = "device_type", (NYT.column_name) = "device_type"];
+        string Source = 2 [json_name = "source", (NYT.column_name) = "source"];
+        uint32 Attempt = 3 [json_name = "attempt", (NYT.column_name) = "attempt"];
+    }
+
+    message TNetworks {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // deprecated due to megamind exceptions during speechkit directives transfer.
+        // sk directive payload is stored inside google.protobuf.Struct
+        // this disregards correct json marshal/unmarshal of google.protobuf.BytesValue (which uses base64 out of the box)
+        // and produces non-ascii bytes, crashing conversion
+        google.protobuf.BytesValue ZigbeeNetwork = 1 [json_name = "zigbee_network", (NYT.column_name) = "zigbee_network"];
+
+        // ZigbeeNetworkBase64 holds ZigbeeNetwork bytes in standard base64 encoding, as defined in RFC 4648
+        google.protobuf.StringValue ZigbeeNetworkBase64 = 2 [json_name = "zigbee_network_base64", (NYT.column_name) = "zigbee_network_base64"];
+    }
+
+    // directives
+    message TStartDiscoveryDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_start_discovery_directive";
+        option (DirectiveType) = IotStartDiscoveryDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated TProtocol Protocols = 1 [json_name = "protocols", (NYT.column_name) = "protocols"];
+        uint32 TimeoutMs = 2 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms"];
+        TDiscoveryContext DiscoveryContext = 3 [json_name = "discovery_context", (NYT.column_name) = "discovery_context"];
+        uint32 DeviceLimit = 4 [json_name = "device_limit", (NYT.column_name) = "device_limit"];
+    }
+
+    message TCancelDiscoveryDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_cancel_discovery_directive";
+        option (DirectiveType) = IotCancelDiscoveryDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TFinishDiscoveryDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_finish_discovery_directive";
+        option (DirectiveType) = IotFinishDiscoveryDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated string AcceptedIds = 1 [json_name = "accepted_ids", (NYT.column_name) = "accepted_ids"];
+    }
+
+    message TStartTuyaBroadcastDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_start_tuya_broadcast_directive";
+        option (DirectiveType) = IotStartTuyaBroadcastDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        string SSID = 1 [json_name = "ssid", (NYT.column_name) = "ssid"];
+        string Password = 2 [json_name = "password", (NYT.column_name) = "password"];
+        string Token = 3 [json_name = "token", (NYT.column_name) = "token"];
+        string Cipher = 4 [json_name = "cipher", (NYT.column_name) = "cipher"];
+    }
+
+    message TRestoreNetworksDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_restore_networks_directive";
+        option (DirectiveType) = IotRestoreNetworksDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        TNetworks Networks = 1 [json_name = "networks", (NYT.column_name) = "networks"];
+    }
+
+    message TForgetDevicesDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_forget_devices_directive";
+        option (DirectiveType) = IotForgetDevicesDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated string DeviceIds = 1 [json_name = "device_ids", (NYT.column_name) = "device_ids"];
+    }
+
+    message TDeleteNetworksDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_delete_networks_directive";
+        option (DirectiveType) = IotDeleteNetworksDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated TProtocol Protocols = 1 [json_name = "protocols", (NYT.column_name) = "protocols"];
+    }
+
+    message TEnableNetworkDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "iot_enable_network_directive";
+        option (DirectiveType) = IotEnableNetworkDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        TProtocol Protocol = 1 [json_name = "protocol", (NYT.column_name) = "protocol"];
+        bool Enabled = 2 [json_name = "enabled", (NYT.column_name) = "enabled"];
+    }
+}
+
+message TVideoCallCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = VideoCallCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TProviderState ProviderStates = 1  [json_name = "provider_states", (NYT.column_name) = "provider_states"];
+
+        repeated TProviderCall Incoming = 2 [json_name = "incoming", (NYT.column_name) = "incoming"];
+        TProviderCall Current = 3 [json_name = "current", (NYT.column_name) = "current"];
+        TProviderCall Outgoing = 4 [json_name = "outgoing", (NYT.column_name) = "outgoing"];
+    }
+
+    message TProviderState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        oneof ProviderState {
+            option (NYT.variant_field_name) = "provider_state";
+
+            TTelegramProviderState TelegramProviderState = 1 [json_name = "telegram_provider_state", (NYT.column_name) = "telegram_provider_state"];
+        }
+    }
+
+    message TTelegramProviderState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TLogin Login = 1 [json_name = "login", (NYT.column_name) = "login"];
+        TContactSyncProgress ContactSync = 2 [json_name = "contact_sync", (NYT.column_name) = "contact_sync"];
+
+        message TLogin {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // telegram user id
+            string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+            EState State = 2 [json_name = "state", (NYT.column_name) = "state"];
+            // Значение true в поле гарантирует, что успешный полный синк контактов для логина был хотя бы раз и сейчас не идет
+            // При false опираться на контакты из базы нельзя
+            bool FullContactsUploadFinished = 3 [json_name = "full_contacts_upload_finished", (NYT.column_name) = "full_contacts_upload_finished"];
+            repeated TRecentContactData RecentContacts = 4 [json_name = "recent_contacts", (NYT.column_name) = "recent_contacts"];
+
+            enum EState {
+                InProgress = 0;
+                Success = 1;
+            }
+        }
+
+        message TContactSyncProgress {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TRecentContactData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // telegram user id
+            string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+        }
+    }
+
+    message TTelegramVideoCallOwnerData {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // telegram call id
+        string CallId = 1 [json_name = "call_id", (NYT.column_name) = "call_id"];
+        // device owner telegram user id
+        string UserId = 2 [json_name = "user_id", (NYT.column_name) = "user_id"];
+    }
+
+    message TProviderCall {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        EState State = 1 [json_name = "state", (NYT.column_name) = "state"];
+
+        oneof ProviderCallData {
+            option (NYT.variant_field_name) = "provider_call_data";
+
+            TTelegramCallData TelegramCallData = 2 [json_name = "telegram_call_data", (NYT.column_name) = "telegram_call_data"];
+        }
+
+        enum EState {
+            Ringing = 0;
+            Accepted = 1;
+            Established = 2;
+        }
+
+        message TTelegramCallData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+            TRecipientData Recipient = 2 [json_name = "recipient", (NYT.column_name) = "recipient"];
+            bool MicMuted = 3 [json_name = "mic_muted", (NYT.column_name) = "mic_muted"];
+            bool VideoEnabled = 4 [json_name = "video_enabled", (NYT.column_name) = "video_enabled"];
+
+            message TRecipientData {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+                string DisplayName = 2 [json_name = "display_name", (NYT.column_name) = "display_name"];
+            }
+        }
+    }
+
+    message TStartVideoCallLoginDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "start_video_call_login_directive";
+        option (DirectiveType) = StartVideoCallLoginDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramStartLoginData TelegramStartLoginData = 1 [json_name = "telegram_start_login_data", (NYT.column_name) = "telegram_start_login_data"];
+        }
+
+        message TTelegramStartLoginData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // id для связи директивы с show_view
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+
+            optional google.protobuf.Struct OnFailCallback = 2 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TStartVideoCallDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "start_video_call_directive";
+        option (DirectiveType) = StartVideoCallDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramStartVideoCallData TelegramStartVideoCallData = 1 [json_name = "telegram_start_video_call_data", (NYT.column_name) = "telegram_start_video_call_data"];
+        }
+
+        message TTelegramStartVideoCallData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // id для связи директивы с show_view
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            // telegram id аккаунта, с которого звоним
+            string UserId = 2 [json_name = "user_id", (NYT.column_name) = "user_id"];
+            // telegram id аккаунта, на который звоним
+            string RecipientUserId = 3 [json_name = "recipient_user_id", (NYT.column_name) = "recipient_user_id"];
+            bool VideoEnabled = 7 [json_name = "video_enabled", (NYT.column_name) = "video_enabled"];
+
+            google.protobuf.Struct OnAcceptedCallback = 4 [json_name = "on_accepted_callback", (NYT.column_name) = "on_accepted_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnDiscardedCallback = 5 [json_name = "on_discarded_callback", (NYT.column_name) = "on_discarded_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 6 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TAcceptVideoCallDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "accept_video_call_directive";
+        option (DirectiveType) = AcceptVideoCallDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramAcceptVideoCallData TelegramAcceptVideoCallData = 1 [json_name = "telegram_accept_video_call_data", (NYT.column_name) = "telegram_accept_video_call_data"];
+        }
+
+        message TTelegramAcceptVideoCallData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TDiscardVideoCallDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "discard_video_call_directive";
+        option (DirectiveType) = DiscardVideoCallDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramDiscardVideoCallData TelegramDiscardVideoCallData = 1 [json_name = "telegram_discard_video_call_data", (NYT.column_name) = "telegram_discard_video_call_data"];
+        }
+
+        message TTelegramDiscardVideoCallData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TMuteMicDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "video_call_mute_mic_directive";
+        option (DirectiveType) = VideoCallMuteMicDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramMuteMicData TelegramMuteMicData = 1 [json_name = "telegram_mute_mic_data", (NYT.column_name) = "telegram_mute_mic_data"];
+        }
+
+        message TTelegramMuteMicData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TUnmuteMicDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "video_call_unmute_mic_directive";
+        option (DirectiveType) = VideoCallUnmuteMicDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramUnmuteMicData TelegramUnmuteMicData = 1 [json_name = "telegram_unmute_mic_data", (NYT.column_name) = "telegram_unmute_mic_data"];
+        }
+
+        message TTelegramUnmuteMicData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TTurnOnVideoDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "video_call_turn_on_video_directive";
+        option (DirectiveType) = VideoCallTurnOnVideoDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramTurnOnVideoData TelegramMuteTurnOnVideoData = 1 [json_name = "telegram_turn_on_video_data", (NYT.column_name) = "telegram_turn_on_video_data"];
+        }
+
+        message TTelegramTurnOnVideoData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+
+    message TTurnOffVideoDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "video_call_turn_off_video_directive";
+        option (DirectiveType) = VideoCallTurnOffVideoDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        oneof ProviderData {
+            option (NYT.variant_field_name) = "provider_data";
+
+            TTelegramTurnOffVideoData TelegramMuteTurnOffVideoData = 1 [json_name = "telegram_turn_off_video_data", (NYT.column_name) = "telegram_turn_off_video_data"];
+        }
+
+        message TTelegramTurnOffVideoData {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TTelegramVideoCallOwnerData CallOwnerData = 1 [json_name = "call_owner_data", (NYT.column_name) = "call_owner_data"];
+
+            google.protobuf.Struct OnSuccessCallback = 2 [json_name = "on_success_callback", (NYT.column_name) = "on_success_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            google.protobuf.Struct OnFailCallback = 3 [json_name = "on_fail_callback", (NYT.column_name) = "on_fail_callback", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+    }
+}
+
+message TLevelCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = LevelCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    enum EInstance {
+        UnknownInstance = 0;
+        TemperatureInstance = 1;
+        HumidityInstance = 2;
+        PressureInstance = 3;
+        BrightnessInstance = 4;
+        IlluminanceInstance = 5;
+        CoverInstance = 6;
+        TVOCInstance = 7;
+        AmperageInstance = 8;
+        VoltageInstance = 9;
+        PowerInstance = 10;
+    }
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        EInstance Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        TRange Range = 2 [json_name = "range", (NYT.column_name) = "range"];
+        EUnit Unit = 3 [json_name = "unit", (NYT.column_name) = "unit"];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        double Level = 1 [json_name = "level", (NYT.column_name) = "level"];
+    }
+
+    enum EMoveMode {
+        Up = 0;
+        Down = 1;
+    }
+
+    // directives
+    message TSetAbsoluteLevelDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_absolute_level_directive";
+        option (DirectiveType) = SetAbsoluteLevelDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        // TargetLevel is the new target level of state
+        double TargetLevel = 1 [json_name = "target_level", (NYT.column_name) = "target_level"];
+
+        // TransitionTime is the desired timespan, in which the change should occur
+        // TransitionTime is measured in tenth of a second
+        // 0 means as fast as possible
+        uint32 TransitionTime = 2 [json_name = "transition_time", (NYT.column_name) = "transition_time"];
+    }
+
+    message TSetRelativeLevelDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_relative_level_directive";
+        option (DirectiveType) = SetRelativeLevelDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        // RelativeLevel is the change that should be applied to the current level of state
+        double RelativeLevel = 1 [json_name = "relative_level", (NYT.column_name) = "relative_level"];
+
+        // TransitionTime is the desired timespan, in which the change should occur
+        // TransitionTime is measured in tenth of a second
+        // 0 means as fast as possible
+        uint32 TransitionTime = 2 [json_name = "transition_time", (NYT.column_name) = "transition_time"];
+    }
+
+    message TStartMoveLevelDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "start_move_level_directive";
+        option (DirectiveType) = StartMoveLevelDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        EMoveMode ModeMode = 1  [json_name = "move_mode", (NYT.column_name) = "move_mode"];
+
+        // Rate represents the desired level change rate per second
+        // 0 means that default change rate should be used
+        double Rate = 2 [json_name = "rate", (NYT.column_name) = "rate"];
+    }
+
+    message TStopMoveLevelDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "stop_move_level_directive";
+        option (DirectiveType) = StopMoveLevelDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    // events
+    message TUpdateStateEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = LevelUpdateStateEventType;
+
+        TLevelCapability Capability = 1 [json_name = "capability", (NYT.column_name) = "capability"];
+    }
+
+    message TCondition {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (ConditionEvents) = LevelUpdateStateEventType;
+
+        EInstance Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        google.protobuf.DoubleValue LowerBound = 2 [json_name = "lower_bound", (NYT.column_name) = "lower_bound"];
+        google.protobuf.DoubleValue UpperBound = 3 [json_name = "upper_bound", (NYT.column_name) = "upper_bound"];
+        double Hysteresis = 4 [json_name = "hysteresis", (NYT.column_name) = "hysteresis"];
+    }
+}
+
+message TColorCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = ColorCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // devices can combine different lighting options
+        // each lighting option should have its own set of parameters
+
+        message TTemperatureKParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TPositiveIntegerRange Range = 1 [json_name = "range", (NYT.column_name) = "range"];
+        }
+
+        message TColorSceneParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            repeated EColorScene SupportedScenes = 1 [json_name = "supported_scenes", (NYT.column_name) = "supported_scenes"];
+        }
+
+        TColorSceneParameters ColorSceneParameters = 1 [json_name = "color_scene_parameters", (NYT.column_name) = "color_scene_parameters"];
+        TTemperatureKParameters TemperatureKParameters = 2 [json_name = "temperature_k_parameters", (NYT.column_name) = "temperature_k_parameters"];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // different lighting options have mutually exclusive state
+
+        oneof Value {
+            option (NYT.variant_field_name) = "value";
+
+            EColorScene ColorScene = 1 [json_name = "color_scene", (NYT.column_name) = "color_scene"];
+            uint64 TemperatureK = 2 [json_name = "temperature_k", (NYT.column_name) = "temperature_k"];
+        }
+    }
+
+    enum EColorScene {
+        Inactive = 0;
+        LavaLampScene = 1;
+        CandleScene = 2;
+        NightScene = 3;
+    }
+
+    // directives
+    message TSetColorSceneDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_color_scene_directive";
+        option (DirectiveType) = SetColorSceneDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        EColorScene ColorScene = 1 [json_name = "color_scene", (NYT.column_name) = "color_scene"];
+    }
+
+    message TSetTemperatureKDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_temperature_k_directive";
+        option (DirectiveType) = SetTemperatureKDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        uint64 TargetValue = 1 [json_name = "target_value", (NYT.column_name) = "target_value"];
+    }
+
+    // events
+    message TUpdateStateEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = ColorUpdateStateEventType;
+
+        TColorCapability Capability = 1 [json_name = "capability", (NYT.column_name) = "capability"];
+    }
+}
+
+message TWebOSCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = WebOSCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        string ForegroundAppId = 1 [json_name = "foreground_app_id", (NYT.column_name) = "foreground_app_id"];
+    }
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TAppInfo{
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string AppId = 1 [json_name = "app_id", (NYT.column_name) = "app_id"];
+        }
+
+        repeated TAppInfo AvailableApps = 1 [json_name = "available_apps", (NYT.column_name) = "available_apps"];
+    }
+
+    // directives
+    message TWebOSLaunchAppDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "web_os_launch_app_directive";
+        option (DirectiveType) = WebOSLaunchAppDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        string AppId = 1 [json_name = "app_id", (NYT.column_name) = "app_id"];
+        bytes ParamsJson = 2 [json_name = "params_json", (NYT.column_name) = "params_json"];
+    }
+
+    message TWebOSShowGalleryDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "web_os_show_gallery_directive";
+        option (DirectiveType) = WebOSShowGalleryDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        // ItemsJson will be changed to Items when the structure will be finalized
+        repeated bytes ItemsJson = 1 [json_name = "items_json", (NYT.column_name) = "items_json"];
+    }
+}
+
+message TButtonCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = ButtonCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    // events
+    message TButtonClickEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = ButtonClickEventType;
+    }
+
+    message TButtonDoubleClickEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = ButtonDoubleClickEventType;
+    }
+
+    message TButtonLongPressEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = ButtonLongPressEventType;
+    }
+
+    message TButtonLongReleaseEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = ButtonLongReleaseEventType;
+    }
+
+    message TCondition {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TCapability.EEventType Events = 1 [json_name = "events", (NYT.column_name) = "events"];
+    }
+}
+
+message TEqualizerCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = EqualizerCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TBandsLimits BandsLimits = 1 [json_name = "bands_limits", (NYT.column_name) = "bands_limits"];
+        repeated EPresetMode SupportedPresetModes = 2 [json_name = "supported_preset_modes", (NYT.column_name) = "supported_preset_modes"];
+
+        oneof BandsConfiguration {
+            option (NYT.variant_field_name) = "bands_configuration";
+            TFixedBandsConfiguration Fixed = 3 [json_name = "fixed", (NYT.column_name) = "fixed"];
+            TAdjustableBandsConfiguration Adjustable = 4 [json_name = "adjustable", (NYT.column_name) = "adjustable"];
+        }
+
+        // structures
+        message TBandsLimits {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            uint32 MinBandsCount = 1 [json_name = "min_bands_count", (NYT.column_name) = "min_bands_count"];
+            uint32 MaxBandsCount = 2 [json_name = "max_bands_count", (NYT.column_name) = "max_bands_count"];
+            double MinBandGain = 3 [json_name = "min_band_gain", (NYT.column_name) = "min_band_gain"];
+            double MaxBandGain = 4 [json_name = "max_band_gain", (NYT.column_name) = "max_band_gain"];
+        }
+
+        message TAdjustableBandsConfiguration {
+            // server can adjust number of bands according to band limits
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+        }
+
+        message TFixedBandsConfiguration {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TFixedBand {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                double Frequency = 1 [json_name = "frequency", (NYT.column_name) = "frequency"];
+                double Width = 2 [json_name = "width", (NYT.column_name) = "width"];
+            }
+            // Fixed num of bands with fixed frequencies and widths
+            // Server can't change the amount of bands and it's freq/width via directive
+            repeated TFixedBand FixedBands = 1 [json_name = "fixed_bands", (NYT.column_name) = "fixed_bands"];
+        }
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TBandState Bands = 1 [json_name = "bands", (NYT.column_name) = "bands"];
+        EPresetMode PresetMode = 2 [json_name = "preset_mode", (NYT.column_name) = "preset_mode"];
+    }
+
+    enum EPresetMode {
+        Default = 0; // default device equalizer settings
+        User = 1; // custom user preset
+        MediaCorrection = 2; // auto genre preset
+    }
+
+    message TBandState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        double Frequency = 1 [json_name = "frequency", (NYT.column_name) = "frequency"];
+        double Gain = 2 [json_name = "gain", (NYT.column_name) = "gain"];
+        double Width = 3 [json_name = "width", (NYT.column_name) = "width"];
+    }
+
+    message TSetAdjustableEqualizerBandsDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_adjustable_equalizer_bands_directive";
+        option (DirectiveType) = SetAdjustableEqualizerBandsDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated TBandState Bands = 1 [json_name = "bands", (NYT.column_name) = "bands"];
+    }
+
+    message TSetFixedEqualizerBandsDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "set_fixed_equalizer_bands_directive";
+        option (DirectiveType) = SetFixedEqualizerBandsDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated double Gains = 1 [json_name = "gains", (NYT.column_name) = "gains"];
+    }
+}
+
+message TAnimationCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = AnimationCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated EFormat SupportedFormats = 1 [json_name = "supported_formats", (NYT.column_name) = "supported_formats"];
+        repeated TScreen Screens = 2 [json_name = "screens", (NYT.column_name) = "screens"];
+    }
+
+    message TScreen {
+        enum EScreenType {
+            UnknownScreenType = 0;
+            Oknix = 1;
+            Panel = 2;
+            LedScreen = 3;
+            Ring = 4;
+        }
+
+        string Guid = 1 [json_name = "guid", (NYT.column_name) = "guid"];
+        EScreenType ScreenType = 2 [json_name = "screen_type", (NYT.column_name) = "screen_type"];
+    }
+
+    message TAnimation {
+        enum EAnimationType {
+            UnknownAnimationType = 0;
+            Nothing = 1;
+            Idle = 2;
+            Notification = 3;
+            TimerCountdown = 4;
+        }
+
+        EAnimationType AnimationType = 1 [json_name = "animation_type", (NYT.column_name) = "animation_type"];
+    }
+
+    enum EFormat {
+        S3Url = 0;
+        Binary = 1;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TScreenState {
+            bool Enabled = 2 [json_name = "enabled", (NYT.column_name) = "enabled"];
+            TAnimation Animation = 3 [json_name = "animation", (NYT.column_name) = "animation"];
+
+            reserved 1;
+            reserved "Screen";
+        }
+
+        // guid -> state
+        map<string, TScreenState> ScreenStatesMap = 2 [json_name = "screen_states_map", (NYT.column_name) = "screen_states_map"];
+
+        reserved 1;
+        reserved "ScreenStates";
+    }
+
+    // directives
+    message TDrawAnimationDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "draw_animation_directive";
+        option (DirectiveType) = DrawAnimationDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        repeated TAnimation Animations = 1 [json_name = "animations", (NYT.column_name) = "animations"];
+        EAnimationStopPolicy AnimationStopPolicy = 2 [json_name = "animation_stop_policy", (NYT.column_name) = "animation_stop_policy"];
+        ESpeakingAnimationPolicy SpeakingAnimationPolicy = 3 [json_name = "speaking_animation_policy", (NYT.column_name) = "speaking_animation_policy"];
+
+        message TAnimation {
+
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            oneof Value {
+                option (NYT.variant_field_name) = "value";
+
+                // Binary encoded animation
+                TBinaryAnimation BinaryAnimation = 1 [json_name = "binary_animation", (NYT.column_name) = "binary_animation"];
+                // in this case all animation data is stored on S3
+                TS3Directory S3Directory = 2 [json_name = "s3_directory", (NYT.column_name) = "s3_directory"];
+            }
+
+            message TS3Directory {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                // bucket + fqdn, for example https://blablabla.s3.mds.yandex.net
+                string Bucket = 1 [json_name = "bucket", (NYT.column_name) = "bucket"];
+                string Path = 2 [json_name = "path", (NYT.column_name) = "path"];
+            }
+
+            message TBinaryAnimation {
+                // type of Base64EncodedValue
+                enum ECompressionType {
+                    Unknown = 0;
+                    None = 1; // Base64EncodedValue contains direct scled binary data with EncodeBase64
+                    // see https://wiki.yandex-team.ru/quasar/mini2/format-ledpatternov-chasov-mini-2/#binarnyjjformatdljaledpatternov
+                    Gzip = 2; // The same as None, but scled binary data compressed with gzpi before EncodeBase64
+                }
+
+                ECompressionType Compression = 1 [json_name = "compression_type", (NYT.column_name) = "compression_type"];
+                string Base64EncodedValue = 2 [json_name = "base64_encoded_value", (NYT.column_name) = "base64_encoded_value"];
+            }
+        }
+
+        enum EAnimationStopPolicy {
+            Unknown = 0;
+            PlayOnce = 1;
+            PlayOnceTillEndOfTTS = 2;
+            RepeatLastTillEndOfTTS = 3;
+            RepeatLastTillNextDirective = 4;
+        }
+
+        enum ESpeakingAnimationPolicy {
+            Default = 0; // default mode
+            PlaySpeakingEndOfTts = 1; // Play "speaking" animation if TTS is longer than server animation
+            SkipSpeakingAnimation = 2; // Don't play "speaking" animation
+        }
+    }
+
+    message TEnableScreenDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "enable_screen";
+        option (DirectiveType) = EnableScreenDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        string Guid = 2 [json_name = "guid", (NYT.column_name) = "guid"];
+
+        reserved 1;
+        reserved "Screen";
+    }
+
+    message TDisableScreenDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "disable_screen";
+        option (DirectiveType) = DisableScreenDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+
+        string Guid = 2 [json_name = "guid", (NYT.column_name) = "guid"];
+
+        reserved 1;
+        reserved "Screen";
+    }
+}
+
+message TMotionCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = MotionCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TMotionDetectedEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = MotionDetectedEventType;
+    }
+
+    message TCondition {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TCapability.EEventType Events = 1 [json_name = "events", (NYT.column_name) = "events"];
+    }
+}
+
+// DON'T ADD ANY NEW CAPABILITIES HERE!
+// ADD THEM AS SEPARATE MODULES IN "CAPABILITIES" FOLDER AND IMPORT TO USE IN ONEOF

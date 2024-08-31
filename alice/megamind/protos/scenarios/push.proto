@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "PushProto";
+
+import "alice/megamind/protos/common/app_type.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TYandexStationFilmData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof OptionalMinPrice {
+        uint32 MinPrice = 1 [json_name = "min_price", (NYT.column_name) = "min_price"];
+    }
+}
+
+// ----------------------------------------------------------------------
+message TSendPushDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TCommon {
+        string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+        string Text  = 2 [json_name = "text", (NYT.column_name) = "text"];
+        string Link  = 3 [json_name = "link", (NYT.column_name) = "link"]; // aka action_url, button_url
+        uint32 TtlSeconds = 4 [json_name = "ttl_seconds", (NYT.column_name) = "ttl_seconds"];
+    }
+
+    message TPush {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // fill some fields if you want to rewrite some data for push
+        TCommon Settings = 1 [json_name = "settings", (NYT.column_name) = "settings"];
+
+        // special block
+        string ThrottlePolicy = 50 [json_name = "throttle_policy", (NYT.column_name) = "throttle_policy"];
+        repeated EAppType AppTypes = 51 [json_name = "app_types", (NYT.column_name) = "app_types"];
+    }
+
+    message TPersonalCard {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // fill some fields if you want to rewrite some data for push
+        TCommon Settings = 1 [json_name = "settings", (NYT.column_name) = "settings"];
+
+        // special block
+        string ImageUrl = 2 [json_name = "image_url", (NYT.column_name) = "image_url"]; // not icon
+        string DateFrom = 3 [json_name = "date_from", (NYT.column_name) = "date_from"]; // uint64_t unix time. default = utc.now()
+        string DateTo   = 4 [json_name = "date_to", (NYT.column_name) = "date_to"]; // uint64_t unix time. default = DateFrom + ttl
+
+        oneof Data {
+            TYandexStationFilmData YandexStationFilmData = 5 [json_name = "yandex.station_film"];
+        }
+
+    }
+
+    message TAction {
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Title = 2 [json_name = "title", (NYT.column_name) = "title"];
+        string Link = 3 [json_name = "link", (NYT.column_name) = "link"];
+    }
+
+    // common block
+    // these fields duplicate in TPush and TPersonalCard
+    // If it's present in TPush and TPersonalCard then use values from special messages
+    TCommon Settings = 1 [json_name = "settings", (NYT.column_name) = "settings"];
+    string PushId  = 2 [json_name = "push_id", (NYT.column_name) = "push_id"];
+    string PushTag = 3 [json_name = "push_tag", (NYT.column_name) = "push_tag"];
+
+    // not common block
+    TPush PushMessage = 4 [json_name = "push_message", (NYT.column_name) = "push_message"];
+    TPersonalCard PersonalCard = 5 [json_name = "personal_card", (NYT.column_name) = "personal_card"];
+    // delete ALL cards before creating new
+    bool RemoveExistingCards = 6 [json_name = "remove_existing_cards", (NYT.column_name) = "remove_existing_cards"];
+    // set True if you do NOT want delete cards with same PushTag before creating new
+    bool DoNotDeleteCardsWithSameTag = 7 [json_name = "do_not_delete_cards_with_same_tag", (NYT.column_name) = "do_not_delete_cards_with_same_tag"];
+    repeated TAction Actions = 8 [json_name = "actions", (NYT.column_name) = "actions"];
+}
+
+message TDeletePushesDirective {
+    // in the current version this directive will delete only personal card by tag
+    // see more in notificator
+    string Tag = 1 [json_name = "tag", (NYT.column_name) = "tag"];
+}

@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package NAlice.NSmartTv;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/tv_feature_boarding";
+option java_package = "ru.yandex.alice.protos.data.tv_feature_boarding";
+option java_outer_classname = "TvFeatureBoardingTemplate";
+
+import "google/protobuf/descriptor.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+import "google/protobuf/struct.proto";
+
+extend google.protobuf.MessageOptions {
+    string promo_template_name = 57332;
+}
+
+message TGiftTemplate {
+    option (promo_template_name) = "tv_gift_promo_template";
+}
+
+message TTandemTemplate {
+    option (promo_template_name) = "tandem_promo_template";
+
+    bool IsTandemDevicesAvailable = 1 [json_name = "is_tandem_devices_available", (NYT.column_name) = "is_tandem_devices_available"];
+    bool IsTandemConnected = 2 [json_name = "is_tandem_connected", (NYT.column_name) = "is_tandem_connected"];
+}
+
+
+message TTemplateRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TChosenTemplate {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TGiftTemplate GiftTemplate = 1 [json_name = "gift_template", (NYT.column_name) = "gift_template"];
+        TTandemTemplate TandemTemplate = 2 [json_name = "tandem_promo_template", (NYT.column_name) = "tandem_promo_template"];
+    }
+
+    // deprecated
+    oneof ChosenTemplate {
+        option (NYT.variant_field_name) = "chosen_template";
+
+        TGiftTemplate GiftTemplate = 1 [json_name = "gift_template", (NYT.column_name) = "gift_template", deprecated = true];
+        TTandemTemplate TandemTemplate = 2 [json_name = "tandem_promo_template", (NYT.column_name) = "tandem_promo_template", deprecated = true];
+    }
+
+    // Unordered set of possible featureboarding templates. Featurebording service chooses one and response accordingly
+    repeated TChosenTemplate RequestedTemplates = 3 [json_name = "requested_templates", (NYT.column_name) = "requested_templates"];
+}
+
+message TReportShownTemplateRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string ShownTemplateName = 1 [json_name = "shown_template_name", (NYT.column_name) = "shown_template_name"];
+    uint64 ShowTemplateTimestamp = 2 [json_name = "show_template_timestamp", (NYT.column_name) = "show_template_timestamp"];
+}
+
+message TReportShownTemplateResponse {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+}
+
+message TTemplateResponse {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    // filled if divjson is available, otherwise empty
+    string TemplateName = 1 [json_name = "template_name", (NYT.column_name) = "template_name"];
+    // filled if divjson is available
+    google.protobuf.Struct DivJson = 2 [json_name = "div_json", (NYT.column_name) = "div_json"];
+    int32 Ttl = 3 [json_name = "ttl", (NYT.column_name) = "ttl"];
+}

@@ -1,0 +1,352 @@
+{% from "alice/hollywood/library/scenarios/market/nlg/cards/common.nlg" import
+  render_action,
+  render_item_price,
+  render_sale_price,
+  render_picture,
+  render_block,
+  render_review_count_text,
+  calc_ratio,
+  VIOLET_COLOR with context %}
+{% from "alice/hollywood/library/scenarios/market/nlg/cards/gallery/common.nlg" import
+  render_gallery_base_block,
+  product_details_action_url,
+  gallery_item_log_id,
+  gallery_item_button_log_id,
+  gallery_item_label_log_id,
+  ACTION with context %}
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import
+  font_color, logged_action_url with context %}
+
+{% set GALLERY_TYPE = 'extended_gallery' %}
+
+{% macro render_price_block(doc, currency) %}
+  {
+    "type": "div-table-block",
+    "height": {
+      "value": "wrap_content",
+      "type": "predefined"
+    },
+    "width": {
+      "value": "match_parent",
+      "type": "predefined"
+    },
+    "rows": [
+      {
+        "type": "row_element",
+        "top_padding": "xs",
+        "cells": [
+          {
+            "text": "{{- render_item_price(doc, currency) -}}",
+            "text_style": "title_l",
+            "vertical_alignment": "bottom"
+          }
+          {% if doc.prices.before_discount is defined %}
+            ,
+            {
+              "text": "{{- render_sale_price(doc, currency) -}}",
+              "text_style": "text_s",
+              "vertical_alignment": "bottom"
+            }
+          {% endif %}
+        ]
+      }
+    ],
+    "columns": [
+      {
+        "left_padding": "zero"
+      }
+      {% if doc.prices.before_discount is defined %}
+        ,
+        {
+        }
+      {% endif %}
+    ]
+  }
+{% endmacro %}
+
+{% macro render_reason_to_buy_row(text=None, image=None) %}
+  {
+    "cells": [
+      {% if image %}
+        {
+          "image": {
+            "type": "div-image-element",
+            "ratio": 1.0,
+            "image_url": "{{- image -}}"
+          },
+          "image_size": "xs"
+        }
+      {% else %}
+        {
+          "text": " "
+        }
+      {% endif %}
+      ,
+      {
+        {% if text %}
+          "text": "{{- font_color('#4DAB30', text) -}}"
+        {% else %}
+          "text": " "
+        {% endif %}
+      }
+    ],
+    "top_padding": "xxs",
+    "bottom_padding": "xxs",
+    "type": "row_element"
+  }
+{% endmacro %}
+
+{% macro render_adviser_percentage(doc, opts) %}
+  {% if opts|get_item("render_adviser_percentage") %}
+    {
+      "type": "div-table-block",
+      "rows": [
+        {% if doc.get("adviser_percentage") %}
+          {% set text -%}
+            {{- doc.adviser_percentage -}}% рекомендует
+          {%- endset %}
+          {{ render_reason_to_buy_row(
+                text=text,
+                image="https://avatars.mds.yandex.net/get-mpic/1657306/icon_02/orig") }}
+        {% else %}
+          {{ render_reason_to_buy_row() }}
+        {% endif %}
+      ],
+      "columns": [
+        {
+          "weight": 0,
+          "left_padding": "zero",
+          "right_padding": "zero"
+        },
+        {
+          "weight": 0
+        }
+      ]
+    }
+  {% endif %}
+{% endmacro %}
+
+{% macro render_extended_gallery_item(doc, index, currency, opts) %}
+  {
+    {% if opts.card_action == "SHOP" %}
+      {# Shop url might be empty if there was no default offer for that model.
+         In that case we will return market url #}
+      {{ render_action(
+            doc.get("shop_url") or doc.url,
+            gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_SHOP)) }},
+    {% elif opts.card_action == "MARKET" %}
+      {{ render_action(doc.url, gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_MARKET)) }},
+    {% elif opts.card_action == "DETAILS_CARD" %}
+      {{ render_action(
+            product_details_action_url(doc, index),
+            gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_PRODUCT_CARD)) }},
+    {% endif %}
+    "frame": {
+      "color": "{{- '#e6e8eb' -}}",
+      "style": "border"
+    },
+    "children": [
+      {
+        "type": "div-universal-block",
+        {% if opts.render_voice_purchase_mark and doc.get("voice_purchase") %}
+          "title": "{{- font_color('#6839CF', 'Можно купить через Алису') -}}",
+        {% else %}
+          "title": " ",
+        {% endif %}
+        "title_style": "text_s"
+      },
+      {
+        "height": {
+          "value": "wrap_content",
+          "type": "predefined"
+        },
+        "width": {
+          "value": "match_parent",
+          "type": "predefined"
+        },
+        "alignment_vertical": "center",
+        "alignment_horizontal": "center",
+        "type": "div-container-block",
+        "children": [
+          {% set height = 120 %}
+          {% set max_width = 190 %}
+          {% set ratio = [max_width/height, [calc_ratio(doc.picture)|float, doc.picture.original_ratio] | max] | min %}
+          {% set width = (height * ratio)|round|int %}
+          {
+            "height": {
+              "value": {{ height }},
+              "type": "numeric"
+            },
+            "width": {
+              "value": {{ width }},
+              "type": "numeric"
+            },
+            "type": "div-container-block",
+            "children": [
+              {
+                "type": "div-image-block",
+                "image": {{- render_picture(doc.picture, ratio) -}}
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "height": {
+          "value": 75,
+          "type": "numeric"
+        },
+        "width": {
+          "value": "match_parent",
+          "type": "predefined"
+        },
+        "type": "div-container-block",
+        "children": [
+          {{ render_price_block(doc, currency) }},
+          {
+            "text": "<font>{{- doc.title | html_escape -}}</font>",
+            "text_max_lines": 2,
+            "type": "div-universal-block",
+            "text_style": "text_s"
+          }
+        ]
+      },
+      {% if opts|get_item('render_shop_name') %}
+        {
+          "text_max_lines": 1,
+          "title_max_lines": 1,
+          "text_style": "text_s",
+          "type": "div-universal-block",
+          "text": "{{- font_color("#31CA6E", doc.get("shop_name", "Яндекс.Маркет") | html_escape) -}}",
+          {{ render_action(
+                doc.get("shop_url") or doc.url,
+                gallery_item_label_log_id(GALLERY_TYPE, ACTION.OPEN_SHOP)) }}
+        },
+      {% endif %}
+      {% if opts|get_item('render_rating') %}
+        {
+          "type": "div-table-block",
+          "rows": [
+            {
+              "cells": [
+                {% if doc.get("rating") and doc.rating.icon_url %}
+                  {
+                    "image": {
+                      "type": "div-image-element",
+                      "ratio": 1.5,
+                      "image_url": "{{- doc.rating.icon_url -}}"
+                    },
+                    "image_size": "xs"
+                  },
+                  {
+                    "text_style": "text_m",
+                    "text": "{{- font_color('#7F7F7F', render_review_count_text(doc.rating.get("review_count"))) -}}",
+                    {{ render_action(
+                            doc.rating.reviews_url,
+                            gallery_item_label_log_id(GALLERY_TYPE, ACTION.OPEN_REVIEWS)) }}
+                  }
+                {% else %}
+                  {
+                    "text": " "
+                  },
+                  {
+                    "text": " "
+                  }
+                {% endif %}
+              ],
+              "top_padding": "xxs",
+              "bottom_padding": "xxs",
+              "type": "row_element"
+            }
+          ],
+          "columns": [
+            {
+              "weight": 0,
+              "left_padding": "zero",
+              "right_padding": "zero"
+            },
+            {
+              "weight": 0
+            }
+          ]
+        },
+      {% endif %}
+      {% call() render_block(append_comma=True) %}
+        {{ render_adviser_percentage(doc, opts) }}
+      {% endcall %}
+      {% if opts|get_item("details_card_button") == "GRAY" %}
+        {
+          "type": "div-buttons-block",
+          "items": [
+            {
+              {{ render_action(
+                    product_details_action_url(doc, index),
+                    gallery_item_button_log_id(GALLERY_TYPE, ACTION.OPEN_PRODUCT_CARD)) }},
+              "text": "Подробнее о товаре"
+            }
+          ],
+          "is_fullwidth": 1
+        },
+      {% elif opts|get_item("details_card_button") == "VIOLET" %}
+        {
+          "type": "div-buttons-block",
+          "items": [
+            {
+              {{ render_action(
+                    product_details_action_url(doc, index),
+                    gallery_item_button_log_id(GALLERY_TYPE, ACTION.OPEN_PRODUCT_CARD)) }},
+              "background_color": "{{- VIOLET_COLOR -}}",
+              "text": "{{- font_color('#FFFFFF', "Подробнее с Алисой") -}}"
+            }
+          ],
+          "is_fullwidth": 1
+        },
+      {% endif %}
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      }
+    ],
+    "width": {
+      "value": 200,
+      "type": "numeric"
+    },
+    "height": {
+      {% set ns = namespace() %}
+      {% set ns.height = 225 %}
+      {% if opts|get_item("render_shop_name") %}
+        {% set ns.height = ns.height + 23 %}
+      {% endif %}
+      {% if opts|get_item("render_rating") %}
+        {% set ns.height = ns.height + 25 %}
+      {% endif %}
+      {% if opts|get_item("render_adviser_percentage") %}
+        {% set ns.height = ns.height + 25 %}
+      {% endif %}
+      {% if opts.get("details_card_button") != "NONE" %}
+        {% set ns.height = ns.height + 52 %}
+      {% endif %}
+      "value": {{ ns.height }},
+      "type": "numeric"
+    },
+    "background": [
+      {
+        "type": "div-solid-background",
+        "color": "{{- '#FFFFFF' -}}"
+      }
+    ],
+    "type": "div-container-block",
+    "direction": "vertical",
+    "alignment_vertical": "top"
+  }
+{% endmacro %}
+
+{% card market_models_extended %}
+  {% call(item, index) render_gallery_base_block(
+                            GALLERY_TYPE,
+                            context.data.docs,
+                            context.data.total,
+                            context.data.total.count) %}
+    {{ render_extended_gallery_item(item, index, form.currency, context.data|get_item("opts")) }}
+  {% endcall %}
+{% endcard %}

@@ -1,0 +1,844 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/common";
+option java_package = "ru.yandex.alice.megamind.protos.common";
+option java_outer_classname = "IoT";
+
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/endpoint/endpoint.proto";
+import "alice/protos/data/device/info.proto";
+import "alice/protos/data/location/group.proto";
+import "alice/protos/data/location/room.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TIoTUserInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TCapability {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum ECapabilityType {
+            UnknownCapabilityType = 0;
+            OnOffCapabilityType = 1;
+            ColorSettingCapabilityType = 2;
+            ModeCapabilityType = 3;
+            RangeCapabilityType = 4;
+            ToggleCapabilityType = 5;
+            CustomButtonCapabilityType = 6;
+            QuasarServerActionCapabilityType = 7;
+            QuasarCapabilityType = 8;
+            VideoStreamCapabilityType = 9;
+        }
+
+        message TOnOffCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            bool Split = 1 [json_name = "split", (NYT.column_name) = "split"];
+        }
+
+        message TColorSettingCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TColorModel {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                enum EColorModelType {
+                    UnknownColorModel = 0;
+                    HsvColorModel = 1;
+                    RgbColorModel = 2;
+                }
+
+                EColorModelType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+                string AnalyticsName = 2 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+            }
+
+            message TTemperatureKCapabilityParameters {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                int32 Min = 1;
+                int32 Max = 2;
+                string AnalyticsName = 3 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+            }
+
+            message TColorScene {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string ID = 1 [json_name = "id", (NYT.column_name) = "id"];
+                string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+            }
+
+            message TColorSceneParameters {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                repeated TColorScene Scenes = 1 [json_name = "scenes", (NYT.column_name) = "scenes"];
+                string AnalyticsName = 2 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+            }
+
+            TColorModel ColorModel = 1 [json_name = "color_model", (NYT.column_name) = "color_model"];
+            TTemperatureKCapabilityParameters TemperatureK = 2 [json_name = "temperature_k", (NYT.column_name) = "temperature_k"];
+            TColorSceneParameters ColorSceneParameters = 3 [json_name = "color_scene", (NYT.column_name) = "color_scene"];
+        }
+
+        message TModeCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TMode {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+                string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            repeated TMode Modes = 2 [json_name = "modes", (NYT.column_name) = "modes"];
+        }
+
+        message TRangeCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TRange {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                double Min = 1 [json_name = "min", (NYT.column_name) = "min"];
+                double Max = 2 [json_name = "max", (NYT.column_name) = "max"];
+                double Precision = 3 [json_name = "precision", (NYT.column_name) = "precision"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            string Unit = 2 [json_name = "unit", (NYT.column_name) = "unit"];
+            bool RandomAccess = 3 [json_name = "random_access", (NYT.column_name) = "random_access"];
+            bool Looped = 4 [json_name = "looped", (NYT.column_name) = "looped"];
+            TRange Range = 5 [json_name = "range", (NYT.column_name) = "range"];
+        }
+
+        message TToggleCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        }
+
+        message TCustomButtonCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            repeated string InstanceNames = 2 [json_name = "instance_names", (NYT.column_name) = "instance_names"];
+        }
+
+        message TQuasarServerActionCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        }
+
+        message TQuasarCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        }
+
+        message TVideoStreamCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            repeated string Protocols = 1 [json_name = "protocols", (NYT.column_name) = "protocols"];
+        }
+
+        message TOnOffCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TRelative {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                bool IsRelative = 1 [json_name = "is_relative", (NYT.column_name) = "is_relative"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            bool Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+            TRelative Relative = 3 [json_name = "relative", (NYT.column_name) = "relative"];
+        }
+
+        message TColorSettingCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message THSV {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                int32 H = 1 [json_name = "h", (NYT.column_name) = "h"];
+                int32 S = 2 [json_name = "s", (NYT.column_name) = "s"];
+                int32 V = 3 [json_name = "v", (NYT.column_name) = "v"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            oneof Value {
+                int32 TemperatureK = 2 [json_name = "temperature_k", (NYT.column_name) = "temperature_k"];
+                int32 RGB = 3 [json_name = "rgb", (NYT.column_name) = "rgb"];
+                THSV HSV = 4 [json_name = "hsv", (NYT.column_name) = "hsv"];
+                string ColorSceneID = 5 [json_name = "color_scene_id", (NYT.column_name) = "color_scene_id"];
+            }
+        }
+
+        message TRangeCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TRelative {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                bool IsRelative = 1 [json_name = "is_relative", (NYT.column_name) = "is_relative"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            double Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+            TRelative Relative = 3 [json_name = "relative", (NYT.column_name) = "relative"];
+        }
+
+        message TModeCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TToggleCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            bool Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TCustomButtonCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            bool Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TQuasarServerActionCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TQuasarCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TMusicPlayValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                message TMusicPlayObject {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                    string Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+                    string Name = 3 [json_name = "name", (NYT.column_name) = "name"];
+                }
+
+                oneof Value {
+                    TMusicPlayObject Object = 1 [json_name = "object", (NYT.column_name) = "object"];
+                    string SearchText = 2 [json_name = "search_text", (NYT.column_name) = "search_text"];
+                }
+
+                bool PlayInBackground = 3 [json_name = "play_in_background", (NYT.column_name) = "play_in_background"];
+            }
+
+            message TNewsValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Topic = 1 [json_name = "topic", (NYT.column_name) = "topic"];
+                string Provider = 2 [json_name = "provider", (NYT.column_name) = "provider"];
+                bool PlayInBackground = 3 [json_name = "play_in_background", (NYT.column_name) = "play_in_background"];
+            }
+
+            message TSoundPlayValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Sound = 1 [json_name = "sound", (NYT.column_name) = "sound"];
+            }
+
+            message TStopEverythingValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+            }
+
+            message TVolumeValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                int32 Value = 1 [json_name = "value", (NYT.column_name) = "value"];
+                bool Relative = 2 [json_name = "relative", (NYT.column_name) = "relative"];
+            }
+
+            message TWeatherValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                message TLocation {
+                    double Longitude = 1 [json_name = "longitude", (NYT.column_name) = "longitude"];
+                    double Latitude = 2 [json_name = "latitude", (NYT.column_name) = "latitude"];
+                    string Address = 3 [json_name = "address", (NYT.column_name) = "address"];
+                    string ShortAddress = 4 [json_name = "short_address", (NYT.column_name) = "short_address"];
+                }
+
+                message THouseholdInfo {
+                    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+                }
+
+                TLocation Where = 1 [json_name = "where", (NYT.column_name) = "where"];
+                THouseholdInfo Household = 2 [json_name = "household", (NYT.column_name) = "household"];
+            }
+
+            message TTtsValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Text = 1 [json_name = "text", (NYT.column_name) = "text"];
+            }
+
+            message TAliceShowValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            oneof Value {
+                TMusicPlayValue MusicPlayValue = 2 [json_name = "music_play_value", (NYT.column_name) = "music_play_value"];
+                TNewsValue NewsValue = 3 [json_name = "news_value", (NYT.column_name) = "news_value"];
+                TSoundPlayValue SoundPlayValue = 4 [json_name = "sound_play_value", (NYT.column_name) = "sound_play_value"];
+                TStopEverythingValue StopEverythingValue = 5 [json_name = "stop_everything_value", (NYT.column_name) = "stop_everything_value"];
+                TVolumeValue VolumeValue = 6 [json_name = "volume_value", (NYT.column_name) = "volume_value"];
+                TWeatherValue WeatherValue = 7 [json_name = "weather_value", (NYT.column_name) = "weather_value"];
+                TTtsValue TtsValue = 8 [json_name = "tts_value", (NYT.column_name) = "tts_value"];
+                TAliceShowValue AliceShowValue = 9 [json_name = "alice_show_value", (NYT.column_name) = "alice_show_value"];
+            }
+        }
+
+        message TVideoStreamCapabilityState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TVideoStreamCapabilityValue {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Protocol = 1 [json_name = "protocol", (NYT.column_name) = "protocol"];
+                string StreamURL = 2 [json_name = "stream_url", (NYT.column_name) = "stream_url"];
+                // unix timestamp in seconds
+                uint64 ExpirationTime = 3 [json_name = "expiration_time", (NYT.column_name) = "expiration_time"];
+                repeated string Protocols = 4 [json_name = "protocols", (NYT.column_name) = "protocols"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            TVideoStreamCapabilityValue Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        ECapabilityType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        bool Retrievable = 2 [json_name = "retrievable", (NYT.column_name) = "retrievable"];
+        bool Reportable = 3 [json_name = "reportable", (NYT.column_name) = "reportable"];
+        double LastUpdated = 4 [json_name = "last_updated", (NYT.column_name) = "last_updated"];
+
+        string AnalyticsType = 19 [json_name = "analytics_type", (NYT.column_name) = "analytics_type"];
+        string AnalyticsName = 20 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+
+        oneof Parameters {
+            TOnOffCapabilityParameters OnOffCapabilityParameters = 5 [json_name = "on_off_capability_parameters", (NYT.column_name) = "on_off_capability_parameters"];
+            TColorSettingCapabilityParameters ColorSettingCapabilityParameters = 6 [json_name = "color_setting_capability_parameters", (NYT.column_name) = "color_setting_capability_parameters"];
+            TModeCapabilityParameters ModeCapabilityParameters = 7 [json_name = "mode_capability_parameters", (NYT.column_name) = "mode_capability_parameters"];
+            TRangeCapabilityParameters RangeCapabilityParameters = 8 [json_name = "range_capability_parameters", (NYT.column_name) = "range_capability_parameters"];
+            TToggleCapabilityParameters ToggleCapabilityParameters = 9 [json_name = "toggle_capability_parameters", (NYT.column_name) = "toggle_capability_parameters"];
+            TCustomButtonCapabilityParameters CustomButtonCapabilityParameters = 10 [json_name = "custom_button_capability_parameters", (NYT.column_name) = "custom_button_capability_parameters"];
+            TQuasarServerActionCapabilityParameters QuasarServerActionCapabilityParameters = 11 [json_name = "quasar_server_action_capability_parameters", (NYT.column_name) = "quasar_server_action_capability_parameters"];
+            TQuasarCapabilityParameters QuasarCapabilityParameters = 21 [json_name = "quasar_capability_parameters", (NYT.column_name) = "quasar_capability_parameters"];
+            TVideoStreamCapabilityParameters VideoStreamCapabilityParameters = 23 [json_name = "video_stream_capability_parameters", (NYT.column_name) = "video_stream_capability_parameters"];
+        }
+
+        oneof State {
+            TOnOffCapabilityState OnOffCapabilityState = 12 [json_name = "on_off_capability_state", (NYT.column_name) = "on_off_capability_state"];
+            TColorSettingCapabilityState ColorSettingCapabilityState = 13 [json_name = "color_setting_capability_state", (NYT.column_name) = "color_setting_capability_state"];
+            TModeCapabilityState ModeCapabilityState = 14 [json_name = "mode_capability_state", (NYT.column_name) = "mode_capability_state"];
+            TRangeCapabilityState RangeCapabilityState = 15 [json_name = "range_capability_state", (NYT.column_name) = "range_capability_state"];
+            TToggleCapabilityState ToggleCapabilityState = 16 [json_name = "toggle_capability_state", (NYT.column_name) = "toggle_capability_state"];
+            TCustomButtonCapabilityState CustomButtonCapabilityState = 17 [json_name = "custom_button_capability_state", (NYT.column_name) = "custom_button_capability_state"];
+            TQuasarServerActionCapabilityState QuasarServerActionCapabilityState = 18 [json_name = "quasar_server_action_capability_state", (NYT.column_name) = "quasar_server_action_capability_state"];
+            TQuasarCapabilityState QuasarCapabilityState = 22 [json_name = "quasar_capability_state", (NYT.column_name) = "quasar_capability_state"];
+            TVideoStreamCapabilityState VideoStreamCapabilityState = 24 [json_name = "video_stream_capability_state", (NYT.column_name) = "video_stream_capability_state"];
+        }
+    }
+
+    message TProperty {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EPropertyType {
+            UnknownPropertyType = 0;
+            FloatPropertyType = 1;
+            BoolPropertyType = 2;
+            EventPropertyType = 3;
+        }
+
+        message TFloatPropertyParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            string Unit = 2 [json_name = "unit", (NYT.column_name) = "unit"];
+        }
+
+        message TFloatPropertyState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            double Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TBoolPropertyParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+        }
+
+        message TBoolPropertyState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            bool Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        message TEventPropertyParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TEvent {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+                string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+            }
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            repeated TEvent Events = 2 [json_name = "events", (NYT.column_name) = "events"];
+        }
+
+        message TEventPropertyState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 1 [json_name = "instance", (NYT.column_name) = "instance"];
+            string Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+        }
+
+        reserved 7;
+
+        EPropertyType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        bool Retrievable = 2 [json_name = "retrievable", (NYT.column_name) = "retrievable"];
+        bool Reportable = 3 [json_name = "reportable", (NYT.column_name) = "reportable"];
+
+        // timestamp of the last value update
+        double StateChangedAt = 15 [json_name = "state_changed_at", (NYT.column_name) = "state_changed_at"];
+        // timestamp of any state update
+        double LastUpdated = 4 [json_name = "last_updated", (NYT.column_name) = "last_updated"];
+
+        // timestamp of particular state update, it's actual only for event property now and changes only when
+        // some particular event occur, i.e. only "opened" event updates this field for open/close sensor
+        double LastActivated = 12 [json_name = "last_activated", (NYT.column_name) = "last_activated"];
+
+        string AnalyticsType = 10 [json_name = "analytics_type", (NYT.column_name) = "analytics_type"];
+        string AnalyticsName = 11 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+
+        oneof Parameters {
+            TFloatPropertyParameters FloatPropertyParameters = 5 [json_name = "float_property_parameters", (NYT.column_name) = "float_property_parameters"];
+            TBoolPropertyParameters BoolPropertyParameters = 6 [json_name = "bool_property_parameters", (NYT.column_name) = "bool_property_parameters"];
+            TEventPropertyParameters EventPropertyParameters = 13 [json_name = "event_property_parameters", (NYT.column_name) = "event_property_parameters"];
+        }
+        oneof State {
+            TBoolPropertyState BoolPropertyState = 8 [json_name = "bool_property_state", (NYT.column_name) = "bool_property_state"];
+            TFloatPropertyState FloatPropertyState = 9 [json_name = "float_property_state", (NYT.column_name) = "float_property_state"];
+            TEventPropertyState EventPropertyState = 14 [json_name = "event_property_state", (NYT.column_name) = "event_property_state"];
+        }
+    }
+
+    message TDevice {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EDeviceState {
+            UnknownDeviceState = 0;
+            OnlineDeviceState = 1;
+            OfflineDeviceState = 2;
+            NotFoundDeviceState = 3;
+            SplitState = 4;
+        }
+
+        message TDeviceInfo {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Manufacturer = 1 [json_name = "manufacturer", (NYT.column_name) = "manufacturer"];
+            string Model = 2 [json_name = "model", (NYT.column_name) = "model"];
+            string HwVersion = 3 [json_name = "hw_version", (NYT.column_name) = "hw_version"];
+            string SwVersion = 4 [json_name = "sw_version", (NYT.column_name) = "sw_version"];
+        }
+
+        message TQuasarInfo {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string DeviceId = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+            string Platform = 2 [json_name = "platform", (NYT.column_name) = "platform"];
+        }
+
+        message TDeviceConfig {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TTandemDeviceConfig {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                message TTandemDeviceConfigPartner {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                }
+
+                TTandemDeviceConfigPartner Partner = 1 [json_name = "partner", (NYT.column_name) = "partner"];
+            }
+
+            message TSpeakerYandexIOConfig {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                TIotDiscoveryCapability.TNetworks Networks = 1 [json_name = "networks", (NYT.column_name) = "networks"];
+            }
+
+            TTandemDeviceConfig Tandem = 1 [json_name = "tandem", (NYT.column_name) = "tandem"];
+            TSpeakerYandexIOConfig SpeakerYandexIOConfig = 2 [json_name = "speaker_yandex_io", (NYT.column_name) = "speaker_yandex_io"];
+        }
+
+        reserved 5;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        repeated string Aliases = 3 [json_name = "aliases", (NYT.column_name) = "aliases"];
+        EUserDeviceType Type = 4 [json_name = "type", (NYT.column_name) = "type"];
+        EUserDeviceType OriginalType = 19 [json_name = "original_type", (NYT.column_name) = "original_type"];
+        string ExternalId = 6 [json_name = "external_id", (NYT.column_name) = "external_id"];
+        string ExternalName = 7 [json_name = "external_name", (NYT.column_name) = "external_name"];
+        string SkillId = 8 [json_name = "skill_id", (NYT.column_name) = "skill_id"];
+        string RoomId = 9 [json_name = "room_id", (NYT.column_name) = "room_id"];
+        repeated string GroupIds = 10 [json_name = "group_ids", (NYT.column_name) = "group_ids"];
+
+        repeated TCapability Capabilities = 11 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+        repeated TProperty Properties = 12 [json_name = "properties", (NYT.column_name) = "properties"];
+
+        TDeviceInfo DeviceInfo = 13 [json_name = "device_info", (NYT.column_name) = "device_info"];
+        TQuasarInfo QuasarInfo = 14 [json_name = "quasar_info", (NYT.column_name) = "quasar_info"];
+        bytes CustomData = 15 [json_name = "custom_data", (NYT.column_name) = "custom_data"];
+        double Updated = 16 [json_name = "updated", (NYT.column_name) = "updated"];
+        double Created = 17 [json_name = "created", (NYT.column_name) = "created"];
+        string HouseholdId = 18 [json_name = "household_id", (NYT.column_name) = "household_id"];
+
+        EDeviceState Status = 20 [json_name = "status", (NYT.column_name) = "status"];
+        double StatusUpdated = 21 [json_name = "status_updated", (NYT.column_name) = "status_updated"];
+
+        string AnalyticsType = 22 [json_name = "analytics_type", (NYT.column_name) = "analytics_type"];
+        string AnalyticsName = 23 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+        string IconURL = 24 [json_name = "icon_url", (NYT.column_name) = "icon_url"];
+
+        bool Favorite = 25 [json_name = "favorite", (NYT.column_name) = "favorite"];
+        TDeviceConfig InternalConfig = 26 [json_name = "internal_config", (NYT.column_name) = "internal_config"];
+        TUserSharingInfo SharingInfo = 27 [json_name = "sharing_info", (NYT.column_name) = "sharing_info"];
+    }
+
+    message THousehold {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        double Longitude = 3 [json_name = "longitude", (NYT.column_name) = "longitude"];
+        double Latitude = 4 [json_name = "latitude", (NYT.column_name) = "latitude"];
+        string Address = 5 [json_name = "address", (NYT.column_name) = "address"];
+        TUserSharingInfo SharingInfo = 6 [json_name = "sharing_info", (NYT.column_name) = "sharing_info"];
+    }
+
+    message TColor {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TScenario {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TCapability {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TIoTUserInfo.TCapability.ECapabilityType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            oneof State {
+                TIoTUserInfo.TCapability.TOnOffCapabilityState OnOffCapabilityState = 2 [json_name = "on_off_capability_state", (NYT.column_name) = "on_off_capability_state"];
+                TIoTUserInfo.TCapability.TColorSettingCapabilityState ColorSettingCapabilityState = 3 [json_name = "color_setting_capability_state", (NYT.column_name) = "color_setting_capability_state"];
+                TIoTUserInfo.TCapability.TModeCapabilityState ModeCapabilityState = 4 [json_name = "mode_capability_state", (NYT.column_name) = "mode_capability_state"];
+                TIoTUserInfo.TCapability.TRangeCapabilityState RangeCapabilityState = 5 [json_name = "range_capability_state", (NYT.column_name) = "range_capability_state"];
+                TIoTUserInfo.TCapability.TToggleCapabilityState ToggleCapabilityState = 6 [json_name = "toggle_capability_state", (NYT.column_name) = "toggle_capability_state"];
+                TIoTUserInfo.TCapability.TCustomButtonCapabilityState CustomButtonCapabilityState = 7 [json_name = "custom_button_capability_state", (NYT.column_name) = "custom_button_capability_state"];
+                TIoTUserInfo.TCapability.TQuasarServerActionCapabilityState QuasarServerActionCapabilityState = 8 [json_name = "quasar_server_action_capability_state", (NYT.column_name) = "quasar_server_action_capability_state"];
+                TIoTUserInfo.TCapability.TQuasarCapabilityState QuasarCapabilityState = 9 [json_name = "quasar_capability_state", (NYT.column_name) = "quasar_capability_state"];
+                TIoTUserInfo.TCapability.TVideoStreamCapabilityState VideoStreamCapabilityState = 10 [json_name = "video_stream_capability_state", (NYT.column_name) = "video_stream_capability_state"];
+            }
+        }
+
+        message TDevice {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            repeated TScenario.TCapability Capabilities = 2 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+        }
+
+        message TLaunchDevice {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+            EUserDeviceType Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+            repeated TIoTUserInfo.TCapability Capabilities = 4 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+            bytes CustomData = 5 [json_name = "custom_data", (NYT.column_name) = "custom_data"];
+            string SkillID = 6 [json_name = "skill_id", (NYT.column_name) = "skill_id"];
+        }
+
+        message TTrigger {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            enum ETriggerType {
+                UnknownScenarioTriggerType = 0;
+                VoiceScenarioTriggerType = 1;
+                TimerScenarioTriggerType = 2;
+                TimetableScenarioTriggerType = 3;
+                DevicePropertyScenarioTriggerType = 4;
+            }
+
+            message TTimetable {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                double TimeOffset = 1 [json_name = "time_offset", (NYT.column_name) = "time_offset"];
+                repeated int32 Weekdays = 2 [json_name = "weekdays", (NYT.column_name) = "weekdays"];
+            }
+
+            message TDeviceProperty {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                enum PropertyTriggerConditionType {
+                    UndefinedPropertyConditionType = 0;
+                    FloatPropertyConditionType = 1;
+                    EventPropertyConditionType = 2;
+                }
+
+                message TEventPropertyCondition {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    repeated string Values = 1 [json_name = "values", (NYT.column_name) = "values"];
+                }
+
+                message TFloatPropertyCondition {
+                    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                    message TBound {
+                        double Value = 1 [json_name = "value", (NYT.column_name) = "value"];
+                    }
+
+                    TBound LowerBound = 1 [json_name = "lower_bound", (NYT.column_name) = "lower_bound"];
+                    TBound UpperBound = 3 [json_name = "upper_bound", (NYT.column_name) = "upper_bound"];
+                }
+
+                string DeviceID = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+                string PropertyType = 2 [json_name = "property_type", (NYT.column_name) = "property_type"];
+                string Instance = 3 [json_name = "instance", (NYT.column_name) = "instance"];
+                PropertyTriggerConditionType ConditionType = 4 [json_name = "condition_type", (NYT.column_name) = "condition_type"];
+                oneof Condition {
+                    TEventPropertyCondition EventPropertyCondition = 5 [json_name = "event_condition", (NYT.column_name) = "event_condition"];
+                    TFloatPropertyCondition FloatPropertyCondition = 6 [json_name = "float_condition", (NYT.column_name) = "float_condition"];
+                }
+            }
+
+            ETriggerType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            oneof Value {
+                string VoiceTriggerPhrase = 2 [json_name = "voice", (NYT.column_name) = "voice"];
+                double TimerTriggerTimestamp = 3 [json_name = "timer", (NYT.column_name) = "timer"];
+                TTimetable Timetable = 4 [json_name = "timetable", (NYT.column_name) = "timetable"];
+                TDeviceProperty DeviceProperty = 5 [json_name = "device_property", (NYT.column_name) = "device_property"];
+            }
+        }
+
+        message TStep {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            enum EStepType {
+                UnknownScenarioStepType = 0;
+                ActionsScenarioStepType = 1;
+                DelayScenarioStepType = 2;
+            }
+
+            message TScenarioStepActionsParameters {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                repeated TLaunchDevice Devices = 1 [json_name = "devices", (NYT.column_name) = "devices"];
+                repeated TScenario.TCapability RequestedSpeakerCapabilities = 2 [json_name = "requested_speaker_capabilities", (NYT.column_name) = "requested_speaker_capabilities"];
+            }
+
+            message TScenarioStepDelayParameters {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                double Delay = 1 [json_name = "delay", (NYT.column_name) = "delay"];
+            }
+
+            EStepType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            oneof Parameters {
+                TScenarioStepActionsParameters ScenarioStepActionsParameters = 2 [json_name = "scenario_step_actions_parameters", (NYT.column_name) = "scenario_step_actions_parameters"];
+                TScenarioStepDelayParameters ScenarioStepDelayParameters = 3 [json_name = "scenario_step_delay_parameters", (NYT.column_name) = "scenario_step_delay_parameters"];
+            }
+        }
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        string Icon = 3 [json_name = "icon", (NYT.column_name) = "icon"];
+        repeated TScenario.TDevice Devices = 4 [json_name = "devices", (NYT.column_name) = "devices"];
+        repeated TScenario.TCapability RequestedSpeakerCapabilities = 5 [json_name = "requested_speaker_capabilities", (NYT.column_name) = "requested_speaker_capabilities"];
+        repeated TTrigger Triggers = 6 [json_name = "triggers", (NYT.column_name) = "triggers"];
+        bool IsActive = 7 [json_name = "is_active", (NYT.column_name) = "is_active"];
+        repeated TStep Steps = 8 [json_name = "steps", (NYT.column_name) = "steps"];
+        bool PushOnInvoke = 9 [json_name = "push_on_invoke", (NYT.column_name) = "push_on_invoke"];
+    }
+
+    message TStereopair {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EStereopairRole {
+            UnknownStereopairRole = 0;
+            LeaderStereopairRole = 1;
+            FollowerStereopairRole = 2;
+        }
+
+        enum EStereopairChannel {
+            UnknownStereopairChannel = 0;
+            LeftStereopairChannel = 1;
+            RightStereopairChannel = 2;
+        }
+
+        message TStereopairDevice {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+            EStereopairChannel Channel = 2 [json_name = "channel", (NYT.column_name) = "channel"];
+            EStereopairRole Role = 3 [json_name = "role", (NYT.column_name) = "role"];
+        }
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        repeated TStereopairDevice Devices = 3 [json_name = "devices", (NYT.column_name) = "devices"];
+    }
+
+    repeated TUserRoom Rooms = 1 [json_name = "rooms", (NYT.column_name) = "rooms"];
+    repeated TUserGroup Groups = 2 [json_name = "groups", (NYT.column_name) = "groups"];
+    repeated TDevice Devices = 3 [json_name = "devices", (NYT.column_name) = "devices"];
+    repeated TScenario Scenarios = 4 [json_name = "scenarios", (NYT.column_name) = "scenarios"];
+    repeated TColor Colors = 5 [json_name = "colors", (NYT.column_name) = "colors"];
+    repeated THousehold Households = 6 [json_name = "households", (NYT.column_name) = "households"];
+    repeated TStereopair Stereopairs = 8[json_name = "stereopairs", (NYT.column_name) = "stereopairs"];
+
+
+    string CurrentHouseholdId = 7 [json_name = "current_household_id", (NYT.column_name) = "current_household_id"];
+
+    string RawUserInfo = 100 [json_name = "raw_user_info", (NYT.column_name) = "raw_user_info"];
+}
+
+message TIoTCapabilityAction {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TIoTUserInfo.TCapability.ECapabilityType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+    oneof State {
+        option (NYT.variant_field_name) = "state";
+
+        TIoTUserInfo.TCapability.TOnOffCapabilityState OnOffCapabilityState = 2 [json_name = "on_off_capability_state", (NYT.column_name) = "on_off_capability_state"];
+        TIoTUserInfo.TCapability.TColorSettingCapabilityState ColorSettingCapabilityState = 3 [json_name = "color_setting_capability_state", (NYT.column_name) = "color_setting_capability_state"];
+        TIoTUserInfo.TCapability.TModeCapabilityState ModeCapabilityState = 4 [json_name = "mode_capability_state", (NYT.column_name) = "mode_capability_state"];
+        TIoTUserInfo.TCapability.TRangeCapabilityState RangeCapabilityState = 5 [json_name = "range_capability_state", (NYT.column_name) = "range_capability_state"];
+        TIoTUserInfo.TCapability.TToggleCapabilityState ToggleCapabilityState = 6 [json_name = "toggle_capability_state", (NYT.column_name) = "toggle_capability_state"];
+        TIoTUserInfo.TCapability.TCustomButtonCapabilityState CustomButtonCapabilityState = 7 [json_name = "custom_button_capability_state", (NYT.column_name) = "custom_button_capability_state"];
+        TIoTUserInfo.TCapability.TQuasarServerActionCapabilityState QuasarServerActionCapabilityState = 8 [json_name = "quasar_server_action_capability_state", (NYT.column_name) = "quasar_server_action_capability_state"];
+        TIoTUserInfo.TCapability.TQuasarCapabilityState QuasarCapabilityState = 9 [json_name = "quasar_capability_state", (NYT.column_name) = "quasar_capability_state"];
+        TIoTUserInfo.TCapability.TVideoStreamCapabilityState VideoStreamCapabilityState = 10 [json_name = "video_stream_capability_state", (NYT.column_name) = "video_stream_capability_state"];
+    }
+}
+
+message TIoTActionIntentParameters {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TCapabilityValue {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string RelativityType = 1 [json_name = "relativity_type", (NYT.column_name) = "relativity_type"];
+        string Unit = 2 [json_name = "unit", (NYT.column_name) = "unit"];
+        oneof Value {
+            option (NYT.variant_field_name) = "value";
+
+            bool BoolValue = 3 [json_name = "bool_value", (NYT.column_name) = "bool_value"];
+            double NumValue = 4 [json_name = "num_value", (NYT.column_name) = "num_value"];
+            string ModeValue = 5 [json_name = "mode_value", (NYT.column_name) = "mode_value"];
+        }
+    }
+
+    string CapabilityType = 1 [json_name = "capability_type", (NYT.column_name) = "capability_type"];
+    string CapabilityInstance = 2 [json_name = "capability_instance", (NYT.column_name) = "capability_instance"];
+    TCapabilityValue CapabilityValue = 3 [json_name = "capability_value", (NYT.column_name) = "capability_value"];
+}
+
+message TIoTDeviceActionRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TIoTActionIntentParameters IntentParameters = 1 [json_name = "intent_parameters", (NYT.column_name) = "intent_parameters"];
+    repeated string RoomIDs = 2 [json_name = "room_ids", (NYT.column_name) = "room_ids"];
+    repeated string HouseholdIDs = 3 [json_name = "household_ids", (NYT.column_name) = "household_ids"];
+    repeated string GroupIDs = 4 [json_name = "group_ids", (NYT.column_name) = "group_ids"];
+    repeated string DeviceIDs = 5 [json_name = "device_ids", (NYT.column_name) = "device_ids"];
+    repeated string DeviceTypes = 6 [json_name = "device_types", (NYT.column_name) = "device_types"];
+
+    // time specification values for action
+    double AtTimestamp = 7 [json_name = "at_timestamp", (NYT.column_name) = "at_timestamp"];
+    double FromTimestamp = 8 [json_name = "from_timestamp", (NYT.column_name) = "from_timestamp"];
+    double ToTimestamp = 9 [json_name = "to_timestamp", (NYT.column_name) = "to_timestamp"];
+    double ForTimestamp = 10 [json_name = "for_timestamp", (NYT.column_name) = "for_timestamp"];
+}
+
+message TStartIotDiscoveryRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIotDiscoveryCapability.TProtocol Protocols = 1 [json_name = "protocols", (NYT.column_name) = "protocols"];
+}
+
+message TFinishIotDiscoveryRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIotDiscoveryCapability.TProtocol Protocols = 1 [json_name = "protocols", (NYT.column_name) = "protocols"];
+    TIotDiscoveryCapability.TNetworks Networks = 2 [json_name = "networks", (NYT.column_name) = "networks"];
+    repeated TEndpoint DiscoveredEndpoints = 3 [json_name = "discovered_endpoints", (NYT.column_name) = "discovered_endpoints"];
+}
+
+message TForgetIotEndpointsRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated string EndpointIds = 1 [json_name = "endpoint_ids", (NYT.column_name) = "endpoint_ids"];
+}
+
+message TIoTDeviceActions {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string DeviceId = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    repeated TIoTCapabilityAction Actions = 2 [json_name = "actions", (NYT.column_name) = "actions"];
+    string ExternalDeviceId = 3 [json_name = "external_device_id", (NYT.column_name) = "external_device_id"];
+    string SkillId = 4 [json_name = "skill_id", (NYT.column_name) = "skill_id"];
+}
+
+// this is only relevant while https://st.yandex-team.ru/ZION-93 is not available and should be removed later
+message TIoTYandexIOActionRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIoTDeviceActions EndpointActions = 1 [json_name = "endpoint_actions", (NYT.column_name) = "endpoint_actions"];
+}
+
+message TIoTDeviceActionsBatch {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIoTDeviceActions Batch = 1 [json_name = "batch", (NYT.column_name) = "batch"];
+}
+
+message TEndpointStateUpdatesRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Endpoints transfer partial state, notifying only actual capability state changes
+    repeated TEndpoint EndpointUpdates = 1 [json_name = "endpoint_updates", (NYT.column_name) = "endpoint_updates"];
+}

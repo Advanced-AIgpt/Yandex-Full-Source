@@ -1,0 +1,65 @@
+import: common/adjectives.grnt
+import: common/commands.grnt
+import: common/common.grnt
+import: common/conjunctions.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+import: player/common.grnt
+
+form personal_assistant.scenarios.player.previous_track:
+    slots:
+        player_type:
+            type:
+                custom.player_type
+            source:
+                $Common.Player.PlayerType
+    root:
+        $Root
+    filler:
+        $Common.Commands.Do
+        $Common.WayToCallAlice
+        $Common.Please
+        $Common.Thanks
+        $Common.Hey
+        $Common.ForMe
+        $Common.ForUs
+        $Common.Conjunctions.And
+        $Common.Conjunctions.Or
+        $Common.Prepositions.In
+        $Common.Prepositions.On
+        $Common.Pronouns.That
+        $Common.Pronouns.This
+        $Common.Verbs.Want
+        $Common.Prepositions.That
+        $Common.Lets
+        $Common.Player.GeneralFiller
+        $Common.Player.CurrentItem
+
+$Root:
+    $PreviousItem
+    $LaunchPrevious
+    $ChangeToPrevious
+    $ReturnToPrevious
+    $OneItemBack
+    %force_negative
+    .* $Common.Player.Item+ $Common.Other .*
+
+$PreviousItem:
+    [$Previous+ $Common.Player.ItemWithPlayerType?]
+
+$LaunchPrevious:
+    $Common.Commands.Launch+ [$Common.Player.ItemWithPlayerType? $Previous+ $Common.Player.Item*]
+
+$ChangeToPrevious:
+    ($Common.Commands.Change+ | $Common.Commands.Set+) $Common.Player.ItemWithPlayerType? ($Common.Commands.Launch* | $Common.Commands.Return+ | $Common.Commands.Repeat+) $Common.Prepositions.To* [$Common.Player.ItemWithPlayerType? $Previous+]
+
+$ReturnToPrevious:
+    ($Common.Commands.Return+ | $Common.Commands.Repeat+) [$Common.Commands.Launch* $Common.Prepositions.To*] [$Common.Player.ItemWithPlayerType? $Previous+]
+    .* ($Common.Commands.Return+ | $Common.Commands.Repeat+) [$Common.Commands.Launch+ $Common.Prepositions.To*] [$Common.Player.ItemWithPlayerType $Previous+] .*
+
+$Previous:
+    $Common.Previous | $Common.Last | $Common.Adjectives.Finished
+
+$OneItemBack:
+    [$Common.Player.ItemWithPlayerType $Common.Player.One* $Common.Player.Back+]

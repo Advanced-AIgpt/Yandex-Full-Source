@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package NAlice.NData.NProactivity;
+option go_package = "a.yandex-team.ru/alice/protos/data/proactivity";
+option java_package = "ru.yandex.alice.protos.data.proactivity";
+
+import "alice/library/proto_eval/proto/expression.proto";
+
+import "alice/megamind/protos/common/device_state.proto";
+import "alice/megamind/protos/common/frame.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+enum ESkillRecQuotaType {
+    Default = 0;
+    Marketing = 1;
+    Tts = 2;
+}
+
+// For clicks logging
+message TSuccessCondition {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NAlice.TSemanticFrame Frame = 1 [(NYT.column_name) = "frame"];
+    NAlice.TDeviceState DeviceState = 2 [(NYT.column_name) = "device_state"];
+    NAlice.TProtoEvalExpression Check = 3 [(NYT.column_name) = "check"];
+    bool IsTrigger = 4 [(NYT.column_name) = "is_trigger"];
+
+    // Pre-calculated hash for SuccessCondition identification, do not fill by hand
+    string HashId = 5 [(NYT.column_name) = "hash_id"];
+}
+
+// Analytics aggregation key
+message TItemAnalytics {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string ItemId = 1 [(NYT.column_name) = "item_id"];
+    string BaseId = 2 [(NYT.column_name) = "base_id"];
+    repeated string Tags = 3 [(NYT.column_name) = "tags"];
+    // E.g. scenario/intent
+    string Info = 4 [(NYT.column_name) = "info"];
+    // ObjectType in PN_AlisaSkills
+    uint32 ItemType = 5 [(NYT.column_name) = "item_type"];
+}

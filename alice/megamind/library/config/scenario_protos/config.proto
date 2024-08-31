@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package NAlice;
+
+option java_package = "ru.yandex.alice.megamind.library.config.scenario_protos";
+option java_multiple_files = true;
+
+import "alice/megamind/library/config/scenario_protos/common.proto";
+
+import "alice/megamind/protos/common/data_source_type.proto";
+
+import "alice/memento/proto/api.proto";
+
+import "alice/protos/api/nlu/generated/features.proto";
+import "alice/protos/data/language/language.proto";
+
+message TDataSourceParams {
+    EDataSourceType Type = 1;
+    bool IsRequired = 2;
+}
+
+enum ERequestType {
+    Undefined = 0;
+    AppHostProxy = 2;
+    AppHostPure = 3;
+
+    reserved 1; reserved "Http";
+}
+
+message TMementoUserConfigParams {
+    ru.yandex.alice.memento.proto.EConfigKey ConfigKey = 1;
+}
+
+message TNluFeatureParams {
+    NNluFeatures.ENluFeature Feature = 1;
+}
+
+message TScenarioConfig {
+    reserved 3, 16;
+    reserved "MetricsName";
+
+    message THandlers {
+        string BaseUrl = 1;
+        bool OverrideHttpAdapterReqId = 3;
+        ERequestType RequestType = 4;
+
+        bool IsTransferringToAppHostPure = 5;
+        string GraphsPrefix = 6;
+    }
+
+    string Name = 1;
+    repeated ELang Languages = 2;
+
+    repeated string AcceptedFrames = 4;
+    THandlers Handlers = 5;
+    bool Enabled = 6;
+    reserved 7;
+    reserved 8;
+    bool AcceptsAnyUtterance = 9;
+    string Description = 10;
+    string DescriptionUrl = 11;
+    bool AcceptsImageInput = 12;
+    bool AcceptsMusicInput = 13;
+    repeated TDataSourceParams DataSources = 14;
+    repeated TMementoUserConfigParams MementoUserConfigs = 15;
+
+    repeated TNluFeatureParams NluFeatures = 17;
+
+    NAlice.NMegamind.TResponsibles Responsibles = 18;
+    bool AlwaysRecieveAllParsedSemanticFrames = 19;
+
+    repeated string AcceptedTypedCallbacks = 20;
+}

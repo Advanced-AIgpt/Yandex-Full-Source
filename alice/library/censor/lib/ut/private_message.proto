@@ -1,0 +1,77 @@
+package NAlice;
+
+import "alice/library/censor/protos/extension.proto";
+
+import "google/protobuf/struct.proto";
+
+message TMessage {
+
+    message TPrivateMessage {
+        option (MessageAccess) = A_PRIVATE_REQUEST;
+
+        optional string String = 1;
+        optional int32 Int = 2;
+    }
+
+    message TMessageWithPrivateField {
+        optional TPrivateMessage PrivateMessage = 1;
+    }
+
+    message TMessageWithPrivateFieldOne {
+        optional TMessageWithPrivateField MessageWithPrivateField = 1;
+    }
+
+    message TMessageWithPrivateFieldTwo {
+        optional TMessageWithPrivateField MessageWithPrivateField = 1;
+    }
+
+    message TPublicMessageWithPrivateFields {
+        enum EEnum {
+            DefaultValue = 0;
+            SecondValue = 1;
+        }
+
+        optional string PrivateString = 1 [(FieldAccess) = A_PRIVATE_REQUEST];
+        optional int32 PrivateInt = 2 [(FieldAccess) = A_PRIVATE_REQUEST];
+        optional EEnum Enum = 3 [(FieldAccess) = A_PRIVATE_REQUEST];
+        optional string PrivateResponseString = 4 [(FieldAccess) = A_PRIVATE_RESPONSE];
+        optional double PrivateDouble = 5 [(FieldAccess) = A_PRIVATE_REQUEST];
+        optional uint64 PublicUint = 6 [(FieldAccess) = A_PUBLIC];
+        repeated string PrivateStrings = 7 [(FieldAccess) = A_PRIVATE_REQUEST];
+        repeated int32 PrivateInts = 8 [(FieldAccess) = A_PRIVATE_REQUEST];
+        required int64 RequiredPrivate = 9 [(FieldAccess) = A_PRIVATE_REQUEST];
+    }
+
+    message TPublicMessage {
+        optional string PublicString = 1;
+    }
+
+    message TMessageWithRequiredFields {
+        required string String = 1;
+        optional TPublicMessage PublicMessage = 2;
+    }
+
+    message TRecursiveMessage {
+        optional TRecursiveMessage RecursiveMessage = 1;
+        repeated TRecursiveMessage RecursiveMessages = 2;
+    }
+
+    optional TPrivateMessage PrivateMessage = 1;
+    optional TPublicMessageWithPrivateFields PublicMessageWithPrivateFields = 2;
+    optional TPublicMessage PublicMessage = 3;
+    optional TPublicMessage PrivateAsFieldMessage = 4 [(FieldAccess) = A_PRIVATE_REQUEST];
+    repeated TPublicMessage PrivateAsFieldMessages = 5 [(FieldAccess) = A_PRIVATE_REQUEST];
+    repeated TPrivateMessage PrivateMessages = 6;
+    required TMessageWithRequiredFields MessageWithRequiredFields = 7 [(FieldAccess) = A_PRIVATE_REQUEST];
+    required bytes Bytes = 8 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional fixed64 Fixed64 = 9 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional fixed32 Fixed32 = 10 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional sfixed64 SFixed64 = 11 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional sfixed32 SFixed32 = 12 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional sint64 SInt64 = 13 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional sint32 SInt32 = 14 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional google.protobuf.Struct Struct = 15 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional TRecursiveMessage RecursiveMessage = 16 [(FieldAccess) = A_PRIVATE_REQUEST];
+    optional TMessageWithPrivateFieldOne MessageWithPrivateFieldOne = 17;
+    optional TMessageWithPrivateFieldTwo MessageWithPrivateFieldTwo = 18;
+}

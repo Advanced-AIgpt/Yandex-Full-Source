@@ -1,0 +1,231 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: general_conversation/movie_discuss_common.grnt
+import: quasar/video_common.grnt
+import: suggesters/movie_akinator.grnt
+
+
+form alice.movie_akinator.show_description:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $ShowDescription
+    slots:
+        show_description:
+            type:
+                entity_search.film
+                string
+            source:
+                $MovieName
+                $MovieNameWeak
+
+form alice.general_conversation.akinator_movie_discuss:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $Describe? $LetsDiscussSpecificMovie
+    slots:
+        film_id:
+            type:
+                entity_search.film
+                string
+            source:
+                $MovieName
+                $MovieNameWeak
+
+form alice.general_conversation.akinator_movie_discuss_weak:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        .* $MovieNameWithContent .*
+
+        %weight 1000000000000000000000000000
+        %negative
+        .* $ActionShow .*
+        .* (онлайн|бесплатно) .*
+        $Describe? $LetsDiscussSpecificMovie
+        $ShowDescription
+        $ChooseSimilarContent
+        .* дом два .*
+    slots:
+        film_id:
+            type:
+                entity_search.film
+                string
+            source:
+                $MovieName
+                $MovieNameWeak
+
+$ShowDescription:
+    [$Describe про? $MovieNameWithContent]
+    [$Describe? (этот|это)? (о чем|про что) сюжет? в? $MovieContentType? $MovieNameWeak вкратце? (идет речь)?]
+    [$Describe? (этот|это)? (о чем|про что)? сюжет в? $MovieContentType? $MovieNameWeak вкратце? (идет речь)?]
+    [описание $MovieContentType? $MovieNameWeak ((можете|можешь) рассказать|расскажи|расскажите|перескажи|перескажите)]
+    [что (такое|за) $MovieContentType? $MovieNameWeak]
+
+$LetsDiscussSpecificMovie:
+    [(в? $MovieNameWithContent) $MovieElement $Good ($Thee|по твоему|по вашему|тебе кажется)?]
+    [$Describe (про? $MovieElement) в? $MovieContentType? $MovieNameWeak]
+    [$Describe (что $You (думаешь|думаете) про) про? $MovieNameWithContent]
+    [(как $Thee|что $You (думаешь|думаете) про) $MovieElement в? $MovieContentType? $MovieNameWeak]
+    [почему $You? ($Recommend|стоит посмотреть) $MovieContentType? $MovieNameWeak]
+    [почему $Thee? (запомнился|понравился) $MovieContentType? $MovieNameWeak]
+    [(чем|почему) (тебя|вас)? (зацепил|впечатлил|заинтересовал) $MovieNameWithContent]
+    [что (тебя|вас)? (больше всего) (зацепил|впечатлил|заинтересовал) $MovieNameWithContent]
+    [(за что|что именно?) $You любишь (в? $MovieNameWithContent)]
+    [(чем|что именно)? $Thee нравится (в? $MovieNameWithContent)]
+    [$MovieNameWithContent $Good ($Thee|по твоему|по вашему|тебе кажется)?]
+    [(как $Thee)? в? $MovieNameWithContent $Features $MovieContentType?]
+    [$MovieNameWeak это? $Features $MovieContentType?]
+    [(какие сильные стороны|достоинства|какой жанр) есть? (у? $MovieNameWithContent)]
+    [драк и погонь (в? $MovieNameWithContent) много]
+    [драк (в? $MovieNameWithContent) много]
+    [погонь (в? $MovieNameWithContent) много]
+    [какая была? развязка (в? $MovieNameWithContent)]
+    [какой $Thee любимый персонаж именно? ((из|в)? $MovieNameWithContent)]
+    [$MovieNameWithContent (смотреть интересно|снят красиво)]
+    [(как зовут главного героя|кто главный герой|кто главные герои) (в? $MovieNameWithContent)]
+    [кто (из известных актеров)? (снялся|снимался|играет) (в? $MovieNameWithContent)]
+    [(в сюжете) $MovieNameWithContent есть (неожиданные повороты)]
+    [(в каком жанре|какой жанр|в каком стиле снят?) (у? $MovieNameWithContent)]
+    [в каком расположении духа стоит смотреть $MovieNameWithContent]
+    [в сюжете $MovieNameWithContent есть неожиданные повороты]
+    [кто из (актеров|героев|персонажей) (в? $MovieNameWithContent) $Thee? (больше всего)? $Good]
+
+$Describe:
+    расскажи
+    расскажите
+    опиши
+    опишите
+    перескажи
+    перескажите
+    (можешь|можете) рассказать
+    (можешь|можете) описать
+    (можешь|можете) пересказать
+
+$MovieElement:
+    %lemma
+    актерский состав
+    актеры
+    видеоряд
+    герои
+    главный герой
+    история
+    конец
+    концовка
+    музыка
+    оператора
+    операторская работа
+    персонаж
+    песни
+    развязка
+    режиссера
+    саундтрек
+    сценарий
+    сценариста
+    сюжет
+    финал
+
+$Good:
+    %lemma
+    заинтересовал
+    интересный
+    не разочаровал
+    не слишком банальный
+    оригинальный
+    понравился
+    предсказуем
+    предсказуемый
+    продуманный
+    хороший
+
+$Recommend:
+    рекомендуешь
+    рекомендуете
+    советуешь
+    советуете
+
+$Features:
+    %lemma
+    авторский
+    атмосфера
+    атмосферный
+    боевик
+    вдумчивый
+    веселый
+    вообще стоит смотреть
+    голливудский
+    грабят банки
+    грустный
+    депрессивный
+    драма
+    драматичный
+    есть любовная линия
+    есть танцы
+    есть хеппи энд
+    занятный
+    запутанный сюжет
+    зрелищный
+    известный
+    интеллектуальный
+    (достаточно|очень)? интересный
+    история успеха
+    какая эпоха
+    какой жанр
+    комедийный
+    комедия
+    (достаточно|очень)? красивый
+    легкий
+    легко смотрится
+    много взрывов
+    много жестоких сцен
+    много компьютерной графики
+    много кровавых сцен
+    много крови
+    много спецэффектов
+    много шуток
+    много шуток ниже пояса
+    много экшена
+    можно смотреть всей семьей
+    можно смотреть детям
+    на чем то основан
+    не затянутый
+    открытый финал
+    (достаточно|очень)? кровавый
+    (достаточно|очень)? мрачный
+    поднимает настроение
+    прикольный
+    про гонки
+    про любовь
+    про спорт
+    (достаточно|очень)? реалистичный
+    светлый
+    (достаточно|очень)? сентиментальный
+    (достаточно|очень)? смешной
+    спасают мир
+    стоит смотреть на большом экране
+    (достаточно|очень)? страшный
+    трагичная история
+    трагичный
+    тяжело смотреть
+    тяжелый
+    увлекательный
+    эмоциональный
+
+$ActionShow:
+    %lemma
+    $Common.Play
+    $Common.Open
+    найди
+    поищи
+    ищи
+    смотреть
+    игра
+    играй
+    проиграй

@@ -1,0 +1,132 @@
+syntax="proto3";
+
+package NAlice.NSocialSharing;
+
+option go_package = "a.yandex-team.ru/alice/paskills/social_sharing/proto/api";
+option java_package = "ru.yandex.alice.social.sharing.proto";
+option java_outer_classname = "WebPageProto";
+
+import "alice/megamind/protos/common/frame.proto";
+
+message TDialogMessage {
+    enum EType {
+        UNDEFINED = 0;
+        USER = 1;
+        ASSISTANT = 2;
+    }
+
+    message TTextMessage {
+        string Text = 1 [json_name = "text"];
+    }
+
+    EType Type = 1 [json_name = "type"];
+    oneof Message {
+        TTextMessage TextMessage = 10 [json_name = "text_message"];
+    }
+}
+
+message TDialog {
+    repeated TDialogMessage Messages = 1 [json_name = "messages"];
+}
+
+message TDialogWithImageTemplate {
+    TDialog Dialog = 1 [json_name = "dialog"];
+    string ImageUrl = 2 [json_name = "image_url"];
+}
+
+message TExternalSkillTemplate {
+
+    message TSkill {
+        string Id = 1 [json_name = "id"];
+        string Name = 2 [json_name = "name"];
+        double Rating = 3 [json_name = "rating"];
+        reserved 4; // string LogoUrl
+        string LogoAvatarsId = 5 [json_name = "logo_avatars_id"];
+    }
+
+    message TImage {
+        string Url = 1 [json_name = "url", deprecated = true];
+        string AvatarsId = 2 [json_name = "avatars_id"];
+    }
+
+    message TActionButton {
+        string Text = 1 [json_name = "text"];
+        string BackgroundColor = 2 [json_name = "background_color"];
+        string TextColor = 3 [json_name = "text_color"];
+    }
+
+    message TPageContent {
+        string BackgroundColor = 1 [json_name = "background_color"];
+        string CardColor = 2 [json_name = "card_color"];
+        string Title = 3 [json_name = "title"];
+        string Subtitle = 4 [json_name = "subtitle"];
+        TImage Image = 5 [json_name = "image"];
+    }
+
+    enum ESendPushStatus {
+        DEFAULT = 0;
+        SENT = 1;
+        NOT_SENT = 2;
+    }
+
+    TDialog Dialog = 1 [json_name = "dialog", deprecated = true];
+    string SkillId = 2 [json_name = "skill_id", deprecated = true];
+    TSkill Skill = 3 [json_name = "skill"];
+    TActionButton ActionButton = 4 [json_name = "action_button"];
+    TPageContent PageContent = 5 [json_name = "page_content"];
+    ESendPushStatus SendPushStatus = 6 [json_name = "send_push_status"];
+}
+
+message TGenerativeFairyTaleTemplate {
+    message TImage {
+        string AvatarsId = 1 [json_name = "avatars_id"];
+    }
+
+    message TPageContent {
+        string BackgroundColor = 1 [json_name = "background_color"];
+        string CardColor = 2 [json_name = "card_color"];
+        string Title = 3 [json_name = "title"];
+        string Subtitle = 4 [json_name = "subtitle"];
+        TImage Image = 5 [json_name = "image"];
+        string Text = 6 [json_name = "text"];
+    }
+
+    message TActionButton {
+        string Text = 1 [json_name = "text"];
+        string BackgroundColor = 2 [json_name = "background_color"];
+        string TextColor = 3 [json_name = "text_color"];
+    }
+
+    TPageContent PageContent = 1 [json_name = "page_content"];
+    TActionButton ActionButton = 2 [json_name = "action_button"];
+}
+
+
+message TScenarioSharePage {
+    // opengraph markup
+    message TSocialNetworkMarkup {
+        message TImage {
+            string Url = 1 [json_name = "url"];
+            string Type = 2 [json_name = "type"];
+            uint32 Width = 3 [json_name = "width"];
+            uint32 Height = 4 [json_name = "height"];
+            string Alt = 5 [json_name = "alt"];
+        }
+
+        string Title = 1 [json_name = "title"];
+        string Type = 2 [json_name = "type"];
+        TImage Image = 3 [json_name = "image"];
+        string Url = 4 [json_name = "url"];
+        string Description = 5 [json_name = "description"];
+    }
+
+    oneof Template {
+        TDialogWithImageTemplate DialogWithImage = 1 [json_name = "dialog_with_image"];
+        TExternalSkillTemplate ExternalSkill = 2 [json_name = "external_skill"];
+        TGenerativeFairyTaleTemplate FairyTaleTemplate = 3 [json_name = "fairy_tale_template"];
+    }
+    TSocialNetworkMarkup SocialNetworkMarkup = 10 [json_name = "social_network_markup"];
+    repeated string RequiredFeatures = 11 [json_name = "required_features"];
+    NAlice.TSemanticFrameRequestData Action = 12 [json_name = "action", deprecated = true];
+    NAlice.TTypedSemanticFrame Frame = 13 [json_name = "frame"];
+}

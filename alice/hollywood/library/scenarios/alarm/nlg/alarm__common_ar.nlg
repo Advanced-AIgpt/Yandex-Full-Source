@@ -1,0 +1,155 @@
+{% macro render_alarm_time(date, time, time_preposition='ل') -%}
+  {% if date %}
+    {% if date.weekdays %}
+      {{ date | render_weekday_type }}
+    {% elif date.days == 1 and date.days_relative and time and not time.get('hours') and not time.get('minutes') %}
+      لليوم
+    {% else %}
+      {% set d = date | render_datetime_raw %}
+      ل {% vc %}{{ d.voice }}{% evc %}{% tx %}{{ d.text }}{% etx %}
+    {% endif %}
+    {% if time %}
+      {% set t = time | time_format(cases='acc') %}
+      في {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+    {% endif %}
+  {% elif time %}
+    {% set t = time | time_format(cases='acc') %}
+    {{ time_preposition }} {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_alarm_list(alarm_list) %}
+  {% for alarm in alarm_list %}
+    {% vc %}رقم {{ loop.index }}{% evc %}{% tx %}{{ loop.index }}{% etx %}.
+    {{ render_alarm_time(alarm.date, alarm.time) }}
+    {% if not loop.last %}
+      \n{% vc %}-{% evc %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro set_sound_phrase() %}
+  {% chooseline %}
+    "أليسا، ضعي موسيقى مرحة على المنبه"
+    "أليسا، أيقظيني على أغنية هوا يا هوا"
+    "أليسا، اضبطي حسين الجسمي على المنبه"
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro alarm_stoit() %}
+  {% chooseitem %}
+    تم ضبط على المنبه
+  {% or %}
+    هل أوقظك
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro alarm_stoyat() %}
+  {% chooseitem %}
+    تم تعيين على المنبه
+  {% or %}
+    أأيقظك
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    حالياً أنا لا أستطيع ضبط المنبه في هذا الوقت. مضحك أليسا كذلك. لكنني سأتعلم قريباً.
+    سأتعلم قريباً كيف أضبط المنبه في هذا الوقت. أعدك!
+    حالياً لا أستطيع. يمكنك أن تطلب من أحد والديك أن يغني منذ الصباح الباكر.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_error(code, date=None, time=None) -%}
+  {% if code == 'no_alarms_available' %}
+    {% if date %}
+      ليس لديك منبهات معينة على هذا التاريخ.
+    {% elif time %}
+      ليس لديك منبهات معينة على هذا الوقت.
+    {% else %}
+      {% chooseline %}
+        ليس لديك منبهات معينة.
+        أنت لم تطلب مني إيقاظك.
+      {% endchooseline %}
+    {% endif %}
+  {% elif code == 'unsupported_operation' %}
+    {#
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      للأسف. لا أستطيع ضبط المنبهات على هذه الأجهزة.
+    {% endif %}
+    #}
+    للأسف. لا أستطيع ضبط المنبهات على هذه الأجهزة.
+  {% elif code == 'too_many_alarms' %}
+    تم ضبط 25 منبهاً. لا أستطيع أكثر من ذلك.
+  {% else %}
+    حدث خطأ ما، لنحاول فيما بعد؟
+  {% endif %}
+{%- endmacro %}
+
+{% macro ask_time() %}
+  على أي وقت أعين المنبه؟
+{% endmacro %}
+
+{# used for music tags and radio error rendering #}
+{% macro is_one_of_specified_intents(form_names) -%}
+  {% if form.raw_form.name in form_names -%}
+    True
+  {%- endif %}
+{%- endmacro %}
+{% macro is_specified_intent(form_name) -%}
+  {{ is_one_of_specified_intents([form_name]) }}
+{%- endmacro %}
+
+{% macro is_alarm_what_sound_is_set_intent() -%}
+  {{ is_specified_intent('personal_assistant.scenarios.alarm_what_sound_is_set') }}
+{%- endmacro %}
+
+{% macro is_alarm_set_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_sound',
+                                  'personal_assistant.scenarios.alarm_ask_sound']) }}
+{%- endmacro %}
+
+{% macro is_alarm_set_with_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_with_sound',
+                                  'personal_assistant.scenarios.alarm_set_with_sound__ellipsis']) }}
+{%- endmacro %}
+
+{% phrase render_error__alarmerror %}
+  {{ render_error(context.error.data.code, date=form.date, time=form.time) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__set_alarm %}
+  ضبط المنبه على {{ (context.alarm__set_alarm.data.time | time_format(cases='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__alarm__set_alarm %}
+  ضبط المنبه على {{ (context.alarm__set_alarm.data.time | time_format(cases='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__show_alarms %}
+  مشاهدة جميع المنبهات
+{% endphrase %}
+
+{% phrase render_suggest_uri__alarm__show_alarms %}
+  {{ context.alarm__show_alarms.data.uri }}
+{% endphrase %}
+
+{% phrase ask__time %}
+  {% set ask_time_for_day_part = context.attentions.get('alarm__ask_time_for_day_part') %}
+  {% if ask_time_for_day_part and ask_time_for_day_part.data and ask_time_for_day_part.data.day_part_name %}
+    {{ ask_time_for_day_part.data.day_part_name | capitalize_first }} - في أي وقت؟
+  {% else %}
+    {{ ask_time() }}
+  {% endif %}
+{% endphrase %}
+
+{% macro format_how_long(time, aggressive=True, case='acc') %}
+  {% set v = time | normalize_time_units() | ceil_seconds(aggressive) | render_units_time(cases=case) %}
+  {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+{% endmacro %}
+
+{% macro has_uncontrollable_updates() %}
+    {{ context.is_mini_speaker_lg }} or {{ context.is_elari_watch }}
+{% endmacro %}

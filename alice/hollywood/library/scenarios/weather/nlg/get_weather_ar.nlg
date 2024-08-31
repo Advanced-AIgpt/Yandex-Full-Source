@@ -1,0 +1,188 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ar.nlg" %}
+
+{% nlgimport "alice/hollywood/library/scenarios/weather/nlg/get_weather__ask_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/weather/nlg/cards/weather.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/weather/nlg/cards/weather_carousel.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/weather/nlg/cards/weather_show_view.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ar.nlg" import temp, min_max_temp, format_date,
+    render_day_part, geo_changed_attention, background_sound %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ar.nlg" import render_now_phrase, range_attention %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__today_ar.nlg" import weather_today %}
+
+{% macro render_weather(date, city, temperature, condition) %}
+  {{ date }} {{ city }} {{ temperature }}
+  {% if condition is defined and condition %}
+    , {{ condition | lower}}
+  {% endif %}
+{% endmacro %}
+
+{% macro weather_current() %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set condition=context.weather_forecast.condition %}
+
+  # render result
+  {{ render_weather(date, city, temp(context.weather_forecast.temperature), condition) }}.
+{% endmacro %}
+
+{% macro warning_catchphrase() %}
+  {% chooseline %}
+    هل تعني
+    سأنبهك
+    ليكن بعلمك
+    اعلم
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro general_catchphrase() %}
+  {% chooseline %}
+    على العموم
+    في الواقع
+    بشكل عام
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro unroll_warnings_list(list) %}
+  {% for item in list -%}
+        {% if item %}
+            {% if not loop.first %}{{ ", " }}{% endif %}{{ item.message }}
+        {% endif %}
+    {%- endfor %}
+{% endmacro %}
+
+{% macro weather_current_exp() %}
+  {% set extra_info=context.weather_forecast.extra_info %}
+  {% set significant=context.weather_forecast.significant_info %}
+  {% set prec_soon=context.weather_forecast.prec_soon_info %}
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set condition %}
+    {% tx %}{{ context.weather_forecast.condition }}{% etx %}
+    {% vc %}{{ context.weather_forecast.condition.replace(':', ' ') }}{% evc %}
+  {% endset %}
+
+  {{ render_weather(date, city, temp(context.weather_forecast.temperature), condition) }}.
+
+  {% if prec_soon is defined and prec_soon %}
+    {% tx %}{{ prec_soon | capitalize_first }}{% etx %}
+    {% vc %}{{ prec_soon.replace(':', ' ') | capitalize_first }}{% evc %}.
+  {% endif %}
+
+  {% if significant is defined and significant %}
+    {% set unrolled=unroll_warnings_list(significant) %}
+    {{ warning_catchphrase() }}
+    {{ "أن، "}}{% tx %}{{ unrolled }}{% etx %}
+    {% vc %}{{ unrolled.replace(':', ' ') }}{% evc %}
+    {{ '.' }}
+  {% endif %}
+
+  {% if extra_info is defined and extra_info %}
+    {% set unrolled=unroll_warnings_list(extra_info) %}
+    {{ general_catchphrase() }}{{ " اليوم " }}
+    {% tx %}{{ unrolled }}{% etx %}
+    {% vc %}{{ unrolled.replace(':', ' ') }}{% evc %}
+    {{ '.' }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_day(day, is_capitalized) %}
+  {% set (min, max)=day.temperature %}
+  {% set condition=day.condition %}
+  {% set date=format_date(day.date, day.tz, context.mock_timestamp) %}
+
+  {% if is_capitalized is defined and is_capitalized %}
+    {% set date=date|capitalize %}
+  {% endif %}
+
+  {{ render_weather(date, "", min_max_temp(min, max), condition) }}
+{% endmacro %}
+
+{% macro weather_for_range() %}
+  {% if 'no_weather_for_next_weekend' in context.attentions %}
+    لا أستطيع التنبؤ بالمستقبل لكنني أعرف حالة الطقس لأيام عطلة هذا الأسبوع.
+  {% endif %}
+  {{ context.forecast_location | city_prepcase | capitalize_first }}
+  {% for day in context.weather_forecast.days %}
+    {{ render_day(day, loop.index0) }}.\n
+  {% endfor %}
+  {{ range_attention(context.attentions) }}
+{% endmacro %}
+
+{% macro weather_for_date() %}
+  {% set (min, max)=context.weather_forecast.temperature %}
+
+  {% set date -%}
+    {{ format_date(context.weather_forecast.date, context.weather_forecast.tz, context.mock_timestamp) }}
+
+    {{ render_day_part(context.day_part) }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set condition=context.weather_forecast.condition %}
+
+  # render result
+  {{ render_weather(date, city, min_max_temp(min, max), condition) }}.
+{% endmacro %}
+
+
+{% macro render_weather_with_geo_changed_attention_and_sound(weather) %}
+  {% if context.background_sound_filename %}
+    {% voice %} {{ background_sound(context.background_sound_filename) }} {% endvoice %}
+  {% endif %}
+
+  {% if context.attentions.get('geo_changed') %}
+    {{ geo_changed_attention(context, weather) }}
+  {% else %}
+    {{ weather | capitalize_first }}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase render_weather_current %}
+  {{ render_weather_with_geo_changed_attention_and_sound(weather_current()) }}
+{% endphrase %}
+
+{% phrase render_weather_current_exp %}
+  {{ render_weather_with_geo_changed_attention_and_sound(weather_current_exp()) }}
+{% endphrase %}
+
+{% phrase render_weather_today %}
+  {{ render_weather_with_geo_changed_attention_and_sound(weather_today(context)) }}
+{% endphrase %}
+
+{% phrase render_weather_today_exp %}
+  {{ render_weather_with_geo_changed_attention_and_sound(render_today_warning_message(context.weather_forecast.today_warning_message)) }}
+{% endphrase %}
+
+{% phrase render_weather_for_date %}
+  {{ render_weather_with_geo_changed_attention_and_sound(weather_for_date()) }}
+{% endphrase %}
+
+{% phrase render_weather_tomorrow_exp %}
+  {{ render_weather_with_geo_changed_attention_and_sound(render_tomorrow_warning_message(context.weather_forecast.tomorrow_warning_message)) }}
+{% endphrase %}
+
+{% phrase render_weather_for_range %}
+  {{ render_weather_with_geo_changed_attention_and_sound(weather_for_range()) }}
+{% endphrase %}
+
+
+{% macro city() -%}
+  {{ context.forecast_location | city_prepcase if context.forecast_location else '' }}
+{%- endmacro %}
+
+{% macro render_today_warning_message(message) %}
+  اليوم {{ city() }} {% tx %}{{ message }}{% etx %}{% vc %}{{ message.replace(':', ' ') }}{% evc %}
+{% endmacro %}
+
+{% macro render_tomorrow_warning_message(message) %}
+  غداً {{ city() }} {{ message }}
+{% endmacro %}

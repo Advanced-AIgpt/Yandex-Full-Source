@@ -1,0 +1,233 @@
+use hahn;
+
+pragma yt.Pool='paskills';
+pragma yson.DisableStrict = 'true';
+
+$from = select cast(max(cast(substring(Path,Length('home/paskills/sessions/')) as Date) + Interval('P1D')) as String )
+from folder('home/paskills/sessions')
+where Type = 'table';
+$to = CurrentUtcDate();
+--$from = '2020-05-01';
+--$to = '2020-04-29';
+
+$get_sc_info = ($analyticsInfo) -> { RETURN $analyticsInfo.analytics_info.Dialogovo.scenario_analytics_info };
+
+$get_session_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::LookupString($obj, 'name') == 'external_skill.session' }
+    )[0];
+};
+
+$get_skill_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::Contains($obj, 'skill') }
+    )[0];
+};
+
+$get_user_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::LookupString($obj, 'name') == 'external_skill.user' }
+    )[0];
+};
+
+$app_group = ($app) -> {
+    RETURN case
+                when $app in ('quasar', 'small_smart_speakers') then 'all_speakers'
+                when $app in ('search_app_prod','search_app_beta', 'browser_alpha', 'browser_beta', 'browser_prod', 'yabro_beta', 'yabro_prod') then 'with_screen'
+                when $app in ('auto','navigator') then 'in_car'
+                else 'other'
+            end;
+};
+
+$skills = select ToDict(aggregate_list(
+    AsTuple(id, AsStruct(category as category,
+    case when developerType = 'yandex' then 'Yandex' when look = 'external' then 'External' else developerType end as dev_type,
+    `hideInStore` as hide_in_store,
+    `onAir` as on_air,
+    id as id))
+))
+from `//home/paskills/skills/stable` where channel = 'aliceSkill';
+
+$is_long_session = ($category, $session_length) -> {
+    RETURN case $category
+        when 'games_trivia_accessories' then $session_length >= 6
+        when 'kids' then $session_length >= 3
+        else $session_length >=2
+    end;
+};
+
+$calc_player_events_tlt = ($player_event, $player_event_ms, $prev_player_event, $prev_player_event_ms)-> {
+    $tlt = 0;
+    $tlt_diff = $player_event_ms - $prev_player_event_ms;
+
+    $tlt = IF($player_event=='on_play_started' AND $prev_player_event=='on_play_started', $tlt_diff, $tlt);
+    $tlt = IF($player_event=='on_play_stopped' AND $prev_player_event=='on_play_started', $tlt_diff, $tlt);
+    $tlt = IF($player_event=='on_play_finished' AND $prev_player_event=='on_play_started', $tlt_diff, $tlt);
+
+    return $tlt;
+};
+
+$is_player_callback = ($callback_name) -> {
+    $callback_name_str = Yson::ConvertToString($callback_name);
+
+    RETURN
+        $callback_name_str == 'on_play_started' OR
+        $callback_name_str == 'on_play_stopped' OR
+        $callback_name_str == 'on_play_finished' OR
+        $callback_name_str == 'get_next_audio_play_item';
+};
+
+$target_folder = 'home/paskills/sessions/';
+$source_folder = 'home/alice/dialog/prepared_logs_expboxes';
+$load_date = unwrap(cast(CurrentUtcDate() as String));
+define action $insert_sessions($date) as
+    $target_path = $target_folder || CAST($date AS String);
+    $source_path = $source_folder || '/' || CAST($date AS String);
+    --drop table $target_path;
+    --commit;
+
+    $sessions_base = select
+    skill_id,
+    `uuid`,
+    fielddate,
+    skill_session,
+    unwrap(min_by(app, server_time_ms), 'unexpected null in app') as app,
+    unwrap(min_by(dev_type, server_time_ms)??DictLookup($skills, skill_id).dev_type??'External') as dev_type,
+    unwrap(min_by(category, server_time_ms)??DictLookup($skills, skill_id).category??'unknown') as category,
+    unwrap(min_by($app_group(app??'-'), server_time_ms), 'unexpected null in app') as app_group,
+    DictLookup($skills, skill_id) as skill_info,
+    count(req_id) as in_session_req_cnt ,
+    --, `puid`
+    (max(server_time_ms) - min(server_time_ms))/1000 as skill_session_duration,
+    sum(min_of(max_of(next_req_server_time_ms - server_time_ms, 0), 300000))/1000 as limited_session_duration,
+    sum(request_timespent_ms)/1000 as tpt_session_duration,
+    Yson::ConvertToStringList(MIN_BY(testids, server_time_ms)) as testids,
+    MIN_BY(activation_source_type, server_time_ms) as activation_source_type,
+    MIN_BY(first_day, server_time_ms) as first_day,
+    MIN_BY(cohort, server_time_ms) as cohort,
+    from (
+        select skill_id, `uuid`, fielddate, skill_session, server_time_ms, req_id, app,
+        -- распространяем значения из первого запроса на весь день
+        first_value(dev_type) ignore nulls over w as dev_type, first_value(category) ignore nulls over w as category,
+        next_req_server_time_ms, request_timespent_ms, testids, activation_source_type, first_day, cohort,
+        from (
+            select skill_id, `uuid`, fielddate, skill_session, server_time_ms, req_id,
+                last_value(app) ignore nulls over w2 as app,
+                last_value(dev_type) ignore nulls over w as dev_type,
+                last_value(category) ignore nulls over w as category,
+                coalesce(lag(server_time_ms, 1) over w2, server_time_ms) as next_req_server_time_ms,
+
+                min_of(
+                    60000, --1 min timeout
+                    max_of(coalesce(lag(server_time_ms,1) over w2, alice_speech_end_ms, server_time_ms) - server_time_ms, 0)
+                ) as request_timespent_ms,
+                --first_value(testids) over w as testids
+                last_value(testids) ignore nulls over w2 as testids,
+                last_value(activation_source_type) ignore nulls over w2 as activation_source_type,
+                last_value(first_day) ignore nulls over w2 as first_day,
+                last_value(cohort) ignore nulls over w2 as cohort,
+            from (
+                SELECT Yson::ConvertToString($get_skill_obj(analytics_info).skill.id) as skill_id,
+                `uuid`,
+                $date as fielddate, -- убеждаемся, что в рамках одной таблицы у всех записей одно значение fielddate
+                app,
+                --`puid`,
+                Yson::ConvertToString($get_session_obj(analytics_info).id) as skill_session,
+                Yson::ConvertToString($get_skill_obj(analytics_info).skill.developer_type) as dev_type,
+                Yson::ConvertToString($get_skill_obj(analytics_info).skill.category) as category,
+                Yson::ConvertToString($get_session_obj(analytics_info).skill_session.activation_source_type) as activation_source_type,
+                req_id,
+                server_time_ms,
+                testids,
+                WeakField(first_day, String) as first_day,
+                coalesce(WeakField(alice_speech_end_ms, Int64), server_time_ms) as alice_speech_end_ms,
+                WeakField(cohort, String) as cohort,
+                FROM $source_path
+                where mm_scenario=='Dialogovo'
+            )
+            where skill_session is not null
+            window w2 as (partition compact by skill_id, `uuid`, fielddate, skill_session/*, app, dev_type, category*/ order by server_time_ms desc),
+            w as (partition by skill_id, fielddate order by server_time_ms desc) -- стараемся заполнить категорию и тип разработчика для первой сесси в день
+        )
+        window w as (partition by skill_id, fielddate order by server_time_ms asc) -- распространяем категорию и тип разработчика из первого запроса на весь день
+    )
+    group compact by unwrap(skill_id) as skill_id, unwrap(`uuid`, 'unexpected null in uuid') as `uuid`, unwrap(fielddate, 'unexpected null in fielddate') as fielddate, unwrap(skill_session, 'unexpected null in skill_session') as skill_session
+    ;
+
+    $sessions_player_tlt = (SELECT
+            skill_session,
+            SUM($calc_player_events_tlt(player_event, player_event_ms, prev_player_event, prev_player_event_ms))/1000 as player_tlt_sec,
+            skill_id,
+            `uuid`,
+            fielddate,
+        FROM(
+            SELECT
+                    skill_id,
+                    `uuid`,
+                    fielddate,
+                    skill_session,
+                    player_event,
+                    server_time_ms as player_event_ms,
+                    LAG(player_event) OVER W as prev_player_event,
+                    LAG(server_time_ms) OVER W as prev_player_event_ms
+                FROM(
+                    SELECT
+                        Yson::ConvertToString($get_skill_obj(analytics_info).skill.id) as skill_id,
+                        $date as fielddate,
+                        `uuid`,
+                        Yson::ConvertToString(other.callback.name) as player_event,
+                        server_time_ms,
+                        Yson::ConvertToString($get_session_obj(analytics_info).id) as skill_session
+                    FROM
+                        $source_path
+                    WHERE
+                        Yson::Contains(other.callback, 'name') AND
+                        $is_player_callback(other.callback.name))
+            WINDOW W AS (PARTITION BY skill_session, skill_id, `uuid`, fielddate ORDER BY server_time_ms ASC))
+        GROUP BY skill_session, skill_id, `uuid`, fielddate);
+
+    -- select * from $sessions_player_tlt;
+
+    INSERT INTO $target_path WITH TRUNCATE
+    SELECT
+        base.skill_id as skill_id,
+        base.`uuid` as `uuid`,
+        base.fielddate as fielddate,
+        app_group,
+        app,
+        base.skill_session as skill_session,
+        in_session_req_cnt,
+        dev_type, category,
+        unwrap(skill_info.on_air??true) as on_air,
+        unwrap(skill_info.hide_in_store??false) as hide_in_store,
+        unwrap($is_long_session(category, in_session_req_cnt), 'unexpected null in is_long_session') as is_long_session,
+        unwrap(activation_source_type??'Undefined') as activation_source_type,
+        skill_session_duration as skill_session_duration_sec,
+        tpt_session_duration + (tlt.player_tlt_sec??0) as tpt_session_duration_sec,
+        first_day,
+        cohort,
+        $load_date as load_date,
+        tpt_session_duration as tpt_tts_session_duration_sec,
+        tlt.player_tlt_sec??0 as player_tlt_sec,
+        testids
+    FROM $sessions_base as base
+    LEFT JOIN $sessions_player_tlt as tlt USING (skill_session, skill_id, `uuid`, fielddate);
+
+    COMMIT;
+    DISCARD select Ensure(count(distinct fielddate),
+        count(distinct fielddate)==1,
+        'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', values: '||(ListConcat(ListMap(aggregate_list_distinct(fielddate), ($x) -> {return cast($x as String); }))??'none'))
+    from $target_path;
+end define;
+
+$dates = (SELECT ListSortAsc(aggregate_list(d)) from (
+select cast(substring(Path,Length($source_folder) + 1u) as Date) as d
+from folder($source_folder)
+) as T
+where d between cast($from as Date) and cast($to as Date));
+
+select $dates;
+EVALUATE FOR $date IN $dates DO $insert_sessions($date);

@@ -1,0 +1,46 @@
+use hahn;
+
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma yson.DisableStrict = 'true';
+
+insert into @activations2 select * from Range(`home/paskills/radionews/sessions`);
+commit;
+
+insert into `home/paskills/radionews/sessions_stat` with truncate
+select fielddate,
+    station??'_total_' as station,
+    source_activation_type??'_total_' as source_activation_type,
+    app_group??'_total_' as app_group,
+    count(distinct `uuid`) as dau,
+    count(*) as sessions,
+    count_if(station != 'none') as radio_sessions,
+    SUM(fact_duration_s) as tlt_sum_s,
+    median(fact_duration_s) as median_duration_s,
+    PERCENTILE(fact_duration_s, 0.9) as tlt_perc_90_s,
+    PERCENTILE(fact_duration_s, 0.8) as tlt_perc_80_s,
+    avg(fact_duration_s) as avg_duration_s,
+    count_if(alice_was_interrupted) as interrupts,
+    cast(count_if(alice_was_interrupted) as Double)/count(*) as interrupt_part,
+    count_if(alice_speech_end_defined) as alice_speech_defined_cnt,
+    cast(count_if(alice_speech_end_defined) as Double)/count(*) as alice_speech_defined_part,
+    median(duration_s_before_interrupt) as median_duration_s_before_interrupt,
+    avg(duration_s_before_interrupt) as avg_duration_s_before_interrupt,
+    median(interrupted_at_part) as median_interrupted_at_part,
+    avg(interrupted_at_part) as avg_interrupted_at_part,
+
+from @activations2
+--where station != 'none'
+group compact by
+GROUPING SETS (
+    (fielddate/*, `uuid`*/, app_group, station, source_activation_type),
+    (fielddate/*, `uuid`*/, app_group, station                        ),
+    (fielddate/*, `uuid`*/, app_group,          source_activation_type),
+    (fielddate/*, `uuid`*/, app_group                                 ),
+    (fielddate/*, `uuid`*/,            station, source_activation_type),
+    (fielddate/*, `uuid`*/,            station                        ),
+    (fielddate/*, `uuid`*/,                     source_activation_type),
+    (fielddate/*, `uuid`*/                                            )--,
+    --(           `uuid`                                               )
+);
+

@@ -1,0 +1,46 @@
+import: common/filler.grnt
+import: weather/common.grnt
+
+# практически полная копия гранета get_weather, но БЕЗ wildcard-ов
+form personal_assistant.scenarios.get_weather.fast:
+    slots:
+        when:
+            type:
+                sys.datetime_range
+                sys.datetime
+            source: $When
+        day_part:
+            type: custom.day_part
+            source: $DayPart
+        where:
+            matching_type: overlap
+            type:
+                GeoAddr.Address
+                sys.geo
+                string
+            source: $StrictWhere
+    root:
+        $Root
+
+        %negative
+        $SingleWeatherWords
+        [$Weather.ExtraWeatherWord+ .*]  # не берем единичные "редкие" слова ("осадки", "метель") без других нетерминалов
+
+        %force_negative
+        [.* $NoMatchHandcrafted]  # убирание запросов на грани
+
+$Root:
+    [$TellMe* $Weather+ $WhenResolver? $DayPartResolver? $StrictWhere? $ExpectedChange*]
+    [$TellMe* $Weather+ $WhenResolver $DayPartResolver? $StrictWhere? $ExpectedChange*]
+    [$TellMe* $Weather+ $WhenResolver? $DayPartResolver $StrictWhere? $ExpectedChange*]
+    [$TellMe* $Weather+ $WhenResolver? $DayPartResolver? $StrictWhere $ExpectedChange*]
+    [$TellMe* $Weather* $Weather.ExtraWeatherWord+ $WhenResolver? $DayPartResolver? $StrictWhere? $ExpectedChange*]  # погода по "редким" словам ("осадки", "метель")
+
+    [$TellMe* $HotWords+ $WhenResolver? $DayPartResolver? $StrictWhere?]
+
+filler:
+    $Common.Filler
+    $Common.LeftFiller
+    $Common.WayToCallAlice
+    $nonsense
+    $WeatherFiller

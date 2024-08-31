@@ -1,0 +1,12 @@
+OWNER(
+    samoylovboris
+    g:alice_quality
+)
+
+UNION()
+
+FROM_SANDBOX(2615627335 OUT_NOAUTO alice6_2021-08.tsv)
+FROM_SANDBOX(2615663468 OUT_NOAUTO alice6_2021-09.tsv)
+FROM_SANDBOX(2460992432 OUT_NOAUTO vins_nlu.tsv)
+
+END()

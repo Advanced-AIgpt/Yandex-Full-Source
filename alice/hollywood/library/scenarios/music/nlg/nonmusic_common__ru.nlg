@@ -1,0 +1,161 @@
+{% macro render_fairytale_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  {% if what_is_playing %}
+    Сейчас играет
+    {% if 'сказк' not in normalized_title %}
+      сказка
+    {% endif %}
+  {% else %}
+    {{ render_content_with_saved_progress() }}
+    {% if 'сказк' not in normalized_title %}
+      сказку
+    {% elif music_answer.type == 'playlist' %}
+      подборку
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro for_the_night() %}
+  {% vc %}н+аночь{% evc %}
+  {% tx %}на ночь{% etx %}
+{% endmacro %}
+
+{% macro render_fairytale_answer(req_info, music_answer, is_general_playlist=False, what_is_playing=False) %}
+  {% if is_general_playlist and context.is_bedtime_tales and context.attentions.get('bedtime_tales_onboarding_thin_player') %}
+      Включаю сказки {{ for_the_night() }}. Колонка выключится, когда сказка закончится, но не раньше, чем через 15 минут.
+  {% elif is_general_playlist and context.is_bedtime_tales and context.attentions.get('bedtime_tales_onboarding') %}
+      Включаю сказки {{ for_the_night() }}. Колонка выключится через 15 минут.
+  {% elif is_general_playlist and context.is_bedtime_tales %}
+      Включаю сказки {{ for_the_night() }}.
+  {% elif is_general_playlist and context.attentions.get('show_child_age_promo') %}
+    {% chooseline %}
+      Включаю сказки. Хотите, я подберу их под возраст ребёнка? Тогда скажите мне в приложении Яндекса в вашем телефоне: "Алиса, настрой сказки".
+      Включаю сказки. Чтобы я подобрала её по возрасту, скажите мне в приложении Яндекса в вашем телефоне: "Алиса, настрой сказки".
+      Включаю сказки. Кстати, её можно подобрать по возрасту ребёнка. Просто скажите мне в приложении Яндекса в вашем телефоне: "Алиса, настрой сказки".
+    {% endchooseline %}
+  {% elif is_general_playlist or req_info.experiments['fairytale_radio'] != None and music_answer.type == 'filters' %}
+      Включаю сказки.
+  {% else %}
+    {{ render_fairytale_answer_beginning(music_answer, what_is_playing) }}
+    {% if music_answer.title %}
+      "{{ music_answer.title }}"
+    {% endif %}
+    .
+  {% endif %}
+  {% if context.attentions.get('can_start_from_the_beginning') %}
+    Чтобы включить заново, скажи: "Алиса, включи сначала".
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer_beginning(music_answer, what_is_playing=False) %}
+{% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  Включаю
+  {% if music_answer.type == 'track' and 'стих' not in normalized_title %}
+    стихотворение
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer(music_answer, what_is_playing=False) %}
+  {{ render_poem_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  {% set title_tokens = normalized_title.split() %}
+  {% set has_podcast_in_title = 'podcast' in normalized_title or 'подкаст' in normalized_title %}
+
+  {% if what_is_playing %}
+    Сейчас играет
+    {% if 'выпуск' not in title_tokens %}
+      выпуск
+    {% endif %}
+  {% else %}
+    {% if not context.attentions.get('music_restricted_by_child_content_settings') %}
+      {{ render_content_with_saved_progress() }}
+      {% if music_answer.type == 'track' and not 'выпуск' in title_tokens %}
+        выпуск
+      {% elif music_answer.type == 'album' and not has_podcast_in_title %}
+        подкаст
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer(music_answer, what_is_playing=False) %}
+  {% if context.attentions.get('podushki_show') %}
+    {% if context.attentions.get('used_saved_progress') %}
+      Продолжаю Подушки-шоу с момента, на котором мы остановились. Чтобы включить заново, скажи: "Алиса, включи сначала".
+    {% else %}
+      Включаю Подушки-шоу.
+    {% endif %}
+  {% else %}
+    {{ render_podcast_answer_beginning(music_answer, what_is_playing) }}
+    {% if music_answer.title %}
+      "{{ music_answer.title }}"
+    {% endif %}
+    .
+    {% if context.attentions.get('can_start_from_the_beginning') %}
+       Чтобы включить самый последний выпуск, скажите: "Алиса, включи сначала".
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_restricted_by_content_settings() %}
+    Лучше всего послушать этот подкаст вместе с родителями.
+{% endmacro %}
+
+{% macro render_audiobook_answer_beginning(music_answer, what_is_playing=False) %}
+  {% if what_is_playing %}
+    Сейчас играет
+  {% else %}
+    {{ render_content_with_saved_progress() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_audiobook_answer(music_answer, what_is_playing=False) %}
+  {{ render_audiobook_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+  .
+  {% if context.attentions.get('can_start_from_the_beginning') %}
+    Чтобы включить заново, скажите: "Алиса, включи сначала".
+  {% endif %}
+{% endmacro %}
+
+{% macro render_ambient_sound_answer_beginning(music_answer) %}
+  Включаю
+{% endmacro %}
+
+{% macro render_ambient_sound_answer(music_answer) %}
+  {{ render_ambient_sound_answer_beginning(music_answer) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_authorization_from_fairytale() %}
+  {% chooseline %}
+    Пожалуйста, войдите в свой аккаунт на Яндексе, чтобы я могла включать вам сказки целиком. А пока послушайте отрывок.
+    Пожалуйста, войдите в аккаунт, чтобы я могла включать вам сказки, которые вы любите, полностью. А пока - отрывок.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_yaplus_fairytale() %}
+  {% chooseline %}
+    Без подписки доступен только отрывок сказки. Это неплохо, но с подпиской было бы идеально.
+    Без подписки можно слушать только часть сказки, но самое интересное впереди!
+    Сказка прервется в самом интересном месте! Оформите подписку - слушайте целиком.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_content_with_saved_progress() %}
+  {% if context.attentions.get('used_saved_progress') %}
+    Продолжаю
+  {% else %}
+    Включаю
+  {% endif %}
+{% endmacro %}

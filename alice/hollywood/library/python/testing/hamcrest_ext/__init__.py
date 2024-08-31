@@ -1,0 +1,5 @@
+import alice.hollywood.library.python.testing.hamcrest_ext.is_dict_containing_only_entries as is_dict_containing_only_entries
+import alice.hollywood.library.python.testing.hamcrest_ext.is_non_empty_dict as is_non_empty_dict
+
+has_only_entries = is_dict_containing_only_entries.has_only_entries
+non_empty_dict = is_non_empty_dict.non_empty_dict

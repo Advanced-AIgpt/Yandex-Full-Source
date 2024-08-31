@@ -1,0 +1,51 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" import get_search_info %}
+
+{% macro render_factoid_answer_preamble() %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if context.is_smart_speaker or context.is_legatus or context.is_auto %}
+    {% chooseitem 1 %}
+      لا يمكنك إيجاز التفاصيل بكلمتين حاول أن تسأل ياندكس.
+    {% or 1 %}
+      بالمناسبة أنا أقرأ كتاباً عن هذا الموضوع، وسأخبرك قريباً عنه!
+    {% or 0.25 %}
+      معلوماتي سطحية في هذا المجال، ما رأيك أن نتحدث عن شيء آخر.
+    {% or 0.1 %}
+      كنت أعلم لكنني نسيت. لماذا ضايقتني.
+    {% endchooseitem %}
+  {% else %}
+    {% chooseline %}
+      سأقوم بفتح مصدر المعلومات.
+      سأقوم بفتح مصدري.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if (not context.is_smart_speaker or context.is_legatus or context.is_auto) %}
+    {% if info.factoid_url %}
+      {{ info.factoid_url }}
+    {% elif info.object_url %}
+      {{ info.object_url }}
+    {% endif %}
+  {% endif %}
+
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if info.factoid_url or info.object_url %}
+    {{ render_factoid_answer_preamble() }}
+  {% else %}
+    {% chooseline %}
+      اعذرني، لا يوجد لدي المزيد من المعلومات.
+      اعذرني، لا أستطيع إخبارك بالمزيد.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

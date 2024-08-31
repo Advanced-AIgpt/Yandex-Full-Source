@@ -1,0 +1,189 @@
+USE hahn;
+PRAGMA YSON.DisableStrict = 'true';
+
+$timeout = 30 * 1000;
+
+$vins_logs = '//home/voice/vins/logs/dialogs';
+$clicks_logs = '//home/voice/dialog/skills_discovery';
+$preclicks_results = '//home/paskills/discovery/datasets/PreClicks/raw/test_with_negatives';
+
+$start_date = '2019-09-01';
+$end_date   = '2019-11-08';
+
+$common_fillers = (SELECT AGGREGATE_LIST(text) FROM `//home/paskills/discovery/datasets/PreClicks/common-fillers`);
+$common_fillers_set = ToSet($common_fillers);
+$tokenizer = TextProcessing::MakeTokenizer(
+    True as Lowercasing,
+    True as Lemmatizing,
+    "BySense" as SeparatorType,
+    AsList("Word", "Number") as TokenTypes
+);
+$tokenize = ($text) -> {
+    $tokens = $tokenizer($text);
+    $tokens = ListMap($tokens, ($t) -> { RETURN $t.Token });
+    $tokens = ListFilter($tokens, ($token) -> {RETURN $token not in $common_fillers_set});
+    RETURN ToSet($tokens);
+};
+
+$get_word_intersection = ($phrase1, $phrase2) -> {
+    -- k - минимальное количество токенов в пересечении
+    $phrase1 = $tokenize($phrase1);
+    $phrase2 = $tokenize($phrase2);
+    RETURN DictLength(SetIntersection($phrase1, $phrase2));
+};
+
+-- TODO: filter out empty clicks
+$extract_skill_id_clicks_from_relevant_skills = ($clicks, $relevant_skills) -> {
+    $clicks = ListMap($clicks, ($click) -> { RETURN $click});
+    $clicks_unique = ListUniq($clicks);
+    $relevant_skills_with_clicks = ListMap($relevant_skills, ($relevant_skill_id) -> { RETURN ($relevant_skill_id, $relevant_skill_id in $clicks_unique) });
+    RETURN $relevant_skills_with_clicks;
+};
+
+$__skills = (
+    SELECT
+        id
+    FROM
+        `//home/paskills/skills/stable`
+    WHERE
+        channel = 'aliceSkill' AND
+        onAir AND
+        NOT isBanned AND
+        NOT hideInStore AND
+        isRecommended AND
+        deletedAt is NULL AND
+        TRUE
+);
+DEFINE ACTION $CALC_PRECLICKS($date) AS
+    $vins_logs_table = $vins_logs || "/" || $date;
+    $clicks_table = $clicks_logs || "/" || $date;
+    $preclicks_table = $preclicks_results || "/" || $date;
+    $Qs = (
+        SELECT
+            utterance_text as query,
+            form_name,
+            utterance_source,
+            server_time_ms,
+            response,
+            request,
+            Yson::LookupString(request, 'request_id') as request_id,
+            LAG(utterance_text)    over w AS prev_query,
+            LAG(form_name)         over w AS prev_form_name,
+            LAG(utterance_source)  over w AS prev_utterance_source,
+            LAG(server_time_ms)    over w AS prev_server_time_ms,
+            LAG(response)          over w AS prev_response,
+        FROM
+            $vins_logs_table
+        WINDOW
+            w AS (
+                PARTITION BY
+                    `uuid`
+                ORDER BY
+                    `server_time_ms`
+            )
+    );
+    SELECT * FROM $Qs LIMIT 3;
+
+    $clicks = (
+        SELECT
+            utterance_text,
+            request_id,
+            clicked_skill,
+            relevant_skills
+        FROM
+            $clicks_table
+        WHERE
+            Length(utterance_text) > 0 AND
+            TRUE
+    );
+
+    SELECT * FROM $clicks LIMIT 3;
+
+    $clicks = (
+        SELECT
+            utterance_text,
+            request_id,
+            IF(relevant_skill_click.1, "YES", "NO") as clicked,
+            relevant_skill_click.0 as skill_id,
+        FROM
+            $clicks
+        FLATTEN LIST BY ($extract_skill_id_clicks_from_relevant_skills(clicked_skill, relevant_skills) as relevant_skill_click)
+    );
+
+    SELECT * FROM $clicks LIMIT 3;
+
+    $Qs = (
+        SELECT
+            query,
+            form_name,
+            prev_query,
+            prev_form_name,
+            skill_id,
+            c.clicked as clicked,
+            q.request_id AS request_id,
+            $get_word_intersection(q.query, prev_query) as word_intersection
+        FROM
+            $Qs as q
+        INNER JOIN
+            $clicks as c
+        ON
+            q.request_id = c.request_id
+        WHERE
+            query IS NOT NULL AND
+            utterance_source = 'voice' AND
+            prev_query IS NOT NULL AND
+            prev_utterance_source = 'voice' AND
+            server_time_ms - prev_server_time_ms <= $timeout AND
+            TRUE
+    );
+    SELECT * FROM $Qs LIMIT 10;
+    $Qs = (
+        SELECT
+            query as next_query,
+            prev_query as query,
+            clicked,
+            form_name as next_form_name,
+            prev_form_name as form_name,
+            skill_id,
+            request_id as next_request_id,
+            word_intersection
+        FROM
+            $Qs
+        WHERE
+            skill_id in $__skills
+    );
+    INSERT INTO
+        $preclicks_table
+    WITH TRUNCATE
+    SELECT
+        *
+    FROM
+        $Qs
+    ORDER BY
+        query,
+        next_query
+    ;
+END DEFINE;
+$clicks_tables = (
+    SELECT
+        TableName(Path) as name
+    FROM
+        Folder($clicks_logs)
+    WHERE
+        Type = "table"
+);
+$tables_to_calc = (
+    SELECT
+        AGGREGATE_LIST(name) AS dates
+    FROM
+        $clicks_tables
+    WHERE
+        name BETWEEN $start_date AND $end_date
+);
+SELECT ListLength($tables_to_calc);
+EVALUATE FOR
+    $date
+IN
+    $tables_to_calc
+DO
+    $CALC_PRECLICKS($date);

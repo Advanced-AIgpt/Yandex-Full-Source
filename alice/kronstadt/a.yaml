@@ -1,0 +1,297 @@
+service: kronstadt
+title: Alisa Kronstadt
+
+arcanum:
+  review:
+    groups:
+      - name: "reviewers_group_1"
+        roles:
+          - "yandexdialogs2:@id=38"
+          - "smarttv:@id=38"
+    override_policy: "override"
+    rules:
+      - reviewers:
+          - name: "reviewers_group_1"
+            ship: 1
+            assign: 1
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: st_issue_linked
+
+ci:
+  autocheck:
+    fast-targets:
+      - alice/paskills/dialogovo
+      - alice/paskills/common
+      - alice/kronstadt
+      - alice/library/java
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags:
+        - RM_CI
+        - RM_COMPONENT:dialogovo
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+
+  releases:
+    release_kronstadt_over_ci:
+      title: Release Kronstadt
+      flow: kronstadt-ci-release-flow
+      auto: false
+      start-version: 50
+      branches:
+        pattern: releases/alice/kronstadt/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: testing
+          title: Testing
+        - id: stable
+          title: Release to stable
+
+  actions:
+    kronstadt-per-commit:
+      flow: kronstadt-per-commit-release-flow
+      triggers:
+        - on: commit
+          filters:
+            - discovery: dir
+              abs-paths: ['alice/paskills/dialogovo/**', 'alice/kronstadt/**']
+
+  flows:
+    kronstadt-ci-release-flow:
+      title: Kronstadt Release flow (over CI)
+      jobs:
+        build_kronstadt:
+          task: common/arcadia/ya_package_2
+          title: Build kronstadt docker
+          stage: build
+          input:
+            packages: alice/paskills/dialogovo/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            resource_type: DIALOGOVO_BINARY
+            build_type: release
+            custom_version: "release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+            requirements:
+              sandbox:
+                platform: linux
+
+        create-release-ticket:
+          title: Create ticket in ALICERELEASE
+          task: common/tracker/create_issue
+          stage: testing
+          needs: build_kronstadt
+          input:
+            config:
+              secret:
+                key: st.token
+              link:
+                queues:
+            rules:
+              on_duplicate: UPDATE
+            template:
+              type: Задача
+              summary: Релиз Kronstadt ${context.version_info.major}
+              assignee: kapitonovaj
+              queue: ALICERELEASE
+              fixVersion: kronstadt ${context.version_info.major}
+              tags:
+                - kronstadt
+                - release_number_${context.version_info.major}
+            update_template:
+              comment: |
+                Новые тикеты и коммиты в ((${context.ci_url} ${context.title}))
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+
+        release-kronstadt-to-priemka:
+          title: Deploy to priemka
+          task: common/nanny/update_service
+          stage: testing
+          needs: create-release-ticket
+          input:
+            config:
+              service_id: dialogovo_priemka
+              docker_image: "paskills/dialogovo:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        run-alice-evo-tests:
+          title: Run Alice Evo Integration Tests
+          task: projects/alice/alice_evo_integration_tests_wrapper
+          stage: testing
+          needs:
+            - release-kronstadt-to-priemka
+          input:
+            megamind_url: http://vins.hamster.alice.yandex.net/speechkit/app/pa?srcrwr=ALICE_DIALOGOVO:ALICE__KRONSTADT_PRIEMKA_APPHOST&srcrwr=Alice4Business:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/alice4business&srcrwr=Dialogovo:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/megamind&srcrwr=DialogovoB2b:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/megamind/dialogovo_b2b&srcrwr=ExternalSkillFlashBriefing:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/flash_briefing&srcrwr=ExternalSkillRecipes:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/megamind/recipes&srcrwr=SkillDiscoveryGc:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/discovery&srcrwr=Theremin:http://paskills-common-testing.alice.yandex.net:80/dialogovo-priemka/theremin
+            launch_type: kronstadt
+            repeat_failed_test: true
+            run_call_owner_subtask: true
+            test_filters: external_skills flash_briefings recipes thereminvox video
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        # Release to production
+        start-prepare:
+          title: Start prepare
+          task: dummy
+          stage: stable
+          needs:
+            - release-kronstadt-to-priemka
+            - run-alice-evo-tests
+          manual:
+            enabled: true
+            prompt: Release to stable?
+
+        prepare-kronstadt-on-prestable-sas:
+          title: Prepare kronstadt SAS Prestable
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: dialogovo_prestable_sas
+              target_status: PREPARED
+              docker_image: "paskills/dialogovo:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        prepare-kronstadt-on-sas:
+          title: Prepare kronstadt SAS
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: dialogovo_sas
+              target_status: PREPARED
+              docker_image: "paskills/dialogovo:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        prepare-kronstadt-on-vla:
+          title: Prepare kronstadt VLA
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: dialogovo_vla
+              target_status: PREPARED
+              docker_image: "paskills/dialogovo:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        prepare-kronstadt-on-hamster:
+          title: Prepare kronstadt HAMSTER
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: dialogovo_hamster
+              target_status: PREPARED
+              docker_image: "paskills/dialogovo:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        start-activate-prestable-sas:
+          title: Start activate
+          task: dummy
+          stage: stable
+          needs:
+            - prepare-kronstadt-on-prestable-sas
+            - prepare-kronstadt-on-sas
+            - prepare-kronstadt-on-vla
+            - prepare-kronstadt-on-hamster
+          manual:
+            enabled: true
+            prompt: Activate SAS Prestable?
+
+        activate-kronstadt-prestable-sas:
+          title: Activate kronstadt SAS Prestable
+          task: common/nanny/set_snapshot_state
+          needs:
+            - start-activate-prestable-sas
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: dialogovo_prestable_sas
+
+        start-activate-sas-vla:
+          title: Start activate SAS and VLA
+          task: dummy
+          stage: stable
+          needs:
+            - activate-kronstadt-prestable-sas
+          manual:
+            enabled: true
+            prompt: Activate SAS and VLA?
+
+        activate-kronstadt-sas:
+          title: Activate kronstadt SAS
+          task: common/nanny/set_snapshot_state
+          needs:
+            - start-activate-sas-vla
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: dialogovo_sas
+
+        activate-kronstadt-vla:
+          title: Activate kronstadt VLA
+          task: common/nanny/set_snapshot_state
+          needs:
+            - activate-kronstadt-sas
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: dialogovo_vla
+
+        activate-kronstadt-hamster:
+          title: Activate kronstadt HAMSTER
+          task: common/nanny/set_snapshot_state
+          needs:
+            - activate-kronstadt-vla
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: dialogovo_hamster
+
+    kronstadt-per-commit-release-flow:
+      jobs:
+        build:
+          task: common/arcadia/ya_package_2
+          title: Build docker
+          stage: build
+          input:
+            packages: alice/paskills/dialogovo/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "trunk-${context.version_info.full}.r${context.target_commit.revision.number}"
+        release-to-nanny:
+          task: common/nanny/update_service
+          title: Update service
+          needs: build
+          stage: deploy
+          input:
+            config:
+              release_type: unstable
+              service_id: kronstadt_ci
+              docker_image: "paskills/dialogovo:trunk-${context.version_info.full}.r${context.target_commit.revision.number}"

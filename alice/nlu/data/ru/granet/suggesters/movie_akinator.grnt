@@ -1,0 +1,498 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: general_conversation/movie_discuss_common.grnt
+import: suggesters/movie_entities.grnt
+
+form alice.movie_akinator:
+    filler:
+        $Fillers
+    root:
+        $RecommendToWatch
+        $WantToWatch
+        $WhatToWatch
+        %negative
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+        .* не надо .*
+    slots:
+        content_type:
+            type: movie_akinator_content_type
+            source: $MovieAkinatorContentType
+
+        film_genre:
+            type: custom.video_film_genre
+            source:
+                $Genre
+                $ContentGenre
+
+form alice.movie_akinator.recommend:
+    filler:
+        $Fillers
+    root:
+        $RecommendToWatch
+        $WantToWatch
+        $WhatToWatch
+        %negative
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+        .* не надо .*
+    slots:
+        content_type:
+            type: movie_akinator_content_type
+            source: $MovieAkinatorContentType
+
+        film_genre:
+            type: custom.video_film_genre
+            source:
+                $Genre
+                $ContentGenre
+
+form alice.movie_akinator.choose_content:
+    filler:
+        $Fillers
+    root:
+        $RecommendToWatch
+        $WantToWatch
+        $WantToWatchWeak
+        $WhatToWatch
+        $ShowContentWeak
+        %negative
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+        .* не надо .*
+    slots:
+        content_type:
+            type: movie_akinator_content_type
+            source: $MovieAkinatorContentType
+
+        film_genre:
+            type: custom.video_film_genre
+            source:
+                $Genre
+                $ContentGenre
+
+form alice.movie_akinator.choose_similar_content:
+    filler:
+        $Fillers
+    root:
+        $ChooseSimilarContent
+        %negative
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+        .* не надо .*
+    slots:
+        content_type:
+            type: movie_akinator_content_type
+            source: $MovieAkinatorContentType
+
+        film_genre:
+            type: custom.video_film_genre
+            source:
+                $Genre
+                $ContentGenre
+
+        film_id:
+            type: entity_search.film
+            source: $AkinatorMovieName
+
+form alice.movie_akinator.choose_unrecognized_content:
+    filler:
+        $Fillers
+    root:
+        $RecommendToWatchSimilarWeak
+        $WantToWatchWeakSimilarWeak
+        $WhatToWatchSimilarWeak
+        $ShowContentWeakSimilarWeak
+        %negative
+        $ChooseSimilarContent
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+        .* не надо .*
+    slots:
+        content_type:
+            type: movie_akinator_content_type
+            source: $MovieAkinatorContentType
+
+        film_genre:
+            type: custom.video_film_genre
+            source:
+                $Genre
+                $ContentGenre
+
+        film_id:
+            type: string
+            source: $AkinatorMovieNameWeak
+
+form alice.movie_akinator.reset:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $ResetMain
+
+$Fillers:
+    $Common.Filler
+    $Common.LeftFiller
+    $nonsense
+    %lemma
+    говорю
+    сказал
+    думаю
+    пожалуй
+    слушай
+    короче
+    определенно
+    вовсе
+    совсем
+
+$ChooseSimilarContent:
+    $RecommendToWatchSimilar
+    $WantToWatchWeakSimilar
+    $WhatToWatchSimilar
+    $ShowContentWeakSimilar
+
+$RecommendToWatch:
+    [$CanYouRecommend $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [$CanYouRecommend (что|$Something) $ShouldWatch $Good? $ContentProvider? $When? $Free?]
+
+$RecommendToWatchSimilar:
+    [$CanYouRecommend $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ContentProvider? $When? $Free?]
+
+$RecommendToWatchSimilarWeak:
+    [$CanYouRecommend $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ContentProvider? $When? $Free?]
+
+$CanYouRecommend:
+    You? $Recommend<g:|imper|imper,pl|indic,2p|indic,2p,pl>
+    You? (помоги|помогите) выбрать
+    $CanYou $Recommend<g:|inf>
+    может быть? You? $Recommend<g:|indic,2p|indic,2p,pl>
+    $CanYou помочь выбрать
+    может быть? You? поможешь выбрать
+
+$Recommend:
+    порекомендуй
+    рекомендуй
+    посоветуй
+    советуй
+    подскажи
+    подбери
+    подыщи
+    выбери
+    предложи
+    предлагать
+
+$WantToWatch:
+    [я? $Common.ToWant $WatchLemma $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [я? бы $WatchLemma<g:|indic,1p,sg,praet> $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [мы? бы $WatchLemma<g:|indic,1p,pl,praet> $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [(мне|нам)? хочется $WatchLemma $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [мы? $Common.ToWant $WatchLemma $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+
+$WantToWatchWeak:
+    [я? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [я? бы $Common.ToWant $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [(мне|нам)? хочется $WatchLemma? $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+    [мы? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $MoviesSimilar? (из? $ContentType) $ContentProvider? $When? $Free?]
+
+$WantToWatchWeakSimilar:
+    [я? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ContentProvider? $When? $Free?]
+    [я? бы $Common.ToWant $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ContentProvider? $When? $Free?]
+    [(мне|нам)? хочется $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ContentProvider? $When? $Free?]
+    [мы? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ContentProvider? $When? $Free?]
+
+$WantToWatchWeakSimilarWeak:
+    [я? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ContentProvider? $When? $Free?]
+    [я? бы $Common.ToWant $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ContentProvider? $When? $Free?]
+    [(мне|нам)? хочется $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ContentProvider? $When? $Free?]
+    [мы? $Common.ToWant $WatchLemma? $ShouldWatch? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ContentProvider? $When? $Free?]
+
+$WhatToWatch:
+    [что $CanYouRecommend? $Good? $Some? (из? $ContentType)? (стоит|можно|нужно|лучше)? обязательно? посмотреть $ContentProvider? $When? $Free?]
+    %lemma
+    [какое $CanYouRecommend? $Good? $Some? (из? $ContentType) $ShouldWatch $ContentProvider? $When? $Free?]
+    [какое $CanYouRecommend? $Good $Some? (из? $ContentType) $ShouldWatch? $ContentProvider? $When? $Free?]
+
+$WhatToWatchSimilar:
+    [что $CanYouRecommend? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName (стоит|можно|нужно|лучше)? обязательно? посмотреть $ContentProvider? $When? $Free?]
+    %lemma
+    [какое $CanYouRecommend? $Good? $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ShouldWatch $ContentProvider? $When? $Free?]
+    [какое $CanYouRecommend? $Good $Some? $SomethingSimilar $ContentType* $AkinatorMovieName $ShouldWatch? $ContentProvider? $When? $Free?]
+
+$WhatToWatchSimilarWeak:
+    [что $CanYouRecommend? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak (стоит|можно|нужно|лучше)? обязательно? посмотреть $ContentProvider? $When? $Free?]
+    %lemma
+    [какое $CanYouRecommend? $Good? $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ShouldWatch $ContentProvider? $When? $Free?]
+    [какое $CanYouRecommend? $Good $Some? $SomethingSimilar $ContentType? $AkinatorMovieNameWeak $ShouldWatch? $ContentProvider? $When? $Free?]
+
+$ShowContentWeak:
+    [$ShowContent? $ContentType]
+
+$ShowContentWeakSimilar:
+    [$ShowContent? $SomethingSimilar $ContentType* $AkinatorMovieName]
+
+$ShowContentWeakSimilarWeak:
+    [$ShowContent $SomethingSimilar $ContentType? $AkinatorMovieNameWeak]
+
+$ShowContent:
+    давай
+    покажи
+    показывай
+    найди
+
+$Some:
+    %lemma
+    любой
+    какой (нибудь|то)?
+
+$ShouldWatch:
+    [(стоит|можно|нужно|лучше)? обязательно? $WatchLemma]
+    для просмотра
+
+$WatchLemma:
+    смотреть|посмотреть
+
+$ContentProvider:
+    %lemma
+    (на|в|с|из) кинопоиск
+
+$Good:
+    (какие|которые) (тебе нравятся|ты? любишь)
+    %lemma
+    самый? ($custom.video_top|кассовый|интересный|нормальный)
+    бесплатный
+    душевный
+    новый
+    последний
+    новинки
+
+$When:
+    $Date? $Time?
+    на вечер
+    на ночь
+    теперь
+    дальше
+    потом
+    сейчас
+
+$Date:
+    сегодня
+    завтра
+    в выходные
+    на выходных
+
+$Time:
+    утром
+    днем
+    вечером
+    ночью
+
+$Free:
+    бесплатно
+    на халяву
+
+$ContentType:
+    [$Genre? $MovieAkinatorContentType]
+    $ContentGenre
+
+$MovieAkinatorContentType:
+    %type "movie_akinator_content_type"
+
+    %value "movie"
+    $Movie
+
+    %value "cartoon"
+    $Cartoon
+
+    %value "tv_show"
+    $Series
+
+$Genre:
+    $custom.video_film_genre
+
+    %lemma
+    %type "custom.video_film_genre"
+
+    %value "drama"
+    драматические
+    драматичные
+
+    %value "crime"
+    криминальное
+
+    %value "melodramas"
+    мелодраматическое
+
+$ContentGenre:
+    %lemma
+
+    %type "custom.video_film_genre"
+
+    %value "action"
+    боевик
+    боевичок
+    супербоевик
+    кинобоевик
+    экшен
+
+    %value "adventure"
+    приключения
+
+    %value "anime"
+    anime
+    аниме
+    анимэ
+    анимэшка
+    анимэшечка
+
+    %value "arthouse"
+    артхаус
+    арт-кино
+    авторское кино
+    авторский фильм
+
+    %value "biopic"
+    байопик
+
+    %value "comedy"
+    комедия
+    кинокомедия
+
+    %value "detective"
+    детектив
+    кинодетектив
+    теледетектив
+
+    %value "documentary"
+    документалистика
+    документальное кино
+    документальная лента
+    документальная картина
+    документальная передача
+    кинодокументальный
+    документалка
+
+    %value "drama"
+    драма
+    кинодрама
+    трагедия
+
+    %value "epic"
+    кинороман
+    киноповесть
+    киноэпопея
+    киноновелла
+
+    %value "fantasy"
+    фэнтези
+    фентези
+
+    %value "horror"
+    страшный фильм
+    ужасы
+    ужастик
+    ужастики
+    фильм ужасов
+    хоррор
+    horror
+
+    %value "melodramas"
+    мелодрама
+
+    %value "musical"
+    мюзикл
+    мьюзикл
+    киномюзикл
+    музыкальный фильм
+
+    %value "noir"
+    нуар
+    неонуар
+    noir
+
+    %value "science_fiction"
+    кинофантастика
+    научная фантастика
+    сай фай
+    фантастика
+    sci-fi
+
+    %value "romantic"
+    романтика
+    романтики
+    романтичный
+    романтический
+
+    %value "thriller"
+    триллер
+    саспенс
+
+$CanYou:
+    %lemma
+    [ты? (можешь|могла бы)]
+
+$Something:
+    %lemma
+    еще
+    что-то
+    какой-то
+    какой-нибудь
+    что то
+    какой то
+    какой нибудь
+    что-нибудь
+    что нибудь
+
+$MoviesSimilar:
+    $Something $Similar
+    $MovieAkinatorContentType $Similar
+
+$SomethingSimilar:
+    $Something? $Similar
+
+$Similar:
+    похожее на?
+    похожие на?
+    типа
+    в стиле
+    в жанре
+
+$AkinatorMovieName:
+    $entity_search.film
+    $AkinatorMovieEntity
+
+    %negative
+    %lemma
+    крутой
+    самый лучший
+    я тоже
+    кто ты
+    другой
+    как меня зовут
+    канал
+
+$AkinatorMovieNameWeak:
+    .+
+
+$ResetMain:
+    нет? $Reset
+
+$Reset:
+    (начать|начнем)? сначала
+    [$ShowContent? $Common.ToWant? $Something? $Other]
+
+    оба? не нравятся
+    ни то ни другое
+    ничего из этого (не нравится)?
+    мне? такое не нравится
+    я? такое не люблю
+
+$Other:
+    не эти
+    %lemma
+    другой

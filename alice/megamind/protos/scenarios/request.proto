@@ -1,0 +1,734 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "RequestProto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+
+import "alice/memento/proto/api.proto";
+
+import "alice/library/client/protos/client_info.proto";
+import "alice/library/client/protos/promo_type.proto";
+import "alice/library/geo/protos/user_location.proto";
+
+import "alice/megamind/protos/blackbox/blackbox.proto";
+import "alice/megamind/protos/common/data_source_type.proto";
+import "alice/megamind/protos/common/device_state.proto";
+import "alice/megamind/protos/common/environment_state.proto";
+import "alice/megamind/protos/common/events.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/gc_memory_state.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/common/location.proto";
+import "alice/megamind/protos/common/origin.proto";
+import "alice/megamind/protos/common/quasar_devices.proto";
+import "alice/megamind/protos/common/smart_home.proto";
+import "alice/megamind/protos/guest/guest_data.proto";
+import "alice/megamind/protos/guest/guest_options.proto";
+import "alice/megamind/protos/quasar/auxiliary_config.proto";
+import "alice/megamind/protos/scenarios/begemot.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+import "alice/megamind/protos/scenarios/external_markup.proto";
+import "alice/megamind/protos/scenarios/iot.proto";
+import "alice/megamind/protos/scenarios/notification_state.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+import "alice/megamind/protos/scenarios/web_search_source.proto";
+import "alice/protos/data/language/language.proto";
+
+import "alice/protos/data/contacts.proto";
+
+import "google/protobuf/descriptor.proto";
+
+// Description of a user utterance.
+message TInput {
+    // List of frames detected by Begemot as a result of parsing the utterance.
+    repeated TSemanticFrame SemanticFrames = 1 [json_name = "semantic_frames"];
+
+    // Text of a typed utterance from the user.
+    message TText {
+        // Utterance exactly as it was typed by the user, with possible misspellings.
+        string RawUtterance = 1 [json_name = "raw_utterance"];
+
+        // Utterance normalized and corrected.
+        string Utterance = 2 [json_name = "utterance"];
+
+        // If true, indicates that the utterance was not typed but selected
+        // from options suggested in a previous Alice's response.
+        bool FromSuggest = 3 [json_name = "from_suggest"];
+    }
+
+    // Description of a voice utterance from the user.
+    message TVoice {
+        // Text of the entire utterance as recognized by ASR.
+        string Utterance = 1 [json_name = "utterance"];
+
+        // Voice recognition data produced by ASR (recognition hypotheses,
+        // individual tokens).
+        repeated TAsrResult AsrData = 2 [json_name = "asr_data"];
+
+        // Biometric data produced for the user to identify the primary owner
+        // of a Yandex.Station.
+        TBiometryScoring BiometryScoring = 3 [json_name = "biometry_scoring"];
+
+        // Biometric classification scores (adult or a child etc.)
+        TBiometryClassification BiometryClassification = 4 [json_name = "biometry_classification"];
+    }
+
+    // Image that is sent in place of an utterance.
+    message TImage {
+        enum ECaptureMode {
+            Undefined = 0;
+            OcrVoice = 1; /* "voice_text" */
+            Ocr = 2; /* "text" */
+            Photo = 3; /* "photo" */
+            Market = 4; /* "market" */
+            Document = 5; /* "document" */
+            Clothes = 6; /* "clothes" */
+            Details = 7; /* "details" */
+            SimilarLike = 8; /* "similar_like" */
+            SimilarPeople = 9; /* "similar_people" */
+            SimilarPeopleFrontal = 10; /* "similar_people_frontal" */
+            Barcode = 11; /* "barcode" */
+            Translate = 12; /* "translate" */
+            SimilarArtwork = 13; /* "similar_artwork" */
+            SmartCamera = 14; /* "smart_camera" */
+            Poetry = 15; /* "poetry" */
+            Homework = 16; /* "homework" */
+        }
+
+        reserved 1;
+
+        // URL of the image.
+        string Url = 2 [json_name = "url"];
+
+        ECaptureMode CaptureMode = 3 [json_name = "capture_mode"];
+
+        string CropCoordinates = 4 [json_name = "crop_coordinates"];
+    }
+
+    // Music identification request.
+    message TMusic {
+        // Description of the matched music track from Y.Music.
+        TMusicResult MusicResult = 1 [json_name = "music_result"];
+    }
+
+    message TTypedCallback {
+        // Value of MMTypedCallbackName option in callback message
+        string CallbackName = 1 [json_name = "callback_name"];
+
+        google.protobuf.Any Callback = 2 [json_name = "callback"];
+    }
+
+    reserved 4;
+
+    oneof Event {
+        // User sent a text utterance.
+        TText Text = 2 [json_name = "text"];
+
+        // User sent a voice utterance.
+        TVoice Voice = 3 [json_name = "voice"];
+
+        // Use Event.Text.FromSuggest instead.
+        // TSuggest Suggest = 4 [json_name = "suggest", deprecated = true];
+
+        // User sent an image.
+        TImage Image = 5 [json_name = "image"];
+
+        // User sent a music identification request.
+        TMusic Music = 6 [json_name = "music"];
+
+        // A callback directive was executed.
+        //
+        // See https://wiki.yandex-team.ru/Alice/Megamind/ProtocolScenarios/proto/directives/#callbackdirective
+        TCallbackDirective Callback = 7 [json_name = "callback"];
+
+        TTypedCallback TypedCallback = 8 [json_name = "typed_callback"];
+    }
+}
+
+// List of surface capabilities available to the app that the user
+// sent the utterance through.
+message TInterfaces {
+    // True if the app can display the response from Alice (as opposed to
+    // smart speakers, for example).
+    //
+    // Relies on data from the app. Please, look for alternatives if possible.
+    bool HasScreen = 1 [json_name = "has_screen"];
+
+    // True if the session started with voice activation (as opposed to typing).
+    bool VoiceSession = 2 [json_name = "voice_session"];
+
+    // True if the app has access to speakers (false for Module, for example).
+    //
+    // The flag is not reliable due to wrong default value.
+    bool HasReliableSpeakers = 3 [json_name = "has_reliable_speakers"]; // (BASS: !no_reliable_speakers) динамики "надежные" (используется для напоминаний и будильников)
+
+    // True if the app has access to Bluetooth.
+    bool HasBluetooth = 4 [json_name = "has_bluetooth"]; // not reliable due to wrong default value
+
+    // True if the app has access to the state of the battery on the device.
+    bool HasAccessToBatteryPowerState = 5 [json_name = "has_access_to_battery_power_state"]; // клиент может имеет доступ к заряду батареи
+
+    // True if the app can turn off a screen connected to the device through
+    // HDMI.
+    bool HasCEC = 6 [json_name = "has_cec"]; // клиент может выключать экран через HDMI
+
+    // True if the app can change the sound that the device uses for alarms.
+    bool CanChangeAlarmSound = 7 [json_name = "can_change_alarm_sound"]; // клиент поддерживает изменение звука будильника
+
+    // True if the app has access to the microphone on the device.
+    bool HasMicrophone = 8 [json_name = "has_microphone"]; // not reliable due to wrong default value
+
+    // The device firmware supports Music "shots".
+    //
+    // TODO: clarify with Music
+    bool HasMusicPlayerShots = 9 [json_name = "has_music_player_shots"]; // клиент (музыкальный плеер) поддерживает шоты
+
+    // True if there's a TV currently plugged into the device.
+    bool IsTvPlugged = 10 [json_name = "is_tv_plugged"];
+
+    bool CanSetAlarm = 11 [json_name = "can_set_alarm"];
+    bool CanSetTimer = 12 [json_name = "can_set_timer"];
+    bool CanOpenLink = 13 [json_name = "can_open_link"]; // client can open link in internal browser
+    bool CanOpenLinkTurboApp = 20 [json_name = "can_open_link_turboapp"]; // client can open turbo app
+    bool HasSynchronizedPush = 14 [json_name = "has_synchronized_push"]; // client implements pushes without races
+    bool SupportsVideoProtocol = 15 [json_name = "supports_video_protocol"]; // client supports video protocol (knows how to handle video directives)
+    bool CanShowGif = 16 [json_name = "can_show_gif"]; // subset of clients supporting div2 cards
+    bool HasLedDisplay = 17 [json_name = "has_led_display"]; // client supports led display to show animation
+    bool TtsPlayPlaceholder = 18 [json_name = "tts_play_placeholder"]; // client can voice tts (tts_play_placeholder directive) in arbitrary place among directives
+    bool Multiroom = 19 [json_name = "multiroom"]; // True if device has multiroom support
+    bool HasAudioClient = 21 [json_name = "has_audio_client"]; // client supports thin audio player
+    bool IsPubliclyAvailable = 22 [json_name = "is_publicly_available"]; // client is publicly available (risky client due to some legal reasons)
+    bool HasNotifications = 23 [json_name = "has_notifications"]; // client supports push notifications via alice notificator
+    bool HasBluetoothPlayer = 24 [json_name = "has_bluetooth_player"];
+    bool CanChangeAlarmSoundLevel = 25 [json_name = "can_change_alarm_sound_level"];
+    bool CanServerAction = 26 [json_name = "can_server_action"]; // client implements server actions (special alice backend requests)
+    bool CanRecognizeMusic = 27 [json_name = "can_recognize_music"]; // client supports music recognition with music request
+    bool HasMordoviaWebView = 28 [json_name = "has_mordovia_webview"]; // client supports mordovia directives
+    bool IncomingMessengerCalls = 29 [json_name = "incoming_messenger_calls"]; // client supports incoming messenger calls
+    bool SupportsBluetoothRCU = 30 [json_name = "bluetooth_rcu"]; // client supports pairing to a remote control unit via bluetooth
+
+    // True if client supports live-tv scheme urls (publishes own url list based on internal channel db state
+    // to backend and knows how to handle such urls after receiving)
+    bool LiveTvScheme = 31 [json_name = "live_tv_scheme"];
+    bool CanOpenQuasarScreen = 32 [json_name = "can_open_quasar_screen"]; // client can open quasar screen
+
+    //Video codecs
+    bool VideoCodecAVC = 33 [json_name = "video_codec_AVC"];
+    bool VideoCodecHEVC = 34 [json_name = "video_codec_HEVC"];
+    bool VideoCodecVP9 = 35 [json_name = "video_codec_VP9"];
+    bool AudioCodecDD = 36 [json_name = "audio_codec_DD", deprecated = true];
+    bool AudioCodecDTS = 37 [json_name = "audio_codec_DTS", deprecated = true];
+    bool AudioCodecAAC = 38 [json_name = "audio_codec_AAC"];
+    bool AudioCodecEC3 = 39 [json_name = "audio_codec_EC3", deprecated = true];
+    bool CurrentHDCPLevelNone = 40 [json_name = "current_HDCP_level_none"];
+    bool CurrentHDCPLevel1X = 41 [json_name = "current_HDCP_level_1X"];
+    bool CurrentHDCPLevel2X = 42 [json_name = "current_HDCP_level_2X"];
+    bool DynamicRangeSDR = 43 [json_name = "dynamic_range_SDR"];
+    bool DynamicRangeHDR10 = 44 [json_name = "dynamic_range_HDR10"];
+    bool DynamicRangeHDR10Plus = 45 [json_name = "dynamic_range_HDR10Plus"];
+    bool DynamicRangeDV = 46 [json_name = "dynamic_range_DV"];
+    bool DynamicRangeHLG = 47 [json_name = "dynamic_range_HLG"];
+    bool VideoFormatSD = 48 [json_name = "video_format_SD"];
+    bool VideoFormatHD = 49 [json_name = "video_format_HD"];
+    bool VideoFormatUHD = 50 [json_name = "video_format_UHD"];
+
+    bool CanOpenWhocalls = 51 [json_name = "can_open_whocalls"]; // client can open whocalls onboarding
+
+    bool AudioCodecEAC3 = 52 [json_name = "audio_codec_EAC3"];
+    bool AudioCodecAC3 = 53 [json_name = "audio_codec_AC3"];
+    bool AudioCodecVORBIS = 54 [json_name = "audio_codec_VORBIS"];
+    bool AudioCodecOPUS = 55 [json_name = "audio_codec_OPUS"];
+
+    bool HasMusicSdkClient = 56 [json_name = "has_music_sdk_client"];
+    bool CanRecognizeImage = 57 [json_name = "can_recognize_image"];
+    bool CanRenderDivCards = 58 [json_name = "can_render_div_cards"];
+    bool CanOpenLinkIntent = 59 [json_name = "can_open_link_intent"];
+
+    bool MultiroomCluster = 60 [json_name = "multiroom_cluster"]; // True if device has multiroom cluster support
+    bool CanRenderDiv2Cards = 61 [json_name = "can_render_div2_cards"]; // Actually tells that this is PP that can render div2 card from response.layout.card; Consider as Deprecated in Clients other than PP
+    bool CanOpenDialogsInTabs = 62 [json_name = "can_open_dialogs_in_tabs"]; // client can open external skills in separate tabs
+    bool CanOpenLinkSearchViewport = 63 [json_name = "can_open_link_search_viewport"]; // client can open serp with viewport:// url
+    bool HasDirectiveSequencer = 64 [json_name = "has_directive_sequencer"]; // client supports sequential directive execution
+    bool CanOpenKeyboard = 65 [json_name = "can_open_keyboard"]; // client can open keyboard onboarding/settings
+    bool HasCloudPush = 66 [json_name = "has_cloud_push"]; // client implements cloud-based pushes
+
+    bool CanOpenYandexAuth = 67 [json_name = "can_open_yandex_auth"]; // True if device can open "yandex-auth://" links for authorization
+    bool HasMusicQuasarClient = 68 [json_name = "has_music_quasar_client"]; // client supports legacy quasar music player
+    bool CanSetAlarmSemanticFrame = 69 [json_name = "can_set_alarm_semantic_frame"];
+    bool HasNavigator = 70 [json_name = "has_navigator"]; // supports navigator protocol
+    bool CanOpenLinkYellowskin = 71 [json_name = "can_open_link_yellowskin"]; // client supports yellowskin js-api
+    bool SupportsShowView = 72 [json_name = "supports_show_view"]; // client supports show_view directive
+    bool SupportsFMRadio = 73 [json_name = "supports_fm_radio"]; // client supports listening to FM radio
+    bool OutgoingPhoneCalls = 74 [json_name = "outgoing_phone_calls"]; // client supports outgoing phone calls
+    bool CanOpenIBroSettings = 75 [json_name = "can_open_ibro_settings"]; // client can open system browser settings screen with custom push
+    bool SupportsHDMIOutput = 76 [json_name = "supports_hdmi_output"]; // client supports streaming video data through hdmi
+    bool SupportsAudioBitrate192Kbps = 77 [json_name = "supports_audio_bitrate_192_kpbs"]; // client's audio player supports middle-level sound bitrate
+    bool SupportsAudioBitrate320Kbps = 78 [json_name = "supports_audio_bitrate_320_kpbs"]; // client's audio player supports the highest sound bitrate
+    bool SupportsVideoPlayDirective = 79 [json_name = "supports_video_play_directive"]; // client supports video_play directive
+    bool CanOpenReader = 80 [json_name = "can_open_reader"]; // client can open reader app
+    bool SupportsUnauthorizedMusicDirectives = 81 [json_name = "supports_unauthorized_music_directives"]; // client supports music directives for unauthorized user
+    bool SupportsTvOpenCollectionScreenDirective = 82 [json_name = "supports_tv_open_collection_screen_directive"]; // client supports tv_open_collection_screen directive
+    bool SupportsTvOpenDetailsScreenDirective = 83 [json_name = "supports_tv_open_details_screen_directive"]; // client supports tv_open_details_screen directive
+    bool SupportsTvOpenPersonScreenDirective = 84 [json_name = "supports_tv_open_person_screen_directive"]; // client supports tv_open_person_screen directive
+    bool SupportsTvOpenSearchScreenDirective = 85 [json_name = "supports_tv_open_search_screen_directive"]; // client supports tv_open_search_screen directive
+    bool SupportsTvOpenSeriesScreenDirective = 86 [json_name = "supports_tv_open_series_screen_directive"]; // client supports tv_open_series_screen directive
+    bool SupportsCloudUi = 87 [json_name = "supports_cloud_ui"]; // client supports Alice-cloud https://st.yandex-team.ru/IBRO-24652
+    bool MultiroomAudioClient = 88 [json_name = "multiroom_audio_client"]; // client supports multiroom on audio client
+    bool SupportsDivCardsRendering  = 89 [json_name = "supports_div_cards_rendering"]; // proxy interface for client support one of div cards (CanRenderDivCards or CanRenderDiv2Cards)
+    bool CanOpenCovidQrCode = 90 [json_name = "can_open_covid_qr_code"]; // can open covid qr code in app
+    bool HasAudioClientHls = 91 [json_name = "has_audio_client_hls"]; // client supports hls in thin audio player
+    bool CanOpenPedometer = 92 [json_name = "can_open_pedometer"]; // client can open pedometer app
+    bool SupportsVerticalScreenNavigation = 93 [json_name = "supports_vertical_screen_navigation"]; // client supports vertical screen navigation directives (go_up/go_down)
+    bool CanOpenWhocallsBlocking = 94 [json_name = "can_open_whocalls_blocking"]; // client can open whocalls blocking settings
+    bool SupportsMapsDownloadOffline = 95 [json_name = "maps_download_offline"]; // client can download offline maps https://st.yandex-team.ru/MAPSPRODUCT-1623
+    bool CanOpenPasswordManager = 96 [json_name = "can_open_password_manager"]; // client can open password manager via deeplink
+    bool SupportsGoHomeDirective = 97 [json_name = "supports_go_home_directive"]; // // client supports go_home directive
+    bool CanOpenBonusCardsCamera = 98 [json_name = "can_open_bonus_cards_camera"]; // client supports smart camera in bonus cards mode
+    bool CanOpenBonusCardsList = 99 [json_name = "can_open_bonus_cards_list"]; // client can open bonus cards list
+    bool CanShowTimer = 100 [json_name = "can_show_timer"]; // client supports timer_show directive
+    bool HasMusicPlayer = 101 [json_name = "has_music_player"]; // client has internal music player
+    bool SupportsDeviceLocalReminders = 102 [json_name = "supports_device_local_reminders"]; // client supports device local reminders
+    bool CanOpenWhocallsMessageFiltering = 103 [json_name = "can_open_whocalls_message_filtering"]; // client can open message filtering
+    bool HasScledDisplay = 104 [json_name = "has_scled_display"]; // client supports 7-segment-led display to show animation (Mini 2)
+    bool PhoneAddressBook = 105 [json_name = "phone_address_book"]; // client can send the address book
+    bool SupportsAbsoluteVolumeChange = 106 [json_name = "supports_absolute_volume_change"]; // client supports sound_set_level directive
+    bool SupportsRelativeVolumeChange = 107 [json_name = "supports_relative_volume_change"]; // client supports sound_louder/sound_quiter directive
+    bool CanOpenVideotranslationOnboarding = 108 [json_name = "can_open_videotranslation_onboarding"]; // client can open videotranslation onboarding
+    bool OpenAddressBook = 109 [json_name = "open_address_book"]; // client can open the address book
+    bool HasClockDisplay = 110 [json_name = "has_clock_display"]; // client shows clock on its display
+    bool CanHandleAndroidAppIntent = 111 [json_name = "can_handle_android_app_intent"]; // client can handle "intent" to open app or notify broadcast receiver
+    bool HasTvStore = 112 [json_name = "has_tv_store"]; // client has TV store installed
+    bool SupportsDoNotDisturbDirective = 113 [json_name = "supports_do_not_disturb_directive"]; // client supports do_not_disturb directive
+    reserved 114; reserved "SupportsKinopoiskLaunch";
+    bool SupportsDarkThemeSetting = 115 [json_name = "supports_dark_theme_setting"]; // client supports dark theme setting
+    bool CanReadSites = 116 [json_name = "can_read_sites"]; // client supports reading web sites
+    bool CanOpenVideoEditor = 117 [json_name = "can_open_video_editor"]; // client can open video editor app
+    bool SupportsCloudUiFilling = 118 [json_name = "supports_cloud_ui_filling"]; // client supports FillCloudUi directive
+    bool SupportsVideoPlayer = 119 [json_name = "supports_video_player"]; // client supports video player
+    bool SupportsAnyPlayer = 120 [json_name = "supports_any_player"]; // client supports music player or bluetooth player or FM-radio or video player
+    bool SupportsButtons = 121 [json_name = "supports_buttons"]; // client supports clickable buttons in dialogs
+    bool SupportsFeedback = 122 [json_name = "supports_feedback"]; // client supports feedback (likes & dislikes)
+    bool SupportsS3Animations = 123 [json_name = "s3_animations"]; // cloient supports s3 animations playing
+    bool HasEqualizer = 124 [json_name = "has_equalizer"]; // client has an equalizer that can be adjusted
+    bool HasAudioClientHlsMultiroom = 125 [json_name = "has_audio_client_hls"]; // client supports hls in thin audio multiroom session
+    bool SupportsDarkTheme = 126 [json_name = "supports_dark_theme"]; // client supports dark theme
+    bool SupportsPhoneAssistant = 127 [json_name = "supports_phone_assistant"]; // client supports phone assistant
+    bool SupportsOutgoingDeviceCalls = 128 [json_name = "supports_outgoing_device_calls"]; // client supports outgoing device calls with TMessengerCallDirective
+    bool SupportsOpenLinkOutgoingDeviceCalls = 129 [json_name = "supports_open_link_outgoing_device_calls"]; // client supports outgoing device calls with TOpenUriDirective
+    bool SupportsContentChannelAlarm = 130 [json_name = "supports_content_channel_alarm"]; // client supports content channel alarm
+    bool SupportsMuteUnmuteVolume = 131 [json_name = "supports_mute_unmute_volume"]; // client supports mute and unmute sound commmands
+    bool SupportsPlayerPauseDirective = 132 [json_name = "supports_player_pause_directive"]; // client supports pause directive on any player
+    bool SupportsPlayerRewindDirective = 133 [json_name = "supports_player_rewind_directive"]; // client supports rewind directive on any player
+    bool SupportsPlayerContinueDirective = 134 [json_name = "supports_player_continue_directive"]; // client supports continue directive on any player
+    bool SupportsPlayerNextTrackDirective = 135 [json_name = "supports_player_next_track_directive"]; // client supports next track directive on any player
+    bool SupportsPlayerPreviousTrackDirective = 136 [json_name = "supports_player_previous_track_directive"]; // client supports previous track directive on any player
+    bool SupportsPlayerDislikeDirective = 137 [json_name = "supports_player_dislike_directive"]; // client supports dislike directive on any player
+    bool SupportsPlayerLikeDirective = 138 [json_name = "supports_player_like_directive"]; // client supports like directive on any player
+    bool SupportsTandemSetup = 139 [json_name = "supports_tandem_setup"]; // client supports tandem setup i.e. opening tandem settings screen
+    bool SupportsIotIosDeviceSetup = 140 [json_name = "suppports_iot_ios_device_setup"]; // supports iot IOS setup i. e. opening devices settings screens on IOS iot-app
+    bool SupportsIotAndroidDeviceSetup = 141 [json_name = "suppports_iot_android_device_setup"]; // supports iot Android setup i. e. opening devices settings screens on Android iot-app
+    bool SupportsShowPromo = 142 [json_name = "supports_show_promo"]; // Supports to show promo if surface can't threat user's request 
+    bool SupportsShowViewLayerContent = 143 [json_name = "supports_show_view_layer_content"]; // client partially supports show_view directive https://st.yandex-team.ru/HOME-80735
+    bool SupportsShowViewLayerFooter = 144 [json_name = "supports_show_view_layer_footer"]; // client partially supports show_view directive
+    bool SupportsRouteManagerCapability = 145 [json_name = "supports_route_manager_capability"]; // client supports route_manager directives for SDC
+    bool SupportsOutgoingOperatorCalls = 146 [json_name = "supports_outgoing_operator_calls"]; // client supports outgoing operator calls
+}
+
+// List of phrases from the history of user communicating with the scenario.
+message TDialogHistoryDataSource {
+    // Individual entries from the history of utterances user sent to the scenario.
+    repeated string Phrases = 1 [json_name = "phrases", deprecated = true];
+
+    message TDialogTurn {
+        string Request = 1 [json_name = "request"];
+        string RewrittenRequest = 2 [json_name = "rewritten_request"];
+        string Response = 3 [json_name = "response"];
+        string ScenarioName = 4 [json_name = "scenario_name"];
+        uint64 ServerTimeMs = 5 [json_name = "server_time_ms"];
+        uint64 ClientTimeMs = 6 [json_name = "client_time_ms"];
+    }
+
+    repeated TDialogTurn DialogTurns = 2 [json_name = "dialog_turns"];
+}
+
+message TResponseHistoryDataSource {
+    message TResponse {
+        TLayout Layout = 1 [json_name = "layout"];
+        map<string, TFrameAction> Actions = 2 [json_name = "actions"];
+    }
+
+    TResponse PrevResponse = 1 [json_name = "prev_response"];
+}
+
+message TSkillDiscoverySaasCandidates {
+    message TSaasCandidate {
+        string SkillId = 1 [json_name = "skill_id"];
+        double Relevance = 2 [json_name = "relevance"];
+    }
+
+    repeated TSaasCandidate SaasCandidate = 1 [json_name = "candidates"];
+}
+
+message TAppInfo {
+    string Value = 1 [json_name = "value"];
+}
+
+// Entity search results.
+//
+// Only used for VINS requests.
+message TEntitySearch {
+    string RawJson = 1 [json_name = "raw_json"];
+}
+
+// Begemot response for VINS scenarios
+message TVinsWizardRules {
+    string RawJson = 1 [json_name = "raw_json"];
+}
+
+message TVideoViewState {
+    google.protobuf.Struct ViewState = 1 [json_name = "view_state"];
+}
+
+message TVideoCurrentlyPlaying {
+	NAlice.TDeviceState.TVideo.TCurrentlyPlaying CurrentlyPlaying = 1 [json_name = "currently_playing"];
+}
+
+message TMementoData {
+    ru.yandex.alice.memento.proto.TUserConfigs UserConfigs = 1 [json_name = "user_configs"];
+    ru.yandex.alice.memento.proto.TSurfaceConfig SurfaceConfig = 2 [json_name = "surface_config"];
+
+    google.protobuf.Any ScenarioData = 3 [json_name = "scenario_data"];
+    google.protobuf.Any SurfaceScenarioData = 4 [json_name = "surface_scenario_data"];
+}
+
+message TWhisperInfo {
+    bool IsAsrWhisper = 1; // Whether request is in a whisper
+    bool IsWhisperResponseAvailable = 2; // Whether response can be in a whisper
+}
+
+extend google.protobuf.FieldOptions {
+    EDataSourceType DataSourceType = 57439;
+}
+// Data received by Megamind from data sources.
+//
+// Most of the sources are created for very specific purposes.
+// Widely useful sources are listed in docs: https://docs.yandex-team.ru/docs/alice-scenarios/architecture#sources
+message TDataSource {
+    reserved 1 to 3, 5, 18;
+    reserved "BegemotTaggerResult", "PersonalIntents";
+
+    oneof Type {
+        // TODO: move it from alice/library to megamind/protos/...
+        NAlice.TUserLocationProto UserLocation = 4 [json_name = "user_location", (DataSourceType) = USER_LOCATION];
+        TBegemotExternalMarkup BegemotExternalMarkup = 6 [json_name = "begemot_external_markup", (DataSourceType) = BEGEMOT_EXTERNAL_MARKUP];
+        TBlackBoxUserInfo UserInfo = 7 [json_name = "user_info", (DataSourceType) = BLACK_BOX];
+        TDialogHistoryDataSource DialogHistory = 8 [json_name = "dialog_history", (DataSourceType) = DIALOG_HISTORY];
+        TBegemotIotNluResult BegemotIotNluResult = 9 [json_name = "iot_nlu_result", (DataSourceType) = BEGEMOT_IOT_NLU_RESULT];
+        TGcMemoryState BegemotGcMemoryState = 10 [json_name = "gc_memory_state", (DataSourceType) = GC_MEMORY_STATE];
+        TBegemotItemSelectorResult BegemotItemSelectorResult = 11 [json_name = "begemot_item_selector_result", (DataSourceType) = BEGEMOT_ITEM_SELECTOR_RESULT];
+        TBegemotFixlistResult BegemotFixlistResult = 24 [json_name = "begemot_fixlist_result", (DataSourceType) = BEGEMOT_FIXLIST_RESULT];
+
+        // the0@ или tolyandex@
+        TWebSearchDocs WebSearchDocs = 12 [json_name = "web_search_docs", (DataSourceType) = WEB_SEARCH_DOCS];
+        TWebSearchDocsRight WebSearchDocsRight = 13 [json_name = "web_search_docs_right", (DataSourceType) = WEB_SEARCH_DOCS_RIGHT];
+        TWebSearchWizplaces WebSearchWizplaces = 14 [json_name = "web_search_docs_wizplaces", (DataSourceType) = WEB_SEARCH_WIZPLACES];
+        TWebSearchSummarization WebSearchSummarization = 15 [json_name = "summarization", (DataSourceType) = WEB_SEARCH_SUMMARIZATION];
+        TWebSearchRenderrer WebSearchRenderrer = 16 [json_name = "web_search_renderrer", (DataSourceType) = WEB_SEARCH_RENDERRER];
+        NAlice.TSmartHomeInfo SmartHomeInfo = 20 [json_name = "smart_home", (DataSourceType) = SMART_HOME_INFO];
+        TWebSearchWizard WebSearchWizard = 25 [json_name = "web_search_wizard", (DataSourceType) = WEB_SEARCH_WIZARD];
+        TWebSearchBanner WebSearchBanner = 26 [json_name = "web_search_banner", (DataSourceType) = WEB_SEARCH_BANNER];
+        TWebSearchRequestMeta WebSearchRequestMeta = 37 [json_name = "web_search_request_meta", (DataSourceType) = WEB_SEARCH_REQUEST_META];
+
+        // For Vins optimization
+        TEntitySearch EntitySearch = 17 [json_name = "entity_search", (DataSourceType) = ENTITY_SEARCH];
+        // TPersonalIntents PersonalIntents = 18 [json_name = "personal_intents"];
+        TVinsWizardRules VinsWizardRules = 19 [json_name = "vins_wizard_rules", (DataSourceType) = VINS_WIZARD_RULES];
+        TVideoViewState VideoViewState = 21 [json_name = "video_view_state", (DataSourceType) = VIDEO_VIEW_STATE];
+        NAlice.TNotificationState NotificationState = 22 [json_name = "notification_state", (DataSourceType) = NOTIFICATION_STATE];
+        NAlice.NQuasarAuxiliaryConfig.TAuxiliaryConfig.TAlice4BusinessConfig Alice4BusinessConfig = 23 [json_name = "alice4business_config", (DataSourceType) = ALICE4BUSINESS_DEVICE];
+
+        TResponseHistoryDataSource ResponseHistory = 27 [json_name = "response_history", (DataSourceType) = RESPONSE_HISTORY];
+        TSkillDiscoverySaasCandidates SkillDiscoveryGcSaasCandidates = 28 [json_name = "skill_discovery_gc", (DataSourceType) = SKILL_DISCOVERY_GC];
+
+        NAlice.TNavigator DeviceStateNavigator = 29 [json_name = "device_state_navigator", (DataSourceType) = DEVICE_STATE_NAVIGATOR];
+        NAlice.TIoTUserInfo IoTUserInfo = 30 [json_name = "iot_user_info", (DataSourceType) = IOT_USER_INFO];
+
+        TAppInfo AppInfo = 31 [json_name = "app_info", (DataSourceType) = APP_INFO];
+        string RawPersonalData = 32 [json_name = "raw_personal_data", (DataSourceType) = RAW_PERSONAL_DATA];
+        TVideoCurrentlyPlaying VideoCurrentlyPlaying = 33 [json_name = "video_currently_playing", (DataSourceType) = VIDEO_CURRENTLY_PLAYING];
+        NAlice.NData.TContactsList ContactsList = 34 [json_name = "contacts_list", (DataSourceType) = CONTACTS_LIST];
+        TEnvironmentState EnvironmentState = 35 [json_name = "environment_state", (DataSourceType) = ENVIRONMENT_STATE];
+        TTandemEnvironmentState TandemEnvironmentState = 36 [json_name = "tandem_environment_state", (DataSourceType) = TANDEM_ENVIRONMENT_STATE];
+        // 37 is taken, next 38
+        TWhisperInfo WhisperInfo = 38 [json_name = "whisper_info", (DataSourceType) = WHISPER_INFO];
+
+        NAlice.TGuestData GuestData = 39 [json_name = "guest_data", (DataSourceType) = GUEST_DATA];
+        NAlice.TGuestOptions GuestOptions = 40 [json_name = "guest_options", (DataSourceType) = GUEST_OPTIONS];
+
+        NAlice.TQuasarDevicesInfo QuasarDevicesInfo = 41 [json_name = "quasar_devices_info", (DataSourceType) = QUASAR_DEVICES_INFO];
+    }
+}
+
+// Request attributes.
+message TOptions {
+    message TPermission {
+        // Whether the permission was granted.
+        bool Granted = 1 [json_name = "granted"];
+
+        // Name of the permission.
+        string Name = 2 [json_name = "name"];
+    }
+
+    // User-Agent request header, if applicable.
+    string UserAgent = 1 [json_name = "user_agent"];
+
+    // Field is deprecated, use TScenarioBaseRequest.UserPreferences.FiltrationMode instead
+    uint32 FiltrationLevel = 2 [json_name = "filtration_level", deprecated = true];
+
+    // User IP address.
+    string ClientIP = 3 [json_name = "client_ip"];
+
+    // UI scaling factor set for the device.
+    double ScreenScaleFactor = 4 [json_name = "screen_scale_factor"];
+
+    // Limit on the amount of videos that can be returned in the response.
+    // TODO: details from atsepeleva@
+    uint32 VideoGalleryLimit = 5 [json_name = "video_gallery_limit"];
+
+    // Personal data from DataSync
+    // TODO: details from a-square@
+    string RawPersonalData = 6 [json_name = "raw_personal_data", deprecated = true]; // TODO(a-square): a better format
+
+    // Radio stations available to the user.
+    // TODO: details from olegator@
+    repeated string RadioStations = 7 [json_name = "radio_stations"];
+
+    // ID of the region that the user specified in the app settings.
+    int32 UserDefinedRegionId = 8 [json_name = "user_defined_region_id"];
+
+    // Config for devices in public spaces (hotels etc.)
+    // TODO: details from pazus@, jock@
+    NAlice.NQuasarAuxiliaryConfig.TAuxiliaryConfig QuasarAuxiliaryConfig = 9 [json_name = "quasar_auxiliary_config"];
+
+    // Permissions granted to the app on the device (doesn't include
+    // access to Bluetooth).
+    repeated TPermission Permissions = 10 [json_name = "permissions"];
+
+    // Automotive favourite locations. Deprecated
+    repeated TFavouriteLocation FavouriteLocations = 11 [json_name = "favourite_locations", deprecated = true];
+
+    // Directive that shows that the user is stuck in the experiment
+    google.protobuf.Struct MegamindCookies = 12 [json_name = "megamind_cookies"];
+
+    bool CanUseUserLogs = 13 [json_name = "can_use_user_logs"];
+
+    NClient.EPromoType PromoType = 14 [json_name = "promo_type"];
+}
+
+// TUserPreferences предоставляет доступ ко всем параметрам и настройкам, которые регулируются пользователями.
+message TUserPreferences {
+    // Чтобы регулировать присутствие нежелательного контента в результатах поиска, Яндекс предлагает разные режимы
+    // фильтрации найденных документов (see: https://yandex.ru/tune/search/).
+    enum EFiltrationMode {
+        // Без ограничений — в результатах поиска присутствуют все найденные по запросу документы, включая
+        // интернет-ресурсы «для взрослых».
+        NoFilter = 0;
+        // Умеренный – из результатов поиска исключаются сайты «для взрослых», если запрос явно не направлен на поиск
+        // таких ресурсов (режим включен по умолчанию).
+        Moderate = 1;
+        // Семейный — из результатов поиска полностью исключается контент «для взрослых» (даже если запрос явно
+        // направлен на поиск таких ресурсов), а также сайты, содержащие нецензурную лексику.
+        FamilySearch = 2;
+        // Детский - в результат попадает только разрешенный контент (ничего двусмысленного/спорного не пройдёт).
+        // (see: https://st.yandex-team.ru/ALICEPRODUCT-167)
+        Safe = 3;
+    }
+
+    EFiltrationMode FiltrationMode = 1 [json_name = "filtration_mode"];
+}
+
+message TUserClassification {
+    enum EAge {
+        Adult = 0;
+        Child = 1;
+    }
+
+    EAge Age = 1 [json_name = "age"];
+
+    enum EGender {
+        Unknown = 0;
+        Male = 1;
+        Female = 2;
+    }
+
+    EGender Gender = 2 [json_name = "gender"];
+}
+
+message TNluFeature {
+    // TODO(DEVTOOLS-8751) int32 is NNluFeatures.ENluFeature enum
+    int32 Feature = 1 [json_name = "feature"];
+    float Value = 2 [json_name = "value"];
+}
+
+// Common attributes of requests to scenarios.
+message TScenarioBaseRequest {
+    enum ERequestSourceType {
+        Default = 0; // TODO: add more request source types
+        GetNext = 1; // When next stack_engine action is prosecced
+    }
+    // ID of the request assigned by Megamind (usable in https://setrace.yandex-team.ru/ui/,
+    // on the Alice tab.
+    string RequestId = 1 [json_name = "request_id"];
+
+    // ID of the tab (currently only used by Dialog skills).
+    string DialogId = 2 [json_name = "dialog_id"];
+
+    // Server time of Megamind receiving the request.
+    uint64 ServerTimeMs = 3 [json_name = "server_time_ms"];
+
+    // Seed for randomization: requests with the same seed should always get
+    // the same response.
+    uint64 RandomSeed = 4 [json_name = "random_seed"];
+
+    // Device info /Users/zamulla/Documents/arc/arcadia/alice/library/client/protos/client_info.proto
+    TClientInfoProto ClientInfo = 5 [json_name = "client_info"];
+
+    // Location data received from the device.
+    TLocation Location = 6 [json_name = "location"];
+
+    // Features of the device available to the Alice app.
+    TInterfaces Interfaces = 7 [json_name = "interfaces"];
+
+    // Available information on the current state of the device: sound level,
+    // music played, Navigator options and route etc.
+    TDeviceState DeviceState = 8 [json_name = "device_state"];
+
+    // Data sent by the scenario in a previous response.
+    google.protobuf.Any State = 9 [json_name = "state"];
+
+    // Experiments enabled for the user.
+    google.protobuf.Struct Experiments = 10 [json_name = "experiments"];
+
+    // Request parameters.
+    TOptions Options = 11 [json_name = "options"];
+
+    // True if the previous request from the same device was processed
+    // by a different scenario.
+    bool IsNewSession = 12 [json_name = "is_new_session"]; // shows if previous scenario was not the same
+
+    // Preferences set for Alice by the user.
+    TUserPreferences UserPreferences = 13 [json_name = "user_preferences"];
+
+    // Whether the session was reset on the client side. Conversation state,
+    // sent in the `state` JSON property and stored for the current scenario,
+    // is not reset when this happens.
+    bool IsSessionReset = 14 [json_name = "is_session_reset"];
+
+    // The language that the user speaks and expects to receive a response in
+    // The same language used in config file for filtration.
+    // See alice/megamind/library/config/scenario_config.proto?rev=6843217#L15
+    ELang UserLanguage = 15 [json_name = "user_language"];
+
+    // Classified user parameters and preferences.
+    TUserClassification UserClassification = 16 [json_name = "user_classification"];
+
+    TMementoData Memento = 17 [json_name = "memento"];
+
+    // The way the request was sent (GetNext when requested next stack action, for example)
+    ERequestSourceType RequestSource = 18 [json_name = "request_source"];
+
+    // True if scenario is the stack engine owner.
+    bool IsStackOwner = 19 [json_name = "is_stack_owner"];
+
+    // Information about the original whereabouts of the request
+    TOrigin Origin = 20 [json_name = "origin"];
+
+    // NluFeatures requested by scenario
+    repeated TNluFeature NluFeatures = 21 [json_name = "nlu_features"];
+}
+
+// Request to run the scenario without corresponding object state changes, if any.
+//
+// For details, see https://docs.yandex-team.ru/docs/alice-scenarios/architecture#request
+message TScenarioRunRequest {
+    // Data common for all scenario requests.
+    TScenarioBaseRequest BaseRequest = 1 [json_name = "base_request"];
+
+    // Data received from the user.
+    TInput Input = 2 [json_name = "input"];
+
+    // NOTE(the0): deprecated
+    // repeated DataSources = 3 [json_name = "data_sources"];
+    reserved 3;
+
+    // Data received from data sources specified in the scenario config.
+    //
+    // EDataSourceType -> TDataSource
+    // Results of begemot rules etc.
+    map<int32, TDataSource> DataSources = 4 [json_name = "data_sources"];
+}
+
+// Request to run the scenario with all the necessary state changes. Sent when
+// the response to the previous RunRequest has been ranked first by Megamind.
+//
+// For details, see https://docs.yandex-team.ru/docs/alice-scenarios/architecture#request
+//
+// All fields except Arguments are the same as in the TScenarioRunRequest request and are immutable.
+message TScenarioApplyRequest {
+    // Data common for all scenario requests.
+    TScenarioBaseRequest BaseRequest = 1 [json_name = "base_request"];
+
+    // Data that the scenario provided in response to the previous RunRequest
+    // to be sent as arguments in case of the actual scenario execution.
+    google.protobuf.Any Arguments = 2 [json_name = "arguments"];
+
+    // Data received from the user.
+    TInput Input = 3 [json_name = "input"];
+
+    // NOTE(the0): deprecated
+    // repeated DataSources = 4 [json_name = "data_sources"];
+    reserved 4;
+
+    // Data received from data sources specified in the scenario config.
+    //
+    // EDataSourceType -> TDataSource
+    // Results of begemot rules etc.
+    map<int32, TDataSource> DataSources = 5 [json_name = "data_sources"];
+}
+
+message TScenarioRpcRequest {
+    message TRpcBaseRequest {
+        // Unique request identifier.
+        string RequestId = 1 [json_name = "request_id"];
+
+        uint64 ServerTimeMs = 2 [json_name = "server_time_ms"];
+
+        // Seed for randomisation.
+        uint64 RandomSeed = 3 [json_name = "random_seed"];
+
+        // Location data received from the device.
+        TLocation Location = 4 [json_name = "location"];
+
+        // Device info /Users/zamulla/Documents/arc/arcadia/alice/library/client/protos/client_info.proto
+        TClientInfoProto ClientInfo = 5 [json_name = "client_info"];
+
+        // The language that the user speaks and expects to receive a response in
+        // The same language used in config file for filtration.
+        // See alice/megamind/library/config/scenario_config.proto?rev=6843217#L15
+        ELang UserLanguage = 6 [json_name = "user_language"];
+
+        // Experiments enabled for the user.
+        google.protobuf.Struct Experiments = 7 [json_name = "experiments"];
+
+        TInterfaces Interfaces = 8 [json_name = "interfaces"];
+    }
+
+    TRpcBaseRequest BaseRequest = 1 [json_name = "base_request"];
+    // Grpc request body.
+    google.protobuf.Any Request = 2 [json_name = "request"];
+}

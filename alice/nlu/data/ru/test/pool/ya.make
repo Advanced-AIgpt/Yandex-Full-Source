@@ -1,0 +1,22 @@
+OWNER(
+    samoylovboris
+    g:alice_quality
+)
+
+UNION()
+
+FROM_SANDBOX(2760185460 OUT alice3v3.tsv)
+FROM_SANDBOX(2760186089 OUT alice4v3.tsv)
+FROM_SANDBOX(2760187709 OUT alice5v3.tsv)
+FROM_SANDBOX(2760191747 OUT alice6v3.tsv)
+
+FROM_SANDBOX(1578357816 OUT auto5v1.tsv)
+FROM_SANDBOX(1315309724 OUT random5v3.tsv)
+FROM_SANDBOX(1156127145 OUT screen4v2.tsv screen4v2.ctx.json)
+FROM_SANDBOX(1156849748 OUT screen5v2.tsv screen5v2.ctx.json)
+
+FROM_SANDBOX(3017221500 OUT responses4v1.tsv)
+FROM_SANDBOX(3017223665 OUT responses5v1.tsv)
+FROM_SANDBOX(3017236959 OUT responses6v1.tsv)
+
+END()

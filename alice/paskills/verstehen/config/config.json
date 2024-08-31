@@ -1,0 +1,85 @@
+{
+    "server": {
+        "verbose": true,
+        "default_n_samples": 50,
+        "granet_ui_dir": "/granet_ui",
+        "port": 80,
+        "qloud_logging": true
+    },
+    "indexes_defaults": {
+        "granet": {
+            "name": "Granet",
+            "grammars_dir": "standard_grammars",
+            "synonyms_server": "http://localhost:9898",
+            "is_paskills": true
+        },
+        "bm25": {
+            "name": "BM25",
+            "k": 0.1,
+            "b": 0.75,
+            "use_query_freq": true
+        },
+        "dssm_knn": {
+            "name": "DSSM",
+            "embedding_dim": 300,
+            "model_input_name": "context_0",
+            "model_output_name": "query_embedding"
+        },
+        "logreg_dssm_knn": {
+            "name": "DSSM with Logistic Regression",
+            "reuse_dssm_index_name": "DSSM",
+            "logreg_min_negative_samples": 50,
+            "C": 100.0,
+            "active_learning": null
+        },
+        "mlp_dssm_knn": {
+            "name": "DSSM with MLP",
+            "reuse_dssm_index_name": "DSSM"
+        },
+        "logreg_with_catboost": {
+            "name": "DSSM with Logistic Regression + CatBoost",
+            "reuse_weak_index_name": "DSSM with Logistic Regression",
+            "reuse_dssm_index_name": "DSSM"
+        }
+    },
+    "default_app": "All Logs",
+    "apps": [
+        {
+            "name": "All Logs",
+            "texts_path": "/verstehen_data/texts.pickle",
+            "payload_path": "/verstehen_data/payload.pickle",
+            "grouped_by_skill_id": true,
+            "payload_keys": [
+              "skill_id",
+              "occurrence_rate",
+              "count",
+              "mock"
+            ],
+            "default_index": "DSSM",
+            "indexes": [
+                {
+                    "index_type": "granet",
+                    "mocks_path": "/verstehen_data/mocks.tsv"
+                },
+                {
+                    "index_type": "dssm_knn",
+                    "embeddings_path": "/verstehen_data/dssm_knn_embeddings.bytes",
+                    "model_path": "/verstehen_data/dssm_knn.model"
+                },
+                {
+                    "index_type": "logreg_dssm_knn"
+                },
+                {
+                    "index_type": "mlp_dssm_knn"
+                },
+                {
+                    "index_type": "logreg_with_catboost",
+                    "weak_index_config": {
+                        "index_type": "logreg_dssm_knn",
+                        "active_learning": "decision_boundary"
+                    }
+                }
+            ]
+        }
+    ]
+}

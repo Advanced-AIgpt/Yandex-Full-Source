@@ -1,0 +1,204 @@
+import: common/commands.grnt
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/nouns.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/questions.grnt
+import: common/surfaces.grnt
+
+
+form alice.music.announce.disable:
+    root:
+        $Common.LeftFiller* $RootDisable+
+
+    filler:
+        $Filler
+        $TurnOff
+
+
+form alice.music.announce.enable:
+    root:
+        $Common.LeftFiller* $RootEnable+
+
+    filler:
+        $Filler
+        $TurnOn
+
+
+$RootDisable:
+    [$Common.Decline+ $MusicItemAnnounce+]
+    [$TurnOff+ $Setting+ $Announce+]
+    [$TurnOff+ ($MusicItemAnnounce | $DJ | $Announce+ $Info+)+]
+    [$TurnOn* $PlayPlainMusic+]
+
+$RootEnable:
+    [$AnnounceImperative+ $MusicItem+]
+    [$Common.Speak+ $Info+ $MusicItem+ $Always+]
+    [$Common.Speak+ ([$MusicItem+ $Common.ConjunctionThat+]+ $TurnOn+)+]
+    [$Setting+ ($MusicItemAnnounce | $DJ)+]
+
+$TurnOn:
+    $AnnounceImperative
+    $Common.Set
+    $Common.TurnOn
+
+    %force_negative
+    включал
+    включала
+    включил
+    включила
+    %lemma
+    подключиться
+    поставить
+
+$TurnOff:
+    $Common.CancelRemoveReset
+    $Common.Decline+ $TurnOn+
+    $Common.Exit
+    $Common.No+ $Announce+
+    $Common.No+ $Common.Speak+
+    $Common.Pause
+    $Common.Stop
+    $Common.TurnOff
+
+    %force_negative
+    отключился
+
+$Filler:
+    $Always
+    $Announce
+    $Common.About
+    $Common.Ask
+    $Common.At
+    $Common.ConjunctionThat
+    $Common.Filler
+    $Common.From
+    $Common.Help
+    $Common.Lets
+    $Common.More
+    $Common.New
+    $Common.Now
+    $Common.PronounsAll
+    $Common.QuestionHow
+    $Common.QuestionWhen
+    $Common.QuestionWhere
+    $Common.SmartDevice
+    $Common.ToSound
+    $Common.WayToCallAlice
+    $Common.With
+    $DJ
+    $Info
+    $MusicItem
+    $PlayPlainMusic
+    $Setting
+    %lemma
+    будешь
+    всех
+    если есть то
+    знать
+    на время
+    наконец
+    начало
+    ни
+    перед тем как
+    позволяющую
+    при которой
+    у
+    чтоб
+    чтобы
+
+$Setting:
+    $Common.Set
+    $Common.TheSettings
+    %lemma
+    навык
+    опция
+
+$DJ:
+    %lemma
+    DJ
+    disc jockey
+    ди джей
+    диджей
+    диджейный
+    диджейский
+    диск жокей
+    дискжокей
+
+$MusicItemAnnounce:
+    [$Announce+ $MusicItem+]
+    [$Common.Speak+ $MusicItem+ $MusicItemStrict+]
+    [$Setting+ $DJ+]
+
+$AnnounceImperative:
+    анонсируй
+    называй
+    объявляй
+    озвучивай
+    оповещай
+    проговаривай
+    сообщай
+    упоминай
+
+$Announce:
+    $AnnounceImperative<lemma>
+    $Common.Speak+ $Info+
+    %lemma
+    анонс
+    анонсирование
+    название
+    объявление
+    озвучивание
+    оповещение
+    определение
+    определять
+    проговаривание
+    упоминание
+    %negative
+    %exact
+    говорил
+    называл
+
+$Info:
+    $Common.TheName
+    %lemma
+    данные
+    информация
+    как $Common.Pronoun3Person* называется $MusicItem*
+    кто $Common.PronounPossessive3Person* (поет|исполняет|играет) $MusicItem*
+
+$MusicItemStrict:
+    %lemma
+    автор
+    альбом
+    группа
+    исполнитель
+    композиция
+    песня
+    трек
+
+$MusicItem:
+    $MusicItemStrict
+    %lemma
+    музыка
+
+$Always:
+    %enable_synonyms all
+    %lemma
+    в начале
+    всегда
+    каждый раз*
+    насовсем
+    перед каждым* (включением|проигрыванием)*
+
+$Play:
+    %enable_synonyms all
+    $Common.Play
+    $Common.PlayAudio
+    %lemma
+    звучать
+    ставить
+
+$PlayPlainMusic:
+    [$Common.Let+ $MusicItem+ $Play+ подряд* (без+ $MusicItemAnnounce)+]

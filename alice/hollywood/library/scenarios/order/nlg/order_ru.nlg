@@ -1,0 +1,128 @@
+{% phrase render_no_orders %}
+    К сожалению, у вас нет активных заказов в Яндекс Лавке.
+{% endphrase %}
+
+{% phrase render_incorrect_response %}
+    Упс! Что-то пошло не так. Попробуйте спросить позже.
+{% endphrase %}
+
+{% phrase render_one_order %}
+    {% set only_order = context.Orders[0] %}
+    Ваш заказ из Яндекс Лавки {{ get_status(only_order.Status) }}.
+    {% if only_order.CallDeliveryStatus %}
+        Он будет у вас в течение {{ only_order.DeliveryEtaMin }} {{ get_minutes(only_order.DeliveryEtaMin) }}.
+    {% endif %}
+{% endphrase %}
+
+{% phrase render_multiple_orders %}
+    {{ get_total_number_of_orders(context) }}
+    {% for order in context.Orders %}
+        {{ render_order(order, context) }}
+    {% endfor %}
+{% endphrase %}
+
+{% set MAX_NUMBER_OF_ORDERS = 15 %}
+
+{% macro render_order(order, context) %}
+    {% if context.CallItems %}
+        {% if order.CallUniqueItemName %}
+            {% if order.OnlyOneItem %}
+                \n Ваш {{ get_order_number(order.OrdinalName) }} заказ с товаром{% vc %},{% evc %} {{ order.UniqueItemName }} {{ get_status(order.Status) }}.  
+            {% else %}
+                \n Ваш {{ get_order_number(order.OrdinalName) }} заказ из {% tx %}{{ get_number_of_positions_text(order.TotalQuantity) }}{% etx %}{% vc %}{{ get_number_of_positions_voice(order.TotalQuantity) }}{% evc %}, включая товар{% vc %},{% evc %} "{{ order.UniqueItemName }}", {{ get_status(order.Status) }}. 
+            {% endif %}
+        {% else %}
+            \n Ваш {{ get_order_number(order.OrdinalName) }} заказ из {% tx %}{{ get_number_of_positions_text(order.TotalQuantity) }}{% etx %}{% vc %}{{ get_number_of_positions_voice(order.TotalQuantity) }}{% evc %} {{ get_status(order.Status) }}. 
+        {% endif %}
+        {% if order.CallDeliveryStatus %}
+            {{ get_curier_info(order.DeliveryTyp) }} будет у вас в течение {{ order.DeliveryEtaMin }} {{ get_minutes(order.DeliveryEtaMin) }}.
+        {% endif %}
+    {% else %}
+        \n Ваш {{ get_order_number(order.OrdinalName) }} заказ {{ get_status(order.Status) }}. 
+        {% if order.CallDeliveryStatus %}
+            Он будет у вас в течение {{ order.DeliveryEtaMin }} {{ get_minutes(order.DeliveryEtaMin) }}.
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro get_minutes(min) %}
+    {% if min != 11 and min%10 == 1 %}
+        минуты
+    {% else %}
+        минут
+    {% endif %}
+{% endmacro %}
+
+{% macro get_number_of_positions_text(number) %}
+    {% if number%10 == 1 and number != 11%}
+        {{ number }} позиции
+    {% else %}
+        {{ number }} позиций
+    {% endif %}
+{% endmacro %}
+
+{% macro get_number_of_positions_voice(number) %}
+    {% if number == 1 %}
+        одной позиции
+    {% elif number%10 == 1%}
+        "{{(number - 1) ~ ""}}" одной позиции
+    {% else %}
+        {{number}} позиций
+    {% endif %}
+{% endmacro %}
+
+{% macro get_order_number(number) %}
+    {% if number > MAX_NUMBER_OF_ORDERS %}
+        следующий
+    {% else %}
+        {% if number >= 10 or number%10 in [1,4,5,9] %}
+            {{ number }}-ый
+        {% elif number%10 in [2,6,7,8] %}
+            {{ number }}-ой
+        {% else %}
+            {{ number }}-ий
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro get_total_number_of_orders(context) %}
+    {% if context.Orders|length <= MAX_NUMBER_OF_ORDERS %}
+        У вас {{ context.Orders|length }} активных {{ 'заказ' | pluralize(context.Orders|length, 'nom') }} в Яндекс Лавке.
+    {% else %}
+        У вас более 15 активых заказов в Яндекс Лавке.
+    {% endif %}
+{% endmacro %}
+
+{% macro get_status(status) %}
+    {% if status in status_mapper %}
+        {{ status_mapper[status] }}
+    {% else %}
+        создан
+    {% endif %}
+{% endmacro %}
+
+{% set order_number_mapper = {"1":"один", "2": "два", "3": "три", "4": "четыре", 
+                            "5": "пять", "6": "шесть", "7": "семь", "8": "восемь", 
+                            "9": "девять", "10": "десять",  "11": "одиннадцать", 
+                            "12": "двенадцать", "13": "тринадцать", "14": "четырнадцать", "15": "пятнадцать"} %}
+
+{% set status_mapper = { "Created": "создан и скоро начнёт собираться",
+                        "Assembling": "собирается",
+                        "Assembled": "собран, теперь мы ищем курьера",
+                        "PerformerFound": "собран и передан в доставку", 
+                        "Delivering": "в пути",
+                        "DeliveryArrived": "уже близко",
+                        "Succeeded": "доставлен", 
+                        "Canceled": "отменен",
+                        "Failed": "завершен с ошибкой. Пожалуйста, проверьте его в приложении Яндекс Лавка или на сайте"}
+%}
+
+{% set curier_mapper = {"Curier": "Курьер", "Rover": "Ровер", "UnknownDeliveryType": "Заказ"} %}
+
+{% macro get_curier_info(curier) %}
+    {% if curier in  curier_mapper%}
+        {{ curier_mapper[curier] }}
+    {% else %} 
+        {{ curier_mapper["UnknownDeliveryType"] }}
+    {% endif %}
+{% endmacro %}

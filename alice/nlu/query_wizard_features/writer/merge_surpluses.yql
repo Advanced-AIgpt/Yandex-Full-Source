@@ -1,0 +1,38 @@
+$script = @@
+import itertools
+
+def merge_surpluses(a, b):
+    result = {}
+    for key, (cnt, surplus) in itertools.chain(a.iteritems(), b.iteritems()):
+        prev_cnt, prev_surplus = result.get(key, (0, 0.0))
+        result[key] = (prev_cnt + cnt, prev_surplus + surplus)
+    return result
+
+def create(item):
+    return item
+
+def add(state, item):
+    return merge(state, create(item))
+
+def merge(state_a, state_b):
+    return merge_surpluses(state_a, state_b)
+@@;
+
+$create_sd = Python::create(@@
+    (
+        Dict<String, Tuple<Int64, Double>>
+    ) -> Dict<String, Tuple<Int64, Double>>
+@@, $script);
+$add_sd = Python::add(@@
+    (
+        Dict<String, Tuple<Int64, Double>>,
+        Dict<String, Tuple<Int64, Double>>
+    ) -> Dict<String, Tuple<Int64, Double>>
+@@, $script);
+$merge_sd = Python::merge(@@
+    (
+        Dict<String, Tuple<Int64, Double>>,
+        Dict<String, Tuple<Int64, Double>>
+    ) -> Dict<String, Tuple<Int64, Double>>
+@@, $script);
+

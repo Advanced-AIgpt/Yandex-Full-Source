@@ -1,0 +1,48 @@
+OWNER(
+    samoylovboris
+    g:alice_quality
+)
+
+UNION()
+
+FILES(
+    cart.add_item.on_mix1.tsv
+    main.can_order_mc.on_mix1.tsv
+    main.start_add_item.on_mix1.tsv
+    main.start_add_item.on_add_item_text.tsv
+    main.start_add_item.on_add_item_asr_mobile.tsv
+    main.start_mc.on_mix1.tsv
+    main.start_mc_add_item.on_mix1.tsv
+    main.start_mc_add_item.on_add_item_asr_mobile.tsv
+    main.start_mc_add_item.on_add_item_text.tsv
+    main.start_mc_add_item_sure_test.on_mix1.tsv
+    main.start_mc_add_item_sure_test.on_add_item_asr_mobile.tsv
+    main.start_mc_add_item_sure_test.on_add_item_text.tsv
+    on_ux1.cart.add_item.tsv
+    on_ux1.cart.clear_cart.tsv
+    on_ux1.cart.remove_item.tsv
+    on_ux1.cart.show_cart.tsv
+    on_ux1.cart.what_you_can.tsv
+    on_ux1.common.agree.tsv
+    on_ux1.common.cancel.tsv
+    on_ux1.common.decline.tsv
+    on_ux1.common.nothing.tsv
+    on_ux1.confirm_order.agree.tsv
+    on_ux1.confirm_order.decline.tsv
+    on_ux1.exit.exit_scenario.tsv
+    on_ux1.keep_old_cart.agree.tsv
+    on_ux1.keep_old_cart.decline.tsv
+    on_ux1.keep_old_cart.show_cart.tsv
+    on_ux1.main.can_order.tsv
+    on_ux1.main.can_order_mc.tsv
+    on_ux1.main.repeat_last_order.tsv
+    on_ux1.main.reset_scenario.tsv
+    on_ux1.main.start_add_item.tsv
+    on_ux1.main.start_mc.tsv
+    on_ux1.main.start_mc_add_item.tsv
+    on_ux1.main.start_mc_add_item_sure_test.tsv
+    on_ux1.post_order.agree.tsv
+    on_ux1.post_order.decline.tsv
+)
+
+END()

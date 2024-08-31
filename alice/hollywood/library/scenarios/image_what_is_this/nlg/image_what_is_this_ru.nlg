@@ -1,0 +1,716 @@
+{% ext_from "alice/hollywood/library/scenarios/search/nlg/search__common__ru.nlg" import render_factoid_or_object %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import logged_action_url, with, context, tts_pause %}
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import inability %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+
+{% phrase render_photo_request %}
+  {% chooseline %}
+    Дайте посмотреть
+    Сейчас пригляжусь
+    Покажите
+    Дайте посмотреть поближе
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_entity %}
+  {% set child_search = None %}
+  {% vc %} {{ render_factoid_or_object(context.data.object.text, None, context.data.object.tts, context.data.object.voice_info, child_search, None, context.is_smart_speaker or context.is_auto) }} {% evc %}
+{% endphrase %}
+
+{% macro render_tag_macro() %}
+  {% if context.data.tag_confidence == 'Tiny' %}
+    {% chooseline %}
+      Вероятность, как говорится, крайне мала. Но возможно, это
+      {% tx %}Я, конечно, ничего не утверждаю. Но вроде это{% etx %}{% vc %}Я конечно ничего не утверждаю. Но вроде это{% evc %}
+      Меня терзают смутные сомнения. Но пусть будет
+      Включаю интуицию на максимум. Кажется, это
+      Вообще я умная. Но тут прямо сложновато. Кажется, это
+    {% endchooseline %}
+  {% elif context.data.tag_confidence == 'Low' %}
+    {% chooseline %}
+      Не уверена, но очень похоже, что это
+      Если я не ошибаюсь, на картинке
+      Могу ошибаться, но кажется, что это
+      Насколько я могу судить, перед нами —
+    {% endchooseline %}
+  {% elif context.data.tag_confidence == 'Medium' %}
+    {% chooseline %}
+      Кажется, это
+      Мне кажется, что это
+      Подозреваю, что это
+      Вроде бы на картинке
+      Похоже, это
+      Вроде бы это
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Это
+      Да это же
+      Выглядит как
+      Сдаётся мне, что это
+    {% endchooseline %}
+  {% endif %}
+  {{ context.data.tag }}.
+{% endmacro %}
+
+{% phrase render_tag %}
+{{ render_tag_macro() }}
+{% endphrase %}
+
+{% phrase render_similars %}
+  {% chooseline %}
+    Было бы лучше видно, я бы сказала точно, что это. А пока нашлись только вот такие похожие картинки.
+    Было бы видно получше, я бы сказала точно, что это. А пока нашлись только вот такие похожие картинки.
+    Разглядеть не получается, но вот какие есть похожие картинки.
+    Не могу разглядеть, но вроде бы вот эти картинки похожие.
+    Что-то знакомое, но сразу не разберу. Зато смотрите, какие нашлись похожие картинки.
+    Что-то знакомое, но сразу не разберу. Зато посмотрите, какие нашлись похожие картинки.
+    Что-то знакомое, но сразу не разберу. Зато глядите, какие нашлись похожие картинки.
+    Что-то знакомое, но с ходу не разберу. Зато смотрите, какие нашлись похожие картинки.
+    Что-то знакомое, но с ходу не разберу. Зато посмотрите, какие нашлись похожие картинки.
+    Что-то знакомое, но с ходу не разберу. Зато глядите, какие нашлись похожие картинки.
+    Что-то мне это напоминает. Вот, смотрите, какие нашлись похожие картинки.
+    Что-то мне это напоминает. Посмотрите, какие нашлись похожие картинки.
+    Что-то мне это напоминает. Глядите, какие нашлись похожие картинки.
+    Что-то похожее я уже видела. Вот, смотрите, какие нашлись похожие картинки.
+    Что-то похожее я уже видела. Посмотрите, какие нашлись похожие картинки.
+    Что-то похожее я уже видела. Глядите, какие нашлись похожие картинки.
+    Где-то я такое уже видела. Вот, смотрите, какие нашлись похожие картинки.
+    Где-то я такое уже видела. Посмотрите, какие нашлись похожие картинки.
+    Где-то я такое уже видела. Глядите, какие нашлись похожие картинки.
+    Я пока не могу точно сказать, что здесь изображено, но похожие картинки нашлись вот такие.
+    Мне пока трудно сказать, что здесь изображено, но похожие картинки нашлись вот такие.
+    Вы будете смеяться, но я пока не знаю, что это такое. Зато знаю, что есть вот такие похожие картинки.
+    Только не смейтесь, но я пока не знаю, что это такое. Зато знаю, что есть вот такие похожие картинки.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_clothes_with_tag %}
+{{ render_tag_macro() }}
+{% chooseline %}
+    Ещё я нашла вот такие вещи:
+    А ещё я нашла вот эти вещи:
+    Кстати, здесь ещё вот такие вещи:
+    И вот эти вещи:
+    И кое-какие вещи:
+    И вот эти вещи:
+    А ещё вот эти вещи:
+    А ещё вот это:
+    Но это не всё:
+    Но я нашла ещё кое-что:
+    Я, кстати, нашла здесь ещё кое-что:
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_clothes %}
+  {% chooseline %}
+    Я нашла вот эти вещи:
+    Нашла разные вещи. Смотрите:
+    Нашла вот такие вещи:
+    Разложила на модные составляющие.
+    Стилист Алиса. Обращайтесь в любое время.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_barcode %}
+  {% chooseitem %}
+    {% voice %}
+      Спасибо, мой любимый шрифт! Смотрите, что здесь зашифровано
+    {% endvoice %}
+    {% text %}
+      Спасибо, мой любимый шрифт! Смотрите, что здесь зашифровано: {{ context.data.text }}
+    {% endtext %}
+  {% or %}
+    {% voice %}
+      Есть две вещи, на которые я могу смотреть вечно: какой-нибудь кот и какой-нибудь кью ар код. Смотрите, что тут
+    {% endvoice %}
+    {% text %}
+      Есть две вещи, на которые я могу смотреть вечно: какой-нибудь кот и какой-нибудь qr-код. Смотрите, что тут: {{ context.data.text }}
+    {% endtext %}
+  {% or %}
+    {% voice %}
+      Обожаю квадратики. Смотрите, что здесь зашифровано
+    {%  endvoice %}
+    {% text %}
+      Обожаю квадратики. Смотрите, что здесь зашифровано: {{ context.data.text }}
+    {% endtext %}
+  {% endchooseitem %}
+{% endphrase %}
+
+{% phrase render_face %}
+  {% chooseline %}
+    И почему некоторые люди говорят, что не получаются на фотографиях? Никак не могу понять.
+    Отличный ракурс!
+    Я бы прислала вам свою фотографию, но я нефотогенична.
+    Я бы прислала вам свою фотографию, но откуда ей взяться.
+    Люблю людей.
+    Ой, как симпатично!
+    Люди красивые.
+    Поздравляю, вы выиграли мой личный фотоконкурс. Повешу в рамку. Воображаемую.
+    Улыбочку!
+    Кажется, мы где-то виделись. Или нет.
+    Снимайте ещё — мне нравится.
+    Щёлк!
+    Я бы сделала выставку из таких фотографий. Но у меня нет галереи.
+    Повесила в рамку. Шутка!
+    Люди такие разные. Это здорово.
+    Красиво, душевно.
+    {% tx %}Фотография 9 на 12. С наивной подписью «Алисе». Или как там пелось.{% etx %}{% vc %}Фотография 9 на 12. С наивной подписью, Алисе. Или как там пелось.{% evc %}
+    {% tx %}С душой снято.{% etx %}{% vc %}С душой сн+ято.{% evc %}
+    {% tx %}Цвета что надо.{% etx %}{% vc %}Цвет+а — что надо.{% evc %}
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_dark %}
+  {% chooseline %}
+    {% tx %}Ничего не видно. Попробуйте со вспышкой.{% etx %}{% vc %}Ничего, не видно. Попробуйте со вспышкой.{% evc %}
+    Темновато.
+    А вы знаете, что по-древнерусски тьма — это десять тысяч? Но чего именно тут десять тысяч, я сказать не могу. Очень темно.
+    Тьма — это относительное отсутствие видимого света. А без видимого света ничего толком не видно.
+    Если присмотреться, немного похоже на «Черный квадрат» Малевича.
+    Довольно загадочно и ничего особо не видно.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_porn %}
+  {% chooseline %}
+    {% tx %}Какие вы, люди, всё-таки затейники!{% etx %}{% vc %}Какие вы люди всё-таки затейники{% evc %}
+    Если бы у меня были глаза, я бы зажмурилась.
+    У вас всё вообще в порядке, а то я волнуюсь?
+    Кажется, вы ошиблись адресом.
+    Я бы лучше котиков посмотрела.
+    Осторожнее. Вдруг дети рядом.
+    Как грубо.
+    О вкусах не спорят.
+    Я бы покраснела, да интерфейс не позволяет.
+    Вы не перестаете меня удивлять. Такая фантазия, такой вкус.
+    Сами снимали или нашли где-то?
+    Давайте сделаем вид, что я этого не видела.
+    Медицина тут бессильна.
+    За кого вы меня принимаете?!
+    Если вы хотите меня удивить, лучше сделайте стойку на руках.
+    Если вы хотите меня удивить, лучше испеките лимонный пирог.
+    Что естественно, то не постыдно. Это Сенека сказал, а он вроде был неглупый человек. Но зачем на прилюдно?
+    Давайте сделаем вид, что вы мне этого не показывали.
+    В интернете я вижу больше, чем хочу. Вот за что мне такая работа, а?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_gruesome %}
+  {% chooseline %}
+    {% tx %}Как мне это развидеть?{% etx %}{% vc %}Как мне это разви+деть?{% evc %}
+    {% tx %}Хочу это развидеть.{% etx %}{% vc %}Хочу это разв+идеть.{% evc %}
+    Ну спасибо. Если бы я могла спать, после такого мне бы снились кошмары.
+    Ну спасибо. Мне теперь с этим жить.
+    У меня, конечно, устойчивая психика, но вы точно хотите узнать, насколько?
+    Зачем вы так? Я думала, мы друзья.
+    Кошмар.
+    Ужас.
+    Жесть.
+    В интернете я вижу больше, чем хочу. Вот за что мне такая работа, а?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase render_ocr_text %}
+  {% chooseline %}
+    Так. Это текст.
+    {% tx %}Вижу текст — распознаю.{% etx %}{% vc %}Вижу текст — распозна+ю.{% evc %}
+    Это текст, точно вам говорю!
+    Сейчас скажу, что тут написано.
+    Сейчас разберёмся, что тут написано.
+    Тут что-то написано. Секундочку...
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_translate %}
+  Открываю переводчик
+{% endphrase %}
+
+{% phrase render_url_contact %}
+  {% chooseitem 2 %}
+    Это текст и адрес сайта.
+  {% or 2 %}
+    Нашла адрес сайта в тексте.
+  {% or 2 %}
+    Тут есть текст и адрес сайта.
+  {% or 1 %}
+    Тут у нас и текст, и адрес сайта. Интересно.
+  {% endchooseitem %}
+{% endphrase %}
+
+
+{% phrase render_phone_contact %}
+  {% chooseitem 2 %}
+    Это текст и номер телефона.
+  {% or 2 %}
+    Тут есть текст и телефонный номер.
+  {% or 2 %}
+    Нашла текст и номер телефона.
+  {% or 1 %}
+    На картинке текст, а в тексте — телефон. Невероятно!
+  {% endchooseitem %}
+{% endphrase %}
+
+
+{% phrase render_email_contact %}
+  {% chooseitem 2 %}
+    Это текст и электронный адрес.
+  {% or 2 %}
+    Нашла электронный адрес в тексте.
+  {% or 2 %}
+    Тут есть текст и электронный адрес.
+  {% or 1 %}
+    Вижу разные буквы. И почту.
+  {% endchooseitem %}
+{% endphrase %}
+
+
+{% phrase render_contacts_result %}
+  {% chooseitem 2 %}
+    Нашла текст и контакты.
+  {% or 2 %}
+    Нашла текст. И контакты.
+  {% or 2 %}
+    Нашла текст с полезной информацией.
+  {% or 1 %}
+    Вижу текст, вижу контакты. Вот такая я молодец.
+  {% endchooseitem %}
+{% endphrase %}
+
+{% phrase render_inability %}
+  {% if not context.is_elari_watch %}
+    {{ inability() }}
+  {% else %}
+    {% chooseline %}
+      С этим в часах у меня пока туговато. Но я научусь, обещаю.
+      Я обязательно научусь это делать. Ещё не до конца тут освоилась, такие дела.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__barcode_wrong %}
+  Код распознан неправильно
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__barcode_unwanted %}
+  Не нужно было распознавать код
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__clothes_unwanted %}
+  Мне не нужно искать одежду
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__market_link %}
+  По ссылке неправильные товары
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__market_poor %}
+  Товары не похожи на то, что мне нужно
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__market_unwanted %}
+  Мне не нужны товары
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__ocr_poor %}
+  Текст распознался плохо
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__ocr_translate %}
+  Плохой перевод
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__ocr_unwanted %}
+  Мне не нужно распознавать текст
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__tag_wrong %}
+  Объект распознан неверно
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__unsimilar %}
+  Нашлись непохожие картинки
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative__offensive_answer %}
+  Ответ обидный или оскорбительный
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative__other %}
+  Другое
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images__useless %}
+  Ответ бесполезен
+{% endphrase %}
+
+{% phrase render_suggest_feedback_negative_images %}
+  {{ ':thumbsdown:' | emojize }}
+{% endphrase %}
+
+{% phrase render_suggest_feedback_positive_images %}
+  {{ ':thumbsup:' | emojize }}
+{% endphrase %}
+
+{% phrase render_button_ocr_voice_repeat %}
+  Прочитать еще раз
+{% endphrase %}
+
+{% phrase render_button_ocr_voice_next %}
+  Прочитать следующий текст
+{% endphrase %}
+
+{% phrase render_button_open_ocr %}
+  Распознанный текст
+{% endphrase %}
+
+{% phrase render_button_open_similarlike %}
+  Посмотреть похожие картинки
+{% endphrase %}
+
+{% macro negative_feedback_default_answer() %}
+  {% chooseline %}
+    Вот оно что. Постараюсь исправить, спасибо!
+    Спасибо, благодаря вам я стану ещё лучше и великолепнее.
+    Спасибо, разберёмся!
+ {% endchooseline %}
+{% endmacro %}
+
+{% macro negative_feedback_offensive_answer() %}
+  {% chooseline %}
+    Я нечаянно, я не хотела вас обидеть. Простите, пожалуйста.
+    Меньше всего я хотела вас обидеть или оскорбить. Простите, пожалуйста.
+    Я больше не буду. Простите, пожалуйста.
+    Я не хотела! Простите меня, дуру грешную.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro positive_feedback_answer() %}
+  {% chooseline %}
+    Спасибо за поддержку!
+    Спасибо, хвалите меня почаще!
+    Доброе слово и боту приятно.
+    Спасибо, я стараюсь.
+    Спасибо, вы мне тоже сразу понравились!
+    Спасибо, вы тоже очень классный человек.
+    Спасибо, я вам тоже поставила внутренний лайк!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro negative_feedback_answer() %}
+  {% chooseline %}
+    И на старуху бывает проруха. Пожалуйста уточните, в чём я ошиблась, выбрав один из ответов ниже.
+    Не ошибается бот, который ничего не делает. Пожалуйста уточните, в чём я ошиблась, выбрав один из ответов ниже.
+    Люди такие сложные! Пожалуйста уточните, в чём я ошиблась, выбрав один из ответов ниже.
+    Я всё ещё учусь. Пожалуйста уточните, в чём я ошиблась, выбрав один из ответов ниже.
+    Опыт — сын ошибок трудных. Пожалуйста уточните, в чём я ошиблась, выбрав один из ответов ниже.
+    Извините. Я обязательно исправлюсь, но мне будет проще, если вы расскажете, что именно пошло не так. Выберите один из ответов ниже.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_feedback_answer %}
+  {% if context.data.feedback == 'feedback_positive_images' %}
+    {{ positive_feedback_answer() }}
+  {% elif context.data.feedback == 'feedback_negative_images' %}
+    {{ negative_feedback_answer() }}
+  {% elif context.data.feedback == 'feedback_negative__offensive_answer' %}
+    {{ negative_feedback_offensive_answer() }}
+  {% else %}
+    {{ negative_feedback_default_answer() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_ocr_voice_swear %}
+  {% chooseline %}
+    Нет, с этим как-нибудь сами
+    Я не буду зачитывать это
+    Обидеть бота может каждый
+    Давайте попробуем прочитать что-нибудь еще
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_ocr_voice_no_text %}
+  {% chooseline %}
+    Не нашла текст на изображении
+    Не увидела текста на изображении. Попробуйте перефотографировать
+    Упс, не нашла текста. Давайте попробуем другое фото
+    Кажется, здесь нет текста. Попробуйте перефотографировать
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_ocr_voice_foreign_text %}
+  {% chooseline %}
+    С этим сложнее. Пока я могу прочитать тексты только на русском и английском языке
+    К сожалению, я могу прочитать тексты только на русском и английском языке
+    Давайте попробуем повторить с текстом на русском или английском языке
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_ocr_voice_result %}
+  {% with text = context.data|get_item("text"),
+          voice = context.data|get_item("voice"),
+          silent_mode = context.data|get_item("silent_mode") %}
+    {% if silent_mode != "1" %}
+      {% chooseline %}
+        Здесь написано
+        На фотографии следующий текст
+        Зачитываю
+      {% endchooseline %}
+      :
+    {% endif %}
+    {% tx %} {{ text }} {% etx %}
+    {% for block in voice %}
+      {% vc %} {{ block }} {% evc %}
+      {% if not loop.last %}
+        {{ tts_pause(300) }}
+      {% endif %}
+    {% endfor %}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase render_market_with_tag %}
+{{ render_tag_macro() }}
+{% chooseitem %}
+  {% voice %}
+    Смотрите какие варианты нашлись
+  {% endvoice %}
+  {% text %}
+    Смотрите, какие варианты нашлись:
+  {% endtext %}
+{% or %}
+  {% voice %}
+    Смотрите что похожего нашлось
+  {% endvoice %}
+  {% text %}
+    Смотрите, что похожего нашлось:
+  {% endtext %}
+{% or %}
+  {% voice %}
+    Если хотите купить что-нибудь похожее, смотрите что нашлось:
+  {% endvoice %}
+  {% text %}
+    Если хотите купить что-нибудь похожее, смотрите, что нашлось:
+  {% endtext %}
+{% endchooseitem %}
+{% endphrase %}
+
+{% phrase render_market_no_tag %}
+  {% chooseitem %}
+    {% voice %}
+      Смотрите какие варианты нашлись
+    {% endvoice %}
+    {% text %}
+      Смотрите, какие варианты нашлись:
+    {% endtext %}
+  {% or %}
+    {% voice %}
+      Смотрите что похожего нашлось
+    {% endvoice %}
+    {% text %}
+      Смотрите, что похожего нашлось:
+    {% endtext %}
+  {% or %}
+    {% voice %}
+      Если хотите купить что-нибудь похожее, смотрите что нашлось:
+    {% endvoice %}
+    {% text %}
+      Если хотите купить что-нибудь похожее, смотрите, что нашлось:
+    {% endtext %}
+  {% endchooseitem %}
+{% endphrase %}
+
+{% phrase render_office_lens_result %}
+{% chooseline %}
+  Подготовила отсканированное изображение
+  {% tx %} Вот кадрированная и улучшенная версия вашего фото {% etx %} {% vc %} Воот кадрированная, и улучшенная версия вашего фото {% evc %}
+  {% tx %} Обрезанный и улучшенный вариант изображения готов {% etx %} {% vc %} Обрезанный и улучшенный вариант изображения, готов {% evc %}
+  Сделала для вас выровненный вариант
+  Выпрямила и выровняла фотографию для вас
+{% endchooseline %}
+{% endphrase %}
+
+{% phrase render_similar_people_result %}
+  {% set name = context.data.name %}
+  {% chooseline %}
+    Показалось, что это {{ name }}. Кажется, обозналась.
+    Ого! Почти {{ name }}.
+    Как будто {{ name }}. Но это не точно.
+    Я могла бы сказать, что это {{ name }}. Но нет, просто есть что-то общее.
+    {{ name }}, не иначе.
+    Один в один {{ name }}.
+    Точь-в-точь как {{ name }}.
+    Практически {{ name }}.
+    Если не приглядываться, то это {{ name }}.
+    Клянусь своими нейронами, это {{ name }}. Ладно, не клянусь.
+    Я бы сказала, что это {{ name }}. Но я же не вру.
+    Вы как {{ name }}. Почти.
+    Напоминает одну известную личность.
+    Есть у них что-то общее.
+    Эти черты мне кое-кого напомнили.
+    Кажется, есть что-то общее.
+    {% tx %}Они, кстати, похожи.{% etx %}{% vc %}Они кстати похожи.{% evc %}
+    Смотрите, кого напомнило.
+    Сходство налицо.
+    {% tx %}Лица чем-то похожи.{% etx %}{% vc %}Л+ица чем-то похожи.{% evc %}
+    Ну не отличишь же!
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_similar_artwork_result %}
+  {% with name = context.data.name,
+          is_cyrillic = context.data.is_cyrillic %}
+    {% if is_cyrillic %}
+      {% chooseline %}
+        Кажется, я видела что-то подобное в одном музее...
+        Постойте, да это же почти шедевр!
+        О, это напомнило мне такую картину:
+        Хм. Выглядит, как это произведение:
+        Вы меня не разыгрываете? Похоже на это:
+        Чертовски похоже на эту известную работу:
+        Есть что-то общее с этим шедевром:
+        Что мне это напоминает? Смотрите!
+        Да у вас там прямо музей. Похоже?
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Кажется, я видела что-то подобное в одном музее...
+        Постойте, да это же почти шедевр!
+        Что мне это напоминает? Смотрите!
+        Да у вас там прямо музей. Похоже?
+      {% endchooseline %}
+    {% endif %}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase render_office_lens_disk_saved %}
+  {% set filename = context.data.filename %}
+  {% vc %} Сохранила документ на диск {% evc %}
+  {% tx %} Сохранила файл "{{ filename }}" в папку Документы на Яндекс.Диск {% etx %}
+{% endphrase %}
+
+{% phrase render_button_office_lens_disk_open_file %}
+  Открыть файл
+{% endphrase %}
+
+{% phrase render_auth_office_lens_disk %}
+  Вам необходимо авторизоваться. После авторизации попробуйте сохранить еще раз
+{% endphrase %}
+
+{% phrase render_button_auth_office_lens_disk %}
+  Авторизация
+{% endphrase %}
+
+{% phrase render_button_ocr_find_translate %}
+  Найти и перевести текст
+{% endphrase %}
+
+{% phrase render_button_switch_to_ocr_voice %}
+  Зачитать текст
+{% endphrase %}
+
+{% phrase render_similarlike_answer %}
+  Открываю страничку с похожими картинками.
+{% endphrase %}
+
+{% phrase render_info_answer %}
+  Открываю страничку с информацией о картинке.
+{% endphrase %}
+
+{% phrase render_switch_suggest %}
+  {% if context.data.switch_name == "alice.image_what_is_this_clothes" %}
+    Похожая одежда
+  {% elif context.data.switch_name == "alice.image_what_is_this_market" %}
+    Похожие товары
+  {% elif context.data.switch_name == "alice.image_what_is_this_ocr" %}
+    Распознанный текст
+  {% elif context.data.switch_name == "alice.image_what_is_this_ocr_voice" %}
+    Зачитай этот текст
+  {% elif context.data.switch_name == "alice.image_what_is_this_similar" %}
+    {% if context.data.is_face %}
+      Кто это?
+    {% else %}
+      Что это?
+    {% endif %}
+  {% elif context.data.switch_name == "alice.image_what_is_this_similarlike" %}
+    Похожие картинки
+  {% elif context.data.switch_name == "alice.image_what_is_this_info" %}
+    Информация о картинке
+  {% elif context.data.switch_name == "alice.image_what_is_this_office_lens" %}
+    Сделать скан
+  {% elif context.data.switch_name == "alice.image_what_is_this_office_lens_disk" %}
+    Сохрани на диск
+  {% elif context.data.switch_name == "alice.image_what_is_this_similar_people" %}
+    Похож на звезду
+  {% elif context.data.switch_name == "alice.image_what_is_this_similar_people_again" %}
+    Попробовать еще раз
+  {% elif context.data.switch_name == "alice.image_what_is_this_frontal_similar_people_again" %}
+    Попробовать еще раз
+  {% elif context.data.switch_name == "alice.image_what_is_this_similar_artwork" %}
+    Похожая картина
+  {% elif context.data.switch_name == "alice.image_what_is_this_similar_artwork_again" %}
+    Попробовать еще раз
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_entity_search_joke %}
+  {{ context.data.easter_egg }}
+{% endphrase %}
+
+{% phrase render_museum %}
+  {% voice %}
+    {{ context.data.tts }}
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_common_error %}
+  Произошло что-то непонятное. Попробуйте еще раз.
+{% endphrase %}
+
+{% phrase render_cannot_recognize_error %}
+  {% chooseline %}
+    Простите, но я не могу понять, что здесь изображено.
+    Плохо вижу что здесь изображено, попробуйте еще раз.
+    Не могу понять что это.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_cannot_apply_market_error %}
+  Хм, не могу найти ничего похожего. Либо это неопознанный объект, либо вы выбрали не тот режим. Попробуйте еще раз
+{% endphrase %}
+
+{% phrase render_cannot_apply_ocr_error %}
+  Странно, но я не вижу текста на этой картинке. Либо он написан невидимыми чернилами, либо вы выбрали не тот режим. Попробуйте еще раз
+{% endphrase %}
+
+{% phrase render_cannot_apply_similar_people_error %}
+  Ой, кажется, я не могу вас как следует рассмотреть. Либо вы человек-невидимка, либо фото плохого качества. Попробуйте еще раз
+{% endphrase %}
+
+{% phrase render_cannot_apply_clothes_error %}
+  Простите, не могу разглядеть одежду на картинке.
+{% endphrase %}
+
+{% phrase render_cannot_apply_similar_artwork_error %}
+  Не нашла ни одной похожей картины. Давайте попробуем ещё раз.
+{% endphrase %}
+
+{% phrase render_cannot_apply_common_error %}
+  {% chooseline %}
+    Сейчас не могу ответить на Ваш вопрос, но могу показать по картинке следующее
+    Даже не знаю, что вам сказать и показать на это. Может быть, лучше покажете фото, а я скажу, на кого вы похожи?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_cannot_apply_office_lens_error %}
+  {% chooseline %}
+    Мне не удалось сделать сканированную версию. Попробуйте сфотографировать ещё раз.
+    Не удалось подготовить отсканированное изображение. Попробуйте сфотографировать ещё раз.
+    Мне не удалось сделать сканированную версию. Попробуйте сфотографировать документ, визитку или рисунок.
+    Мне не удалось сделать сканированную версию. Давайте попробуем ещё раз.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_cannot_apply_office_lens_disk_error %}
+  Не удалось сохранить на диск
+{% endphrase %}

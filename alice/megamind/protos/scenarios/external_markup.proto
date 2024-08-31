@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "BegemotExternalMarkupProto";
+
+// This file is modified copy of search/begemot/rules/external_markup/proto/format.proto
+// DirtyLang.Class renamed to DirtyLang.DirtyLangClass in order to be compiled with java
+
+message TBegemotExternalMarkup {
+    string OriginalRequest = 1; // original unmodified user request
+    string ProcessedRequest = 2; // final state of request after wizard processing
+
+    // Tokens, Delimiters
+    message TToken {
+        string Text = 1;
+        uint32 BeginChar = 2; // position in ProcessedRequest - in unicode (wide) characters
+        uint32 EndChar = 3;
+    }
+    repeated TToken Tokens = 3;
+    repeated TToken Delimiters = 4; // number of Delimiters is always equal to 1 + number of Tokens
+
+    message TTokenSpan {
+        uint32 Begin = 1;
+        uint32 End = 2;
+    }
+
+    // Morph
+    message TMorphWord {
+        message TLemma {
+            string Text = 1;
+            string Language = 2; // ISO 639-1, empty if LANG_UNK
+            repeated string Grammems = 3;
+
+            message TForm {
+                string Text = 1;
+                repeated string Grammems = 2;
+            }
+            repeated TForm Forms = 4; // forms are not generated without explicit request
+        }
+
+        TTokenSpan Tokens = 1;
+        repeated TLemma Lemmas = 2;
+    }
+    repeated TMorphWord Morph = 5;
+
+    // GeoAddr
+    message TGeoAddr {
+        TTokenSpan Tokens = 1;
+        string Type = 2;
+
+        message TField {
+            TTokenSpan Tokens = 1;
+            string Type = 2;
+            string Name = 3; // normalized name
+        }
+        repeated TField Fields = 3;
+    }
+    repeated TGeoAddr GeoAddr = 6;
+
+    // GeoAddrRoute
+    message TGeoAddrRoute {
+        string Type = 1;
+        string Transport = 2; // type of transport (for example "public" or "car")
+        int32 GeoAddrFrom = 3; // from index in GeoAddr
+        int32 GeoAddrTo = 4; // to index in GeoAddr
+        int32 GeoAddrIn = 5; // in index in GeoAddr
+    }
+    repeated TGeoAddrRoute GeoAddrRoute = 7;
+
+    // Fio
+    message TFio {
+        TTokenSpan Tokens = 1;
+        string Type = 2;
+        string FirstName = 3;
+        string LastName = 4;
+        string Patronymic = 5;
+    }
+    repeated TFio Fio = 8;
+
+    //porn classifier
+    message TPorn {
+        bool IsPornoQuery = 1;
+    }
+    TPorn Porn = 9;
+
+    //dirty language classifier
+    message TDirtyLang {
+        string DirtyLangClass = 1;
+    }
+    TDirtyLang DirtyLang = 10;
+
+    //units of measurement
+    message TMeasurementUnit {
+        TTokenSpan Tokens = 1;
+        message TRange {
+           uint32 From = 1;
+           uint32 To = 2;
+        }
+
+        // only one of following is filled
+        oneof Type {
+            TRange Range = 2; // 2,3 for "2-3mm length"
+            uint32 Value = 3; // 100 for "memory limit 100 Mb"
+        }
+
+        string Unit = 4; // "Mb" for "100 Mb", "mm" for "2-3mm"
+        string UnitDenom = 5; // "hour" for "100 km/h"
+        string Property = 6; // "length" for "2-3mm length"
+    }
+    repeated TMeasurementUnit MeasurementUnits = 11;
+
+    message TDate {
+        message TDuration {
+            string Type = 1; // [BACK, FORWARD, PERIODICAL] direction of period
+            float Day = 2;
+            float Month = 3;
+            float Year = 4;
+            float Hour = 5;
+            uint32 Min = 6;
+            uint32 Week = 7;
+            uint32 Times = 8; // repetitions during period
+        }
+
+        TTokenSpan Tokens = 1;
+        sint32 Day = 2;
+        bool RelativeDay = 3;
+
+        sint32 Month = 4;
+        bool RelativeMonth = 5;
+
+        sint32 Year = 6;
+        bool RelativeYear = 7;
+
+        sint32 Week = 8;
+        bool RelativeWeek = 9;
+
+        sint32 Century = 10;
+        bool BeforeCommonEra = 11;
+
+        uint32 Hour = 12;
+        uint32 Min = 13;
+
+        string Prep = 14;
+
+        bool IntervalBegin = 15;
+        bool IntervalEnd = 16;
+
+        TDuration Duration = 17; // time period with length
+    }
+    repeated TDate Date = 12;
+}

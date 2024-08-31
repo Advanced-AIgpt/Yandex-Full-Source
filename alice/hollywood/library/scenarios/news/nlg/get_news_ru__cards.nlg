@@ -1,0 +1,168 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color with context %}
+
+{% macro render_news_item(news_item, item_number) %}
+  {
+    "size": "xs",
+    "type": "div-separator-block"
+  },
+  {
+    {% with text = news_item|get_item('text')|html_escape %}
+      "title": "{{ text }}",
+    {% endwith %}
+    "type": "div-universal-block",
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(news_item|get_item('url'), 'open_news__item_block', item_number, 'open_news__item_block', dict(intent_name='personal_assistant.scenarios.get_news')) }}",
+      "log_id": "news_card__open_news"
+    },
+    "side_element": {
+      "element": {
+        "image_url": "{{ news_item|get_item('image.src')|html_escape }}",
+        {% with ratio = news_item|get_item('image.width', 1)/news_item|get_item('image.height', 1),
+        				minimal_ratio = 0.75 %}
+          "ratio": {{ ratio if ratio > minimal_ratio else minimal_ratio }},
+        {% endwith %}
+        "type": "div-image-element"
+      },
+      "size": "m",
+      "position": "right"
+    }
+  },
+  {% with messages = news_item|get_item('messages'),
+          turbo_icon_url = news_item|get_item('turbo.src'),
+          agency = news_item|get_item('agency'),
+          additional_info_text_color = '#C3CAD9' %}
+    {% if messages %}
+      {
+        "rows": [
+          {
+            "cells": [
+              {
+                "text": "{{ font_color(additional_info_text_color, '%s %s' % (messages, 'источник'|pluralize(messages))) }}",
+                "text_style": "text_s",
+                "action": {
+                  "url": "{{ open_uri_action_for_item_in_list(news_item|get_item('url'), 'open_news_sources__link', item_number, 'open_news_sources__link') }}",
+                  "log_id": "news_card__open_sources"
+                }
+              }
+            ],
+            "type": "row_element"
+          }
+        ],
+        "columns": [
+          {
+            "right_padding": "zero"
+          }
+        ],
+        "type": "div-table-block"
+      },
+    {% elif turbo_icon_url %}
+      {
+        "rows": [
+          {
+            "cells": [
+              {
+                "image": {
+                  "image_url": "{{ turbo_icon_url }}",
+                  "ratio": 1,
+                  "type": "div-image-element"
+                },
+                "image_size": "xs",
+                "horizontal_alignment": "center",
+                "action": {
+                  "url": "{{ open_uri_action_for_item_in_list(news_item|get_item('url'), 'open_news_turbo__link', item_number, 'open_news_turbo__link') }}",
+                  "log_id": "news_card__open_sources"
+                }
+              },
+              {
+                "text": "{{ font_color(additional_info_text_color, agency or 'Турбо-страница') }}",
+                "text_style": "text_s",
+                "action": {
+                  "url": "http://news2.yandex.ru",
+                  "log_id": "news_card__open_turbo"
+                }
+              }
+            ],
+            "type": "row_element"
+          }
+        ],
+        "columns": [
+          {
+            "right_padding": "zero"
+          },
+          {
+            "left_padding": "xxs"
+          }
+        ],
+        "type": "div-table-block"
+      },
+    {% elif agency %}
+      {
+        "rows": [
+          {
+            "cells": [
+              {
+                "text": "{{ font_color(additional_info_text_color, agency) }}",
+                "text_style": "text_s",
+                "action": {
+                  "url": "{{ open_uri_action_for_item_in_list(news_item|get_item('url'), 'open_news_agency__link', item_number, 'open_news_agency__link') }}",
+                  "log_id": "news_card__open_agency"
+                }
+              }
+            ],
+            "type": "row_element"
+          }
+        ],
+        "columns": [
+          {
+            "right_padding": "zero"
+          }
+        ],
+        "type": "div-table-block"
+      },
+    {% endif %}
+  {% endwith %}
+  {
+    "size": "xs",
+    "type": "div-separator-block",
+    "has_delimiter": 1
+  },
+{% endmacro %}
+
+
+{% macro render_news_card(data) %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+      	{% for news_item in data|get_item('news') %}
+      		{{ render_news_item(news_item, loop.index) }}
+      	{% endfor %}
+
+        {
+          {% if req_info.experiments.get('alice_news_show_all_new_color') != None %}
+            "text": "{{ font_color('#6839CF', 'ПОКАЗАТЬ ВСЕ НОВОСТИ') }}",
+          {% else %}
+            "text": "{{ font_color('#0A4DC3', 'ПОКАЗАТЬ ВСЕ НОВОСТИ') }}",
+          {% endif %}
+          "type": "div-footer-block",
+          "action": {
+            "url": "{{ open_uri_action(data|get_item('url'), 'whole_card', 'show_all_news_whole_card') }}",
+            "log_id": "news_card__open_all_news"
+          }
+        }
+      ]
+    }
+  ],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endmacro %}
+
+{% card news %}
+  {{ render_news_card(context.data) }}
+{% endcard %}

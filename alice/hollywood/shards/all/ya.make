@@ -1,0 +1,5 @@
+RECURSE(
+    prod
+    scenarios
+    server
+)

@@ -1,0 +1,495 @@
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather_nowcast_text_cases_ar.nlg" import render_case, render_error, render_precipitation_type, render_hours %}
+
+{% macro render_pressure_phrase(forecast, is_for_now=false) %}
+  الضغط
+  {% if is_for_now %}
+    يبلغ
+  {% else %}
+    سيكون
+  {% endif %}
+  {{ forecast.pressure }} {% tx %}ملم زئبق{% etx %}{% vc %}الميليمتر الزئبقي{% evc %}.
+{% endmacro %}
+
+{% macro render_wind_strength(speed) %}
+  {% if speed < 6 %}
+    ضعيف
+  {% elif speed < 15 %}
+
+  {% elif speed < 25 %}
+    قوي
+  {% else %}
+    عاصف
+  {% endif %}
+{% endmacro %}
+
+{% macro render_wind_phrase(forecast) %}
+  {% if forecast.wind_dir == "هادئ" or forecast.wind_speed < 1 %}
+    هادئ
+  {% else %}
+    {{ render_wind_strength(forecast.wind_speed) }}
+    {{ forecast.wind_dir }}
+    رياح
+  {% endif %}
+
+  , {{ forecast.wind_speed | round(0) }} متر/ثانية
+  {% if forecast.wind_gust >= 10 %}
+    مع هبوب رياح تصل سرعتها إلى
+    {{ forecast.wind_gust | round(0) }} متر/ثانية
+  {% endif %}
+{% endmacro %}
+
+{% macro render_wind_precaution(forecast, attentions=None) %}
+  {% if forecast.wind_gust >= 12 and 'weather_use_wind_precautions' in attentions %}
+    {% if forecast.wind_gust < 17 %}
+      {% chooseline %}
+        كن حذرًا!
+        انتبه!
+      {% endchooseline %}
+    {% elif forecast.wind_gust < 21 %}
+      {% chooseline %}
+        كن حذرًا للغاية!
+        كن حذرًا جدًا!
+      {% endchooseline %}
+    {% elif forecast.wind_gust < 25 %}
+      {% chooseline %}
+        يُفضل عدم مغادرة المنزل!
+        أنصحك بالبقاء في المنزل!
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        تحذير! مثل هذه الرياح قد تشكل خطرًا على الحياة!
+        تحذير! الخروج من المنزل سيشكل خطرًا على الحياة!
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro range_attention(attentions) %}
+  {% if 'incomplete_forecast' in attentions %}
+    \nليس لدي توقعات لبقية الأيام حتى الآن.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_now_phrase() %}
+  # This should be different from the current_weather phrase. See https://st.yandex-team.ru/DIALOG-4922#5d2ed72663890d001d7e5275
+  الآن
+{% endmacro %}
+
+{% macro render_now_phrase() %}
+  {% chooseline %}
+    الآن
+    في الوقت الحالي
+    في هذه اللحظة
+    حاليًا
+    في هذه الدقيقة
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro temp(grad) %}
+  {% if grad > 0 %}
+    +{{ grad }}
+  {% else %}
+    {{ grad }}
+  {% endif %}
+{% endmacro %}
+
+{% macro min_max_temp(min, max) %}
+  {% if min == max %}
+    {{ temp(min) }}
+  {% elif min < 0 and max < 0 %}
+    من {{ temp(max) }} إلى {{ temp(min) }}
+  {% else %}
+    من {{ temp(min) }} إلى {{ temp(max) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro format_date(date, tz=None, mock_ts=None) %}
+  {% set parsed_date = date | parse_dt %}
+  {% set parsed_date.tzinfo = tz %}  # date from forecast is already in proper timezone
+  {{ parsed_date | human_day_rel(tz, mock_ts) }}
+{% endmacro %}
+
+{% macro render_smart_joined(separator, values) %}
+    {% for item in values -%}
+        {% if item %}
+            {% if not loop.first %}{{ separator }}{% endif %}{{ item }}
+        {% endif %}
+    {%- endfor %}
+{% endmacro %}
+
+{% macro render_day_part(day_part) %}
+  {% if day_part == "morning" %}
+    في الصباح
+  {% elif day_part == "day" %}
+    في النهار
+  {% elif day_part == "evening" %}
+    في المساء
+  {% elif day_part == "night" %}
+    في الليل
+  {% endif %}
+{% endmacro %}
+
+{% macro __render_already_going(precipitation_type, prec_type_asked, same_types_case, different_types_case, default_case) %}
+    {% if (prec_type_asked is defined and prec_type_asked and prec_type_asked != None)
+            and (precipitation_type is defined and precipitation_type and precipitation_type != None)
+            and (prec_type_asked != 'precipitation' and prec_type_asked != 'no_precipitation') %}
+        {% if render_precipitation_type(precipitation_type) == render_precipitation_type(prec_type_asked) %}
+            {{ same_types_case }}
+        {% else %}
+            {{ different_types_case }}
+        {% endif %}
+    {% else %}
+        {{ default_case }}
+    {% endif %}
+{% endmacro %}
+
+{% macro render_tomorrow(day_part, precipitation_change_hours, timestr, tz, mock_ts=None, next=False) %}
+    {% if (timestr is none or timestr is not defined) or (tz is none or tz is not defined) %}
+      {% if not next %}
+        {% if precipitation_change_hours >= 18 %}غدًا{% endif %}
+      {% endif %}
+    {% else %}
+      {% set dt = datetime_strptime(timestr, "%Y-%m-%d-%H:%M:%S") %}
+      {% set change_time = add_hours(datetime=dt, hours=precipitation_change_hours) %}
+      {% set date = format_date(change_time.strftime('%Y-%m-%d'), tz, mock_ts) %}
+      {% set local_hour = dt.hour %}
+
+      {% if date == "غدًا" %}
+        {% if day_part == "night" %}
+          {% if local_hour < 5 %}
+            غدًا
+          {% endif %}
+        {% else %}
+          غدًا
+        {% endif %}
+      {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro render_continues(next_change, change) %}
+  {% if change == next_change %}
+    سيستمر
+    {% chooseline %}
+       أقل من ساعة
+       ليس أكثر من ساعة
+    {% endchooseline %}
+  {% else %}
+    ستدوم قرابة {{ render_hours(next_change - change, case='gen') }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_change(context, type, state, skip_tomorrow_part) %}
+  {% if context.precipitation_change_hours == 0 %}
+    {% if context.precipitation_current == 0 %}
+      {{ render_case(type=type, case='no_rain', state=state) }}
+    {% else %}
+      {% if context.precipitation_next_change_hours is defined and context.precipitation_next_change_hours is not none %}
+        {% if context.expected_change == "prec_ends" %}
+          {{ render_precipitation_type(type, case='nom') }} لن تتوقف طوال 24 ساعة القادمة
+        {% else %}
+          {% set prec_type_asked = context.prec_type_asked %}
+          {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') }} إنه يهطل ولن يتوقف في غضون 24 ساعة القادمة
+          {% endset %}
+          {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            الآن لا ولكنه يهطل
+            {{ render_precipitation_type(type, case='nom') }}.
+            لن يتوقف في غضون 24 ساعة القادمة
+          {% endset %}
+          {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') }} لن تتوقف طوال 24 ساعة القادمة
+          {% endset %}
+          {% if context.expected_change == "prec_starts" %}
+            {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+          {% else %}
+            {{ same_types_case }}
+          {% endif %}
+        {% endif %}
+      {% else %}
+        {{ render_case(type=type, case='only_rain', state=state) }}
+      {% endif %}
+    {% endif %}
+  {% else %}
+    {% if context.precipitation_current == 0 %}
+      {{ render_precipitation_type(type, case='nom') }} سيبدأ خلال {{ render_hours(context.precipitation_change_hours) }}
+      {% if context.precipitation_next_change_hours is defined and context.precipitation_next_change_hours is not none %}
+        {% if context.precipitation_next_change_hours == 0 %}
+          ولن يتوقف طوال اليوم
+        {% elif context.precipitation_next_change_hours <= 5 %}
+          و {{ render_continues(context.precipitation_next_change_hours, context.precipitation_change_hours) }}
+        {% else %}
+          ويتوقف
+          {% if not skip_tomorrow_part %}
+            {{ render_tomorrow(context.precipitation_next_day_part, context.precipitation_next_change_hours, context.date, context.tz, context.mock_timestamp, next=True) }}
+          {% endif %}
+          {{ render_day_part(context.precipitation_next_day_part) }}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      {% if context.precipitation_next_change_hours is defined and context.precipitation_next_change_hours is not none %}
+        {% if context.expected_change == "prec_ends" %}
+          {{ render_precipitation_type(type, case='nom') }} سيتوقف خلال {{ render_hours(context.precipitation_change_hours) }}
+        {% else %}
+          {% set prec_type_asked = context.prec_type_asked %}
+          {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') }} إنه يهطل.
+            {{ render_continues(context.precipitation_change_hours, 0) | capitalize_first }}
+          {% endset %}
+          {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            الآن لا ولكنه يهطل
+            {{ render_precipitation_type(type, case='nom') }}.
+            {{ render_continues(context.precipitation_change_hours, 0) | capitalize_first }}
+          {% endset %}
+          {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') }}
+            {{ render_continues(context.precipitation_change_hours, 0) }}
+          {% endset %}
+          {% if context.expected_change == "prec_starts" %}
+            {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+          {% else %}
+            {{ same_types_case }}
+          {% endif %}
+        {% endif %}
+      {% else %}
+        {{ render_precipitation_type(type, case='nom') }} سيتوقف خلال {{ render_hours(context.precipitation_change_hours) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_change_day_part(context, type, state, skip_tomorrow_part) %}
+
+  {% if context.precipitation_current == 0 %}
+    {% if context.precipitation_next_change_hours is defined and context.precipitation_next_change_hours is not none %}
+      {{ render_precipitation_type(type, case='nom') }} سيبدأ
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(context.precipitation_day_part, context.precipitation_change_hours, context.date, context.tz, context.mock_timestamp) }}
+      {% endif %}
+      {{ render_day_part(context.precipitation_day_part) }}
+      {% if context.precipitation_next_change_hours == 0 %}
+          ولن يتوقف طوال اليوم
+      {% elif context.precipitation_day_part == context.precipitation_next_day_part %}
+          وسيدوم حوالي {{ render_hours(context.precipitation_next_change_hours - context.precipitation_change_hours, case='gen') }}
+      {% else %}
+        ويتوقف
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(context.precipitation_next_day_part, context.precipitation_next_change_hours, context.date, context.tz, context.mock_timestamp, next=True) }}
+        {% endif %}
+        {{ render_day_part(context.precipitation_next_day_part) }}
+      {% endif %}
+    {% else %}
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(context.precipitation_day_part, context.precipitation_change_hours, context.date, context.tz, context.mock_timestamp) }}
+      {% endif %}
+      {{ render_day_part(context.precipitation_day_part) }}
+      ربما {{ render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% else %}
+    {% if context.precipitation_next_change_hours is defined and context.precipitation_next_change_hours is not none %}
+      {% if context.expected_change == "prec_ends" %}
+        {{ render_precipitation_type(type, case='nom') }} سينتهي
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(context.precipitation_day_part, context.precipitation_change_hours, context.date, context.tz, context.mock_timestamp) }}
+        {% endif %}
+        {{ render_day_part(context.precipitation_day_part) }}
+      {% else %}
+        {% set prec_type_asked = context.prec_type_asked %}
+        {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') }} إنه يهطل. سينتهي
+        {% endset %}
+        {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            الآن لا ولكنه يهطل
+            {{ render_precipitation_type(type, case='nom') }}.
+            سيتوقف
+        {% endset %}
+        {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') }} سينتهي
+        {% endset %}
+        {% if context.expected_change == "prec_starts" %}
+          {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+        {% else %}
+          {{ same_types_case }}
+        {% endif %}
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(context.precipitation_day_part, context.precipitation_change_hours, context.date, context.tz, context.mock_timestamp) }}
+        {% endif %}
+        {{ render_day_part(context.precipitation_day_part) }}
+      {% endif %}
+    {% else %}
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(context.precipitation_day_part, context.precipitation_change_hours, context.date, context.tz, context.mock_timestamp) }}
+      {% endif %}
+      {{ render_day_part(context.precipitation_day_part) }}
+      {{ render_precipitation_type(type, case='nom') }} سينتهي
+    {% endif %}
+  {% endif %}
+
+{% endmacro %}
+
+{% macro render_precipitation_for_day_part(context, type, state) %}
+  {{ render_day_part(context.day_part) }}
+
+  {% if context.precipitation_current == 0 %}
+    {% if context.precipitation_for_day_part == 0 %}
+      دون {{ render_precipitation_type(type, case='gen') }}
+    {% else %}
+      ربما {{ render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% else %}
+    {% if context.precipitation_for_day_part == 0 %}
+      {{ render_precipitation_type(type, case='nom') }} سينتهي
+    {% else %}
+      ربما {{ render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_debug(context) %}
+  day_part: {{ context.day_part }}
+  weather_nowcast_alert: {{ context.weather_nowcast_alert }}
+  precipitation_for_day_part: {{ context.precipitation_for_day_part }}
+  precipitation_change_hours: {{ context.precipitation_change_hours }}
+  precipitation_next_day_part: {{ context.precipitation_next_day_part }}
+  precipitation_next_change_hours: {{ context.precipitation_next_change_hours }}
+  precipitation_current: {{ context.precipitation_current }}
+  day_part: {{ context.day_part }}
+  debug: {{ context.precipitation_debug }}
+{% endmacro %}
+
+{% macro render_nowcast_alert(weather_nowcast_alert, precipitation_current, precipitation_type, expected_change, prec_type_asked) %}
+  {% if expected_change == "prec_starts" and precipitation_current == 1 %}
+    {% set same_types_case %}
+        لن تصدق — إنه يهطل. حسب معلوماتي، {{ weather_nowcast_alert | decapitalize_first }}
+    {% endset %}
+    {% set different_types_case %}
+        {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+        الآن لا ولكنه يهطل
+        {{ render_precipitation_type(precipitation_type, case='nom') }}.
+        حسب معلوماتي، {{ weather_nowcast_alert | decapitalize_first }}
+    {% endset %}
+    {% set default_case %}
+        {{ weather_nowcast_alert }}
+    {% endset %}
+    {{ __render_already_going(precipitation_type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+  {% elif expected_change == "prec_starts" and precipitation_current == 0 %}
+    {{ weather_nowcast_alert }}
+  {% elif expected_change == "prec_ends" and precipitation_current == 1 %}
+    {{ weather_nowcast_alert }}
+  {% elif expected_change == "prec_ends" and precipitation_current == 0 %}
+    لكنه لا يهطل الآن. حسب معلوماتي، {{ weather_nowcast_alert | decapitalize_first }}
+  {% else %}
+    {{ weather_nowcast_alert }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation(context, skip_tomorrow_part=false) %}
+  {% if context.precipitation_type is defined and context.precipitation_type %}
+     {% set type = context.precipitation_type %}
+  {% else %}
+     {% set type = 0 %}
+  {% endif %}
+
+  {% if context.set_number is defined and context.set_number %}
+    {% set state = context.set_number %}
+  {% else %}
+    {% set state = 1 %}
+  {% endif %}
+
+  {% if context.prec_type_asked is defined and context.prec_type_asked %}
+    {% set asked_type = context.prec_type_asked %}
+  {% else %}
+    {% set asked_type = 0 %}
+  {% endif %}
+
+  {% if context.weather_nowcast_alert is defined and context.weather_nowcast_alert is not none %}
+    {{ render_nowcast_alert(context.weather_nowcast_alert, context.precipitation_current, type, context.expected_change, asked_type) }}
+  {% elif context.precipitation_for_day_part is defined and context.precipitation_for_day_part is not none %}
+    {% if context.day_part is defined and context.day_part is not none %}
+      {{ render_precipitation_for_day_part(context, type=type, state=state) }}
+    {% else %}
+      {% if context.precipitation_debug is defined and context.precipitation_debug is not none %}
+        {{ render_error("لا أعرف جزءً من اليوم") }}
+      {% else %}
+        {{ render_error() }}
+      {% endif %}
+    {% endif %}
+  {% elif (context.precipitation_change_hours is not defined or context.precipitation_change_hours is none)
+        or (context.precipitation_current is not defined or context.precipitation_current is none) %}
+    {% if context.precipitation_debug is defined and context.precipitation_debug is not none %}
+      {{ render_error("لا أعرف سيتغير الطقس لساعة. change_hours = " + (context.precipitation_change_hours | string) + ". current = " + (context.precipitation_current | string)) }}
+    {% else %}
+      {{ render_error() }}
+    {% endif %}
+  {% else %}
+    {% if context.precipitation_change_hours <= 5 %}
+      {{ render_precipitation_change(context, type=type, state=state, skip_tomorrow_part=skip_tomorrow_part) }}
+    {% elif context.precipitation_day_part is defined and context.precipitation_day_part %}
+      {{ render_precipitation_change_day_part(context, type=type, state=state, skip_tomorrow_part=skip_tomorrow_part) }}
+    {% else %}
+      {% if context.precipitation_debug is defined and context.precipitation_debug is not none %}
+        {{ render_error("لا أعرف سيكون هناك تغيير في الطقس بقية اليوم.") }}
+      {% else %}
+        {{ render_error() }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if context.precipitation_debug is defined and context.precipitation_debug is not none %}
+    . {{ render_debug(context) }}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro geo_changed_attention(context, weather) %}
+  {% set original=context.original_forecast_location | city_prepcase %}
+  {% set new=context.forecast_location | city_prepcase %}
+
+  {% chooseitem %}
+    أعتقد أنه تحت مسمى الطقس {{ original }} كنت تقصد الطقس {{ new }}.
+    في هذه الحالة، {{ weather | decapitalize_first }} آمل أن يكون هذا قد ساعدك.
+  {% or %}
+    ممكن، إذا كنت تسأل عن حالة الطقس {{ original }}، هل يهمك معرفة حالة الطقس {{ new }}.
+    {{ weather | capitalize_first }}
+  {% or %}
+    الطقس {{ original }}... أعتقد أنك تقصد حالة الطقس {{ new }}.
+    {{ weather | capitalize_first }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro geo_changed_attention_pressure(context, pressure) %}
+  {% set original=context.original_forecast_location | city_prepcase %}
+  {% set new=context.forecast_location | city_prepcase %}
+
+  {% chooseitem %}
+    أعتقد أنه تحت مسمى الضغط {{ original }} أنك تقصد الضغط {{ new }}.
+    في هذه الحالة، {{ pressure | decapitalize_first }} آمل أن يكون هذا قد ساعدك.
+  {% or %}
+    ممكن، إذا كنت تسأل عن الضغط {{ original }}، هل يهمك معرفة الضغط {{ new }}.
+    {{ pressure | capitalize_first }}
+  {% or %}
+    الضغط {{ original }}... أعتقد أنك تقصد الضغط {{ new }}.
+    {{ pressure | capitalize_first }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro geo_changed_attention_wind(context, wind) %}
+  {% set original=context.original_forecast_location | city_prepcase %}
+  {% set new=context.forecast_location | city_prepcase %}
+
+  {% chooseitem %}
+    أعتقد أنه تحت مسمى الرياح {{ original }} أنك تقصد الرياح {{ new }}.
+    في هذه الحالة، {{ wind | decapitalize_first }} آمل أن يكون هذا قد ساعدك.
+  {% or %}
+    ممكن، إذا كنت تسأل عن حالة الرياح {{ original }}، هل يهمك معرفة حالة الرياح {{ new }}.
+    {{ wind | capitalize_first }}
+  {% or %}
+    الرياح {{ original }}... أعتقد أنك تقصد حالة الرياح {{ new }}.
+    {{ wind | capitalize_first }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro background_sound(filename) %}
+  <speaker background="{{filename}}">
+{% endmacro %}

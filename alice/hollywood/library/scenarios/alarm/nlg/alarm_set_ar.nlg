@@ -1,0 +1,64 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ar.nlg" import render_error, render_alarm_time, elari_watch_not_supported, render_alarm_list %}
+
+{% macro alarm_set_render_result() %}
+  {% if context.attentions.get('alarm__need_confirmation') %}
+  {% elif context.attentions.get('alarm__already_set') %}
+    تم ضبط المنبه {{ render_alarm_time(context.date, context.data.time) }}.
+  {% elif context.attentions.get('alarm__snooze') %}
+    {% if context.date %}
+      حسناً أجلت المنبه {{ render_alarm_time(context.date, context.data.time) }}.
+    {% else %}
+      {% chooseline %}
+        حسناً. المنبه التالي —
+        أوكي. سأوقظك
+        حسناً. المنبه التالي —
+      {% endchooseline %}
+      {{ render_alarm_time(context.date, context.data.time, time_preposition='في') }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      منبهك: {{ render_alarm_time(context.date, context.data.time) }}. تم ضبطه!
+    {% or %}
+      لا مشكلة. سأضبط المنبه {{ render_alarm_time(context.date, context.data.time) }}.
+    {% or %}
+      تم. المنبه {{ render_alarm_time(context.date, context.data.time) }}. ارتح.
+    {% or %}
+      عُلِم! ضبطت المنبه {{ render_alarm_time(context.date, context.data.time) }}.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ alarm_set_render_result() }}
+{% endphrase %}
+
+{% phrase ask__possible_alarms %}
+  أي هذه المنبهات تريدني أن أعين؟
+  \n{% vc %}-{% evc %}
+  {{ render_alarm_list(context.data.possible_alarms) }}
+{% endphrase %}
+
+{% phrase ask__time %}
+  على أي وقت أعين المنبه؟
+{% endphrase %}
+
+{% phrase ask__correction_day_part %}
+  {{ context.data.day_part_name | capitalize_first }} - في أي وقت؟
+{% endphrase %}
+
+{% phrase setting_failed %}
+  أُعذرني. لم أستطع تعيين المنبه.
+{% endphrase %}
+
+{% phrase bad_arguments %}
+  أستطيع ضبط المنبه لل24 ساعة القادمة. كذلك أستطيع ضبط تكرار المنبه على الأيام المختارة من الأسبوع.
+{% endphrase %}
+
+{% phrase too_many_alarms %}
+  تم ضبط 25 منبهاً. لا أستطيع أكثر من ذلك.
+{% endphrase %}
+
+{% phrase not_supported %}
+    أنا لا زلت لا أستطيع ذلك.
+{% endphrase %}

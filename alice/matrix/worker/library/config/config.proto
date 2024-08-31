@@ -1,0 +1,46 @@
+package NMatrix.NWorker;
+
+import "alice/matrix/library/config/config.proto";
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+message TMatrixNotificatorClientSettings {
+    optional string Host = 1 [(NProtoConfig.Help) = "Matrix notificator's http address."];
+    optional uint32 Port = 2 [(NProtoConfig.Help) = "Matrix notificator's http port."];
+
+    optional string SocketTimeout  = 3 [(NProtoConfig.Help) = "Socket timeout.", default = "1.5s"];
+    optional string ConnectTimeout = 4 [(NProtoConfig.Help) = "Connect timeout.", default = "500ms"];
+}
+
+message TWorkerLoopSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+
+    optional bool ManualMode = 2 [(NProtoConfig.Help) = "Do not start loop, sync only by request (usefull for tests and debug).", default = false];
+    optional uint64 MainLoopThreads = 3 [(NProtoConfig.Help) = "Main loop threads.", default = 3];
+
+    optional string DefaultMinLoopInterval = 4 [(NProtoConfig.Help) = "Worker min loop interval.", default = "3s"];
+    optional string DefaultMaxLoopInterval = 5 [(NProtoConfig.Help) = "Worker max loop interval.", default = "5s"];
+    optional string MinLoopIntervalForSkippedSync = 6 [(NProtoConfig.Help) = "Worker min loop interval if sync was skipped (there are no free shard to sync for example).", default = "3s"];
+    optional string MaxLoopIntervalForSkippedSync = 7 [(NProtoConfig.Help) = "Worker max loop interval if sync was skipped (there are no free shard to sync for example).", default = "5s"];
+
+    optional uint64 SelectLimit = 8 [(NProtoConfig.Help) = "Select from DB actions limit.", default = 150];
+    optional string PerActionTimeout = 9 [(NProtoConfig.Help) = "Timeout to process one action.", default = "25s"];
+    optional string MinEnsureShardLockLeadingAndDoHeartbeatPeriod = 10 [(NProtoConfig.Help) = "Min ensure shard lock leading and do heartbeat period.", default = "5s"];
+
+    optional TMatrixNotificatorClientSettings MatrixNotificatorClient = 11 [(NProtoConfig.Help) = "Matrix notificator client settings."];
+}
+
+message TWorkerServiceSettings {
+    optional TWorkerLoopSettings WorkerLoop = 1 [(NProtoConfig.Help) = "Worker loop options."];
+}
+
+message TApplicationSettings {
+    required TServerSettings Server = 1 [(NProtoConfig.Help) = "Server options."];
+    optional TLoggerSettings Log = 2 [(NProtoConfig.Help) = "Logger options."];
+    optional TRtLogSettings RtLog = 3 [(NProtoConfig.Help) = "RtLog options."];
+    required TYDBClientCommonSettings YDBClientCommon = 4 [(NProtoConfig.Help) = "YDB client common options."];
+    optional bool LockAllMemory = 5 [(NProtoConfig.Help) = "Lock all memory - current and future.", default = true];
+
+
+    optional TWorkerServiceSettings WorkerService = 6 [(NProtoConfig.Help) = "Worker loop options."];
+}

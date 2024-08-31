@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+    <Appenders>
+
+        <RollingRandomAccessFile name="BillingFileLogger" fileName="/logs/billing.log"
+                                 filePattern="/logs/billing.%i.log" immediateFlush="true">
+            <JsonLayout compact="true" eventEol="true">
+                <KeyValuePair key="timestamp" value="$${date:yyyy-MM-dd'T'HH:mm:ssZ}"/>
+                <KeyValuePair key="uid" value="$${ctx:uid:-NA}"/>
+                <KeyValuePair key="requestId" value="$${ctx:requestId:-NA}"/>
+            </JsonLayout>
+
+            <DefaultRolloverStrategy max="2"/>
+
+            <Policies>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+
+        </RollingRandomAccessFile>
+
+        <RollingRandomAccessFile name="BillingCallsFileLogger" fileName="/logs/billing-calls.log"
+                                 filePattern="/logs/billing-calls.%i.log" immediateFlush="true">
+            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" stacktraceAsString="true">
+                <KeyValuePair key="timestamp" value="$${date:yyyy-MM-dd'T'HH:mm:ssZ}"/>
+                <KeyValuePair key="uid" value="$${ctx:uid:-NA}"/>
+                <KeyValuePair key="requestId" value="$${ctx:requestId:-NA}"/>
+                <KeyValuePair key="request_type" value="$${ctx:request_type}"/>
+            </JsonLayout>
+
+            <DefaultRolloverStrategy max="2"/>
+
+            <Policies>
+                <SizeBasedTriggeringPolicy size="300MB"/>
+            </Policies>
+
+        </RollingRandomAccessFile>
+
+    </Appenders>
+
+    <Loggers>
+        <Logger name="REQUEST_LOGGER" level="trace" additivity="false">
+            <AppenderRef ref="BillingCallsFileLogger"/>
+        </Logger>
+        <AsyncLogger name="ru.yandex.quasar.billing" level="info" additivity="false">
+            <AppenderRef ref="BillingFileLogger"/>
+        </AsyncLogger>
+        <AsyncRoot level="info">
+            <AppenderRef ref="BillingFileLogger"/>
+        </AsyncRoot>
+    </Loggers>
+
+</Configuration>

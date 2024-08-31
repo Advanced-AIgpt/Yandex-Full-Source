@@ -1,0 +1,84 @@
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_authorization_from_music_play with context %}
+
+{# Старое винсовое NLG https://a.yandex-team.ru/arc/trunk/arcadia/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/intents/radio/radio_play.nlg #}
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("радио" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    радио "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_long_radio_intro(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    Включаю {{ rendered_radio_title }}.
+  {% or %}
+    Окей! {{ rendered_radio_title | capitalize_first }}.
+  {% or %}
+    Хорошо! {{ rendered_radio_title | capitalize_first }}.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_unconfigured_station() %}
+  {% chooseline %}
+    Я ещё не настроилась на эту волну.
+    Я ещё не поймала эту волну.
+    Я ещё не настроилась на эту радиостанцию.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_launch_recommended(radio_title) %}
+  {% chooseline %}
+    Могу предложить вам
+    Но могу включить вам
+    Зато могу включить вам
+  {% endchooseline %}
+  {{ render_radio_title(radio_title) }}.
+{% endmacro %}
+
+{% macro render_unknown_station() %}
+    Простите, не знаю такой радиостанции.
+{% endmacro %}
+
+{% macro render_unsupported_user_region() %}
+  К сожалению, для вашего региона не найдено ни одной доступной радиостанции.
+{% endmacro %}
+
+{% phrase render_result %}
+  {% set music_answer = form.answer or context.slots.answer or context.answer %}
+  {% set active = music_answer|get_item('active', False) and not context.attentions.get('fm_station_is_inactive') %}
+  {% set available = music_answer|get_item('available', False) and not context.attentions.get('fm_station_is_unavailable') %}
+  {% set recognized = not context.attentions.get('fm_station_is_unrecognized') %}
+  {% set radio_title = music_answer|get_item('title', 'радио') %}
+  {% set launch_recommended = context.attentions.get('station_not_found_launch_recommended') %}
+
+  {% if context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% else %}
+    {% if context.attentions.get('suggest_authorization_from_music_play') %}
+      {% text %}
+        {{ render_authorization_from_music_play() }}
+        \n
+      {% endtext %}
+    {% endif %}
+    
+    {% if not recognized %}
+      {{ render_unknown_station() }}
+    {% elif not active %}
+      {{ render_unconfigured_station() }}
+    {% elif not available %}
+      Эта станция временно недоступна.
+      {% chooseline %}
+        Такие дела.
+        Попробуйте позже.
+      {% endchooseline %}
+    {% else %}
+      {{ render_long_radio_intro(radio_title) }}
+    {% endif %}
+    {% if launch_recommended and not (active and available and recognized) %}
+      {{ render_launch_recommended(radio_title) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

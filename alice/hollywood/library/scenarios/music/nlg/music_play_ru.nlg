@@ -1,0 +1,672 @@
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import inability %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_ya_plus_required, render_artists, track_keyword %}
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ru.nlg" import render_fairytale_answer, render_poem_answer, render_audiobook_answer, render_ambient_sound_answer,
+                                                                                 render_fairytale_answer_beginning, render_poem_answer_beginning, render_audiobook_answer_beginning, render_ambient_sound_answer_beginning with context %}
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ru.nlg" import render_podcast_answer, render_podcast_answer_beginning with context %}
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/cards__ru.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_before_redirect_to_fm_radio, render_music_answer, render_generative_answer, render_music_tags_default, render_music_tags,
+    render_simple_music_answer, launch, own_song_joke, ya_plus, render_authorization_from_music_play, render_suggest_yaplus, render_suggest_station_promo, alice_shots_stub with context %}
+
+{% macro init(ns) %}
+  {% set ns.explicit_attention = context.attentions.get('explicit_content') %}
+  {% set ns.music_filters_attention = context.attentions.get('music_filters') %}
+  {% set ns.search_result_with_filters = ns.music_filters_attention and ns.music_filters_attention.data.code == 'search_result_with_filters' %}
+  {% set ns.uncertainty_preambula_needed = ns.music_filters_attention and not ns.search_result_with_filters %}
+{% endmacro %}
+
+{% phrase render_inability %}
+  {{ inability() }}
+{% endphrase %}
+
+{% phrase render_unauthorized %}
+  Вы не авторизовались.
+{% endphrase %}
+
+{% phrase render_fallback_to_music_vertical %}
+  {% chooseline %}
+    Именно этой музыки сейчас нет, но попробуйте выбрать что-то из этого послушать.
+    Хороший трек, но, к сожалению, недоступен. Давайте послушаем что-нибудь ещё.
+  {% endchooseline %}
+{% endphrase %}
+
+{% macro render_additional_traits(with_turn_on=False) %}
+  {% if not context.no_shuffle_repeat_in_nlg %}
+    {% set type = (form.answer or context.slots.answer)|get_item('type') %}
+    {% set order_slot = form.order or context.slots.order %}
+    {% set repeat_slot = form.repeat or context.slots.repeat %}
+    {% if order_slot == 'shuffle' and type != 'track' %}
+      вперемешку
+    {% endif %}
+    {% if repeat_slot == 'repeat' and with_turn_on %}
+      на повтор
+    {% elif repeat_slot == 'repeat' %}
+      на повторе
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_turn_on() %}
+  {% if context.attentions.get('used_saved_progress') %}
+    Продолжаю
+  {% else %}
+    Включаю
+  {% endif %}
+  {{ render_additional_traits(True) }}
+{% endmacro %}
+
+{% macro render_personal_playlist_nlg_list() %}
+{% set traits = render_additional_traits().strip() %}
+{% set traits_with_turn_on = render_additional_traits(True).strip() %}
+  Послушаем ваше любимое {{ traits }}.
+  Включаю ваши любимые песни {{ traits_with_turn_on }}.
+  Окей. Плейлист с вашей любимой музыкой {{ traits }}.
+  {% if not traits %}
+    Люблю песни, которые вы любите.
+    Окей. Песни, которые вам понравились.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_personal_playlist_nlg() %}
+  {% chooseline %}
+    {{ render_personal_playlist_nlg_list() }}
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_payment_required() %}
+  {% if context.attentions.get('payment-required') %}
+    {% if context.attentions.get('plus_push') %}
+      Чтобы слушать музыку, вам нужна подписка {{ ya_plus() }}.
+      Ссылка для покупки придёт на ваш смартфон — я уже её отправила.
+    {% else %}
+      Чтобы слушать музыку, необходимо купить подписку на {{ ya_plus() }}.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_explicit_filtered(ns) %}
+  {% if ns.explicit_attention and ns.explicit_attention.data.code == 'explicit-content-filtered' %}
+    {% chooseline %}
+      Если что, у вас включён детский режим.
+      У вас включён детский режим поиска.
+      Вот что нашлось в детском режиме.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_preambula(ns) %}
+  {% if ns.uncertainty_preambula_needed %}
+    {% chooseline %}
+      Возможно, вам подойдет вот это.
+      Не совсем уверена, но
+      Скорее всего это вам подойдет.
+      Надеюсь, это подойдёт.
+      Вот что нашлось.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_filtered_stream(radio_seeds) %}
+  {% set streams = {
+    "[\'user:onyourwave\']": 'поток "Моя волна"',
+    "[\'personal:recent-tracks\']": 'поток "Новое"',
+    "[\'personal:never-heard\']": 'поток "Незнакомое"',
+    "[\'mood:discovery\']": 'поток "Незнакомое"',
+    "[\'personal:missed-likes\']": 'поток "Забытое"',
+    "[\'personal:collection\']": 'поток "Любимое"',
+    "[\'personal:hits\']": 'поток "Популярное"',
+    "{\'user\': [\'onyourwave\']}": 'поток "Моя волна"',
+    "{\'personal\': [\'recent-tracks\']}": 'поток "Новое"',
+    "{\'personal\': [\'never-heard\']}": 'поток "Незнакомое"',
+    "{\'mood\': [\'discovery\']}": 'поток "Незнакомое"',
+    "{\'personal\': [\'missed-likes\']}": 'поток "Забытое"',
+    "{\'personal\': [\'collection\']}": 'поток "Любимое"',
+    "{\'personal\': [\'hits\']}": 'поток "Популярное"'
+  } %}
+  {% set stream = radio_seeds|string %}
+  {% if stream in streams %}
+    Включаю {{ streams[stream] }}.
+  {% else %}
+    Включаю.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_explicit_may_be_contained(ns) %}
+  {% if ns.explicit_attention and ns.explicit_attention.data.code == 'may-contain-explicit-content' %}
+    .
+    {% chooseline %}
+      Осторожно! Детям лучше этого не слышать.
+      Внимание! Это не для детских ушей.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_dance_phrase() %}
+  {% set activity_slot = form.activity or context.slots.activity %}
+  {% set playlist_slot = form.playlist or context.slots.playlist %}
+  {% if activity_slot == 'party' or playlist_slot and 'вечеринк' in playlist_slot %}
+    .
+    {% maybe 0.25 %}
+      Потанцуем?
+    {% endmaybe %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_yamusic_audiobranding() %}
+  {% chooseitem %}
+    {% text %}
+      Вот что я нашла для вас на Яндекс.Музыке. Надеюсь, понравится.
+    {% endtext %}
+    {% voice %}
+      Вот что я нашла для вас на Яндекс Музыке. Надеюсь, понравится.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      На Яндекс.Музыке много всего, но я выбрала особенный трек.
+    {% endtext %}
+    {% voice %}
+      На Яндекс Музыке много всего, но я выбрала особенный трек.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      Минутку, залезу на Яндекс.Музыку. Вот, послушайте это.
+    {% endtext %}
+    {% voice %}
+      Минутку, залезу на Яндекс Музыку. Вот, послушайте это.
+    {% endvoice %}
+  {% or %}
+    {% text %}
+      Секунду, выберу для вас что-нибудь на Яндекс.Музыке. Скажем, это.
+    {% endtext %}
+    {% voice %}
+      Секунду, выберу для вас что-нибудь на Яндекс Музыке. Скажем, это.
+    {% endvoice %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{# It is used in combination with div cards #}
+{% phrase music_start %}
+{% set answer_slot = form.answer or context.slots.answer %}
+{% set type = answer_slot|get_item('type') %}
+{% set is_album_or_track = type == 'album' or type == 'track' %}
+{% set first_track = answer_slot|get_item('first_track') %}
+{% set genre = answer_slot|get_item('album')|get_item('genre') or answer_slot|get_item('genre') or first_track|get_item('album')|get_item('genre') %}
+{% set subtype = answer_slot|get_item('subtype') %}
+  {% text %}
+    {% if context.attentions.get('unauthorized') and context.attentions.get('suggest_authorization_from_music_play') %}
+      {{ render_authorization_from_music_play() }}
+    {% elif context.attentions.get('suggest_yaplus') %}
+      {{ render_suggest_yaplus() }}
+    {% elif context.attentions.get('station_promo') %}
+      {{ render_suggest_station_promo() }}
+    {% elif (is_album_or_track and genre == 'fairytales') or (answer_slot and context.is_fairy_tale_subscenario and context.is_ondemand_fairytale) %}
+      {{ render_fairytale_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and genre == 'poemsforchildren' %}
+      {{ render_poem_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and subtype == 'audiobook' %}
+      {{ render_audiobook_answer_beginning(answer_slot) }}
+    {% elif is_album_or_track and (subtype == 'podcast' or subtype == 'podcast-episode') %}
+      {{ render_podcast_answer_beginning(answer_slot) }}
+    {% elif genre == 'naturesounds' %}
+      {{ render_ambient_sound_answer_beginning(answer_slot) }}
+    {% else %}
+      {{ render_turn_on() }}
+      {% if type == 'album' %}
+        альбом
+      {% elif type == 'playlist' %}
+        плейлист
+      {% elif type == 'artist' %}
+        исполнителя
+      {% endif %}
+    {% endif %}
+  {% endtext %}
+{% endphrase %}
+
+{% phrase render_thin_client_subscription_required %}
+  {{ render_ya_plus_required() }}
+{% endphrase %}
+
+
+{% phrase render_result %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {% set type = answer_slot|get_item('type') %}
+  {% set is_album_or_track = type == 'album' or type == 'track' %}
+  {% set first_track = answer_slot|get_item('first_track') %}
+  {% set genre = answer_slot|get_item('album')|get_item('genre') or answer_slot|get_item('genre') or first_track|get_item('album')|get_item('genre') %}
+  {% set subtype = answer_slot|get_item('subtype') %}
+  {% set ns = namespace() %}
+  {% do init(ns) %}
+
+  {% if context.attentions.get('launch_youtube_app') %}
+    Секунду.
+  {% elif context.attentions.get('unauthorized') and not context.attentions.get('suggest_authorization_from_music_play') %}
+    Вы не авторизовались.
+  {% elif context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% elif context.attentions.get('alice_shots_intro') %}
+    {{ alice_shots_stub() }}
+  {% elif context.attentions.get('multiroom_not_supported') %}
+    {% chooseline %}
+        Я ещё не научилась играть музыку на разных устройствах одновременно
+    {% endchooseline %}
+  {% elif context.attentions.get('multiroom_rooms_not_supported') %}
+    {% chooseline %}
+        Я еще не научилась включать музыку в разных комнатах, но вы можете попросить меня включить музыку везде
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical') %}
+    {% chooseline %}
+      Именно этой музыки сейчас нет, но попробуйте выбрать что-то из этого послушать.
+      Хороший трек, но, к сожалению, недоступен. Давайте послушаем что-нибудь ещё.
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical_nothing_found') %}
+    {% chooseline %}
+      Именно этой музыки сейчас нет, но попробуйте выбрать что-то из этого послушать.
+      Хорошая музыка, но, к сожалению, недоступна. Давайте послушаем что-нибудь ещё.
+    {% endchooseline %}
+  {% elif context.attentions.get('fallback_to_music_vertical_general') %}
+    {% if context.attentions.get('suggest_authorization_from_music_play') %}
+      {% text %}
+        {{ render_authorization_from_music_play() }}
+        \n
+      {% endtext %}
+    {% endif %}
+    {% chooseline %}
+      Попробуйте выбрать что-то из этого послушать.
+      Давайте что-нибудь послушаем.
+    {% endchooseline %}
+  {% elif context.attentions.get('simplistic_turn_on_message') %}
+    Включаю.
+  {% elif form.personality == 'is_personal' or context.slots.personality == 'is_personal' %}
+    {{ render_personal_playlist_nlg() }}
+  {% elif (is_album_or_track and genre == 'fairytales') or (answer_slot and context.is_fairy_tale_subscenario and context.is_ondemand_fairytale) %}
+    {{ render_fairytale_answer(req_info, answer_slot) }}
+  {% elif is_album_or_track and genre == 'poemsforchildren' %}
+    {{ render_poem_answer(answer_slot) }} .
+  {% elif is_album_or_track and subtype == 'audiobook' %}
+    {{ render_audiobook_answer(answer_slot) }}
+  {% elif is_album_or_track and (subtype == 'podcast' or subtype == 'podcast-episode') %}
+    {{ render_podcast_answer(answer_slot) }}
+  {% elif genre == 'naturesounds' %}
+    {{ render_ambient_sound_answer(answer_slot) }} .
+  {% elif context.attentions.get('morning_show') %}
+    {# The first track in morning show already contains a greeting, so we don't need any NLG at all #}
+  {% elif context.attentions.get('is_general_playlist') and not context.attentions.get('radio_filtered_stream') %}
+    {% if context.attentions.get('yamusic_audiobranding') and randuniform(0, 1) < context.attentions.get('yamusic_audiobranding').data %}
+      {{ render_yamusic_audiobranding() }}
+    {% else %}
+      Включаю.
+    {% endif %}
+  {% elif context.attentions.get('unverified_playlist') %}
+    {% chooseline %}
+      Вот что я нашла среди плейлистов других пользователей. Включаю "{{ answer_slot.title }}"
+      Нашла что-то подходящее среди плейлистов других пользователей. Включаю "{{ answer_slot.title }}"
+    {% endchooseline %}
+    {{ render_additional_traits().strip() }}
+    .
+  {% else %}
+    {% set filters_answer = answer_slot.type == 'filters' and 'need_similar' not in context.attentions %}
+    {% set genre_filters_count = filters_answer and (answer_slot.filters.genre|length) %}
+    {% set mood_filters_count = filters_answer and (answer_slot.filters.mood|length) %}
+    {% set activity_filters_count = filters_answer and (answer_slot.filters.activity|length) %}
+    {% set epoch_filters_count = filters_answer and (answer_slot.filters.epoch|length) %}
+    {% set music_filters_count = genre_filters_count + mood_filters_count + activity_filters_count + epoch_filters_count %}
+    {% set filter = "" if not music_filters_count else 'genre' if genre_filters_count else 'mood' if mood_filters_count else 'activity' if activity_filters_count else 'epoch' %} {# if epoch_filters_count #}
+    {% set tag = "" if not filter else answer_slot.filters.get(filter)[0] | replace('-', '_') %}
+    {% set filters_reply = req_info.experiments.get('new_music_radio_nlg') != None and music_filters_count %}
+    {% set radio_seeds = filters_answer and (answer_slot.filters.radioSeeds or answer_slot.filters) %}
+
+    {% set use_full_answer = namespace() %}
+
+    {% set special_playlist_slot = form.special_playlist or context.slots.special_playlist %}
+
+    {% if context.attentions.get('music_play_not_supported_on_device') %}
+      {% if context.is_tv_device %}
+        {% if special_playlist_slot == 'ambient_sounds_default' %}
+          {% chooseline %}
+            Простите, но я не могу включить звуки природы здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+            Упс, звуки природы на телик пока не залила. Но могу с радостью включить их в приложении или через колонку, если попросите.
+          {% endchooseline %}
+        {% elif special_playlist_slot == 'fairy_tales_default' %}
+          {% chooseline %}
+            Простите, но я не могу включить сказку здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+            Упс, сказки на телик пока не залила. Но могу с радостью рассказать их в приложении или через колонку, если попросите.
+          {% endchooseline %}
+        {% elif special_playlist_slot == 'podcasts_default' %}
+          {% chooseline %}
+            Простите, но я не могу включить подкаст здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+            Упс, подкасты на телик пока не залила. Но могу с радостью включить их в приложении или через колонку, если попросите.
+          {% endchooseline %}
+        {% else %}
+          {% chooseline %}
+            Музыку я умею включать без телевизора, а здесь могу найти подходящий клип.
+            Кажется, здесь без картинки не получится. Давайте поищем музыкальный клип.
+            Я не могу включить здесь просто музыку, попробуйте поискать подходящий клип.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        Извините, я пока не умею искать музыку.
+      {% endif %}
+    {% else %}
+      {% set full_answer %}
+        {% if context.attentions.get('radio_filtered_stream') %}
+          {{ render_filtered_stream(radio_seeds) }}
+        {% elif context.is_smart_speaker %}
+          {% if special_playlist_slot == 'origin' %}
+            {% set traits_with_turn_on = render_additional_traits(True).strip() %}
+            {% chooseline %}
+              Включаю Плейлист с Алисой {{ traits_with_turn_on }} — в нем я собрала музыку, которая вам понравится, и разбавила своими репликами - чувствуйте себя как на радио.
+              Включаю Плейлист с Алисой {{ traits_with_turn_on }} — в нем я собрала музыку, которую вы любите и добавила комментарии, чтобы было интереснее слушать.
+              Включаю Плейлист с Алисой {{ traits_with_turn_on }} — в нем я собрала музыку специально для вас и дополнила ее своими комментариями.
+            {% endchooseline %}
+          {% elif special_playlist_slot == 'ny_alice_playlist' %}
+            {{ own_song_joke() }}
+          {% elif special_playlist_slot == 'ambient_sounds_default' %}
+            Включаю звуки природы
+          {% elif special_playlist_slot == 'fairy_tales_default' or context.is_fairy_tale_subscenario %}
+            {% set use_full_answer.flag = True %}
+            {{ render_fairytale_answer(req_info, answer_slot, True) }}
+          {% elif special_playlist_slot == 'podcasts_default' %}
+            {% set use_full_answer.flag = True %}
+            {{ render_podcast_answer(answer_slot) }}
+          {% else %}
+            {% vc %}
+              {{ render_payment_required() }}
+              {{ render_explicit_filtered(ns) }}
+              {{ render_preambula(ns) }}
+            {% evc %}
+            {% if not filters_answer and not intent_name.endswith(('more','less')) and not search_result_with_filters %}
+              {% if answer_slot.type == 'generative' %}
+                {{ render_generative_answer(answer_slot) }}
+              {% else %}
+                {{ render_turn_on() }}
+                {{ render_music_answer(answer_slot, 'acc', render_album=False, shorten=True) }}
+              {% endif %}
+            {% elif filters_reply %}
+              {% set use_full_answer.flag = True %}
+              {% if music_filters_count > 1 %}
+                {{ render_music_tags_default() }}
+              {% else %}
+                {{ render_music_tags(filter, tag) }}
+              {% endif %}
+            {% elif 'first_track' in answer_slot and req_info.experiments.get('music_show_first_track') != None %}
+              {% if not ns.uncertainty_preambula_needed %}
+                {% chooseline %}
+                  Вам может понравиться
+                  Могу предложить
+                  Послушайте
+                {% endchooseline %}
+              {% else %}
+                {{ render_turn_on() }}
+              {% endif %}
+              {{ render_music_answer(answer_slot.first_track, 'acc', render_album=False, shorten=True) }}
+            {% else %}
+              {{ render_turn_on() }}
+            {% endif %}
+          {% endif %}
+          {% vc %}
+            {{ render_explicit_may_be_contained(ns) }}
+            {{ render_dance_phrase() }}
+          {% evc %}
+        {% else %}
+          {{ launch(form.action_request or context.slots.action_request or context.attentions.get('supports_music_player')) }}
+        {% endif %}
+      {% endset %}
+
+      {% if use_full_answer.flag %}
+        {{ full_answer }}
+      {% else %}
+        {% if req_info.experiments.get('tts_domain_music') != None %}
+          {{ full_answer | tts_domain('music') | only_voice }}
+        {% else %}
+          {{ full_answer | only_voice }}
+        {% endif %}
+        {% text %}
+          {% if answer_slot.type == 'generative' %}
+            {{ render_generative_answer(answer_slot) }}
+          {% else %}
+            {{ launch(form.action_request or context.slots.action_request or context.attentions.get('supports_music_player')) }}
+            {% if answer_slot.type in ['track','album','artist'] %}
+              :
+            {% elif answer_slot.type == 'filters' and 'need_similar' in context.attentions %}
+              :
+            {% endif %}
+            {{ render_music_answer(answer_slot, 'acc') }}.
+          {% endif %}
+        {% endtext %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro ask_what_short(missing_type) %}
+  {% if missing_type == 'Album' %}
+    {% tx %}Какой альбом?{% etx %}{% vc %}Какой <[ accented ]> альбом?{% evc %}
+  {% elif missing_type == 'Artist' %}
+    {% tx %}Какого исполнителя?{% etx %}{% vc %}Какого <[ accented ]> исполнителя?{% evc %}
+  {% else %}
+    {% tx %}Какую песню?{% etx %}{% vc %}Какую <[ accented ]> песню ?{% evc %}
+  {% endif %}
+{% endmacro %}
+
+{% macro ask_what_simple(missing_type) %}
+  {% if missing_type == 'Artist' %}
+    {% tx %}Кого включить?{% etx %}{% vc %}Кого <[ accented ]> включить?{% evc %}
+  {% else %}
+    {% tx %}Что включить?{% etx %}{% vc %}Что <[ accented ]> включить?{% evc %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase ask_again %}
+  {% if context.reask_count == 0 %}
+    {% chooseline %}
+      {{ ask_what_short(context.missing_type).strip() }}
+      Не поняла. {{ ask_what_short(context.missing_type).strip() }}
+      {{ ask_what_simple(context.missing_type).strip() }}
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Помедленее, я не поняла!
+      Повторите почётче, пожалуйста!
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase interactive_fairytale %}
+  {% if context.max_reasks_exceeded %}
+    Ну тогда включаю сказку сюрприз!
+  {% else %}
+    {% chooseline %}
+      Включить вам сказку "{{ context.fairytale_name }}" или поискать еще?
+      Могу предложить сказку "{{ context.fairytale_name }}" или поискать еще?
+      Как насчёт сказки "{{ context.fairytale_name }}" или поискать еще?
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase alice_show %}
+{% endphrase %}
+
+{% phrase meditation %}
+  {{ 'Включаю.' | only_text }}
+{% endphrase %}
+
+{% phrase lite_hardcoded_playlist %}
+    {%- if context.promo_type == "PT_GREEN_PERSONALITY" -%}
+        Включаю. Настройтесь на дух Нью-Йорка шестидесятых
+    {%- elif context.promo_type == "PT_PURPLE_PERSONALITY" -%}
+        Включаю. Все, что нужно, чтобы без конца качало
+    {%- elif context.promo_type == "PT_RED_PERSONALITY" -%}
+        Включаю. В эфире все самое желанное
+    {%- elif context.promo_type == "PT_BEIGE_PERSONALITY" -%}
+        Включаю. Никогда еще дома не было так хорошо
+    {%- elif context.promo_type == "PT_YELLOW_PERSONALITY" -%}
+        Включаю. Это должно добавить вам счастья
+    {%- elif context.promo_type == "PT_PINK_PERSONALITY" -%}
+        Включаю. Добро пожаловать в волшебный мир музыки
+    {%- endif -%}
+{% endphrase %}
+
+{% phrase fixlist %}
+  {{ context.fixlist.nlg }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__open_uri %}
+  Слушать на Яндекс.Музыке
+{% endphrase %}
+
+{% phrase render_suggest_uri__music__open_uri %}
+  {% set answer_slot = form.answer or context.slots.answer %}
+  {{ answer_slot.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_radio %}
+  {{ render_music_answer(context.music__suggest_radio.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_radio %}
+  Включи {{ render_music_answer(context.music__suggest_radio.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_track %}
+  {{ render_music_answer(context.music__suggest_track.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_track %}
+  Включи {{ render_music_answer(context.music__suggest_track.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_artist %}
+  {{ render_music_answer(context.music__suggest_artist.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_artist %}
+  Включи {{ render_music_answer(context.music__suggest_artist.data, 'acc') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__suggest_album %}
+  {{ render_music_answer(context.music__suggest_album.data, 'nom') | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__suggest_album %}
+  Включи {{ render_music_answer(context.music__suggest_album.data, 'acc') }}
+{% endphrase %}
+
+{% macro shuffle_confirm() %}
+  {% chooseline %}
+    Перемешала все треки.
+    Люблю беспорядок.
+    Ок
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro alicesdk_player_response(text) %}
+  {{ text | only_text }}
+{% endmacro %}
+
+{% macro render_shuffle_result(context) %}
+  {% if context.has_alicesdk_player %}
+    {{ alicesdk_player_response(shuffle_confirm()) }}
+  {% else %}
+    {{ shuffle_confirm() }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_player %}
+  {# TODO(sparkle): probably won't work with context.slots #}
+  {% set raw_form_slot = form.raw_form or context.slots.raw_form %}
+  {% if raw_form_slot.name == 'personal_assistant.scenarios.player_shuffle' %}
+    {{ render_shuffle_result(context) }}
+  {% endif %}
+  {% if context.attentions.get('nothing_is_playing') %}
+    {% chooseline %}
+      Не могу, ведь сейчас ничего не играет.
+      Не получится. Сейчас ничего не играет.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_album(album) %}
+  {% if 'альбом' not in album.lower() %}
+    альбом
+  {% endif %}
+  "{{ album }}"
+{% endmacro %}
+
+{% macro render_track(answer, title) %}
+  {{ track_keyword(answer, title) }}
+  "{{ title }}"
+{% endmacro %}
+
+{% phrase track_announce %}
+  {% set first_play = context.first_play %}
+  {% set genre = context.answer|get_item('genre') %}
+  {% set type = context.answer|get_item('type') %}
+  {% set subtype = context.answer|get_item('subtype') %}
+
+  {% if subtype not in ('fm_radio', 'shot', 'audiobook', 'podcast', 'podcast-episode')
+     and genre not in ('fairytales', 'poemsforchildren')
+     and type not in ('generative', 'track') %}
+
+    {% set title = context.answer|get_item('track_title') %}
+
+    {% set announce %}
+      {% if not first_play %}
+        {% maybe 0.4 %}
+          {% chooseline %}
+            А сейчас
+            А дальше нас ждет
+            А теперь поставлю
+            Послушайте
+            Дальше послушаем
+            Для вас -
+            Следующий трек -
+            Следующим номером нашей программы
+            Дальше -
+            А теперь
+          {% endchooseline %}
+        {% endmaybe %}
+      {% endif %}
+
+      {% if type != 'artist' and type != 'album' %}
+        {% set artists = render_artists(context.answer, short=True) | trim %}
+        {% if artists %}
+          {{ artists }},
+        {% endif %}
+        {% set album = context.answer|get_item('album_title') %}
+        {% set same_album = (album and title.lower() == album.lower()) %}
+        {% if album and not same_album
+           and (album|number_of_readable_tokens) <= 6
+           and context.announce_album %}
+          {{ render_album(album) }},
+        {% endif %}
+      {% endif %}
+
+      {{ render_track(context.answer, title | music_title_shorten) }}
+      {% if same_album %}
+        {% maybe %}
+          с одноименного альбома
+        {% endmaybe %}
+      {% endif %}
+      .
+      {% if context.dj_shot %}
+        {% tx %}{{ context.dj_shot.text }}{% etx %}
+        {% vc %}{{ context.dj_shot.voice }}{% evc %}
+      {% endif %}
+    {% endset %}
+
+    {{ announce | trim | capitalize_first | tts_domain('music') }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase generative_music_not_supported %}
+  Простите, не могу включить нейромузыку в этом приложении.
+{% endphrase %}
+
+{% phrase tandem_follower_not_supported %}
+  {% chooseline %}
+    Музыку я играю в колонке. Попросите меня, пожалуйста, включить ее там.
+    Все музыкальные заказы я исполняю на колонке. Попросите меня об этом там, пожалуйста.
+  {% endchooseline %}
+{% endphrase %}

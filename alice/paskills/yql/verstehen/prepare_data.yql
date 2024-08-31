@@ -1,0 +1,57 @@
+use hahn;
+
+PRAGMA ClassicDivision = 'false';
+
+$input = (
+    select
+        Unicode::ToLower(cast(String::Strip(query) as Utf8)) as text
+        , skill_id
+    from 
+        {{input1}}
+    where
+        query is not null
+        and skill_id is not null
+);
+
+$weighted_queries = (
+    select
+        text
+        , skill_id
+        , COUNT(*) as weight
+    from
+        $input
+    group by
+        skill_id
+        , text
+);
+
+$weighted_queries_rn = (
+    select
+        text
+        , skill_id
+        , weight
+        , row_number() over w as rn
+    from 
+        $weighted_queries
+    window w as (partition by skill_id order by weight desc)
+);
+
+$max_queries_per_skill = 10000;
+
+$unique_queries_number = (
+    select
+        sum(weight)
+    from
+        $weighted_queries
+);
+
+insert into
+    {{output1}}
+select
+    skill_id
+    , text
+    , weight / $unique_queries_number as occurrence_rate
+from 
+    $weighted_queries_rn
+where
+    rn <= $max_queries_per_skill;

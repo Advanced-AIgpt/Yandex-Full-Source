@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/quality_storage";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+/**
+ * Megamind classification stages
+ */
+enum EMmClassificationStage {
+    ECS_UNKNOWN = 0;
+    ECS_PRE = 1;
+    ECS_POST = 2;
+}
+
+/**
+ * Enum to specify a reason for scenario to won classification ranking
+ */
+enum EWinReason {
+    WR_UNKNOWN = 0;
+    WR_PRIORITY = 1; // Winner by handcrafted priorities
+    WR_FORMULA = 2; // Winner by trained formulas within one priority
+    WR_SWAPPED_AFTER_FORMULA = 3; // Winner was swapped after formulas
+    WR_REQUESTED_SLOT = 4; // Winner requested slot filling
+    WR_MODAL = 5; // Winner is in modal mode
+    WR_FORCED = 6; // Winner was forced
+    WR_BOOSTED = 7; // Winner was boosted
+    WR_PLAYER_OWNER = 8 [deprecated = true]; // Winner is player owner
+    WR_RESTORE_PLAYER = 9; // Winner restore last active player
+    WR_IMPORTANT_INTENTS = 10; // Winner is forced by important intents and grammars
+    WR_RANDOM = 11; // Winner by random within one priority
+}
+
+/**
+ * Enum to specify a reason for scenario to lose classification ranking
+ */
+ enum ELossReason {
+    LR_UNKNOWN = 0;
+    LR_PRIORITY = 1; // Lose by handcrafted priorities
+    LR_FORMULA = 2; // Lose by trained formulas within one priority
+    LR_CUT_BY_FORMULA = 3; // Cut by preclassification formula
+    LR_BOOSTED_SCENARIO = 4; // Another scenario was boosted
+    LR_FORCED_SCENARIO = 5; // Another scenario was forced
+    // TODO(@ran1s) think how to delete values in enums
+    LR_NOT_ALLOWED = 6; // Another scenario was forced
+    // reserved 6;
+    // reserved "LR_NOT_ALLOWED";
+    LR_PRE_HINT = 7; // Another scenario was forced
+    LR_NOT_GC = 8; // Skill discovery is left only on gc intents
+    LR_FILTERED_BY_FIXLIST = 9; // Other scenarios were activated by fixlist
+    LR_DOESNT_RESTORE_PLAYER = 10; // Another scenario restore player
+    LR_NOT_LAST_PLAYER = 11; // Another scenario restore last player
+    LR_VINS_IMPORTANT_SCENARIOS = 12; // Vins was forced on important scenarios
+    LR_VINS_IMPORTANT_SCENARIOS_AND_GRAMMARS = 13; // Vins was forced on important scenarios and grammars
+    LR_VIDEO_IMPORTANT_SCENARIOS = 14; // Video was forced on important scenarios
+    LR_VIDEO_GC_PROACTIVITY = 15; // Video was forced by gc proactivity
+    LR_FRAME_BOOSTING = 16; // Another scenario was boosted by frame
+    LR_SWAP_BEFORE_FORMULA = 17; // Scenario was swapped before formula application
+    LR_BAD_VINS_RESPONSE = 18; // Scenario wasn't activated by vins intent
+    LR_SWAPPED_WITH_PREFERABLE = 19; // Scenario was swapped with preferable scenario
+    LR_MUSIC_GC_PROACTIVITY = 20; // Music was forced by gc proactivity
+    LR_GC_IMPORTANT_SCENARIOS = 21; // Music was forced by gc proactivity
+    LR_REQUESTED_FRAME = 22; // GC was forced on important scenarios
+    LR_ACTION_NOT_SUPPORTED = 23; // Action isn't supported by scenario
+    LR_NEGATIVE_PRIORITY = 24; // Action isn't supported by scenario
+    LR_IRRELEVANT = 25; // Scenario is irrelevant
+    LR_MODAL_SCENARIO = 26; // Another scenario is in modal mode
+    LR_NOT_PLAYER_OWNER = 27; // Another scenario is player owner
+    LR_IS_CONTINUING = 28; // Another scenario has is_continuing flag
+    LR_SWAPPED_WITH_GOODWIN = 29 [deprecated = true]; // Deprecated, arc:1518556
+    LR_EARLY_PRIORITY = 30; // Another scenario has priority higher than protocol-scenario-priority
+    LR_RANDOM = 31; // Loser by random within one priority
+    LR_CUT_BY_SIDESPEECH_FORMULA = 32; // Cut by sidespeech formula
+    LR_FIXLIST_RESTRICTION = 33; // Fixlist restricts scenario
+    LR_DOESNT_ACCEPT_INPUT = 34; // Scenario doesnt accept input format
+    LR_UNSUPPORTED_LANGUAGE = 35;
+    LR_NOT_ENABLED = 36;
+    LR_SHOULD_FILTER_SCENARIO = 37; // Context disable scenario
+}
+
+/**
+ * Class to store megamind ranking factors and predicts for training purposes
+ */
+message TQualityStorage {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    /**
+     * Class to store history of exact scenario classification
+     */
+    message TScenarioInfo {
+        reserved 1;
+        reserved "Stage";
+
+        /**
+         * Stage, on which scenario lost classification
+         */
+        EMmClassificationStage ClassificationStage = 3 [json_name = "classification_stage", (NYT.column_name) = "classification_stage"];
+        /**
+         * Reason for loosing classification
+         */
+        ELossReason Reason = 2 [json_name = "reason", (NYT.column_name) = "reason"];
+    }
+
+    /**
+     * Storage for ranking factors
+     * Serialized factor storage (human readable so far)
+     */
+    string FactorStorage = 1 [json_name = "factor_storage", (NYT.column_name) = "factor_storage"];
+
+    /**
+     * Storage for preclassifier predicts
+     * Contains intent -> preclassifier_predicts mapping
+     */
+    map<string, float> PreclassifierPredicts = 2 [json_name = "pre_predicts", (NYT.column_name) = "pre_predicts", (NYT.flags) = MAP_AS_DICT];
+
+    /**
+     * Storage for postclassifier predicts
+     * Contains intent -> postclassifier_predicts mapping
+     */
+    map<string, float> PostclassifierPredicts = 3 [json_name = "post_predicts", (NYT.column_name) = "post_predicts", (NYT.flags) = MAP_AS_DICT];
+
+    /**
+     * Reason for top scenario to won postclassification ranking
+     */
+    EWinReason PostclassificationWinReason = 4 [json_name = "post_win_reason", (NYT.column_name) = "post_win_reason"];
+
+    /**
+     * Storage for each scenario information
+     */
+    map<string, TScenarioInfo> ScenariosInformation = 5 [json_name = "scenarios_information", (NYT.column_name) = "scenarios_information", (NYT.flags) = MAP_AS_DICT];
+
+    /**
+     * For output from research MM versions
+     */
+    string ResearchOutput = 6 [json_name = "research_output", (NYT.column_name) = "research_output"];
+}

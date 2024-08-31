@@ -1,0 +1,77 @@
+USE hahn;
+
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA YSON.DisableStrict = 'true';
+
+$today = Unwrap(CurrentUtcDate());
+$target_dir = 'home/paskills/store/stable/skill_top_by_day';
+$prev_day_top_path = (
+    SELECT
+        MAX(Path)
+    FROM FOLDER($target_dir)
+    WHERE
+        Type == 'table'
+);
+
+DEFINE ACTION $process($last_table) AS
+    $metrics =
+    SELECT
+        fielddate AS stat_date,
+        skill_id,
+        skill_name,
+        skills.slug AS slug,
+        player_tlt_sec_m,
+        session_length_m,
+        session_count_m,
+        skills.avatarId AS avatarId,
+        skills.developerName as developerName,
+        skills.categoryLabel as category,
+        (session_length_m + coalesce(player_tlt_sec_m, 0)/30) AS score
+    FROM `//home/paskills/stat/dialogovo_stat_current` AS stat
+    JOIN `home/paskills/skills/stable` AS skills ON stat.skill_id = skills.id
+    WHERE
+        app_group = 'all_speakers' AND
+        app = '_total_' AND
+        developerType = 'external';
+
+    $skill_top_stat = SELECT
+        $today as fielddate,
+        stat_date,
+        skill_id,
+        skill_name,
+        slug,
+        player_tlt_sec_m,
+        session_length_m,
+        session_count_m,
+        avatarId,
+        score,
+        developerName,
+        category,
+        RANK(skill_id) OVER w AS skill_rank
+    FROM $metrics AS m
+    WINDOW w AS (ORDER BY score DESC);
+
+    INSERT INTO {{output1}} WITH TRUNCATE
+    SELECT
+        fielddate,
+        cur.stat_date as stat_date,
+        cur.skill_id as skill_id,
+        skill_name,
+        slug,
+        player_tlt_sec_m,
+        session_length_m,
+        session_count_m,
+        avatarId,
+        score,
+        developerName,
+        category,
+        cur.skill_rank as skill_rank,
+        CAST(IF(prev.skill_rank is not null, IF(prev.stat_date < cur.stat_date, (prev.skill_rank - CAST(cur.skill_rank AS Int64)), prev.skill_rank_diff), 0) AS Int64) AS skill_rank_diff
+    FROM $skill_top_stat AS cur
+    LEFT JOIN (SELECT skill_rank, skill_rank_diff, skill_id, stat_date FROM $last_table) AS prev
+        ON prev.skill_id = cur.skill_id;
+END DEFINE;
+
+DO $process($prev_day_top_path);

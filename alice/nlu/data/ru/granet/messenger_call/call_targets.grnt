@@ -1,0 +1,279 @@
+import: messenger_call/common.grnt
+import: common/filler.grnt
+
+$Room:
+    %fillers off
+    $user.iot.room
+
+$Device:
+    %fillers off
+    $user.iot.device
+
+$DeviceType:
+    %fillers off
+    %lemma
+    %type "custom.device_type"
+    %value "yandexmini"
+    [яндекс* умный* станция* колонка* (мини|миник)+]
+    %value "yandexstation_2"
+    [яндекс* умный* (станция|колонка)+ (два|2|вторая|макс|про)+]
+    %value "elari"
+    [яндекс* умный* станция* колонка* (элари|elari)+]
+    %value "irbis"
+    [яндекс* умный* станция* колонка* (ирбис|irbis)+]
+    %value "dexpp"
+    [яндекс* умный* станция* колонка* (дексп|despp|dexp)+]
+    %value "jbl"
+    [яндекс* умный* станция* колонка* (джейбиэль|джей би эль|jbl)+]
+    %value "prestigio"
+    [яндекс* умный* станция* колонка* (престиджио|prestigio)+]
+    %value "lg"
+    [яндекс* умный* станция* колонка* (элджи|эл джи|lg)+]
+    %value "any"
+    [любой* какой* угодно* яндекс* умный* (станция|колонка)+]
+
+$Emergency:
+    %fillers off
+    %lemma
+    %type "custom.emergency"
+    %value "ambulance"
+    [скорая+ помощь*]
+    (врач|доктор)+
+    %value "fire_department"
+    [(пожарный|пожарная|пожарник)+ служба* часть* управление*]
+    [мчс+ управление*]
+    %value "police"
+    [(полиция|полиции|милиция|полицейский|милицейский)+ наряд* служба*]
+    мент
+    %value "sos"
+    911 | 9 1 1 | девять один один
+    112 | 1 1 2 | один один два
+    [(спасение|экстренный|чрезвычайный)+ служба* помощь*]
+
+$Name:
+    %fillers off
+
+    $FrequentNames:
+        %fillers off
+        %lemma
+        влад а? четыре
+        а четыре
+        моргенштерн
+        егор шип
+        влад милохин
+        даня милохин
+        артур
+        степа
+        эдисон
+
+    ($FrequentNames | $sys.fio.name | $sys.fio.surname | $sys.fio.patronym)+
+
+$PhoneNumber:
+    %fillers off
+    %lemma
+    номер? телефон? $sys.num+
+
+$FrequentRelatives:
+    %fillers off
+    %lemma
+    мама
+    мать
+    мамуля
+    мамочка
+    мамулечка
+    мамуся
+    мамка
+    момо
+    папа
+    папуля
+    папуле
+    папочка
+    отец
+    брат
+    сестра
+    сестричка
+    сестренка
+    бабушка
+    бабуля
+    баба
+    батя
+    дедушка
+    дед
+    дядя
+    тетя
+    сын
+    сынок
+    сынуля
+    сыночек
+    дочь
+    доченька
+    доче
+    дочка
+    внук
+    внучка
+    муж
+    жена
+    невеста
+
+$FrequentOrganizations:
+    %fillers off
+    %lemma
+    госуслуг
+    сбер
+    сбербанк
+    тинькофф
+    россельхозбанк
+    ростелеком
+    мтс
+    билайн
+    мегафон
+    мфц
+    госуслуги
+    почта
+    дом ру
+    авито
+    яндекс маркет
+    газпромбанк
+    росреестр
+    рос
+    ржд
+    иви
+    эльдорадо
+    аптека ру?
+
+$FrequentPersonTargets:
+    %fillers off
+    %lemma
+    дед мороз
+    друг
+    любимая
+    подруга
+    девушка
+    телка|телки
+    подружка
+    невеста
+    жена
+    киска
+    детка
+    любовница
+    любимка
+    любовник
+    парень
+    он
+    она
+    мне? на мой? телефон
+    кто нибудь
+    куда нибудь
+    кто то
+    домой
+    туда
+    бывший
+    бывшая
+    родной
+    родная
+    малышка
+    малыш
+    лента
+    контакт
+    психушка
+    дурка
+    детдом
+    шлюха
+    проститутка
+    номер телефона?
+    телефон
+    себе
+    хозяин
+    хозяйка
+    зайка
+    зая
+    зае
+    родители
+    президент
+    человек
+    туда
+    %lemma off
+    мне
+
+$PersonCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        мой
+        моя
+        свой
+        своя
+        контакт
+        абонент
+        этот
+        телефонный
+
+    [$LocalFillers* .? ($Name | $FrequentRelatives | $FrequentPersonTargets)+]
+
+$OrganizationCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        горячая линия
+        техподдержка
+        оператор
+        помощь
+
+    [$LocalFillers* .? $FrequentOrganizations+]
+
+$EmergencyCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        на дом
+        домой
+
+    [$LocalFillers* .? $Emergency+]
+
+$DeviceCallTarget:
+    %fillers off
+    $Room
+    $Device
+    $DeviceType
+
+$AnyPreciseCallTarget:
+    %fillers off
+    $DeviceCallTarget
+    $PersonCallTarget
+    $OrganizationCallTarget
+    $EmergencyCallTarget
+
+$AnyPreciseNotOrganizationCallTarget:
+    %fillers off
+    $DeviceCallTarget
+    $PersonCallTarget
+    $EmergencyCallTarget
+
+$WildcardCallTarget:
+    %fillers off
+
+    $Word:
+        %fillers off
+        .
+        %force_negative
+        %lemma
+        $nonsense
+        $Filler
+        $Common.Filler
+        $Common.LeftFiller
+        $Room
+        $Device
+        $DeviceType
+        $Emergency
+        $Name
+        $FrequentRelatives
+        $FrequentOrganizations
+        $FrequentPersonTargets
+
+    $Word $Word? $Word? $Word? $Word?

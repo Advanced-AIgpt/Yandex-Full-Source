@@ -1,0 +1,205 @@
+ci:
+  flows:
+    release_personal_cards-flow:
+      title: ReleasePersonalCards
+      jobs:
+        new_tag:
+          title: NewTag
+          task: projects/release_machine/create_arc_tag
+          needs: []
+          input:
+            config:
+              component_name: personal_cards
+          stage: new_tag
+          needs-type: all
+        main_graph_entry:
+          title: MainGraphEntry
+          task: dummy
+          needs:
+          - new_tag
+          input: {}
+          stage: build
+          needs-type: all
+        create_changelog:
+          title: CreateChangelog
+          task: projects/release_machine/release_machine_changelog
+          needs:
+          - main_graph_entry
+          input:
+            candidate_path: ${tasks.new_tag.svn_data.svn_paths.tag}
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+            use_previous_branch_as_baseline: true
+            component_name: personal_cards
+          stage: build
+          needs-type: all
+        create_startrek_ticket:
+          title: CreateStartrekTicket
+          task: projects/release_machine/get_or_create_st_ticket
+          needs:
+          - main_graph_entry
+          input:
+            config:
+              component_name: personal_cards
+          stage: build
+          needs-type: all
+        link_feature_tickets:
+          title: LinkFeatureTickets
+          task: projects/release_machine/link_feature_tickets_from_changelog
+          needs:
+          - create_changelog
+          - create_startrek_ticket
+          input:
+            config:
+              ticket_key: ${tasks.create_startrek_ticket.st_ticket.key}
+              changelog_resource: ${tasks.create_changelog.resources | [?type == 'RELEASE_MACHINE_CHANGELOG'] | [0]}
+              component_name: personal_cards
+          stage: build
+          needs-type: all
+        format_changelog:
+          title: FormatChangelog
+          task: projects/release_machine/format_rm_changelog
+          needs:
+          - create_changelog
+          input:
+            config:
+              changelog_resource: ${tasks.create_changelog.resources | [?type == 'RELEASE_MACHINE_CHANGELOG'] | [0]}
+              component_name: personal_cards
+          stage: build
+          needs-type: all
+        post_changelog_to_startrek:
+          title: PostChangelogToStartrek
+          task: projects/release_machine/post_startrek_comment
+          needs:
+          - create_startrek_ticket
+          - format_changelog
+          input:
+            comment_marker: '<# <!-- CHANGELOG --> #>'
+            place_comment: ticket_description
+            issue_key: ${tasks.create_startrek_ticket.st_ticket.key}
+            comment_text: ${tasks.format_changelog.formatted_changelog.wiki}
+            component_name: personal_cards
+          stage: build
+          needs-type: all
+        create_wiki_page_with_changelog:
+          title: CreateWikiPageWithChangelog
+          task: projects/release_machine/create_wiki_page
+          needs:
+          - create_changelog
+          - create_startrek_ticket
+          input:
+            changelog: ${tasks.create_changelog.resources | [?type == 'RELEASE_MACHINE_CHANGELOG'] | [0].id}
+            startrek_issue: ${tasks.create_startrek_ticket.st_ticket.key}
+            component_name: personal_cards
+          stage: build
+          needs-type: all
+        build:
+          title: Build
+          task: projects/personal_cards/build_personal_cards
+          needs:
+          - main_graph_entry
+          input:
+            build_system: semi_distbuild
+            aapi_fallback: true
+            use_aapi_fuse: true
+            use_arc_instead_of_aapi: true
+            thinlto: true
+          stage: build
+          needs-type: all
+        release_stage_entry:
+          title: ReleaseStageEntry
+          task: dummy
+          needs:
+          - build
+          - create_wiki_page_with_changelog
+          - link_feature_tickets
+          - post_changelog_to_startrek
+          input: {}
+          stage: release
+          needs-type: all
+        release_stable_nanny_push:
+          title: ReleaseStableNannyPush
+          task: common/releases/release_rm_component_2
+          needs:
+          - release_stage_entry
+          input:
+            component_resources:
+              personal_cards_binary: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_BINARY'] | [0].id}
+              personal_cards_instancectl_config: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_INSTANCECTL_CONFIG'] | [0].id}
+              personal_cards_config_production: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_CONFIG_PRODUCTION'] | [0].id}
+              personal_cards_tvm_config_production: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_TVM_CONFIG_PRODUCTION'] | [0].id}
+            deploy_system: nanny_push
+            component_name: personal_cards
+            where_to_release: stable
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+          manual: true
+          stage: release
+          needs-type: all
+        release_testing_nanny_push:
+          title: ReleaseTestingNannyPush
+          task: common/releases/release_rm_component_2
+          needs:
+          - release_stage_entry
+          input:
+            component_resources:
+              personal_cards_binary: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_BINARY'] | [0].id}
+              personal_cards_instancectl_config: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_INSTANCECTL_CONFIG'] | [0].id}
+              personal_cards_config_testing: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_CONFIG_TESTING'] | [0].id}
+              personal_cards_tvm_config_testing: ${tasks.build.resources | [?type == 'PERSONAL_CARDS_TVM_CONFIG_TESTING'] | [0].id}
+            deploy_system: nanny_push
+            component_name: personal_cards
+            where_to_release: testing
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+          manual: true
+          stage: release
+          needs-type: all
+  releases:
+    release_personal_cards:
+      title: release_personal_cards
+      description: ''
+      flow: release_personal_cards-flow
+      auto: false
+      branches:
+        pattern: releases/personal_cards/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+        independent-stages: false
+        auto: true
+      stages:
+      - id: new_tag
+        title: New_Tag
+        displace: false
+        rollback: false
+      - id: build
+        title: Build
+        displace: false
+        rollback: false
+      - id: test
+        title: Test
+        displace: false
+        rollback: false
+      - id: release
+        title: Release
+        displace: false
+        rollback: true
+      start-version: 19
+      filters:
+      - discovery: any
+        abs-paths:
+        - alice/personal_cards/**
+  actions: {}
+  secret: sec-01fwyenwrjgcfa2m424t3dvg2b
+  runtime:
+    sandbox:
+      owner: BASS
+      tags:
+      - RM_CI
+      - RM_COMPONENT:personal_cards
+  config-edit-approvals:
+  - service: yandexassistantcards
+  - service: releasemachine
+    scope: virtual
+service: yandexassistantcards
+title: Alice.PersonalCards

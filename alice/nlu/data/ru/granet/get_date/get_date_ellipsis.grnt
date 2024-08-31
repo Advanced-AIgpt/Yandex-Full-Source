@@ -1,0 +1,48 @@
+import: get_date/common.grnt
+
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/questions.grnt
+import: common/surfaces.grnt
+import: common/tense.grnt
+
+form personal_assistant.scenarios.get_date__ellipsis:
+    slots:
+        calendar_date:
+            type:
+                  sys.datetime
+                  custom.date_delta
+            source: $CalendarDate
+        where:
+            matching_type: overlap
+            type:
+                  GeoAddr.Address
+                  sys.geo
+            source: $Where
+        query_target:
+            type: user.target_format
+            source: $QueryTarget
+
+    root:
+        %lemma
+        # запросы вида "А день недели/дата/число"
+        [$Common.Tell? $QuestionWhatWhen? $QueryTarget]
+        # запросы вида "А завтра/20 мая/..."
+        [$Common.Tell? $QuestionWhatWhen? $CalendarDate]
+        # запросы вида "А в Москве/..."
+        [$Common.Tell? $QuestionWhatWhen? $Where]
+
+        %force_negative
+        [.* $NegativeRequests]
+        $Common.From? $CalendarDate $Common.To $CalendarDate
+
+    filler:
+        $AdditionalFiller
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.Lets
+        $Common.SmartDevice
+        $Common.WayToCallAlice
+        $nonsense
+        будет

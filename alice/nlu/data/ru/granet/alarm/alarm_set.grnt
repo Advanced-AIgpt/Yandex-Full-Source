@@ -1,0 +1,121 @@
+import: alarm/alarms.grnt
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+
+form personal_assistant.scenarios.alarm_set:
+    lemma: true
+    slots:
+        time:
+            source: $Alarm.SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+            matching_type: exact
+        date:
+            source: $sys.date; $Alarm.SlotWeekdays
+            type:
+                sys.weekdays
+                sys.date
+        day_part:
+            source: $DayPart
+            type: custom.day_part
+            matching_type: exact
+    root:
+        [($Change|$Set|$Again)* ($Kind? $Alarm|$Alarm.WakeUp|подъем)+ (чтобы $Ring)? (((на|в|по)? $Alarm.SlotTime|$sys.date|$Alarm.SlotWeekdays $Days?)|$DayPart|$Where|на? $App?)*]
+        [($Kind? $Alarm)? (пусть? $Ring) (в|до|на)? $Alarm.SlotTime]
+        [поменяй время $Alarm]
+        [$Alarm.WakeUp $Whom ((в|до|на)? $Alarm.SlotTime)?]
+
+        %negative
+        $Common.Set на? $sys.num?
+        $Common.Set на? $sys.time назад
+        [$When $Alarm ($Ring|$Set|стоит)]
+        [$Common.PronounYou $Common.Set $Alarm]
+        $Common.Again $sys.num?
+        [$Set (на $Alarm)]
+        ($Alarm.WakeUp|подъем)+
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        как всегда
+        слушай? давай?
+        на? моем телефоне
+        $Common.PronounMe
+        нужен
+        почему
+        не? (можешь|можно|умеешь)
+        ты|его
+        как
+        ровно
+        время
+        сегодня
+
+    $Alarm:
+        будильник
+        сигнал
+
+    $Days:
+        дни
+
+    $DayPart:
+        $Alarm.DayPartPlural
+        $Alarm.DayPartWithoutWholeDay
+        $Alarm.DayPart
+
+    $Change:
+        поменяй
+        перенеси
+
+    $Kind:
+        нормальный
+        гостевой
+        вечерний
+
+    $Where:
+        в? (универ|университет|школу|институт)
+        на? (работу|тренировку|занятия)
+
+    $When:
+        когда
+        (во|на) сколько
+
+    $Ring:
+        перезвони
+        прозвени
+        прозвони
+        отложи
+        зазвони
+        зазвени
+        прозвони (еще раз?)?
+
+    $Set:
+        $Common.Set
+        $Common.TurnOn
+        засекай
+        хочу
+
+    $App:
+        телефон
+        часы
+        %negative
+        %lemma off
+        час
+
+    $Again:
+        $Common.Again
+        тоже
+        другой
+        второй
+        %negative
+        только
+
+    $Whom:
+        детей
+        всех
+        меня
+        $sys.fio.name

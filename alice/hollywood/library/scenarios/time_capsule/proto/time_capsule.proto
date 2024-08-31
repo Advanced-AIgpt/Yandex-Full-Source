@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package NAlice.NHollywood;
+
+import "alice/megamind/protos/common/frame.proto";
+
+import "alice/memento/proto/user_configs.proto";
+
+// state of the session (basically the whole frame)
+message TTimeCapsuleState {
+    TSemanticFrame SemanticFrame = 1 [json_name = "semantic_frame"];
+
+    message TStartStage {
+        uint64 WaitAnswerForApproveStep = 1 [json_name = "wait_answer_for_approve_step"];
+    }
+
+    message TQuestionStage {
+        uint64 WaitAnswerForQuestionId = 1 [json_name = "wait_answer_for_question_id"]; // 1-index
+        bool WaitApproveToInterrupt = 2 [json_name = "wait_approve_to_interrupt"];
+    }
+
+    message TSaveStage {
+        uint64 WaitAnswerForApproveStep = 1 [json_name = "wait_answer_for_approve_step"];
+    }
+
+    message TStopApproveStage {
+        uint64 WaitAnswerForApproveStep = 1 [json_name = "wait_answer_for_approve_step"];
+
+        oneof PrevStage {
+            TStartStage StartStage = 2 [json_name = "start_stage"];
+            TQuestionStage QuestionStage = 3 [json_name = "question_stage"];
+            TSaveStage SaveStage = 4 [json_name = "save_stage"];
+        }
+    }
+
+    message TStopStage {
+    }
+
+    message TFinishedStage {
+    }
+
+    oneof Stage {
+        TStartStage StartStage = 2 [json_name = "start_stage"];
+        TQuestionStage QuestionStage = 3 [json_name = "question_stage"];
+        TSaveStage SaveStage = 4 [json_name = "save_stage"];
+        TStopApproveStage StopApproveStage = 8 [json_name = "stop_approve_stage"];
+        TStopStage StopStage = 9 [json_name = "stop_stage"];
+        TFinishedStage FinishedStage = 10 [json_name = "finished_stage"];
+    }
+
+    message TSessionInfo {
+        string SessionId = 1 [json_name = "session_id"];
+        uint64 LastRequestDeviceEpochTime = 2 [json_name = "last_request_epach_time"];
+    }
+
+    TSessionInfo SessionInfo = 5 [json_name = "session_info"];
+
+    repeated ru.yandex.alice.memento.proto.TTimeCapsuleInfo.TTimeCapsuleData.TAnswerRecord AnswerRecords = 6 [json_name = "answer_records"];
+
+    message TRequestRetryInfo {
+        uint64 AttemptId = 1 [json_name = "attempt_id"];
+    }
+
+    TRequestRetryInfo RequestRetryInfo = 7 [json_name = "request_retry_info"];
+    ru.yandex.alice.memento.proto.TTimeCapsuleInfo.TTimeCapsuleData.ETimeCapsuleType TimeCapsuleType = 11 [json_name = "time_capsule_type"];
+}
+

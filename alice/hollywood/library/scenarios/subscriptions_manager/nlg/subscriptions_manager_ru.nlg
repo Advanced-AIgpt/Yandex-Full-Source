@@ -1,0 +1,71 @@
+{% ext_from "alice/hollywood/library/common_nlg/error_ru.nlg" import render_error %}
+{% ext_from 'alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg' import ya_plus %}
+{% ext_from 'alice/hollywood/library/scenarios/search/nlg/search_ru.nlg' import render_navigation_results %}
+
+{% phrase render_opening %}
+  {{ render_navigation_results(context.nav, default_tts=false) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__opening %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__opening %}
+  {{ context.nav['url'] }}
+{% endphrase %}
+
+
+{% phrase render_how_to_subscribe__has_promo %}
+  Чтобы активировать промо-подписку, зайдите в мобильное приложение Яндекса в вашем телефоне и скажите мне: "Алиса, активируй {{ ya_plus() }}".
+{% endphrase %}
+
+{% phrase render_how_to_subscribe__no_promo %}
+  Пожалуйста, откройте приложение Яндекса в вашем телефоне и зайдите в раздел "Плюс". Выберите подходящий тариф и оплатите его.
+{% endphrase %}
+
+
+{% macro render_subscription(title, end, add_subscription_word) %}
+  {{ end | parse_dt | human_date }} у вас активна {% if add_subscription_word %}подписка{% endif %} {{ title }}
+{% endmacro %}
+
+{% phrase render_status__has_plus %}
+  {% set subnum = context.subscriptions | length %}
+  {% if subnum == 0 %}
+    {{ render_error() }}
+  {% else %}
+    {% set subzero = context.subscriptions[0] %}
+    До {{ render_subscription(subzero.title, subzero.end, subzero.add_subscription_word) }}
+    {% if subnum > 1 %}
+      {# max 2 subscriptions will be rendered #}
+      {% set subone = context.subscriptions[1] %}
+      и до {{ render_subscription(subone.title, subone.end, subone.add_subscription_word) }}
+    {% endif %}
+    . Если хотите узнать больше, откройте приложение Яндекса. Прислала ссылку вам в телефон.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_status__no_plus__has_promo %}
+  На текущий момент у вас нет активных подписок, но вам доступен бесплатный промопериод, приложенный к устройству. Откройте приложение Яндекса для его активации. Прислала ссылку вам в телефон.
+{% endphrase %}
+
+{% phrase render_status__no_plus__no_promo %}
+  На текущий момент у вас нет активных подписок. Если хотите оформить, откройте приложение Яндекса. Прислала ссылку вам в телефон.
+{% endphrase %}
+
+
+{% phrase render_what_can_you_do_without_subscription__speaker__has_screen %}
+  Без подписки {{ ya_plus() }} вы не сможете слушать музыку, сказки, а также смотреть фильмы и сериалы из КиноПоиска, которые входят в подписку.
+{% endphrase %}
+
+{% phrase render_what_can_you_do_without_subscription__speaker__no_screen %}
+  Без подписки {{ ya_plus() }} вы не сможете слушать музыку, сказки и звуки природы.
+{% endphrase %}
+
+{% phrase render_what_can_you_do_without_subscription__other %}
+  Без подписки {{ ya_plus() }} контент {% tx %}Яндекс.Музыки{% etx %}{% vc %}Яндекс Музыки{% evc %} будет ограничен, но вы сможете включить радио, узнать свежие новости или прогноз погоды.
+{% endphrase %}
+
+
+{% phrase error %}
+  {{ render_error() }}
+{% endphrase %}

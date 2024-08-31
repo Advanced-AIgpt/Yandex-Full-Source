@@ -1,0 +1,170 @@
+import: common/filler.grnt
+import: quasar/video_common.grnt
+import: video_command/change_track.grnt
+
+form alice.video.open_current_trailer:
+    slots: 
+        film_name:
+            type:
+                custom.video_name
+                string
+            source: $FilmName
+        video_index:
+            type:
+                fst.num
+                string
+            source: $VideoNumber
+        trailer_number:
+            type:
+                custom.trailer_number
+                string
+            source: $TrailerNumber
+    root:
+        [$ActionTotal* $TrailerItem+ $Film* $Item? $OnProvider?]
+
+$TrailerItem:
+    (это|этот|эту|этом|этого)? трейлер ((номер? $TrailerNumber)|(к номеру? $VideoNumber))?
+    %weight 0.001
+    (это|этот|эту|этом|этого)? ((номер? $TrailerNumber)|(к номеру? $VideoNumber))? трейлер
+
+$VideoNumber:
+    %type custom.film_number
+    %value any_number
+    $sys.num
+
+$TrailerNumber:
+    %type custom.trailer_number
+    %value any_number
+    $sys.num
+
+$AnyName:
+    .+
+
+$FilmName:
+    $AnyName
+    %negative
+    [.* (не? $TrailerItem)]
+    [.* (не? $ActionTotal)]
+    [.* ($FilmItem|$FilmItemPl)]
+    $Film
+    $ActionTotal
+    а? не
+    %lemma
+    описание
+    музыка из?
+    1|2|3|4
+
+$Item:
+    $FilmName
+    %lemma
+    его|него|нём
+    это|этот|эту|этого
+
+$FilmGenre:
+    боевик
+    боевичок
+    супербоевик
+    кинобоевик
+    экшен
+    anime
+    аниме
+    анимэ
+    анимэшка
+    анимэшечка
+    артхаус
+    арт-кино
+    авторское кино
+    авторский фильм
+    байопик
+    комедия
+    кинокомедия
+    детектив
+    кинодетектив
+    теледетектив
+    документальное кино
+    документальная лента
+    документальная картина
+    документальная передача
+    кинодокументальный
+    документалка
+    драма
+    кинодрама
+    трагедия
+    кинороман
+    киноповесть
+    киноэпопея
+    киноновелла
+    фэнтези
+    фентези
+    страшный фильм
+    ужасы
+    ужастик
+    ужастики
+    фильм ужасов
+    хоррор
+    horror
+    мелодрама
+    мюзикл
+    мьюзикл
+    киномюзикл
+    музыкальный фильм
+    нуар
+    неонуар
+    noir
+    кинофантастика
+    научная фантастика
+    сай фай
+    фантастика
+    sci-fi
+    романтика
+    романтики
+    романтичный
+    романтический
+    триллер
+    саспенс
+
+$FilmItem:
+    фильм
+    фильма
+    к? фильму
+    сериал
+    сериала
+    к? сериалу
+    $FilmGenre
+
+$FilmItemPl:
+    к? фильмам
+    фильмов
+    фильмы
+    сериалы
+    сериалов
+    к? сериалам
+
+$Film:
+    (это|этот|эту|этом|этого)? [$FilmItem<g:sg> (номер? $VideoNumber)?]
+
+$ActionPlayWide:
+    %type "custom.video_selection_action"
+    %value "play"
+    валяй
+    включайся
+    врубайся
+    запускайся
+
+$ActionTotal:
+    $Action
+    $ActionPlayWide
+    $Find
+    %negative
+    не $Action
+    не $ActionPlayWide
+
+filler:
+    $nonsense
+    $Common.Filler
+    хорошо|ладно|вот|так|окей|да|то
+    мне|нам|снова|давай|нужно|его|её|можно|можешь
+    на|в|с|у|к|ко
+    новый|последний
+    онлайн
+    русский|на русском языке?

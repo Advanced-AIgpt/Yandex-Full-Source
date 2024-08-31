@@ -1,0 +1,318 @@
+# TODO(bas1330)
+# - Можно отфильровывать запросы с магазинами не с маркета. Например "цена плиты в м видео".
+#   Для этого можно использовать $custom.bad_shops
+# - Можно добавить дополнительную entity "на Маркете" и использовать её наличие как признак для
+#   постклассификатора
+
+import: common/filler.grnt
+
+form alice.market.how_much.tagger:
+    slots:
+        request:
+            source:
+                $RootRough.Request
+                $Request
+            type:
+                string
+        request_end:
+            source:
+                $RootRough.RequestEnd
+                $RequestEnd
+            type:
+                string
+    filler:
+        $nonsense
+        $Common.WayToCallAlice
+        $Common.Filler
+        $SpcialFiller
+
+    root:
+        $RootRough
+        $RootAccurate
+
+$SpcialFiller:
+    на? $Pronoun
+    $RequestFiller
+    $FillerPriceAdjective
+    $Property
+
+    сегодня
+    сейчас
+    на сегодняшний день
+
+    и? как можно
+    и? как [$Pronoun? можно?] купить
+    и? где [$Pronoun? можно?] купить
+    ещё раз
+    очень
+
+    примерно
+    в среднем
+    подешевле
+
+    может
+    в
+
+    %lemma
+    новинка
+    оптовый
+    закупочный
+    выгодный
+    по оптовым
+    самый
+
+$RootRough:
+    [$Minor* $Price+ $Request]
+    [$Minor* $Price* $Request] $PriceSure [$Minor* $Price* $RequestEnd]
+
+    $Request:
+        $RequestBody
+
+    $RequestEnd:
+        $RequestBody
+
+    $RequestBody:
+        .+
+        а $sys.num .*
+        .+ $sys.num а
+
+    $Minor:
+        $Show
+        $HowMuch
+        на
+        а
+
+    $Show:
+        %lemma
+        скажи
+        найди
+        поищи
+        посмотри
+        покажи
+        показать
+        подскажи
+        узнай
+
+    $HowMuch:
+        %lemma
+        скок
+        скока
+        скоко
+        сколка
+        сколко
+        сколька
+        сколько
+        какая
+
+    $Price:
+        $PriceWeak
+        $PriceSure
+
+    $PriceWeak:
+        %lemma
+        стоит
+
+    $PriceSure:
+        %lemma
+        сколько стоит
+        цена
+        ценник
+        стоимость
+        расценки
+        прайс
+        по чём
+        почём
+        где продаются
+        где можно? купить
+        самый? дешевый
+        недорогой
+        недорого
+        за сколько можно? купить
+
+
+$RootAccurate:
+    [$HowMuch $Cost $Request]
+    [$HowMuchCost $Request]
+    [$PriceAll $Request]
+
+    $Request и? ($HowMuchCost|$PriceAll) $RequestEnd?
+    $HowMuch $Request $Cost $RequestEnd
+    $Cost $Request $HowMuch $RequestEnd
+    $Request $HowMuch $RequestEnd $Cost
+    $Request $Cost $RequestEnd $HowMuch
+
+    $HowMuchCost
+    $PriceAll
+    [$HowMuch $Cost $Geo]
+    [($HowMuchCost|$PriceAll) $Geo]
+
+    %negative
+    смешные цены
+    .* магазин смешные цены .*
+
+### Slots ###
+
+$RequestBody:
+    .+
+
+    %negative
+    # 100% unnecessary data
+    $Pronoun
+    [$sys.num* $sys.currency+]
+    $RequestFiller
+
+    # increases accuracy but sometimes rejects suitable requests
+    .+ $RequestFiller .+
+    $RequestFiller .+
+    .+ $RequestFiller
+
+$Request:
+    $RequestBody
+
+    %negative
+    а .*
+
+$RequestEnd:
+    $RequestBody
+
+
+### Key words ###
+
+$Geo:
+    $sys.geo
+    [(в|во) $sys.geo]
+
+$HowMuchPure:
+    почём
+    скок
+    скока
+    скоко
+    сколка
+    сколко
+    сколька
+    сколько
+
+$HowMuch:
+    $HowMuchPure
+    за $HowMuchPure
+    во $HowMuchPure
+
+$Cost:
+    стоет
+    стоит
+    стоят
+    будет
+    будут
+    можно купить
+    [(может|могут|будет|будут) стоить]
+
+$HowMuchCost:
+    [$HowMuch $Cost]
+    [$HowMuch $Pronoun $Cost]
+    почём
+
+$Pronoun:
+    %lemma
+    я
+    он
+    она
+    оно
+    они
+    это
+
+$PricePure:
+    %lemma
+    каталог цен
+    расценки
+    стоимость
+    цена
+    цена вопроса
+    ценник
+
+$Picture:
+    %lemma
+    картинка
+    фотка
+    фото
+
+$FillerPriceAdjective:
+    %lemma
+    примерный
+    лучший
+    дешёвый
+    дорогой
+    недорогой
+
+$PriceAdjective:
+    $FillerPriceAdjective
+    %lemma
+    низкий
+    средний
+
+$Price:
+    %lemma
+    и? (их|его|её) $PricePure
+    в какой $PricePure
+    [(каков|какой) ($PricePure (на|у)?)]
+    по [какой $PricePure]
+    [(по какой) $PricePure]
+    $PricePure
+    $PricePure на?
+    $PricePure для?
+    $PricePure (на|для) $Pronoun
+    [$PriceAdjective $PricePure]
+    по самый? $PriceAdjective $PricePure
+
+$PriceAll:
+    $Price
+    $Price и? $Picture
+    $Picture и? $Price
+
+
+### Fillers ###
+
+$AskPure:
+    %lemma
+    [интересует информация?]
+    найти
+    назвать
+    подсказать
+    поинтересоваться
+    показать
+    посмотреть
+    предоставить
+    рассказать
+    свериться
+    сказать
+    смотреть
+    узнать
+
+$Ask:
+    $AskPure
+    [$AskPure $Pronoun? (в Яндексе)?]
+
+$PropertyPure:
+    %lemma
+    вид
+    инструкция (по применению)?
+    каталог товаров?
+    название
+    наличие
+    обзор
+    описание
+    отзыв
+    параметр
+    показания (к применению)?
+    последняя? модель
+    применение
+    характеристика
+
+$Property:
+    $PropertyPure
+    [и $PropertyPure]
+
+$RequestFiller:
+    $Ask
+    $HowMuch
+    $HowMuchCost
+    $PriceAll

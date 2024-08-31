@@ -1,0 +1,561 @@
+import:
+    common/location.grnt
+    sound/common.grnt
+
+
+form personal_assistant.scenarios.sound.set_level:
+    slots:
+        level:
+            type:
+                custom.volume_setting
+                sys.num
+                sys.float
+                custom.number
+            source:
+                $OldRoot.Level
+                $OldRoot.VolumeDegree
+                $OldRoot.LevelEnum
+                $OldRoot.Root
+                $NewRoot.SmallNum
+                $NewRoot.SmallNumLow
+                $NewRoot.SmallNumHigh
+                $NewRoot.Maximum
+                $NewRoot.Minimum
+                $NewRoot.SureLoud
+                $NewRoot.SureQuiet
+                $NewRoot.SureMiddle
+
+        location:  # DEPRECATED
+            source:
+                $user.iot.room
+                $user.iot.group
+                $user.iot.device
+                $user.iot.multiroom_all_devices
+            type:
+                user.iot.room
+                user.iot.group
+                user.iot.device
+                user.iot.multiroom_all_devices
+        location_room:
+            type:
+                user.iot.room
+            source:
+                $user.iot.room
+        location_group:
+            type:
+                user.iot.group
+            source:
+                $user.iot.group
+        location_device:
+            type:
+                user.iot.device
+            source:
+                $user.iot.device
+        location_everywhere:
+            type:
+                user.iot.multiroom_all_devices
+            source:
+                $user.iot.multiroom_all_devices
+
+        denominator:
+            type:
+                sys.num
+                custom.percent
+            source:
+                $Denominator
+                $PercentEnum
+    root:
+        $OldRoot
+        $NewRoot
+
+        %force_negative
+        [дай+ звук+ (номер? $sys.num)+ .*]
+
+$NewRoot:
+    [$Set* $Sound+ $SmallNumSoundLevel $Common.Location*]
+    [$Set+ $Sound* на $SmallNumSoundLevel $Common.Location*]
+    [($Set (чтобы было)?)* ($SmallNumLowSoundLevel|$SmallNumHighSoundLevel) $Common.Location*]
+    [($Set|$Increase|$Louder)+ $Sound+ $At* $Maximum+ $Common.Location*]
+    [($Set|$Decrease|$Quiter)+ $Sound+ $At* $Minimum+ $Common.Location*]
+    [($Set|$Increase|$Louder|$Sound)+ ($At $Maximum|$SureLoud)+ $Common.Location*]
+    [($Set|$Decrease|$Quiter|$Sound)+ ($At $Minimum|$SureQuiet)+ $Common.Location*]
+    [$Set* ($Increase|$Louder|$Sound)+ $At* ($Maximum|$SureLoud)+ $Common.Location*]
+    [$Set* ($Decrease|$Quiter|$Sound)+ $At* ($Minimum|$SureQuiet)+ $Common.Location*]
+    [прибавь $Sound* $At* $Maximum+]
+    $SingleSureVolume
+    [($Set|$Sound)+ $At* $SureVolume]
+
+    $SmallNumSoundLevel:
+        (на|номер|уровень|громкость|звук)* $SmallNum
+
+    $SmallNumLowSoundLevel:
+        [($Common.Very* (тихо|еле слышно)) ((на|номер|уровень|громкость|звук)+ $SmallNumLow)]
+
+    $SmallNumHighSoundLevel:
+        [($Common.Very* (громко|ярко|мощно|оглушительно)) ((на|номер|уровень|громкость|звук)+ $SmallNumHigh)]
+
+    $Sound:
+        звук
+        громкость
+        уровень звука
+        уровень громкости
+
+    $Set:
+        $Common.Change
+        включи
+        поставь
+        сделай
+        установи
+        вруби
+
+    $Increase:
+        прибавь
+
+    $Louder:
+        погромче
+        громче
+        громко
+
+    $Decrease:
+        убавь
+        уменьши
+
+    $Quiter:
+        потише
+        тише
+        тихо
+
+    $SmallNum:
+        0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10
+
+    $SmallNumLow:
+        0; 1; 2; 3
+
+    $SmallNumHigh:
+        7; 8; 9; 10
+
+    $At:
+        на
+        по
+
+    $Maximum:
+        %type custom.volume_setting
+        %value maximum
+        на всю
+        на полную
+        %lemma
+        максимум
+        максимальный
+        максимально
+        самый громкий
+        самый максимальный
+        самый максимум
+
+    $Minimum:
+        %type custom.volume_setting
+        %value minimum
+        %lemma
+        минимум
+        минимальный
+        самый тихий
+        самый низкий
+        самый минимальный
+        самый минимум
+
+    $SingleSureVolume:
+        %anchor_to_end
+        %anchor_to_begin
+        $Common.Sound.Filler? $At* $SureVolume
+        %negative
+        это $SureVolume
+
+    $SureVolume:
+        $SureLoud
+        $SureQuiet
+        $SureMiddle
+
+    $SureLoud:
+        %fillers false
+        %type custom.volume_setting
+
+        %value high
+        громко|громкий|громкого
+
+        %value very_high
+        громко громко+
+        [$Very+ (громко|громким|громкого)+]
+
+        %value maximum
+        максимально громко
+        совсем громко
+        на всю мощь?
+        на полную мощь?
+        самую громкость
+        на всю громкую
+        громко при громко
+        на всю катушку
+        на полную мощность
+        супер громко
+
+    $SureQuiet:
+        %fillers false
+        %type custom.volume_setting
+
+        %value very_quiet
+        тихо тихо+
+        [$Very+ тихо+]
+
+        %value quiet
+        только тихо
+        маленькую громкость
+
+        %value minimum
+        максимально тихо
+        минимально тихо
+        максимальную тишину
+        совсем тихо
+        на минимум
+
+    $SureMiddle:
+        %fillers false
+        %type custom.volume_setting
+
+        %value middle
+        пол громкости
+        в половину громкости
+
+    $Very:
+        очень
+        сильно
+
+$OldRoot:
+    [$Set* $With* $SoundLevel+ $Something* $On* $Loudness+]
+    [$Set* $Common.Sound.Less* $Common.Sound.More* $With* $SoundLevel+ $Something* (до+ $Loudness+ | $On* $LevelEnum+)]
+    [$Set* ($Common.Sound.Quiter+ | $Common.Sound.Louder+) $With* $SoundLevel* $Something* (до+ $Loudness+ | $On* $LevelEnum+)]
+    [$Set+ $Something* $VolumeDegree+ $Common.Location*]
+    [$Something+ $VolumeDegree+ $Common.Location+]
+    $Root
+    %negative
+    $Negative
+
+    $Root:
+        %type "custom.number"
+        %lemma
+        %value 1
+        [$Set+ тихонечко]
+
+    $Negative:
+        включи звук поставим на всю .*
+        [сделай+ (звук | громкость | громкость звука)* плюс+ $sys.num ($Common.Sound.Units | $PercentEnum)*]
+        [сделай* (звук | громкость | громкость звука)+ плюс+ $sys.num ($Common.Sound.Units | $PercentEnum)*]
+        $Set* звук номер $sys.num
+        (включи | дай | поставь | вруби)+ звук* $sys.num
+        половину сделать
+        [$Set* $Something* всем+]
+        %lemma
+        [$Common.Sound.Launch* $With* $SoundLevel* [$Common.Sound.Media+ (максимум | минимум | половина)+] $On* $Loudness*]
+        [$Set* $Something* нормальная+]
+        [$Set* $Common.Sound.Media+ весь+]
+        [$Set* $Common.Sound.Media+ полный+]
+        [$Set $Common.Sound.Media? (звук поставим на всю)]
+        [$Common.Sound.Media (звук поставим на всю)]
+        %negative
+        [$Set* громкость+ $VolumeDegree+]
+
+    $Set:
+        $Common.Sound.Act
+
+    $With:
+        с
+        на
+        при
+
+    $SoundLevel:
+        звук
+        звука
+        %lemma
+        громкость
+        volume
+
+    $Something:
+        %lemma
+        $SoundLevel
+        голос
+        уровень
+        сила
+        мощность
+        степень
+        аудиосигнал
+        номер
+        $Common.Sound.Media
+
+    $On:
+        на
+        до
+
+    $Loudness:
+        %lemma
+        $Level [($From+ $Denominator)? $Common.Sound.Units* от* максимума*]
+        $Level [$PercentEnum от* максимума*]
+        $VolumeDegree
+
+    $LoudnessStrict:
+        %lemma
+        $Level [($From+ $Denominator)? $Common.Sound.Units* от* максимума*]
+        $Level [$PercentEnum от* максимума*]
+
+    $Level:
+        $sys.num
+        $sys.float
+        $Common.Sound.StrangeNumberEnum
+        $LevelEnum
+        %negative
+        $Common.Sound.OrdinalNumbers
+
+    $From:
+        из 10
+        из десяти
+        из
+
+    $VolumeDegree:
+        $custom.volume_setting
+        %force_negative
+        всего
+
+    $LevelEnum:
+        %type "custom.number"
+        %lemma
+        %value 5
+        середина
+        %value 8
+        высокая
+        %value 10
+        фулл
+        тотал
+        максималка
+        максималку
+
+    $VolumeInContextDegree:
+        %type "custom.number"
+        %value 1
+        максимально тихо
+        на минимум
+        %value 2
+        тихо
+        %value 5
+        умеренно громко
+        средне громко
+        %value 8
+        громко
+        %value 10
+        на максималку
+        на максимум
+        на всю
+        максимально громко
+
+
+form personal_assistant.scenarios.sound.set_level_in_context:
+    slots:
+        level:
+            type:
+                custom.volume_setting
+                sys.num
+                sys.float
+                custom.number
+            source:
+                $Level
+                $VolumeDegree
+                $LevelEnum
+                $VolumeInContextDegree
+                $Root
+        denominator:
+            type:
+                sys.num
+                custom.percent
+            source:
+                $Denominator
+                $PercentEnum
+    root:
+        .* [$Set* $With* $SoundLevel+ $Something* $On* $LoudnessStrict+] .*
+        .* [$Set* $Common.Sound.Less* $Common.Sound.More* $With* $SoundLevel+ $Something* (до+ $LoudnessStrict+ | $On* $LevelEnum+)] .*
+        .* [$Set* ($Common.Sound.Quiter+ | $Common.Sound.Louder+) $With* $SoundLevel* $Something* (до+ $LoudnessStrict+ | $On* $LevelEnum+)] .*
+        .* $VolumeInContextDegree .*
+        %negative
+        .* $Negative .*
+        .* звуки на минимум .*
+
+
+form fast_command.sound_set_level__ellipsis:
+    slots:
+        level:
+            type:
+                custom.volume_setting
+                sys.num
+                sys.float
+                custom.number
+            source:
+                $Level
+                $VolumeDegree
+                $LevelEnum
+                $Root
+        denominator:
+            type:
+                sys.num
+                custom.percent
+            source:
+                $Denominator
+                $PercentEnum
+    root:
+        [$Set* $With* $SoundLevel* $On* $Loudness+]
+        [$Set* $Something* $VolumeDegree+]
+        %negative
+        $Negative
+
+
+$Root:
+    %type "custom.number"
+    %lemma
+    %value 1
+    [$Set+ тихонечко]
+
+$Negative:
+    поставим на всю
+    громко плачет
+    позови меня тихо
+    на всю ((оставшуюся? жизнь)|планету)
+    [$VolumeInContextDegree яркость]
+    [сделай+ (звук | громкость | громкость звука)* плюс+ $sys.num ($Common.Sound.Units | $PercentEnum)*]
+    [сделай* (звук | громкость | громкость звука)+ плюс+ $sys.num ($Common.Sound.Units | $PercentEnum)*]
+    $Set* звук номер $sys.num
+    (включи | дай | поставь | вруби)+ звук* $sys.num
+    половину сделать
+    [$Set* $Something* всем+]
+    %lemma
+    [$Common.Sound.Launch* $With* $SoundLevel* [$Common.Sound.Media+ (максимум | минимум | половина)+] $On* $Loudness*]
+    [$Set* $Something* нормальная+]
+    [$Set* $Common.Sound.Media+ весь+]
+    [$Set* $Common.Sound.Media+ полный+]
+    %negative
+    [$Set* громкость+ $VolumeDegree+]
+
+$Set:
+    $Common.Sound.Act
+
+$With:
+    с
+    на
+    при
+
+$SoundLevel:
+    звук
+    звука
+    %lemma
+    громкость
+    volume
+
+$Something:
+    %lemma
+    $SoundLevel
+    голос
+    уровень
+    сила
+    мощность
+    степень
+    аудиосигнал
+    номер
+    $Common.Sound.Media
+
+$On:
+    на
+    до
+
+$Loudness:
+    %lemma
+    $Level [($From+ $Denominator)? $Common.Sound.Units* от* максимума*]
+    $Level [$PercentEnum от* максимума*]
+    $VolumeDegree
+
+$LoudnessStrict:
+    %lemma
+    $Level [($From+ $Denominator)? $Common.Sound.Units* от* максимума*]
+    $Level [$PercentEnum от* максимума*]
+
+$Level:
+    $sys.num
+    $sys.float
+    $Common.Sound.StrangeNumberEnum
+    $LevelEnum
+    %negative
+    $Common.Sound.OrdinalNumbers
+
+$From:
+    из 10
+    из десяти
+    из
+
+$Denominator:
+    $sys.num
+
+$PercentEnum:
+    %type "custom.percent"
+    %value 100
+    %lemma
+    процентов
+
+$VolumeDegree:
+    $custom.volume_setting
+
+$LevelEnum:
+    %type "custom.number"
+    %lemma
+    %value 5
+    середина
+    %value 8
+    высокая
+    %value 10
+    фулл
+    тотал
+    максималка
+    максималку
+
+$VolumeInContextDegree:
+    %type "custom.number"
+    %value 1
+    %lemma
+    максимально тихо
+    минимальная громкость
+    минимум громкости
+    %lemma off
+    на минимум
+    %value 2
+    %lemma
+    тихая громкость
+    тихую громкость
+    %lemma off
+    тихо
+    %value 5
+    %lemma
+    умеренно громко
+    средне громко
+    на середину громкости
+    на среднюю громкость
+    %value 8
+    %lemma off
+    громко
+    %value 10
+    %lemma
+    максимально громко
+    на максимальную
+    %lemma off
+    на полную
+    на максималку
+    на максимум
+    на всю
+    на фулл
+
+
+filler:
+    %lemma
+    $Common.Sound.Filler
+    $Common.Sound.DoNotHear
+    $Common.Sound.TooLoud

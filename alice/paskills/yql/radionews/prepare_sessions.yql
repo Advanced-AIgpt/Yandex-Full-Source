@@ -1,0 +1,156 @@
+use hahn;
+
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma yson.DisableStrict = 'true';
+
+$target_folder = 'home/paskills/radionews/sessions';
+$from = select cast(max(cast(substring(Path,Length($target_folder||'/')) as Date) + Interval('P1D')) as Date )
+from folder($target_folder)
+where Type = 'table';
+
+--$from = Date('2020-09-30'); -- LAUNCH!
+$to = CurrentUtcDate();
+
+$capture = Re2::Capture("«(.*)»");
+$get_station = ($analytics_info) -> { RETURN coalesce($capture(cast(Yson::ConvertToString($analytics_info.analytics_info.ExternalSkillFlashBriefing.scenario_analytics_info.actions[0].human_readable) as Utf8))._1, 'none'); };
+
+$source_folder = 'home/alice/dialog/prepared_logs_expboxes';
+$load_date = unwrap(cast(CurrentUtcDate() as String));
+
+$app_group = ($app) -> {
+    RETURN case
+                when $app in ('quasar', 'small_smart_speakers'/*, 'tv'*/) then 'all_speakers'
+                when $app in ('search_app_prod','search_app_beta', 'browser_alpha', 'browser_beta', 'browser_prod', 'yabro_beta', 'yabro_prod') then 'with_screen'
+                when $app in ('auto','navigator') then 'in_car'
+                else 'other'
+            end;
+};
+
+define action $insert_sessions($date) as
+    $source_path = $source_folder || '/' || CAST($date AS String);
+    $target_path = $target_folder || '/' || CAST($date as String);
+    $full_sessions = select
+        T.`uuid` as `uuid`,
+        query,
+        reply,
+        unwrap(req_id, 'null req_id for session_id = '||session_id??'unknown'||' and uuid = '||`uuid`??'unknown') as req_id,
+        T.session_id as session_id,
+        session_sequence,
+        alice_speech_end_ms,
+        analytics_info,
+        app,
+        cohort,
+        device,
+        device_id,
+        fielddate,
+        generic_scenario,
+        is_new,
+        is_tv_plugged_in??false as is_tv_plugged_in,
+        mm_scenario,
+        server_time_ms,
+        --row_number() OVER W as rn,
+        alice_speech_end_ms as orig_alice_speech_end_ms,
+
+        max_of(
+            -- prevent negative durations
+            coalesce(
+                alice_speech_end_ms-server_time_ms,
+                max(alice_speech_end_ms - server_time_ms) over W2,
+                max(alice_speech_end_ms - server_time_ms) over W3,
+                0
+            ),
+            0
+        ) as response_duration_ms,
+
+        coalesce(
+            avg(alice_speech_end_ms - server_time_ms) over W2,
+            avg(alice_speech_end_ms - server_time_ms) over W3
+        )/1000 as effective_alice_speech_duration,
+
+        -- lag потому что сортировка в обратную сторону
+        LAG(server_time_ms) OVER W as next_request_server_time_ms,
+
+        alice_speech_end_ms is not null as alice_speech_end_defined,
+
+        max(alice_speech_end_ms - server_time_ms) over W2/1000 as avg_duration_by_reply,
+        avg(alice_speech_end_ms - server_time_ms) over W3/1000 as avg_duration_by_station,
+
+        unwrap(case when LAG(Yson::ConvertToString(analytics_info.modifiers_info.proactivity.item_info)) over W=="alice.external_skill.flash_briefing.activate"
+        then 'postroll'
+        else 'none'
+        end) as source_activation_type,
+        --pre:
+        -- postroll
+        -- Новостей больше нет, хотите включу другое радио?
+        -- Новостей больше нет, хотите включу заново?
+        -- Расскажи новости + настройка
+        -- внутренния рекоммендация
+        -- онбординг
+
+        unwrap('none') /*'source_subscription_accepted'*/ as session_post_action,
+        --POST
+        -- голосовая подписка - ДА
+        -- голосовая подписка - НЕТ
+
+    from (
+        select T.*
+        from $source_path as T
+        join (
+            select `uuid` as `uuid2`, session_id as session_id2
+            from $source_path
+            where mm_scenario  == 'ExternalSkillFlashBriefing'
+            group compact by `uuid`, session_id
+        ) as T2 on T.`uuid` = T2.`uuid2` and T.session_id = T2.session_id2
+    ) as T
+    WINDOW W as (partition compact by T.`uuid`, T.session_id order by server_time_ms desc ROWS BETWEEN 1 PRECEDING AND CURRENT ROW),
+    W2 as (partition compact by T.fielddate, T.generic_scenario, T.reply),
+    W3 as (partition compact by T.fielddate, T.generic_scenario, $get_station(analytics_info) as station);
+
+    INSERT INTO $target_path WITH TRUNCATE
+    select
+        unwrap(cast(fielddate as Date), 'null fielddate for request_id = '||req_id) as fielddate,
+        unwrap(`uuid`, 'null uuid for request_id = '||req_id) as `uuid`,
+        req_id as req_id,
+        unwrap(session_id, 'null_session_id for request_id = '||req_id) as session_id,
+        unwrap(app, 'null app for request_id = '||req_id) as app,
+        unwrap($app_group(app), 'null app for request_id = '||req_id) as app_group,
+        unwrap($get_station(analytics_info), 'null station for request_id = '||req_id) as station,
+        query,
+        reply,
+        alice_speech_end_ms,
+        analytics_info,
+        cohort,
+        device,
+        device_id,
+        --generic_scenario,
+        is_new,
+        is_tv_plugged_in,
+        unwrap(server_time_ms, 'null server_time_ms for request_id = '||req_id) as server_time_ms,
+        orig_alice_speech_end_ms,
+        response_duration_ms,
+        next_request_server_time_ms,
+        alice_speech_end_defined,
+        avg_duration_by_reply,
+        avg_duration_by_station,
+        source_activation_type,
+
+        --duration with interruption
+        cast(min_of(response_duration_ms, max_of((next_request_server_time_ms - server_time_ms)??0,0)) as Double)/1000 as fact_duration_s,
+        if (next_request_server_time_ms is not null and response_duration_ms is not null, next_request_server_time_ms < (server_time_ms + response_duration_ms))?? false as alice_was_interrupted,
+        if (next_request_server_time_ms is not null and response_duration_ms is not null and next_request_server_time_ms < (server_time_ms + response_duration_ms), cast((next_request_server_time_ms - server_time_ms)/1000 as Double)) as duration_s_before_interrupt,
+        if (next_request_server_time_ms is not null and response_duration_ms is not null and next_request_server_time_ms < (server_time_ms + response_duration_ms), cast((next_request_server_time_ms - server_time_ms) as Double)/response_duration_ms) as interrupted_at_part,
+
+        $load_date as load_date
+    from $full_sessions as T
+    where mm_scenario  == 'ExternalSkillFlashBriefing';
+
+end define;
+
+$dates = (SELECT ListSortAsc(aggregate_list(d)) from (
+select cast(substring(Path,Length($source_folder) + 1u) as Date) as d
+from folder($source_folder)
+) as T
+where d between cast($from as Date) and cast($to as Date));
+
+EVALUATE FOR $date IN $dates DO $insert_sessions($date);

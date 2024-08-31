@@ -1,0 +1,142 @@
+import: alarm/alarm_set_sound.grnt
+
+form personal_assistant.scenarios.alarm_set_with_sound:
+    enable_alice_tagger: true
+    slots:
+        time:
+            source: $Alarm.SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+            matching_type: exact
+
+        date:
+            source: $sys.date; $Alarm.SlotWeekdays
+            type:
+                sys.weekdays
+                sys.date
+
+        day_part:
+            source: $DayPart
+            type: custom.day_part
+            matching_type: exact
+
+        target_type:
+            source:
+                $TargetTypeTagged
+            type:
+                custom.target_type
+
+        this:
+            source:
+                $AlarmSound.This
+            type:
+                string
+
+        radio_search:
+            source:
+                $custom.fm_radio_station
+            type:
+                custom.fm_radio_station
+
+        radio_freq:
+            source:
+                $custom.fm_radio_freq
+            type:
+                custom.fm_radio_freq
+
+        # slots filled by tagger
+        music_search:
+            type:
+                custom.hardcoded_music
+                string
+
+        playlist:
+            type:
+                string
+
+        genre:
+            type:
+                custom.genre
+
+        mood:
+            type:
+                custom.mood
+
+        activity:
+            type:
+                custom.activity
+
+        epoch:
+            type:
+                custom.epoch
+
+        personality:
+            type:
+                custom.personality
+
+        special_playlist:
+            type:
+                custom.music.special_playlist
+                custom.special_playlist
+
+        repeat:
+            type:
+                custom.repeat
+
+    root:
+        $AlarmSound.Set $sys.date? $Sound<g:acc> (в|до|на) $Alarm.SlotTime
+        [$Set? (на? $Alarm.AlarmLemma) $Time] (под|с)? $Sound<g:acc>
+        [$WakeUp $Time] (((под|с)? $Sound<g:acc>)|$Sound<g:ins>)
+        $WakeUp (((под|с)? $Sound<g:acc>)|$Sound<g:ins>) $Time
+        [[$Set $Alarm.AlarmLemma $Time]  [$AlarmSound.Set $Sound]]
+
+        %weight 0.01
+        [$Set? (на? $Alarm.AlarmLemma) $Time] (под|c) $SearchText
+        [$Set? (на? $Alarm.AlarmLemma) $Time] (под|с)? [($Common.TheMusic|$Common.TheTrack|звук)? $SearchText]
+        [$Set? (на? $Alarm.AlarmLemma)] (под|с)? [($Common.TheMusic|$Common.TheTrack|звук) $SearchText] $Time
+        [$WakeUp $Time] (под|с) $SearchText
+        [$WakeUp $Time] (под|с)? [($Common.TheMusic|$Common.TheTrack|звук)? $SearchText]
+        $WakeUp (под|с)? [($Common.TheMusic|$Common.TheTrack|звук) $SearchText] $Time
+        $WakeUp (под|с) $SearchText $Time
+
+        %negative
+        [$AlarmSound.Set $Sound]
+        алиса? [$Set* ($Alarm.AlarmLemma|$Timer|$Reminder) $Time]
+        [$WakeUp $Time]
+
+    filler:
+        $Common.About
+        $Common.Filler
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.WayToCallAlice
+        $Common.Lets
+        еще
+        новый
+        хочу
+        чтобы
+        пусть
+        пускай
+        можешь
+
+$Time:
+    (((на|в|по)? $Alarm.SlotTime|на? $sys.date|$Alarm.SlotWeekdays $Days?)|$DayPart)+
+    %negative
+    сегодня
+    завтра
+
+$Set:
+    $Common.Set
+    включи
+    заведи
+
+$Timer:
+    %lemma
+    таймер
+
+$Reminder:
+    %lemma
+    напоминание

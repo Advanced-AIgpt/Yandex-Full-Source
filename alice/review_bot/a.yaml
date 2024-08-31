@@ -1,0 +1,42 @@
+service: megamind
+title: Review bot
+ci:
+  release-title-source: flow
+  secret: sec-01dr6kwd7ggxg428em72adpamt
+  runtime:
+    sandbox-owner: VINS
+  releases:
+    review-bot-stable:
+      title: Deploy review_bot to stable
+      flow: review-bot-stable-flow
+      stages:
+        build:
+          title: Build review_bot package
+          displace: true
+        stable:
+          title: Deploy review_bot to stable
+  flows:
+    review-bot-stable-flow:
+      title: Review bot stable
+      jobs:
+        build:
+          title: Build package
+          task: common/arcadia/ya_package
+          stage: build
+          input:
+            packages: alice/review_bot/package.json
+            resource_type: ALICE_REVIEW_BOT_PACKAGE
+            package_type: tarball
+        stable:
+          title: Deploy to stable
+          task: common/deploy/release
+          stage: stable
+          needs:
+            - build
+          input:
+            config:
+              sandboxResourceType: ALICE_REVIEW_BOT_PACKAGE
+              commonReleaseData:
+                releaseStage: stable
+                releaseNotes: Release from CI
+              stageName: zubchicks-things

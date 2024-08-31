@@ -1,0 +1,42 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" import alicesdk_player_response, render_supported_only_on_music with context %}
+
+{% macro like_confirm() %}
+  {% if context.attentions.get('unknown_music') %}
+    {% chooseline %}
+      لا أستطيع أن أعرف لأي أغنية أضع إعجاب.
+      كنت أودُّ ذلك لكنني لا أعرف على أي أغنية يجب أن أضع إعجاب.
+    {% endchooseline %}
+  {% elif context.is_fm_radio %}
+    {{ render_supported_only_on_music() }}
+  {% elif context.is_shot %}
+    وضعت إعجاب
+  {% else %}
+    {% chooseline %}
+      سأشغل هذا أكثر.
+      سأتذكر ما تحب.
+      سعيدة أنك تقدر.
+      وضعت إعجاب
+      رائع! وضعت إعجاب.
+      لقد وضعت إعجاب.
+      وضعت إعجاباً نيابةً عنك.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('biometry_guest') %}
+     {% if context.user_name is not none %}
+        {% chooseitem 1 %}
+          عذراً، أهم دي جي هنا هو — {{ context.user_name | capitalize }}.
+        {% or 1 %}
+          البوت المهذب لا يتلقى أوامر إلاّ من صاحبه. اعذرني.
+        {% endchooseitem %}
+        # Рада, что нравится. Я бы даже лайк поставила, но только если  {{ context.user_name | capitalize }} попросит.
+     {% else %}
+        البوت المهذب لا يتلقى أوامر إلاّ من صاحبه. اعذرني.
+     {% endif %}
+  {% else %}
+    {{ like_confirm() }}  # TODO(vitvlkv): Support do_authorized(like_confirm())
+  {% endif %}
+{% endphrase %}

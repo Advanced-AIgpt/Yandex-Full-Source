@@ -1,0 +1,104 @@
+{# only for debug in places where gif card can not be shown #}
+{% phrase render_gif_text %}
+  Показываю гифку:
+  \n- gif url: {{context.gif_url}}
+  \n- source url: {{context.gif_source_url}}
+  \n- source text: {{context.gif_source_text}}
+{% endphrase %}
+
+{# for toloka and other places where gif card can not be shown and urls should not be #}
+{% phrase render_gif_dummy_text %}
+  {{ '[У пользователя на экране отображается случайная gif]' }}
+{% endphrase %}
+
+{% card render_gif %}
+  {
+    "templates": {
+      "gif_card": {
+        "type": "container",
+        "direction": "vertical",
+        "width": {
+          "type": "fixed",
+          "value": {% if context.is_ios %} 280 {% else %} 292 {% endif %}
+        },
+        "height": {
+          "type": "fixed",
+          "value": 285
+        },
+        {% if not context.is_ios %}
+          "paddings": {
+            "left": 12,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          },
+        {% endif %}
+        "items": [
+          {
+            "type": "container",
+            "direction": "vertical",
+            "width": {
+              "type": "fixed",
+              "value":  280
+            },
+            "height": {
+              "type": "fixed",
+              "value": 285
+            },
+            "action": {
+              "log_id": "gif_card",
+              "$url": "gif_click_url"
+            },
+            {% if not context.is_ios %}
+              "border": {
+                "corner_radius": 10,
+                "stroke":  {
+                  "width": 2,
+                  "color" : "{{ '#E6E8E8' }}"
+                }
+              },
+            {% endif %}
+            "items": [
+              {
+                "type": "gif",
+                "width": {
+                  "type": "fixed",
+                  "value": 280
+                },
+                "height": {
+                  "type": "fixed",
+                  "value": 250
+                },
+                "$gif_url": "gif_image_url"
+              }, {
+                "type": "text",
+                "font_size": 14,
+                "text_color": "{{ '#808080' }}",
+                "paddings": {
+                  "left": 12,
+                  "right": 12,
+                  "top": 8,
+                  "bottom": 8
+                },
+                "$text": "gif_description"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "card": {
+      "log_id": "gif_card",
+      "states": [{
+        "state_id": 1,
+        "div": {
+          "type": "gif_card",
+          "gif_click_url": "{{context.gif_source_url}}",
+          "gif_image_url": "{{context.gif_url}}",
+          "gif_description": "Источник: {{context.gif_source_text}}"
+        }
+      }]
+    },
+    "hide_borders" : {% if context.is_ios %} false {% else %} true {% endif %}
+  }
+{% endcard %}

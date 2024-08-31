@@ -1,0 +1,133 @@
+<html>
+<head>
+    <title>NER Service demo</title>
+    <style>
+        #container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+        }
+
+        #utteranceForm {
+            flex-grow: 1;
+            margin-right: 50px;
+        }
+
+        #utteranceTextArea {
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            resize: vertical;
+        }
+
+        #results {
+            flex-grow: 1;
+            max-width: 50%;
+        }
+
+        .resultsTable {
+            border: 1px;
+        }
+
+        .tableCell {
+            padding: 10px;
+        }
+
+        .wizard-response {
+            background: lightgray;
+        }
+
+        .collapsible {
+            background-color: #eee;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .active, .collapsible:hover {
+            background-color: #ccc;
+        }
+
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: #f1f1f1;
+        }
+
+        .collapsible-title {
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="container">
+    <form id="utteranceForm" method="POST">
+        <label for="utteranceTextArea">Utterance</label>
+        <textarea id="utteranceTextArea" rows="1" form="utteranceForm" name="utterance">{{ utterance }}</textarea>
+        <input type="submit" id="submit">
+    </form>
+    <div id="results">
+        {% if show_results %}
+            <h2>Statistics</h2>
+            {% if nlu_result.wizard_response_time is not none %}
+                <p>Wizard response time: {{ (1000 * nlu_result.wizard_response_time) | round(2) }} ms</p>
+            {% endif %}
+            <h2>Entities</h2>
+            {% if nlu_result.entities %}
+                <table class="resultsTable" border="1px">
+                    <tr>
+                        <th>Тип</th>
+                        <th>Значение</th>
+                    </tr>
+                    {% for e in nlu_result.entities %}
+                    <tr>
+                        <td class="tableCell">
+                            {{ e.type }}
+                        </td>
+                        <td class="tableCell">
+                            <pre>{{ e.to_dict() | tojson }}</pre>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>No entities found</p>
+            {% endif %}
+            <h2>Response sources</h2>
+            <div class="wizard-response">
+                <button class="collapsible">Full Wizard response</button>
+                <pre class="content">{{ nlu_result.wizard_markup | tojson(indent=4) }}</pre>
+            </div>
+            <div>
+                <button class="collapsible">NER Service response</button>
+                <pre class="content">{{ ner_response | tojson }}</pre>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        const coll = document.getElementsByClassName("collapsible");
+        let i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function () {
+                this.classList.toggle("active");
+                const content = this.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            });
+        }
+
+    </script>
+</div>
+</body>
+</html>

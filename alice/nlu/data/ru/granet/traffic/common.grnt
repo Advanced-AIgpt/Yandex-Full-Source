@@ -1,0 +1,869 @@
+import: common/filler.grnt
+import: common/commands.grnt
+
+$VariantsWithPureJams: # пробки без lemma
+    [$TrafficAddon* $DriverAction* $StrongLocation* $PureJam+ $MediumWeakLocation?]
+    [$TrafficAddon* $DriverAction* $WeakLocation* $PureJam+ $Show+ $AllWords*]
+
+$VariantsWithJams:
+    [$Show? $Question $DriverAction $Preposition $Jam]
+    [$TrafficAddon* $Jam+ $MediumWeakLocation? $StrongLocation*]
+    [$TrafficAddon* $Jam+ $WeakLocation* $AllWords* ($Road | $Score | $Movement | $TrafficSituation | $BlockOrFree | $Map | $Street | $SkipTraffic)+]
+    [$TrafficAddon* $Question+ ($WithoutJam | $Jam)+]
+
+$VariantsWithoutJams:
+    # без слова пробка
+    [$TrafficAddon* $DriverAction* $StrongTrafficSituation+ $StrongLocation*]
+    [$TrafficAddon* $DriverAction* ($BlockOrFree | $TrafficSituation)+ ($Road | $Streets | $Score | $Movement)+ $WeakLocation* $AllWords*]
+    [$TrafficAddon* $DriverAction* $Score+ ($Road | $Streets)+ $WeakLocation* $AllWords*]
+    [$TrafficAddon* $DriverAction* $SituationAdj+ $TrafficSituation+ $StrongLocation* $AllWords*]
+    [$TrafficAddon* $DriverAction* (что | как)+ $Preposition+ $Road+  $StrongLocation*]
+    [$TrafficAddon* $DriverAction* $Score+ $StrongLocation+]
+    [$TrafficAddon* $DriverAction* $OnRoads+ $StrongLocation* $AllWords*] # на дорогах
+    [$TrafficAddon* $DriverAction* $Question+ $OnStreets+ $StrongLocation*] # что творится на улицах
+    [$TrafficAddon* $DriverAction* ($Show | $Question)+ $Roads+ $StrongLocation*] # покажи дороги
+    [$TrafficAddon* $DriverAction* $RoadMovement+ $WeakLocation*]
+    [$TrafficAddon* $DriverAction* $Movement+ $StrongLocation*]
+    [$TrafficAddon* сколько $Score $DriverAction* $StrongLocation*]
+    [$TrafficAddon* $DriverAction* $JamScore+ $StrongLocation* $AllWords*]
+
+$NegativeVariants:
+    [$WhereGeoBase $SmallWeightWord*] # блочим чистые адреса "открытое шоссе дом 15" "улица свободная дом 50"
+    [$Jam . .? .? .?] # должно откидывать совсем непонятные запросы
+    [$TrafficAddon* ($Show $RoadWithRoute)+ $Jam+ $StrongLocation+ .*]
+    [$TrafficAddon* (маршрут | путь)+ $StrongLocation+ $Jam+ .*]
+    [$TrafficAddon* $Jam+ $SkipTraffic+ $StrongLocation+ .*]
+    [$TrafficAddon* $RoadWithRoute+ $WeakLocation* $WithoutJam .*]
+    [$TrafficAddon* $DriverAction+ $WeakLocation* $WithoutJam .*]
+    [$TrafficAddon* $DriverAction+ $StrongLocation+ $Jam+ .*]
+    [$TrafficAddon* $DriverAction+ $StrongLocation+ $WithoutJam+ .*]
+    [$TrafficAddon* $Street+ $WeakLocation* $WithoutJam+ .*]
+    [$TrafficAddon* $WithoutJam+ .*]
+    $Stupid
+    [$TrafficAddon* $StrongLocation+ $WithoutJam+ .*]
+    [$Show? $AliceAction? $AllMe? $WithoutJam $DriverAction? $StrongLocation]+
+    [(я | мы)? (в | на)? $Jam стою? стоим? сидим? сижу? едем? еду? .? .? .? .?]
+
+$RoadWithRoute:
+    $Road
+    %lemma
+    маршрут
+
+$WithoutJam:
+    (без | с учетом) $Jam
+
+$AllWords:
+    .
+    %negative
+    $WeakLocationNegative
+
+$SmallWeightWord:
+    %weight 0.08
+    .
+    %negative
+    $Jam
+    $Street
+    $SituationAdj
+    $DriverAction
+    $Show
+    $Score
+    $TrafficSituation
+    $BlockOrFree
+    $Movement
+    $Road
+    $Size
+    $SituationAdj
+    $Street
+    $Size
+    (в|с|по)? $Score
+    $TrafficAction
+    $JamAction
+    $Map
+    $Card
+    $JamType
+    $AllMe
+    $Direction
+    начало
+    конец
+    $Car
+
+$TrafficAddon:
+    $SituationAdj
+    $Street
+    $Size
+    (в|с|по)? $Score
+    $Road
+    $TrafficAction
+    $JamAction
+    $Map
+    $Preposition
+    $Show
+    $Question
+    $MoreDetails
+    $Card
+    $AliceAction
+    $Score
+    $BlockOrFree
+    $Movement
+    $JamType
+    $TrafficSituation
+    $Particle
+    $AllMe
+    $Direction
+    начало
+    конец
+    $Car
+
+$Card:
+    %lemma
+    карточка
+
+$Stupid:
+    [(тупая | тупой)? как? пробка дура? коза? .*]
+    [ты? (тупая | тупой)? пробка дура? коза? .*]
+
+$StrongLocation:
+    $Where
+    $DirectionLocation
+    $CurrentLocation
+
+$WeakLocation:
+    $StrongLocation
+    $ExtraWeakLocation
+
+$StrictLocation:
+    $DirectionLocation
+    $CurrentLocation
+    %weight 0.01
+    $StrictWhere
+
+$CardinalPoints:
+    %lemma
+    север
+    юг
+    запад
+    восток
+
+$DirectionLocation:
+    [$Size? $Direction? $MyLocation? $LocationNoun]
+    [$Size? $Direction $MyLocation? $Size? $Road]
+    [$Size? $Direction? $MyLocation? [$LocationNoun? $AnaphoraLocation]]
+    [$Size? $Direction? $CardinalPoints]
+
+$Where:
+    $StrictWhere+
+
+$StrictWhere:
+    %fillers off
+    $Direction? $MyLocation? $LocationNoun? $WhereGeoBase+
+    %weight 0.08
+    $Direction? $MyLocation? $LocationNoun? $TrackWithNum
+
+$TrackWithNum:
+    %lemma
+    (федеральная? трасса | шоссе)? (м | эм) $sys.num
+
+$AnaphoraLocation:
+    там | тут | нем | ней
+    %lemma
+    этому
+
+$CurrentLocation:
+    нахожусь
+    нуходимся
+    %lemma
+    здесь
+    впереди
+    спереди
+    передо мной?
+    перед мной?
+    передомной
+    рядом
+    близко
+    у нас
+    в нашей (позоции | локации)
+
+$MyLocation:
+    %lemma
+    моей
+    нашей
+    этому
+
+$WhereGeoBase:
+    $sys.geo
+    $ner.GeoAddr.City
+    $ner.GeoAddr.City2
+    $ner.GeoAddr.Province
+    $ner.GeoAddr.Country
+    $ner.GeoAddr.Address
+    $RegionRu
+    $Country
+    %lemma
+    ленинградка
+    тушино
+    мкад
+
+$LocationNoun:
+    %lemma
+    село
+    поселок
+    поселение
+    город
+    район
+    улица
+    край
+    область
+    страна
+    центр
+    метро
+    дом
+
+$Street:
+    %lemma
+    улица
+    улицы
+
+$OnStreets:
+    на улицах
+
+$Streets:
+    улицы
+    улицах
+    улицам
+    улицами
+
+$OnRoads:
+    на дорогах
+
+$Roads:
+    дороги
+    дорогах
+    дорогами
+    дорогам
+
+$Road:
+    $Noun:
+        %lemma
+        дорога
+        автодорога
+        авто? дорога
+        трасса
+        шоссе
+        путь
+        дорожное движение
+    $Adj:
+        %lemma
+        московские
+        астраханские
+        уфимские
+        столичные
+        казанские
+        российские
+        старые
+        новые
+        питерские
+        общественные
+        реальные
+        настоящие
+        текущие
+        мой
+        задний
+        этот
+    $Adj? $Noun
+    на $Adj? маршруте
+    по $Adj? маршруту
+
+$Direction:
+    в | во | до | на | по | из | от | у
+    в сторону
+    на выезде
+    около
+    впереди
+    в конце
+    между
+    близко
+    близкий
+    поблизости
+
+$RegionRu:
+    %lemma
+    нижегород
+    адыгея
+    алтай
+    башкортостан
+    бурятия
+    дагестан
+    ингушетия
+    кабардино-балкария
+    калмыкия
+    карачаево-черкесия
+    карелия
+    коми
+    крым
+    марий эл
+    мордовия
+    саха
+    северная осетия-алания
+    татарстан
+    тыва
+    удмуртия
+    хакасия
+    чечня
+    чувашия
+    якутия
+    алтайский (край | область)
+    амурская (край | область)
+    архангельская (край | область)
+    астраханская (край | область)
+    белгородская (край | область)
+    брянская (край | область)
+    владимирская (край | область)
+    волгоградская (край | область)
+    вологодская (край | область)
+    воронежская (край | область)
+    забайкальский (край | область)
+    ивановская (край | область)
+    иркутская (край | область)
+    калининградская (край | область)
+    калужская (край | область)
+    камчатский (край | область)
+    кемеровская (край | область)
+    кировская (край | область)
+    костромская (край | область)
+    краснодарский (край | область)
+    красноярский (край | область)
+    курганская (край | область)
+    курская (край | область)
+    ленинградская (край | область)
+    липецкая (край | область)
+    магаданская (край | область)
+    московская (край | область)
+    мурманская (край | область)
+    нижегородская (край | область)
+    новгородская (край | область)
+    новосибирская (край | область)
+    омская (край | область)
+    оренбургская (край | область)
+    орловская (край | область)
+    пензенская (край | область)
+    пермский (край | область)
+    приморский (край | область)
+    псковская (край | область)
+    ростовская (край | область)
+    рязанская (край | область)
+    самарская (край | область)
+    саратовская (край | область)
+    сахалинская (край | область)
+    свердловская (край | область)
+    смоленская (край | область)
+    ставропольский (край | область)
+    тамбовская (край | область)
+    тверская (край | область)
+    томская (край | область)
+    тульская (край | область)
+    тюменская (край | область)
+    ульяновская (край | область)
+    хабаровский (край | область)
+    челябинская (край | область)
+    ярославская (край | область)
+
+$Country:
+    %lemma
+    австралия
+    азербайджан
+    соединенные штаты америки
+    сша
+    северная? америка
+    североамериканские штаты
+    штаты
+    армения
+    белоруссия
+    республика? (беларусь | белорусь)
+    республика
+    болгария
+    бразилия
+    великобритания
+    англия
+    британия
+    шотландия
+    северная ирландия
+    соединенное королевство
+    венгрия
+    (республика | южная)? корея
+    гонконг
+    дания
+    объединенные арабские эмираты
+    оаэ
+    эмираты
+    египет
+    индия
+    индонезия
+    иран
+    исландия
+    италия
+    казахстан
+    канада
+    киргизия
+    китай
+    латвия
+    литва
+    малайзия
+    мексика
+    молдавия
+    новая зеландия
+    новозеландия
+    зеландия
+    израиль
+    норвегия
+    польша
+    россия
+    российская федерация
+    рф
+    раша
+    рашка
+    румыния
+    саудовская аравия
+    сингапур
+    словакия
+    таджикистан
+    таиланд
+    турция
+    туркмения
+    узбекистан
+    узбекистон
+    узбекистонда
+    украина
+    филиппины
+    хорватия
+    чехия
+    швеция
+    швейцария
+    эстония
+    южная африка
+    япония
+
+$SkipTraffic:
+    %lemma
+    объехать
+    проехать
+    миновать
+    обойти
+    объезд
+    не попасть
+
+$Length:
+    %lemma
+    километр
+    метр
+
+$TrafficSituation:
+    %lemma
+    состояние
+    ситуация
+    затруднения
+    загрузка
+    обстановка
+    обстоятельства
+    $StrongTrafficSituation
+
+$SituationAdj:
+    %lemma
+    дорожная
+    автомобильная
+
+$StrongTrafficSituation:
+    %lemma
+    загруженность
+    затор
+
+$QuestionPrefix:
+    (что | че) за?
+    почему (такая | такие)?
+    на? сколько $Length?
+    а? если
+    когда
+    долго
+    надолго
+    много
+    есть ли?
+    из за (чего|кого)
+    нет
+    нету
+    как дела?
+    стоит ли?
+
+    %lemma
+    куда
+    куды
+    наличие
+    уровень
+    прогноз
+    информация
+    оценка
+    случилось
+    (какая | какова) причина?
+    в? какой
+    могут быть
+    будет ли?
+    будут ли?
+    (где | как) $AllMe? (есть | нет | нету)?
+    (на|в|по|до)? (какая|какова) ($LocationNoun |$Road)
+    сколько
+    какой количество?
+    какие
+
+$QuestionSuffix:
+    %lemma
+    происходит
+    творится
+    делается
+    обстоит
+
+$Question:
+    $QuestionPrefix за? $QuestionSuffix?
+    $QuestionPrefix? $QuestionSuffix
+
+$BlockOrFree:
+    %lemma
+    свободный
+    загружена
+    затруднена
+    перекрыта
+    перекрытие
+    закрытие
+    загрузка
+    задержка
+
+    открыта
+    закрыта
+    гололед
+    снегопад
+    скользко
+    чистые
+    затор
+
+$Score:
+    $Noun:
+        %lemma
+        бал
+        балл
+        бальный
+    [$Preposition? $Noun $Question? $sys.num?]
+
+$JamScore:
+    %lemma
+    пробочные $Score
+
+$Preposition:
+    (с | в | по | на | про | о | за | у | от | до)
+
+$Particle:
+    не
+
+$RoadMovement:
+    $Adj:
+        %lemma
+        дорожное
+        плотное
+    $Adj $Movement
+
+$Movement:
+    %lemma
+    движение
+
+$PureJam:
+    пробки
+
+$Jam:
+    %lemma
+    пробка
+    пробочка
+
+$SizeAdj:
+    %lemma
+    самая
+    маленькая
+    немаленькая
+    большая
+    небольшая
+    короткий
+    некороткая
+    сильные
+    несильная
+
+$Size:
+    $SizeAdj*
+    количество
+    длина
+    размер
+
+$Near:
+    %lemma
+    близкие
+    ближайшие
+
+$JamType:
+    ($SizeAdj | $Near | $Road.Adj)+
+
+$Map:
+    %lemma
+    (на | в)? (карта | экране)
+
+$Me:
+    мне | нам
+    меня | нас
+
+$AllMe:
+    $Me | я | мы
+
+$Show:
+    $TellWord:
+        %lemma
+        скажи | расскажи | подскажи | сообщи | говори | посмотри
+        скажешь | расскажешь | подскажешь | сообщишь | говоришь | посмотришь
+        сказать | рассказать | подсказать | сообщать | говорить | посмотреть
+        спрашиваю | спрашиваем | спрошу
+        покажи | показать | дай | найди
+        проясни | разъясни | поясни
+        доложи
+        сообщи | сообщить | сообщите
+        продиктуй | продиктовать | продиктуйте
+        озвучь | озвучить | озвучьте
+        проверь | проверить | проверьте
+        открой | открыть | откройте
+        оцени | оценить | оцените
+        $Common.Open | открыть
+        проинформируй | проинформировать | проинформируйте
+    [$TellWord (поближе | подальше)? $Me?]
+
+$When:
+    (в|во|на|за|до|между|прямо)? $TimeMoment
+
+$TimeMoment:
+    ($sys.datetime | $sys.datetime_range | $custom.day_part)
+    %lemma
+    [(этот | данный)? момент]
+    [(этот | данный)? час]
+    [(эти | данные)? часы]
+    сейчас
+
+$TrafficAction:
+    закончится
+    длится
+    пройдут
+    (обстоят | обстоит) дела?
+
+$AliceAction:
+    $Action:
+        %lemma
+        объясни
+        можешь
+        проверить
+        ищи
+        поболтаем
+    не? $Action
+
+$JamAction:
+    %lemma
+    стоять
+    простоять
+
+$Car:
+    %lemma
+    авто
+    автомобиль
+    машина
+    тачка
+    джип
+
+$DriverAction:
+    $Action:
+        %lemma
+        подьехать
+        проехать
+        приехать
+        ехать
+        поедем
+        поехали
+        попал
+        идти
+        дойти
+        вести
+        добраться
+        доехать
+        поехать
+
+    [$Action ((на|с|в)? $Car)?]
+
+$MoreDetails:
+    %lemma
+    более? подробную информацию
+    больше (деталей | информации | инфы | подробностей)?
+    подробная информация
+    информация
+    подробнее
+    подробно
+
+$TrafficFiller:
+    %lemma
+    возможно
+    долго
+    главный
+    сторона
+    внешний
+    внутренний
+    кольцо
+    яндекс
+    гугл
+    навигатор
+    твои
+    быстро
+    короче
+    смотри
+    (я|мы) спрашиваю
+    ты знаешь
+    узнать
+    (или|и) (нет|нету)
+    еще
+    хрен
+    могу
+    желательно
+    не? только
+    не? надо
+    сильно
+    очень
+    крепко
+    нормально
+    хорошо
+    ли
+    везде
+    online
+    онлайн
+    интересно
+    странно
+    очевидно
+    конец
+
+$MediumWeakLocation:
+    $StrongLocation
+    %weight 0.32
+    $ExtraWeakLocationWord
+    %weight 0.16
+    $ExtraWeakLocationWord $ExtraWeakLocationWord?
+    %weight 0.08
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+
+$ExtraWeakLocation: # https://a.yandex-team.ru/arc/trunk/arcadia/alice/nlu/data/ru/granet/weather/common.grnt?rev=r7769771#L173
+    %positive
+    %weight 0.32
+    $ExtraWeakLocationWord
+    %weight 0.16
+    $ExtraWeakLocationWord $ExtraWeakLocationWord?
+    %weight 0.08
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.04
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.02
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+    %weight 0.01
+    $ExtraWeakLocationWord $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord? $ExtraWeakLocationWord?
+
+
+$ExtraWeakLocationWord:
+    .
+    %negative
+    $WeakLocationNegative
+
+$WeakLocationNegative:
+    маршрут
+    %lemma
+    двигатель
+    электричка
+    затыканния
+    граница
+    таможня
+    таможенная
+    метеорологический
+    карантин
+    нарисовать
+    космос
+    железная
+    железнодорожная
+    поезд
+    правила # дорожного движения
+    знак
+    безопасность
+    поставь
+    би
+    вирус
+    синтез
+    уши
+    ухо
+    ушная
+    вино
+    винная
+    ванна
+    ванная
+    кожица
+    бутылка
+    бутылочная
+    воздушная
+    воздух
+    крышка
+    утилизация
+    без
+    учет
+    учёт
+    стоять
+    построй
+    проведи
+    проложи
+    анальная
+    беременность
+    беременная
+    беременна
+    бревенчатая
+    аллерго
+    выключи
+    спрячь
+    слово
+    слова
+    вода
+    ткань
+    денег
+    добавить
+    погода
+    $SkipTraffic
+    $DriverAction
+    $sys.currency
+    $Common.CancelRemoveReset
+    $Common.TurnOff
+    $Common.Pause
+    $Common.Stop
+    %lemma
+    песня
+    видео
+    музыка
+    плейлист
+    землетрясение  # реагирует на "сколько баллов"
+    интернет
+    остаток
+    лимит
+    продлить
+    диаметр
+    свет
+    серная
+    пластмассовая
+    деревянная
+    сливная
+    гидратных
+    заливная
+    ледяная
+    ушах
+    погода
+    буря
+    ветер
+    поступление
+    егэ
+
+    более? подробней

@@ -1,0 +1,130 @@
+USE hahn;
+
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA YSON.DisableStrict = 'true';
+
+$from = SELECT max(CAST(substring(Path,Length('home/paskills/stat/alice4business/b2b-orgs-alice-req-stat-by-day') + 1u) as Date)
+           + Interval('P1D'))
+       FROM folder('//home/paskills/stat/alice4business/b2b-orgs-alice-req-stat-by-day')
+       WHERE Type = 'table';
+
+-- $from = CAST('2021-01-01' as Date);
+$to = CurrentUtcDate();
+
+$target_folder = 'home/paskills/stat/alice4business/b2b-orgs-alice-req-stat-by-day/';
+$prepared_logs_folder = 'home/alice/dialog/prepared_logs_expboxes';
+$load_date = unwrap(cast(CurrentUtcDate() as String));
+
+$get_sc_info = ($analyticsInfo, $scenario) -> {
+    RETURN $analyticsInfo.analytics_info.$scenario.scenario_analytics_info
+};
+
+$get_skill_obj = ($analyticsInfo, $scenario) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo, $scenario).objects),
+        ($obj) -> { RETURN Yson::Contains($obj, 'skill') }
+    )[0];
+};
+
+DEFINE ACTION $insert_b2b_account_lifetime_stats($date) AS
+    $curr_date = CAST($date AS String);
+    $target_path = $target_folder || $curr_date;
+    $alice_logs = $prepared_logs_folder || '/' || $curr_date;
+
+    $b2b_snapshot_date = CAST($date + Interval('P1D') AS String);
+    $devices_table = "//home/paskills/alice_business/snapshots/" || $b2b_snapshot_date || "/devices";
+    $orgs_table = "//home/paskills/alice_business/snapshots/" ||  $b2b_snapshot_date ||  "/organizations";
+    $operations_table = "//home/paskills/alice_business/snapshots/" ||  $b2b_snapshot_date ||  "/operations_to_yt";
+
+    SELECT 
+        $curr_date as curr_date,
+        $target_path as target_path, 
+        $alice_logs as alice_logs,
+        $devices_table as devices_table,
+        $orgs_table as orgs_table,
+        $operations_table as operations_table;
+
+    $observed_devices = 
+        SELECT DISTINCT 
+            device_id,
+            org.id as org_id, 
+            org.name as org_name
+            FROM 
+                $devices_table as dev
+                JOIN $orgs_table as org ON org.id = dev.organization_id;
+
+    $kolonkish_uids = 
+        SELECT 
+            DISTINCT kolonkishUid FROM 
+            (SELECT
+            Yson::ConvertToString(Yson::ConvertToDict(payload)["kolonkishUid"]) as kolonkishUid
+        FROM (
+        SELECT
+            `payload`,
+        FROM 
+            $operations_table))
+    where kolonkishUid is not null;
+
+    INSERT INTO $target_path WITH TRUNCATE
+        SELECT
+            puid,
+            app,
+            req_id,
+            device,
+            fielddate,
+            generic_scenario,
+            input_type,
+            mm_scenario,
+            -- query,
+            -- reply,
+            server_time_ms,
+            alice_logs.device_id as device_id,
+            Yson::ConvertToString(
+                NVL(
+                if(Yson::Contains(analytics_info.analytics_info, 'Dialogovo'), $get_skill_obj(analytics_info, 'Dialogovo').id),
+                if(Yson::Contains(analytics_info.analytics_info, 'DialogovoB2b'), $get_skill_obj(analytics_info, 'DialogovoB2b').id))) as skill_id,
+            IF(kln.kolonkishUid is not null, TRUE, FALSE) as is_guest_acc,
+            CASE 
+                WHEN app == 'small_smart_speakers' OR app == 'quasar'
+                THEN 'speaker'
+                WHEN app == 'tv'
+                THEN 'tv'
+                ELSE 'other'
+            END as app_type,
+            CASE 
+                WHEN mm_scenario=='HollywoodMusic'
+                THEN 'music'
+                WHEN mm_scenario=='Video'
+                THEN 'video'
+                WHEN mm_scenario=='Search'
+                THEN 'search'
+                WHEN mm_scenario=='IoT'
+                THEN 'smart_home'
+                ELSE 'other'
+            END as scenario_type,
+            b2b_dev.org_name as org_name,
+            org_id as organization_id
+        FROM 
+            $alice_logs as alice_logs
+            LEFT JOIN $kolonkish_uids as kln ON alice_logs.puid == kln.kolonkishUid
+            JOIN $observed_devices as b2b_dev ON b2b_dev.device_id == alice_logs.device_id
+        WHERE
+            input_type != 'tech' AND
+            mm_scenario != 'Alice4Business';
+
+    COMMIT;
+    DISCARD select Ensure(count(distinct fielddate),
+        count(distinct fielddate)==1,
+        'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', values: '||(ListConcat(ListMap(aggregate_list_distinct(fielddate), ($x) -> {return cast($x as String); }))??'none'))
+    FROM $target_path;
+END DEFINE;
+
+$dates = (SELECT ListSortAsc(aggregate_list(d)) FROM (
+    SELECT CAST(substring(Path,Length($prepared_logs_folder) + 1u) as Date) as d
+    FROM folder($prepared_logs_folder)
+    ) as T
+    WHERE d BETWEEN $from and $to);
+
+SELECT $dates;
+EVALUATE FOR $date IN $dates DO $insert_b2b_account_lifetime_stats($date);

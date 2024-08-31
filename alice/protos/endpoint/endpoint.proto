@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint;endpointpb";
+option java_package = "ru.yandex.alice.protos.endpoint";
+option java_outer_classname = "EndpointProto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TEndpoint {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TMeta {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        EEndpointType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        TDeviceInfo DeviceInfo = 2 [json_name = "device_info", (NYT.column_name) = "device_info"];
+    }
+
+    message TStatus {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        EEndpointStatus Status = 1 [json_name = "status", (NYT.column_name) = "status"];
+        google.protobuf.Timestamp UpdatedAt = 2  [json_name = "updated_at", (NYT.column_name) = "updated_at"];
+    }
+
+    message TDeviceInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Manufacturer = 1 [json_name = "manufacturer", (NYT.column_name) = "manufacturer"];
+        string Model = 2 [json_name = "model", (NYT.column_name) = "model"];
+        string HwVersion = 3 [json_name = "hw_version", (NYT.column_name) = "hw_version"];
+        string SwVersion = 4 [json_name = "sw_version", (NYT.column_name) = "sw_version"];
+    }
+
+    enum EEndpointStatus {
+        Unknown = 0;
+        Offline = 1;
+        Online = 2;
+    }
+
+    enum EEndpointType {
+        UnknownEndpointType = 0;
+        SpeakerEndpointType = 1;
+        LightEndpointType = 2;
+        SocketEndpointType = 3;
+        SensorEndpointType = 4;
+        WebOsTvEndpointType = 5;
+        SwitchEndpointType = 6;
+        WindowCoveringEndpointType = 7;
+        DongleEndpointType = 8;
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    TMeta Meta = 2 [json_name = "meta", (NYT.column_name) = "meta"];
+    // Capability must be a member of NAlice.TCapabilityHolder message
+    // from alice/protos/endpoint/capability.proto
+    // but never TCapabilityHolder itself due to the fact that TCapabilityHolder depends on every known capability
+    repeated google.protobuf.Any Capabilities = 3 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+    TStatus Status = 4 [json_name = "status", (NYT.column_name) = "status"];
+}

@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+import "alice/protos/api/matrix/action.proto";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+// [BEGIN TScheduledActionMeta]
+message TScheduledActionMeta {
+    string Id = 1;
+    string Guid = 2;
+}
+// [END TScheduledActionMeta]
+
+// [BEGIN TScheduledActionSpec]
+message TScheduledActionSpec {
+    // [BEGIN TStartPolicy]
+    message TStartPolicy {
+        // Must be at least "CurrentTime() - 10 minutes"
+        google.protobuf.Timestamp StartAt = 1;
+    }
+    // [END TStartPolicy]
+
+    // [BEGIN TSendPolicy]
+    message TSendPolicy {
+        // On first attempt ConsecutiveFailuresCounter = 0, on second ConsecutiveFailuresCounter = 1, etc
+        // After fail next attempt will be at CurrentTime + Min(MaxRestartPeriod, MinRestartPeriod + RestartPeriodScale * (RestartPeriodBackOff ^ ConsecutiveFailuresCounter))
+        // Matrix retry action until MaxRetries has reached (last try will be with ConsecutiveFailuresCounter = MaxRetries) or Deadline has arrived
+        // Note: On fail next attempt time calculated first, and only then ConsecutiveFailuresCounter increased by one
+        // [BEGIN TRetryPolicy]
+        message TRetryPolicy {
+            uint64 MaxRetries = 1;
+
+            google.protobuf.Duration RestartPeriodScale = 2;
+            uint64 RestartPeriodBackOff = 3;
+            // Must be at least 1 second
+            google.protobuf.Duration MinRestartPeriod = 4;
+            google.protobuf.Duration MaxRestartPeriod = 5;
+        }
+        // [END TRetryPolicy]
+
+        // [BEGIN TSendOncePolicy]
+        message TSendOncePolicy {
+            TRetryPolicy RetryPolicy = 1;
+        }
+        // [END TSendOncePolicy]
+
+        // [BEGIN TSendPeriodicallyPolicy]
+        message TSendPeriodicallyPolicy {
+            // Must be at least 1 second
+            google.protobuf.Duration Period = 1;
+
+            // For periodically policy retries works a little differently than for send once policy
+            // On success next action will be scheduled at CurrentTime + Period and ConsecutiveFailuresCounter counter will be set to zero
+            // On fail next action will be scheduled at normal time for retry policy: CurrentTime + Min(MaxRestartPeriod, MinRestartPeriod + RestartPeriodScale * (RestartPeriodBackoff ^ ConsecutiveFailuresCounter))
+            // and ConsecutiveFailuresCounter will be increased by one
+            //
+            // WARNING: not implemented yet
+            // TRetryPolicy RetryPolicy = 2;
+        }
+        // [END TSendPeriodicallyPolicy]
+
+        oneof Policy {
+            TSendOncePolicy SendOncePolicy = 1;
+            TSendPeriodicallyPolicy SendPeriodicallyPolicy = 2;
+        }
+
+        // Action will be removed from queue if deadline arrived
+        // No field means no deadline
+        google.protobuf.Timestamp Deadline = 3;
+    }
+    // [END TSendPolicy]
+
+    TStartPolicy StartPolicy = 1;
+    TSendPolicy SendPolicy = 2;
+    TAction Action = 3;
+}
+// [END TScheduledActionSpec]
+
+// [BEGIN TScheduledActionStatus]
+message TScheduledActionStatus {
+    message TAttemptStatus {
+        enum EStatus {
+            UNKNOWN = 0;
+            ATTEMPT_STARTED = 1;
+            SUCCESS = 2;
+            ERROR = 3;
+        }
+
+        EStatus Status = 1;
+        string ErrorMessage = 2;
+    }
+
+    google.protobuf.Timestamp ScheduledAt = 1;
+
+    uint64 SuccessfulAttemptsCounter = 2;
+    uint64 FailedAttemptsCounter = 3;
+    uint64 InterruptedAttemptsCounter = 4;
+
+    uint64 ConsecutiveFailuresCounter = 5;
+
+    TAttemptStatus CurrentAttemptStatus = 6;
+    TAttemptStatus LastAttemptStatus = 7;
+}
+// [END TScheduledActionStatus]
+
+// [BEGIN TScheduledAction]
+message TScheduledAction {
+    TScheduledActionMeta Meta = 1;
+    TScheduledActionSpec Spec = 2;
+    TScheduledActionStatus Status = 3;
+}
+// [END TScheduledAction]

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+import "alice/megamind/protos/quality_storage/storage.proto";
+import "alice/protos/data/language/language.proto";
+
+import "google/protobuf/wrappers.proto";
+
+package NAlice;
+
+/**
+ * Alice client types
+ * Some app_ids are grouped together to have the same ranking formulas
+ */
+enum EClientType {
+    ECT_UNKNOWN = 0;
+    ECT_SMART_SPEAKER = 1;
+    reserved 2;
+    ECT_SMART_TV = 3;
+    ECT_ELARI_WATCH = 4;
+    ECT_TOUCH = 5;
+    ECT_DESKTOP = 6;
+    ECT_NAVIGATION = 7;
+}
+
+message TFormulaKey {
+    string ScenarioName = 1;
+    EMmClassificationStage ClassificationStage = 2;
+    EClientType ClientType = 3;
+    string Experiment = 4;
+    ELang Language = 5;
+}
+
+/**
+ * TFormulaDescription defines mapping from formula attributes to its name
+ * See THash<NAlice::TFormulaDescription> implementation for attributes hashing
+ */
+message TFormulaDescription {
+    // ScenarioName, ClassificationStage, ClientType, Experiment
+    reserved 2 to 5;
+    TFormulaKey Key = 7;
+
+    // Formula real name (for TFormulasStorage lookup)
+    string FormulaName = 1;
+
+    // Threshold for cutting scenario in preclassification
+    google.protobuf.DoubleValue Threshold = 6;
+    // Threshold for enabling cutting other scenarios in preclassification
+    google.protobuf.DoubleValue ConfidentThreshold = 8;
+    // Threshold for using scenario continue stage
+    google.protobuf.DoubleValue ContinueThreshold = 9;
+}
+
+/**
+ * Descriptions for all megamind formulas
+ * See: https://a.yandex-team.ru/robots/trunk/alice/megamind/formulas_description.pb.txt
+ */
+message TFormulasDescriptionList {
+    repeated TFormulaDescription FormulasDescription = 1;
+}

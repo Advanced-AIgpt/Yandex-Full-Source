@@ -1,0 +1,41 @@
+import: common/filler.grnt
+import: weather/common.grnt
+
+form alice.scenarios.get_weather_temperature__ellipsis:
+    slots:
+        when:
+            type:
+                sys.datetime_range
+                sys.datetime
+            source: $When
+        day_part:
+            type: custom.day_part
+            source: $DayPart
+        where:
+            matching_type: overlap
+            type:
+                sys.geo
+                string
+            source: $StrictWhere
+    root:
+        $Root
+
+        %force_negative
+        $Temperature
+        [.* $NoMatchHandcrafted]  # убираем запросы на грани
+
+$Root:
+    # отличие от get_weather_temperature.grnt - не требуем нетерминал "Temperature+", вместо него "Temperature*"
+    # и требует покрыть хотя бы один слот
+    [$TellMe* $Temperature* $WhenResolver $DayPartResolver? $StrictWhere? $ExpectedChange*]
+    [$TellMe* $Temperature* $WhenResolver? $DayPartResolver $StrictWhere? $ExpectedChange*]
+    [$TellMe* $Temperature* $WhenResolver? $DayPartResolver? $StrictWhere $ExpectedChange*]
+
+filler:
+    $Common.Filler
+    $Common.LeftFiller
+    $Common.WayToCallAlice
+    $nonsense
+    $WeatherFiller
+    $BydloFiller
+    $EllipsisFiller

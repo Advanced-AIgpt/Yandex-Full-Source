@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/analytics";
+option java_package = "ru.yandex.alice.megamind.protos.analytics";
+option java_outer_classname = "AnalyticsInfo";
+
+import "alice/library/field_differ/protos/extension.proto";
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/scenarios/analytics_info.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TAnalyticsInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NScenarios.TAnalyticsInfo ScenarioAnalyticsInfo = 1 [json_name = "scenario_analytics_info", (NYT.column_name) = "scenario_analytics_info"];
+
+    // If you add properties below, write code for copying them in
+    // TMegamindAnalyticsInfoBuilder::AddAnalyticsInfo
+    string Version = 2 [json_name = "version", (NYT.column_name) = "version"];
+    TSemanticFrame SemanticFrame = 3 [json_name = "semantic_frame", (NYT.column_name) = "semantic_frame"];
+    map<string, NScenarios.TFrameAction> FrameActions = 4 [json_name = "frame_actions", (NYT.column_name) = "frame_actions", (NYT.flags) = MAP_AS_DICT,
+        (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    repeated TSemanticFrame MatchedSemanticFrames = 5 [json_name = "matched_semantic_frames", (NYT.column_name) = "matched_semantic_frames", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    string ParentRequestId = 6 [json_name = "parent_request_id", (ImportantFieldCheck) = IFC_PRESENCE];
+    string ParentProductScenarioName = 7 [json_name = "parent_product_scenario_name", (ImportantFieldCheck) = IFC_PRESENCE];
+}

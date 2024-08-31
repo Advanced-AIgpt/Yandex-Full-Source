@@ -1,0 +1,131 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ar.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ar.nlg" import format_date, render_day_part, range_attention %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ar.nlg" import render_wind_phrase, render_now_phrase, render_wind_precaution %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ar.nlg" import geo_changed_attention_wind, render_short_now_phrase %}
+
+
+{% macro wind_current() %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set wind=render_wind_phrase(context.weather_forecast) %}
+  {% set precaution=render_wind_precaution(context.weather_forecast, context.attentions) %}
+
+  # render result
+  {{ date }} {{ city }} {{ wind }}. {{ precaution }}
+{% endmacro %}
+
+
+{% macro render_day_wind(forecast, is_capitalized, mock_ts=None) %}
+  {% set date=format_date(forecast.date, forecast.tz, mock_ts) %}
+
+  {% if is_capitalized is defined and is_capitalized %}
+    {% set date=date|capitalize %}
+  {% endif %}
+
+  {% set wind=render_wind_phrase(forecast) %}
+  {% set precaution=render_wind_precaution(forecast, context.attentions) %}
+
+  {{ date }} {{ wind }}. {{ precaution }}
+{% endmacro %}
+
+
+{% macro wind_for_range() %}
+  {% if context.attentions.get('no_weather_for_next_weekend') %}
+    {% chooseline %}
+      لا أستطيع معرفة المستقبل لكنني أعرف توقعات الريح لأيام العطلة هذا الأسبوع.
+      للأسف، فأنا لا أعرف توقعات الريح لأيام العطلة القادمة لكنني أستطيع إخبارك بتوقعات الريح لأيام العطلة هذا الأسبوع.
+    {% endchooseline %}
+  {% endif %}
+
+  {{ context.forecast_location | city_prepcase | capitalize_first }}
+  {% for day in context.weather_forecast.days %}
+    {{ render_day_wind(day, loop.index0, context.mock_timestamp) }}\n
+  {% endfor %}
+  {{ range_attention(context.attentions) }}
+{% endmacro %}
+
+
+{% macro wind_for_date() %}
+  {% set date %}
+    {{ format_date(context.weather_forecast.date, context.weather_forecast.tz, context.mock_timestamp) }}
+    {{ render_day_part(context.day_part) }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set wind=render_wind_phrase(context.weather_forecast) %}
+  {% set precaution=render_wind_precaution(context.weather_forecast, context.attentions) %}
+
+  # render result
+  {{ date }} {{ city }} {{ wind }}. {{ precaution }}
+{% endmacro %}
+
+
+{% macro render_next_wind_forecast() %}
+  {% if context.forecast_next is defined and context.forecast_next is not none %}
+
+    {{ render_day_part(context.forecast_next.day_part) }}
+    {% chooseline %}
+      الممكن
+      الرجاء الانتظار
+      سيكون
+    {% endchooseline %}
+    رياح تصل إلى
+    {{ context.forecast_next.wind_gust | round(0) }}
+    ميل/الثانية
+
+    {% if context.forecast_next_next is defined and context.forecast_next_next is not none %}
+      , {{ render_day_part(context.forecast_next_next.day_part) }} -
+      حتى {{ context.forecast_next_next.wind_gust | round(0) }}
+    {% endif %}
+
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_current_wind_forecast() %}
+  {% set date %}
+    {{ render_short_now_phrase() }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set wind=render_wind_phrase(context.weather_forecast) %}
+
+  # render result
+  {{ date }} {{ city }} {{ wind }}
+{% endmacro %}
+
+{% macro wind_today() %}
+  {{ render_short_current_wind_forecast() }}.
+  {{ render_next_wind_forecast() | capitalize_first }}.
+  {{ render_wind_precaution(context.weather_forecast, context.attentions) }}
+{% endmacro %}
+
+
+{% macro render_wind_with_geo_changed_attention(wind) %}
+  {% if context.attentions.get('geo_changed') %}
+    {{ geo_changed_attention_wind(context, wind) }}
+  {% else %}
+    {{ wind | capitalize_first }}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase render_wind_current %}
+  {{ render_wind_with_geo_changed_attention(wind_current()) }}
+{% endphrase %}
+
+{% phrase render_wind_today %}
+  {{ render_wind_with_geo_changed_attention(wind_today()) }}
+{% endphrase %}
+
+{% phrase render_wind_for_date %}
+  {{ render_wind_with_geo_changed_attention(wind_for_date()) }}
+{% endphrase %}
+
+{% phrase render_wind_for_range %}
+  {{ render_wind_with_geo_changed_attention(wind_for_range()) }}
+{% endphrase %}

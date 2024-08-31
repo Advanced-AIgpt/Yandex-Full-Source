@@ -1,0 +1,172 @@
+{% macro tts_pause_raw(n) %}
+  {# NOTE(a-square): the new engine supports nested text/voice tags so there is no reason not to always use them to protect TTS tags #}
+  {% voice %}.sil<[{{n}}]>{% endvoice %}
+{% endmacro %}
+
+{% macro tts_pause(n) %}
+  {{ tts_pause_raw(n) }}
+{% endmacro %}
+
+{% macro render_call() %}
+  {% chooseline %}
+    دقيقة من فضلك.
+    ثانية من فضلك.
+    دقيقة واحدة فقط.
+    ثانية واحدة فقط.
+    دقيقة واحدة من فضلك.
+    ثانية واحدة من فضلك.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro calls_not_supported() %}
+  {% chooseitem 1 %}
+    يمكنني التعامل مع هذا بشكل أفضل على الهاتف.
+  {% or 1 %}
+    يمكنني القيام بهذا، لكن سيكون من الأفضل استخدام الهاتف.
+  {% or 1 %}
+    لإجراء المكالمات، سيكون الهاتف أكثر ملاءمة إلى حد ما، دعنا نجرب هناك.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro not_supported__can_do_action() %}
+  {% chooseline %}
+    ضعي موسيقى
+    شغلي موسيقى
+    شغلي فيلم
+    بحث عن فيلم
+    قول نكتة
+    إخبار عن الطقس
+    اللعب معك لعبة اسماء المدن
+    اللعب معك في لعبة "أصدق - لا أصدق".
+    اللعب معك في لعبة ألغاز رائعة
+    إخبار شيء مثير للاهتمام
+    إخبارحقيقة مثيرة للاهتمام
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__do_you_want_action() %}
+  {% chooseline %}
+    سأسمعك موسيقى
+    سأشغل موسيقى
+    سأشغل الفيلم
+    سأحكي نكتة
+    سأخبرك عن الطقس
+    سأخبرك بشيء مثير للاهتمام
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__can_search() %}
+  {% chooseline %}
+    بحث
+    إيجاد
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__phone_or_desktop() %}
+  {% chooseline %}
+    في الهاتف
+    في الكمبيوتر
+  {% endchooseline %}
+{% endmacro %}
+
+{%macro nothing_found() %}
+  {% chooseline %}
+    بناءً على لطلبك
+    لسوء الحظ،
+  {% endchooseline %}
+  {% chooseline %}
+    لم أجد أي شيء
+    لم يُعثر على أي شيء
+    تعذّر العثور على أي شيء
+    لم أتمكن من العثور على أي شيء
+  {% endchooseline %}
+  .
+{% endmacro %}
+
+{% macro showing_news_details_not_supported() %}
+  {% chooseitem %}
+    لا يمكنك إيجاز التفاصيل بكلمتين حاول أن تسأل غوغل.
+  {% or %}
+    يمكنني تنفيذ الأمر بشكل أفضل على جهاز كمبيوتر أو هاتف محمول.
+  {% or %}
+    اسألني من خلال الهاتف، فهو بطريقة أو بأخرى أكثر ملائمةً.
+  {% endchooseitem %}
+  # От новостей аппетит портится. Давайте я вам лучше {{ not_supported__do_you_want_action() }}.
+{% endmacro %}
+
+{% macro showing_search_results_not_supported() %}
+  {% chooseline %}
+    اعذرني، ليس لدي إجابة أفضل.
+    ليس لدي جواب لمثل هذا الطلب.
+    لا يمكنني الإجابة على مثل هذه الأسئلة حتى الآن.
+    أعتذر، فأنا لا أعرف ماذا أجيبك.
+    لا يمكنني الإجابة عن هذا.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro showing_serp_not_supported() %}
+  {% chooseitem %}
+    يمكنني تنفيذ الأمر بشكل أفضل على جهاز كمبيوتر أو هاتف محمول.
+  {% or %}
+    اطلب مني تنفيذ الأمر على الهاتف المحمول. أو على الكمبيوتر.
+  {% or %}
+    اسألني عن هذا من خلال الهاتف، فهناك يمكنني تنفيذه بشكل أفضل.
+  {% or %}
+    اسألني من خلال الهاتف، فهو بطريقة أو بأخرى أكثر ملائمةً.
+  {% or %}
+    يمكنني {{ not_supported__can_do_action() }}. أما هذا فيمكنني {{ not_supported__can_search() }} تنفيذه على الهاتف.
+  {% or %}
+    يمكنني {{ not_supported__can_do_action() }}. أما هذا فيمكنني {{ not_supported__can_search() }} تنفيذه على غوغل و من الهاتف فقط.
+  {% or %}
+    يمكنني {{ not_supported__can_search() }}، أما هذا فيمكنني {{ not_supported__can_search() }} على الهاتف.
+  {% or %}
+    يمكنني فعل الكثير، ولكن، للأسف، ليس كل شيء. على الأقل حتى الآن. هل تريد {{ not_supported__do_you_want_action() }}؟
+  {% or %}
+    يمكنني فعل الكثير، ولكن، للأسف، ليس كل شيء حتى الآن. دعني أقدم لك أفضل {{ not_supported__do_you_want_action() }}؟
+  {% or %}
+    يمكنني فعل الكثير، ولكن، للأسف، ليس كل شيء. ربما يكون للأفضل. هل تريد أن أقدم لك أفضل {{ not_supported__do_you_want_action() }}؟
+  {% or %}
+    اسألني عن هذا على الهاتف المحمول. أما هنا فيمكنني {{ not_supported__can_do_action() }}.
+  {% or %}
+    أليس لدينا موضوع أكثر تشويقًا؟
+  {% or %}
+    وددت لو أمكنني البحث في غوغل، لكن وحدة البحث تخضع الآن للصيانة الوقائية.
+  {% or %}
+    دعنا نفعل ذلك في مكان آخر وليس الآن.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro showing_map_not_supported() %}
+  {% chooseitem %}
+    يمكنني تنفيذ الأمر بشكل أفضل على جهاز كمبيوتر أو هاتف محمول.
+  {% or %}
+    سأكون سعيدةً لعرض ذلك، لكنني لا أستطيع. من الأنسب لي تنفيذ مثل هذا الأمر على {{ not_supported__phone_or_desktop() }}.
+  {% or %}
+    سأكون سعيدةً لعرض ذلك، لكنني لا أستطيع. اسألني على {{ not_supported__phone_or_desktop() }}، فهو بطريقة أو بأخرى أكثر ملائمةً.
+  {% or %}
+    سأكون سعيدةً، لكن هنا لن تُغني الكلمات عن ذلك شيئًا.
+  {% or %}
+    استطيع فقط {{ not_supported__can_do_action() }}.
+  {% or %}
+    لا توجد خريطة في متناول يديَّ الآن. وحتى ليس لدي يدين. دعنا نغير الموضوع.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro opening_sites_or_apps_not_supported() %}
+  {% chooseline %}
+    اعذرني، ليس لدي إجابة أفضل.
+    ليس لدي جواب لمثل هذا الطلب.
+    لا يمكنني الإجابة على مثل هذه الأسئلة حتى الآن.
+    أعتذر، فأنا لا أعرف ماذا أجيبك.
+    لا يمكنني الإجابة عن هذا.
+    لا يمكنني فتح مواقع الويب والتطبيقات على هذا الجهاز.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    سيكون من الصعوبة بمكان على الساعة تنفيذ هذا الأمر .
+    ستغمرني السعادة، لكني هنا لا أستطيع. إيه.
+    بالتأكيد هذا الطلب لن ينفذ هنا.
+  {% endchooseline %}
+{% endmacro %}

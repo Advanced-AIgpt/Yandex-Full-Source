@@ -1,0 +1,33 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" %}
+
+{% ext_from "alice/hollywood/library/common_nlg/common_ar.nlg" import render_call, calls_not_supported %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" import get_search_info  %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not (context.is_smart_speaker or context.is_legatus or context.is_auto)  %}
+    {% if info.factoid_phone_uri %}
+      {{ info.factoid_phone_uri }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if (context.is_smart_speaker or context.is_legatus or context.is_auto) and info.is_factoid_with_phone %}
+    {{ calls_not_supported() }}
+  {% else %}
+    {% if info.factoid_phone_uri %}
+      {{ render_call() }}
+    {% else %}
+      {% chooseline %}
+        لا أذكر بمن علي أن أتصل.
+        لم أتمكن من العثور على أي رقم هاتف.
+        لا أستطيع أن أفهم عن أي رقم هاتف تتحدث.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

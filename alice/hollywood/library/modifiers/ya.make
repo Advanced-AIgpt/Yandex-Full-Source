@@ -1,0 +1,21 @@
+RECURSE(
+    analytics_info
+    base_modifier
+    context
+    external_sources
+    handler
+    matchers
+    metrics
+    modifiers
+    registry
+    response_body_builder
+    testing
+    util
+)
+
+RECURSE_FOR_TESTS(
+    base_modifier
+    handler
+    matchers
+    modifiers
+)

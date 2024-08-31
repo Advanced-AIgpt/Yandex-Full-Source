@@ -1,0 +1,127 @@
+import: order/providers_name.grnt
+
+import: common/filler.grnt
+import: common/grammar_suggest.grnt
+import: common/commands.grnt
+
+form alice.order.cancel_order:
+    slots:
+        provider_name:
+            source: $ProviderName
+            type: custom.provider_name
+    root:
+        [$ForWhom* хочу* ($CancelAction|$UserDescision)+ $OrderName+ $Prefix* $ProviderName*]
+
+        %force_negative
+        [$StopPhrases $ForWhom* $CancelAction+ $OrderName+ $Prefix* $ProviderName*]
+        [$StopWords .*]
+        [не надо (отменять|удалять) $OrderName+]
+
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+        $Noise
+
+$UserDescision:
+    (передумал|передумала) (его|их)? (получать|заказывать|ждать)?
+    (решил|решила)? отказаться от?
+    не хочу (доставлять|заказывать)?
+    не надо $ForWhom? (доставлять|заказывать)?
+    не (нужна|нужен|нужно|нужны) (доставлять|получать|заказывать|ждать|заказывать)?
+
+
+$StopWords:
+    такси
+    машина
+    машину
+    машины
+
+$StopPhrases:
+    как
+
+$CancelAction:
+    сделай? (отмену|отмена|отказ)
+    верни
+    вернуть
+    отмени
+    отмену
+    отменю
+    отменяй
+    отменить
+    отменять
+    отменила
+    отменим
+    отмените
+    отменяйте
+    отменяем
+    отказаться от?
+    отменяю
+    откажись от?
+    отказываюсь от?
+    не доставляй
+    не заказывай
+    удали
+    удалить
+
+$OrderName:
+    (доставки|доставку|доставка) (еды|продуктов)?
+    (заказ|заказа|заказы) (еды|продуктов)?
+    еду
+    еды
+    еда
+    покупку
+    продукты
+    товары
+    курьера
+
+$ForWhom:
+    у? из? $Common.PronounMe
+    мой
+    свой
+
+$Prefix:
+    %lemma
+    (на|от|в|с|из) сервис?
+
+$Noise:
+    пожалуйста
+    этого
+    можно
+    команду
+    попроси
+    заказывал
+    заказывала
+    давай
+    дай
+    даю
+    не нужен
+    да
+    спасибо
+    тебе
+    ты
+    что
+    можешь
+    я
+    его
+    этот
+    нет
+    который
+    уже
+    у
+    срочно
+    через
+    минут
+    или
+    которая
+    будет
+    прибудет
+    приедет
+    свяжись с?
+    сообщи
+    передай
+    будь так? добра
+    с доставкой
+    $sys.time
+    %lemma
+    курьер

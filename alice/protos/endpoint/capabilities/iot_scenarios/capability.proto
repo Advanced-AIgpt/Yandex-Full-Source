@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/iot_scenarios;iotscenariospb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "IotScenariosProto";
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/data/iot/scenario.proto";
+
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TIotScenariosCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = IotScenariosCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    // events
+    message TLocalStepsFinishedEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = LocalStepsFinishedEventType;
+
+        // LaunchID is UUIDv4 and is generated on client side
+        string LaunchID = 1 [json_name = "launch_id", (NYT.column_name) = "launch_id"];
+        string ScenarioID = 2 [json_name = "scenario_id", (NYT.column_name) = "scenario_id"];
+        map<uint32, NAlice.NIot.TLocalScenario.TStepResult> StepResults = 3 [json_name = "step_results", (NYT.column_name) = "step_results"];
+    }
+
+    // directives
+    message TAddIotScenariosDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "add_iot_scenarios_directive";
+        option (DirectiveType) = AddIotScenariosDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated NAlice.NIot.TLocalScenario Scenarios = 1 [json_name = "scenarios", (NYT.column_name) = "scenarios"];
+    }
+
+    message TRemoveIotScenariosDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "remove_iot_scenarios_directive";
+        option (DirectiveType) = RemoveIotScenariosDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated string IDs = 1 [json_name = "ids", (NYT.column_name) = "ids"];
+    }
+
+    message TSyncIotScenariosDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "sync_iot_scenarios_directive";
+        option (DirectiveType) = SyncIotScenariosDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+        repeated NAlice.NIot.TLocalScenario Scenarios = 1 [json_name = "scenarios", (NYT.column_name) = "scenarios"];
+    }
+}

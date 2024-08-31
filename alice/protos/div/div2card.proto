@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/div";
+option java_package = "ru.yandex.alice.protos.div";
+option java_outer_classname = "Div2CardProto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+import "google/protobuf/struct.proto";
+
+import "alice/protos/div/div2id.proto";
+
+message TDiv2Card {
+    // The standard body of the card, as described in the docs.
+    oneof Div2Body {
+        option (NYT.variant_field_name) = "div2_body";
+
+        google.protobuf.Struct Body = 1 [json_name = "body", (NYT.column_name) = "body"];
+        string StringBody = 6 [json_name = "string_body", (NYT.column_name) = "string_body"];
+    }
+
+    // Whether
+    bool HideBorders = 2 [json_name = "hide_borders"];
+
+    string Text = 3 [json_name = "text", (NYT.column_name) = "text"];
+
+    message Template {
+        oneof TemplateBody {
+            option (NYT.variant_field_name) = "template_body";
+
+            google.protobuf.Struct Body = 1 [json_name = "body", (NYT.column_name) = "body"];
+            string StringBody = 2 [json_name = "string_body", (NYT.column_name) = "string_body"];
+        }
+    }
+
+    // Templates than can be cached on device between multiple div-card responses
+    // map from template name to template content
+    map<string, Template> GlobalTemplates = 4 [json_name = "global_templates", (NYT.column_name) = "global_templates"];
+    string CardName = 5 [json_name = "card_name", (NYT.column_name) = "card_name", deprecated = true];
+
+    TDiv2Id Id = 7 [json_name = "id", (NYT.column_name) = "id"];
+}

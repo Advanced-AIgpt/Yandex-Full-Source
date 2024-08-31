@@ -1,0 +1,437 @@
+import: common/filler.grnt
+import: common/nouns.grnt
+import: sound/common.grnt
+
+form personal_assistant.scenarios.sound.unmute:
+    enable_synonyms: all
+    disable_synonyms: synset
+    root:
+        $RootUnmute
+        $RootUnmuteExact
+        %negative
+        .* на? ($Num|всю) .*
+        .* (тише|потише|погромче|громче|нормально|чуть) .*
+    filler:
+        $Filler
+
+$RootUnmute:
+    $Negative:
+        [$TurnOn+ $Common.Sound.Media* $Sound+ (на всю)]
+        [($TurnOn+ $Common.Sound.Media+) $Sound*]
+        .* $TurnOn+ $Common.Sound.Media+ .*
+        .* (как|почему|зачем|какой|какая|какое) .*
+        .* $TurnOn+ (звуки|звук) .+
+        %negative
+        $TurnOn+ (звуки|звук) (на|в)? $Where
+
+    [$TurnOn+ (((на|в) $Where)* $Where*) $Common.Sound.Media* $Sound+]
+    [$TurnOff+ $SoundLessMode+]
+    %negative
+    %weight 100000
+    $RootUnmute.Negative
+
+$RootUnmuteExact:
+    $LocalFillers:
+        ну
+        да
+        тогда
+        блин
+        ой
+        ладно
+        $sys.swear
+        пожалуйста
+        %negative
+        %lemma
+        пердеж
+
+    %fillers off
+    %anchor_to_begin
+    %anchor_to_end
+    [$RootUnmuteExact.LocalFillers* (со звуком) $Common.PronounYou* $Common.WayToCallAlice*]
+    [$RootUnmuteExact.LocalFillers* $TurnOn+ (звуки|звук)+ обратно? $Common.Sound.Media? $Common.PronounYou* $Common.WayToCallAlice*]
+    [$RootUnmuteExact.LocalFillers* (мне)* ((на|в)? $Where)? (поставь|поставьте)+ $TurnOn* $Sound+ $Common.PronounYou* $Common.WayToCallAlice*]
+
+form personal_assistant.scenarios.sound.mute:
+    enable_synonyms: all
+    disable_synonyms: synset
+    root:
+        $RootMute
+        $RootMuteExact
+        %negative
+        $MuteNegative
+    filler:
+        $Filler
+
+$RootMute:
+    $TurnOff+ $AlmostAllOff? $SoundMuteExt+ $AlmostAllMute?
+    $SoundMuteExt+ $AlmostAllMute? $TurnOff+ $AlmostAllOff?
+    [$TurnOn+ $SoundMuteExt+] [((на|в)? $Where)? $TurnOff+ $SoundMuteExt*]
+    [$TurnOn+ $SoundMuteExt*]? [((на|в)? $Where)? $TurnOff+ $SoundMuteExt+]
+    [$Do+ ((на|в)? $Where)* на* $SoundLessMode+ $Sound*]
+    [$TurnOffStrict+ $SoundMuteExt+ (на? (ноль|нолик|zero) (процентов|делений)?)]
+    %negative
+    .* тебя выключу
+    .* не надо $SoundMuteExt+ ($TurnOff<lemma>)+
+    звук (для|чтобы) .*
+    $TurnOff+ .* через .*
+    $TurnOff+ .* в ($sys.time|$sys.date|$sys.datetime)+ .*
+
+$RootMuteExact:
+    $LocalFillers:
+        ну
+        и
+        тогда
+        блин
+        ой
+        ладно
+        $sys.swear
+        пожалуйста
+    $LocalFillersExt:
+        можно
+        только
+        вообще
+        так
+        сейчас
+        спасибо
+        короче
+
+    %fillers off
+    %anchor_to_begin
+    %anchor_to_end
+    [$RootMuteExact.LocalFillers* (тихо|тишина) $Common.PronounYou* $Common.WayToCallAlice*]
+    [$Do* $RootMuteExact.LocalFillers* $RootMuteExact.LocalFillersExt* $Common.PronounYou* $Common.WayToCallAlice* ((на|в)? $Where)* на* $SoundLessMode+ $Sound*]
+
+$Num:
+    %lemma
+    $sys.num
+    $Common.Sound.StrangeNumberEnum
+
+$Something:
+    $Common.TheAlbum
+    $Common.TheArtist
+    $Common.TheMusic
+    $Common.ThePlaylist
+    $Common.TheTrack
+    $Video
+    %lemma
+    радио
+    мультики
+    мультик
+    сказку
+    сказки
+    игру
+    проигрывание
+
+$AlmostAllOff:
+    .*
+    %negative
+    %weight 10
+    .* $Common.Sound.Maximal .*
+    .* $Common.Sound.Minimum .*
+    .* $TurnOn .*
+    .* через .*
+    .* $Num .*
+    .* (будильник|будильника) .*
+    .* $Something .*
+
+$AlmostAllMute:
+    .*
+    %negative
+    %weight 10
+    .* $Common.Sound.Maximal .*
+    .* $Common.Sound.Minimum .*
+    .* $TurnOn .*
+    .* через .*
+    .* $Num .*
+    .* (будильник|будильника) .*
+
+$MuteNegative:
+    .* [$TurnOn+ $Sound+] .*
+    (почему|что|как) [$Something? $TurnOffStrict.Negative+ $SoundMuteExt+ .*]
+    (почему|что|как) $Something? $SoundLessMode+
+    как|почему $TurnOff<lemma> .*
+    (как|почему|зачем|какой|какая|какое) .*
+    .* [тихо говоришь] .*
+    .* на $Num .*
+    .* на $Common.Sound.StrangeNumberEnum .*
+    %negative
+    .* хватит включать .*
+    .* поставь на .*
+
+$Do:
+    %lemma
+    сделай
+    поставь
+    включи
+    добавь
+    дай
+    делай
+    открой
+    показывай
+    громкость
+
+$SoundLessMode:
+    %lemma
+    [(без+ звука+) режим?]
+    [беззвучный+ режим*]
+
+$TurnOff:
+    $TurnOffStrict
+    $TurnOffStrict.Ext
+
+$TurnOffStrict:
+    $Negative:
+        рублю
+        убрала
+        выключен
+        выключила
+        выключил
+        выключилась
+        вырублен
+        вырубила
+        вырубил
+        вырубилась
+        отключен
+        отключила
+        отключил
+        отключилась
+        приостановлен
+        приостановила
+        приостановилась
+        отменен
+        отменила
+        отменил
+        отменилась
+        заглушен
+        заглушила
+        заглушил
+        заглушилась
+        прекратила
+        прекратил
+        прекратилась
+    $Ext:
+        $Common.No $Common.Lets
+        не включай
+        не включайте
+    удали
+    удалите
+    убери
+    уберите
+    убрать
+    убирай
+    выключай
+    выключи
+    выключу
+    выключаем
+    выключим
+    выключите
+    выключить
+    выключись
+    вырубай
+    выруби
+    вырубите
+    отключи
+    отключим
+    отключаем
+    отключай
+    отключите
+    отключить
+    останови
+    остановите
+    приостанови
+    приостановите
+    отмени
+    отмените
+    отменить
+    заглуши
+    заглушите
+    заглушить
+    прекрати
+    прекратите
+    прекратить
+    хватит
+    сбрось
+    сбросить
+    закрой
+    избавь
+    избавьте
+
+$Where:
+    %lemma
+    телефон
+    телевизор
+    камера
+    навигатор
+    планшет
+    компьютер
+    ноутбук
+    везде
+    видео
+    кухня
+    спальня
+    гостиная
+    приставки
+    наушники
+    яндекс
+    интернет
+    смартфон
+    устройство
+    браузер
+
+$Sound:
+    $SoundAdj:
+        %lemma
+        свой
+
+    $SoundNoun:
+        $NegativeSynonyms:
+            %lemma
+            %disable_synonyms all
+            мелодия
+            аудио
+            песня
+            громко
+        $NegativeExact:
+            громкостью
+
+        %lemma
+        звук
+        громкость
+        сигнал
+        динамик
+        голосовое сопровождение
+        режим озвучивания
+        %negative
+        $Sound.SoundNoun.NegativeSynonyms
+        $Sound.SoundNoun.NegativeExact
+
+    [$Sound.SoundAdj? $Sound.SoundNoun]
+
+$SoundMuteExt:
+    %disable_synonyms all
+    $Sound
+    %lemma
+    шум
+
+$TurnOn:
+    $Negative:
+        включу
+        создавать
+    %lemma
+    ставь
+    подключи
+    запусти
+    восстановить
+    верни
+    сделай
+    давай
+    дай
+    дайте
+    активировать
+    продолжить
+    верни
+    обратно
+    включи
+    включись
+    врубай
+    надо
+    %negative
+    $TurnOn.Negative
+
+$Filler:
+    $Common.PronounMe
+    $Common.PronounYou
+    $Common.SmartSpeaker
+    сказал
+    сказала
+    слушай
+    послушай
+    говорю
+    %lemma
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.LeftFiller
+    $sys.swear
+    пожалуйста
+    да
+    ну
+    пока
+    эту
+    это
+    так
+    хорошо
+    тогда
+    теперь
+    спасибо
+    чего
+    можешь
+    хотела сказать
+    сейчас
+    молодец
+    please
+    привет
+    мать твою
+    сука
+    спокойной ночи
+    все
+    ка
+    a
+    ой
+    о
+    господи
+    можно
+    здесь
+    текущий
+    текущая
+    быстрее
+    говорить
+    хочу
+    для
+    прошу
+    попросил
+    во первых
+    во вторых
+    в третьих
+    еще
+    еще раз
+    только
+    надо
+    нужно
+    сама
+    вот
+    так
+    будь добра
+    сразу
+    пупсик
+    его
+    ее
+    себя
+    сама себя
+    свой
+    нет
+    у
+    передумал
+    давай
+    шучу
+    лучше
+    уж
+    ладно
+    то
+    быстро
+    молча
+    опять
+    себе
+    быстрей
+    помоги
+    короче
+    снова
+    просто
+    назад
+    оставлять
+    постоянно
+    настрой
+    🔍
+    %negative
+    %lemma
+    пердеж

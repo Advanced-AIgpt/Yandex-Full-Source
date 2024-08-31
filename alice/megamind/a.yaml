@@ -1,0 +1,169 @@
+service: megamind
+title: Megamind
+ci:
+  release-title-source: flow
+  autocheck:
+    strong: true
+
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  releases:
+    megamind-tests-debug:
+      title: Test Megamind DEBUG
+      flow: run-megamind-tests
+      auto: true
+      stages:
+        testing:
+          title: Test Megamind DEBUG
+      flow-vars:
+        build-type: debug
+
+    megamind-tests-release:
+      title: Test Megamind RELEASE
+      flow: run-megamind-tests
+      auto: true
+      stages:
+        testing:
+          title: Test Megamind RELEASE
+      flow-vars:
+        build-type: release
+
+    megamind-ci-release:
+      title: Megamind CI
+      flow: release-megamind-ci
+      auto: true
+      stages:
+        build:
+          title: Build
+          displace: true
+        stable:
+          title: Deploy
+
+  flows:
+    run-megamind-tests:
+      title: Megamind Tests
+      jobs:
+        testing-start:
+          title: Testing start
+          task: dummy
+          stage: testing
+
+        testing:
+          title: Test ${flow-vars.build-type}
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing-start
+
+        testing-asan:
+          title: Test ${flow-vars.build-type} & asan
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            sanitize: address
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing-start
+
+        testing-tsan:
+          title: Test ${flow-vars.build-type} & tsan
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            sanitize: thread
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing-start
+
+        testing-ubsan:
+          title: Test ${flow-vars.build-type} & ubsan
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            sanitize: undefined
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing
+
+        testing-msan:
+          title: Test ${flow-vars.build-type} & msan
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            sanitize: memory
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing-asan
+
+        testing-lsan:
+          title: Test ${flow-vars.build-type} & lsan
+          task: common/arcadia/ya_make
+          input:
+            build_type: ${flow-vars.build-type}
+            sandbox_tags: GENERIC & SSD
+            sanitize: leak
+            targets: alice/megamind/library
+            test: True
+            disable_test_timeout: True
+          needs: testing-tsan
+
+        tesing-finised:
+          title: Testing finished
+          task: dummy
+          needs:
+            - testing
+            - testing-asan
+            - testing-lsan
+            - testing-msan
+            - testing-tsan
+            - testing-ubsan
+            - testing-start
+
+    release-megamind-ci:
+      title: Megamind CI
+      jobs:
+        build:
+          title: Build Megamind package
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/megamind/deploy/packages/megamind_standalone.json
+            resource_type: MEGAMIND_PACKAGE
+            package_type: tarball
+            build_type: release
+            use_aapi_fuse: true
+            aapi_fallback: true
+            build_system: semi_distbuild
+            binary_executor_release_type: stable
+        stable-amelie-deploy:
+          title: Deploy Megamind CI
+          task: common/deploy/release
+          stage: stable
+          input:
+            config:
+              sandboxResourceType: MEGAMIND_PACKAGE
+              commonReleaseData:
+                releaseStage: unstable
+                releaseNotes: Release from CI
+              stageName: megamind-ci
+          needs:
+            - build
+
+arcanum:
+  review:
+    required: true
+    disabling_policy: need_reason

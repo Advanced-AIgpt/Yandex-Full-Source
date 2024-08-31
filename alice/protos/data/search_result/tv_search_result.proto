@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/search_result";
+option java_package = "ru.yandex.alice.protos.data.search_result";
+option java_outer_classname = "TvSearchResult";
+
+import "alice/protos/data/tv/carousel.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TTvSearchRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string SearchText = 1 [json_name = "search_text", (NYT.column_name) = "search_text"];
+    string RestrictionMode = 2 [json_name = "restriction_mode", (NYT.column_name) = "restriction_mode"];
+    string RestrictionAge = 3 [json_name = "restriction_age", (NYT.column_name) = "restriction_age"];
+    string Entref = 4 [json_name = "entref", (NYT.column_name) = "entref"];
+}
+
+message TTvSearchCarouselWrapper {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    oneof Carousel {
+        option (NYT.variant_field_name) = "carousel";
+        NTv.TCarousel BasicCarousel = 101 [json_name = "basic_gallery", (NYT.column_name) = "basic_gallery"];
+    }
+}
+
+message TTvSearchResultData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TTvSearchCarouselWrapper Galleries = 1 [json_name = "galleries", (NYT.column_name) = "galleries"];
+    repeated TTvSearchCarouselWrapper Carousels = 2 [json_name = "carousels", (NYT.column_name) = "carousels"];
+}

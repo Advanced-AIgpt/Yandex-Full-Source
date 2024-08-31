@@ -1,0 +1,1276 @@
+option optimize_for = SPEED;
+
+// Notificator
+import "alice/matrix/notificator/library/services/update_connected_clients/protos/service.proto";
+import "alice/matrix/notificator/library/services/update_device_environment/protos/service.proto";
+import "alice/matrix/analytics/protos/enum_value_priority_extension.proto";
+
+// Scheduler
+import "alice/matrix/scheduler/library/services/scheduler/protos/service.proto";
+
+// Worker
+import "alice/matrix/worker/library/services/worker/protos/service.proto";
+
+// Matrix API
+import "alice/protos/api/matrix/delivery.proto";
+import "alice/protos/api/matrix/schedule_action.proto";
+import "alice/protos/api/matrix/scheduled_action.proto";
+import "alice/protos/api/matrix/scheduler_api.proto";
+import "alice/protos/api/notificator/api.proto";
+
+// Will be moved to matrix api someday ZION-170
+import "alice/uniproxy/library/protos/notificator.proto";
+
+// Megamind protos
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/scenarios/notification_state.proto";
+
+// Subway API
+import "alice/uniproxy/library/protos/uniproxy.proto";
+
+import "library/cpp/eventlog/proto/events_extension.proto";
+
+package NEvClass;
+
+// Some old events copypasted from https://a.yandex-team.ru/arc/trunk/arcadia/voicetech/library/idl/log/events.ev
+// We can't change their message ids because of important analytics log (VA-2588 for example)
+// Go to ZION-188 and ZION-208 for more info
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// WARNING(ZION-188, ZION-208): Do not add messages with ids from [0; 13374000) here, use 13374000+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Common prototypes for events
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+message THttpHeader {
+    optional string Name = 1;
+    optional string Value = 2;
+}
+
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Common matrix events
+// [13374000; 13375000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixHttpResponseMetaInfo {
+    reserved 2;
+
+    option(message_id) = 2002;
+
+    optional int32 Code = 1;
+    repeated THttpHeader Headers = 3;
+}
+
+message MatrixProtoParseError {
+    reserved 2;
+
+    option(message_id) = 2003;
+
+    optional string Name = 1;
+    optional string ErrorMessage = 3;
+    optional bool FromJson = 4;
+    optional string Content = 5;
+}
+
+message MatrixUnsupportedHttpMethod {
+    option(message_id) = 2004;
+
+    optional string Method = 1;
+}
+
+message MatrixHttpRequestMetaInfo {
+    option(message_id) = 2005;
+
+    optional string RequestId = 1;
+    optional string ServiceName = 2;
+    optional string Path = 3;
+    optional string Method = 4;
+    optional string RemoteHost = 5;
+    optional string Cgi = 6;
+    repeated THttpHeader Headers = 7;
+}
+
+message MatrixAppHostRequestMetaInfo {
+    option(message_id) = 2016;
+
+    optional string GUID = 1;
+    optional uint64 RUID = 2;
+    optional string LocationPath = 3;
+    optional string Handler = 4;
+    optional string RemoteHost = 5;
+    optional string RequestId = 6;
+    optional string RequestAttemptType = 7;
+}
+
+message MatrixSubwayClientRequest {
+    reserved 3;
+
+    option(message_id) = 2017;
+
+    optional string Host = 1;
+    optional uint32 Port = 2;
+    optional NUniproxy.TSubwayMessage SubwayRequest = 5;
+    optional string Endpoint = 4;
+}
+
+message MatrixSubwayClientSendDirectiveToSubway {
+    option(message_id) = 2027;
+
+    optional string PushId = 1;
+    optional string Endpoint = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+}
+
+message MatrixServerStart {
+    option(message_id) = 13374000;
+
+    optional string HostName = 1;
+    optional string Version = 2;
+    optional uint32 Pid = 3;
+
+    optional uint32 HttpPort = 4;
+    optional uint32 GrpcPort = 5;
+
+    optional uint32 LoopThreads = 6;
+    optional uint32 GrpcThreads = 7;
+
+    optional uint32 AdminThreads = 8;
+    optional uint32 ToolsThreads = 9;
+}
+
+message MatrixServerStarted {
+    option(message_id) = 13374001;
+}
+
+message MatrixStartServicesIntegration {
+    option(message_id) = 13374002;
+}
+
+message MatrixServicesAreIntegrated {
+    option(message_id) = 13374003;
+}
+
+message MatrixServerMemoryLocked {
+    option(message_id) = 13374004;
+}
+
+message MatrixServerMemoryLockError {
+    option(message_id) = 13374005;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixServerMemoryLockDisabled {
+    option(message_id) = 13374006;
+}
+
+message MatrixSubwayClientSendRequestSuccess {
+    option(message_id) = 13374007;
+
+    optional uint32 HttpResponseCode = 1;
+    oneof SubwayResponse {
+        string SubwayUnparsedRawResponse = 2;
+        NUniproxy.TSubwayResponse SubwayProtoResponse = 3;
+    }
+}
+
+message MatrixSubwayClientSendRequestError {
+    option(message_id) = 13374008;
+
+    optional uint32 HttpResponseCode = 1;
+    oneof SubwayResponse {
+        string SubwayUnparsedRawResponse = 2;
+        NUniproxy.TSubwayResponse SubwayProtoResponse = 3;
+    }
+    optional string ErrorMessage = 4;
+    optional bool IsTimeOut = 5;
+}
+
+message MatrixSendHttpReplyError {
+    option(message_id) = 13374009;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixServerStartError {
+    option(message_id) = 13374010;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixTvmClientInitializationStart {
+    option(message_id) = 13374011;
+}
+
+message MatrixTvmClientAlreadyInitialized {
+    option(message_id) = 13374012;
+}
+
+message MatrixTvmClientInitializationSuccess {
+    option(message_id) = 13374013;
+}
+
+message MatrixTvmClientInitializationError {
+    option(message_id) = 13374014;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixTvmClientLogMessage {
+    option(message_id) = 13374015;
+
+    enum ELogSeverity {
+        EMERGENCY = 0;
+        ALERT = 1;
+        CRITICAL = 2;
+        ERROR = 3;
+        WARNING = 4;
+        NOTICE = 5;
+        INFORMATIONAL = 6;
+        DEBUG = 7;
+    }
+
+    optional ELogSeverity LogSeverity = 1;
+    optional string Message = 2;
+}
+
+message MatrixIoTClientRequest {
+    option(message_id) = 13374016;
+
+    optional string Host = 1;
+    optional uint32 Port = 2;
+    optional string Endpoint = 3;
+}
+
+message MatrixIoTClientSendRequestSuccess {
+    option(message_id) = 13374017;
+
+    optional uint32 HttpResponseCode = 1;
+    oneof IoTResponse {
+        string IoTUnparsedRawResponse = 2;
+        NAlice.TIoTUserInfo IoTProtoResponse = 3;
+    }
+}
+
+message MatrixIoTClientSendRequestError {
+    option(message_id) = 13374018;
+
+    optional uint32 HttpResponseCode = 1;
+    oneof IoTResponse {
+        string IoTUnparsedRawResponse = 2;
+        NAlice.TIoTUserInfo IoTProtoResponse = 3;
+    }
+    optional string ErrorMessage = 4;
+    optional bool IsTimeOut = 5;
+}
+
+message MatrixMainMetricsHttpRequestData {
+    option(message_id) = 13374019;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixMainMetricsHttpResponseData {
+    option(message_id) = 13374020;
+
+    oneof Response {
+        string JsonResponse = 1;
+        // We don't want to write a raw response in the spack format (it takes up a lot of space and makes it difficult to read text logs)
+        // So, just log spack response size
+        uint64 SpackResponseSize = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixYDBMetricsHttpRequestData {
+    option(message_id) = 13374021;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixYDBMetricsHttpResponseData {
+    option(message_id) = 13374022;
+
+    oneof Response {
+        string JsonResponse = 1;
+        // We don't want to write a raw response in the spack format (it takes up a lot of space and makes it difficult to read text logs)
+        // So, just log spack response size
+        uint64 SpackResponseSize = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Ydb
+// [13375000; 13376000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixYdbOperationSuccess {
+    option(message_id) = 2023;
+
+    optional string StorageName = 1;
+    optional string OperationName = 2;
+}
+
+message MatrixYdbOperationError {
+    option(message_id) = 2024;
+
+    optional string StorageName = 1;
+    optional string OperationName = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixYdbOperationStart {
+    option(message_id) = 2025;
+
+    optional string StorageName = 1;
+    optional string OperationName = 2;
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Matrix notificator events
+// [13376000; 13377000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixNotificatorProxyServiceBackend {
+    option(message_id) = 2006;
+
+    optional string Address = 1;
+    optional bool IsLocalDc = 2;
+}
+
+message MatrixNotificatorMockSubwayRequest {
+    reserved 1, 2;
+
+    option(message_id) = 2019;
+
+    optional NUniproxy.TSubwayMessage SubwayRequest = 3;
+}
+
+message MatrixNotificatorUserDeviceLocation {
+    option(message_id) = 2020;
+
+    optional string DeviceId = 1;
+    optional string DeviceModel = 2;
+    optional string Ip = 3;
+    optional uint32 Port = 4;
+}
+
+message MatrixNotificatorAddDirectiveToDatabase {
+    option(message_id) = 2026;
+
+    optional string PushId = 1;
+    optional string Puid = 2;
+    optional string DeviceId = 3;
+}
+
+message MatrixNotificatorChangeDirectiveStatus {
+    option(message_id) = 2028;
+
+    optional string PushId = 1;
+    optional uint64 NewStatus = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+}
+
+message MatrixNotificatorUpdateConnectionsEndpoint {
+    option(message_id) = 2029;
+
+    optional string Ip = 1;
+    optional uint64 ShardId = 4;
+    optional uint32 Port = 2;
+    optional uint64 Monotonic = 3;
+}
+
+message MatrixNotificatorUpdateConnectionsWithDiff {
+    option(message_id) = 2030;
+
+    optional uint32 ClientStateChangesCount = 1;
+    optional uint32 ConnectedClientsCount = 2;
+    optional uint32 DisconnectedClientsCount = 3;
+}
+
+message MatrixNotificatorUpdateConnectionsWithFullState {
+    option(message_id) = 2031;
+
+    optional uint32 ClientsCount = 1;
+    optional bool IsAllConnectionsDroppedOnShutdown = 2;
+}
+
+message MatrixNotificatorUpdateConnectionsWithFullStateResult {
+    option(message_id) = 2032;
+
+    optional bool IsAllConnectionsDroppedOnShutdown = 1;
+    optional uint64 AddedCount = 2;
+    optional uint64 RemovedCount = 3;
+    optional uint64 AddedClientsSize = 4;
+    optional bool IsAddedClientsTruncated = 5;
+}
+
+message MatrixNotificatorGetDirectivesMultiUserDevicesResult {
+    option(message_id) = 2033;
+
+    optional uint64 UserDirectivesSize = 1;
+    optional bool IsTruncated = 2;
+}
+
+message MatrixNotificatorSendDirectiveToUpdateConnectedClientsResponse {
+    option(message_id) = 2034;
+
+    optional string PushId = 1;
+    optional string Endpoint = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+}
+
+message MatrixNotificatorProxyServiceSendRequestError {
+    option(message_id) = 13376000;
+
+    optional string ErrorMessage = 1;
+    optional bool IsTimeOut = 2;
+}
+
+message MatrixNotificatorUnknownClientStateChangeAction {
+    option(message_id) = 13376001;
+
+    optional string Action = 1;
+}
+
+message MatrixNotificatorUpdateConnectedClientsRequestData {
+    option(message_id) = 13376002;
+
+    optional NMatrix.NNotificator.NServiceProtos.TUpdateConnectedClientsRequest Request = 1;
+}
+
+message MatrixNotificatorUpdateConnectedClientsResponseData {
+    option(message_id) = 13376003;
+
+    optional NMatrix.NNotificator.NServiceProtos.TUpdateConnectedClientsResponse Response = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorUpdateDeviceEnvironmentRequestData {
+    option(message_id) = 13376004;
+
+    optional NMatrix.NNotificator.NServiceProtos.TUpdateDeviceEnvironmentRequest Request = 1;
+}
+
+message MatrixNotificatorUpdateDeviceEnvironmentResponseData {
+    option(message_id) = 13376005;
+
+    optional NMatrix.NNotificator.NServiceProtos.TUpdateDeviceEnvironmentResponse Response = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDirectiveStatusHttpRequestData {
+    option(message_id) = 13376006;
+
+    oneof Request {
+        NAlice.NNotificator.TDirectiveStatus ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorDirectiveChangeStatusHttpRequestData {
+    option(message_id) = 13376007;
+
+    oneof Request {
+        NAlice.NNotificator.TChangeStatus ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorDevicesHttpRequestData {
+    option(message_id) = 13376008;
+
+    oneof Request {
+        NAlice.NNotificator.TGetDevicesRequest ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorLocatorHttpRequestData {
+    option(message_id) = 13376009;
+
+    oneof Request {
+        NNotificator.TDeviceLocator ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorDeliveryOnConnectHttpRequestData {
+    option(message_id) = 13376010;
+
+    oneof Request {
+        NNotificator.TDeliveryOnConnect ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorDeliveryPushHttpRequestData {
+    option(message_id) = 13376011;
+
+    oneof Request {
+        NMatrix.NApi.TDelivery ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorDeliveryHttpRequestData {
+    option(message_id) = 13376012;
+
+    oneof Request {
+        NUniproxy.TPushMessage ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorProxyHttpRequestData {
+    option(message_id) = 13376013;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorNotificationsHttpRequestData {
+    option(message_id) = 13376014;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorNotificationsHttpResponseData {
+    option(message_id) = 13376015;
+
+    optional NAlice.TNotificationState ProtoResponse = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDirectiveStatusHttpResponseData {
+    option(message_id) = 13376016;
+
+    optional NAlice.NNotificator.TDirectiveStatusResponse ProtoResponse = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDevicesHttpResponseData {
+    option(message_id) = 13376017;
+
+    optional NAlice.NNotificator.TGetDevicesResponse ProtoResponse = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDeliveryPushHttpResponseData {
+    option(message_id) = 13376018;
+
+    optional NMatrix.NApi.TDeliveryResponse ProtoResponse = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDirectiveChangeStatusHttpResponseData {
+    option(message_id) = 13376019;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorLocatorHttpResponseData {
+    option(message_id) = 13376020;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDeliveryOnConnectHttpResponseData {
+    option(message_id) = 13376021;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDeliveryHttpResponseData {
+    option(message_id) = 13376022;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorProxyHttpResponseData {
+    option(message_id) = 13376023;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorSubscriptionsUserListHttpRequestData {
+    option(message_id) = 13376024;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorSubscriptionsUserListHttpResponseData {
+    option(message_id) = 13376025;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorSubscriptionsManageHttpRequestData {
+    option(message_id) = 13376026;
+
+    // Regardless of the content type
+    // in the end the request has a protobuf representation
+    // This field may be empty if the request data could not be parsed
+    optional NNotificator.TManageSubscription ProtoRequest = 1;
+
+    oneof Request {
+        string JsonRequest = 2;
+        string CgiRequest = 3;
+        string UnparsedRawRequest = 4;
+    }
+}
+
+message MatrixNotificatorSubscriptionsManageHttpResponseData {
+    option(message_id) = 13376027;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorSubscriptionsHttpRequestData {
+    option(message_id) = 13376028;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorSubscriptionsHttpResponseData {
+    option(message_id) = 13376029;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorSubscriptionsDevicesHttpRequestData {
+    option(message_id) = 13376030;
+
+    oneof Request {
+        string GetRequest = 1;
+        string ManageRequest = 2;
+        string UnparsedRawRequest = 3;
+    }
+}
+
+message MatrixNotificatorSubscriptionsDevicesHttpResponseData {
+    option(message_id) = 13376031;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorNotificationsChangeStatusHttpRequestData {
+    option(message_id) = 13376032;
+
+    oneof Request {
+        NNotificator.TNotificationChangeStatus ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixNotificatorNotificationsChangeStatusHttpResponseData {
+    option(message_id) = 13376033;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorGDPRHttpRequestData {
+    option(message_id) = 13376034;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorGDPRHttpResponseData {
+    option(message_id) = 13376035;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorDeliveryDemoHttpRequestData {
+    option(message_id) = 13376036;
+
+    optional string RawHttpRequestBody = 1;
+}
+
+message MatrixNotificatorDeliveryDemoHttpResponseData {
+    option(message_id) = 13376037;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixNotificatorSkipLocatorRequest {
+    option(message_id) = 13376038;
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Matrix scheduler events
+// [13377000; 13378000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixSchedulerAddScheduledAction {
+    reserved 3;
+
+    option(message_id) = 13377000;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional NMatrix.NApi.TScheduledAction ScheduledAction = 4;
+    optional uint64 ShardId = 5;
+    optional NMatrix.NScheduler.NApi.TAddScheduledActionRequest.EOverrideMode OverrideMode = 6;
+}
+
+message MatrixSchedulerAddScheduledActionValidationError {
+    option(message_id) = 13377001;
+
+    optional string ActionId = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixSchedulerRemoveScheduledAction {
+    option(message_id) = 13377002;
+
+    optional string ActionId = 1;
+}
+
+message MatrixSchedulerAddScheduledActionRequestData {
+    option(message_id) = 13377003;
+
+    optional NMatrix.NScheduler.NServiceProtos.TAddScheduledActionRequest Request = 1;
+}
+
+message MatrixSchedulerAddScheduledActionResponseData {
+    option(message_id) = 13377004;
+
+    optional NMatrix.NScheduler.NServiceProtos.TAddScheduledActionResponse Response = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixSchedulerRemoveScheduledActionRequestData {
+    option(message_id) = 13377005;
+
+    optional NMatrix.NScheduler.NServiceProtos.TRemoveScheduledActionRequest Request = 1;
+}
+
+message MatrixSchedulerRemoveScheduledActionResponseData {
+    option(message_id) = 13377006;
+
+    optional NMatrix.NScheduler.NServiceProtos.TRemoveScheduledActionResponse Response = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixSchedulerScheduleHttpRequestData {
+    option(message_id) = 13377007;
+
+    oneof Request {
+        NMatrix.NApi.TScheduleAction ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixSchedulerUnscheduleHttpRequestData {
+    option(message_id) = 13377008;
+
+    oneof Request {
+        NMatrix.NApi.TRemoveAction ProtoRequest = 1;
+        string UnparsedRawRequest = 2;
+    }
+    optional string ErrorMessage = 3;
+}
+
+message MatrixSchedulerScheduleHttpResponseData {
+    option(message_id) = 13377009;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixSchedulerUnscheduleHttpResponseData {
+    option(message_id) = 13377010;
+
+    optional string RawHttpResponseBody = 1;
+    optional string ErrorMessage = 2;
+}
+
+message MatrixSchedulerAddScheduledActionsValidationError {
+    option(message_id) = 13377011;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixSchedulerRemoveScheduledActionsValidationError {
+    option(message_id) = 13377012;
+
+    optional string ErrorMessage = 1;
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Matrix worker events
+// [13378000; 13379000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixWorkerSyncStarted {
+    option(message_id) = 2007;
+
+    optional string SyncGuid = 1;
+}
+
+message MatrixWorkerSyncFinished {
+    option(message_id) = 2008;
+
+    optional string SyncGuid = 1;
+    optional string SyncDuration = 2;
+}
+
+message MatrixWorkerShardLockAcquireSuccess {
+    option(message_id) = 2021;
+
+    optional uint64 ShardId = 1;
+    optional bool Locked = 2;
+    optional string LastLockGuid = 3;
+    optional string LastLockedBy = 4;
+    optional string LastProcessingStartAt = 5;
+    optional string LastHeartbeatAt = 6;
+}
+
+message MatrixWorkerShardLockAcquireError {
+    option(message_id) = 2022;
+
+    optional string ErrorMessage = 1;
+}
+
+message MatrixWorkerNextLoopInterval {
+    option(message_id) = 13378000;
+
+    optional string Interval = 1;
+}
+
+message MatrixWorkerReleaseShardLockError {
+    option(message_id) = 13378001;
+
+    optional uint64 ShardId = 1;
+    optional string LockGuid = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerNoFreeShard {
+    option(message_id) = 13378002;
+
+    optional string SyncGuid = 1;
+}
+
+message MatrixWorkerSyncException {
+    option(message_id) = 13378006;
+
+    optional string ExceptionMessage = 1;
+}
+
+message MatrixWorkerMoveActionRowsFromIncomingToProcessingStart {
+    option(message_id) = 13378007;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional uint64 SelectLimit = 3;
+}
+
+message MatrixWorkerMoveActionRowsFromIncomingToProcessingSuccess {
+    option(message_id) = 13378008;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+}
+
+message MatrixWorkerMoveActionRowsFromIncomingToProcessingError {
+    option(message_id) = 13378009;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerIncomingActionRowsSelected {
+    option(message_id) = 13378010;
+
+    optional uint64 Count = 1;
+}
+
+message MatrixWorkerMoveActionRowFromIncomingToProcessingStart {
+    option(message_id) = 13378011;
+
+    optional uint64 ShardId = 1;
+    optional string CreatedAt = 2;
+    optional string ActionId = 3;
+    optional string ActionGuid = 4;
+
+    optional string ScheduledAt = 5;
+}
+
+message MatrixWorkerMoveActionRowFromIncomingToProcessingSuccess {
+    option(message_id) = 13378012;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerMoveActionRowFromIncomingToProcessingError {
+    option(message_id) = 13378013;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerPerformActionsFromProcessingStart {
+    option(message_id) = 13378014;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional uint64 SelectLimit = 3;
+}
+
+message MatrixWorkerPerformActionsFromProcessingSuccess {
+    option(message_id) = 13378015;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+}
+
+message MatrixWorkerPerformActionsFromProcessingError {
+    option(message_id) = 13378016;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerProcessingActionRowsSelected {
+    option(message_id) = 13378017;
+
+    optional uint64 Count = 1;
+}
+
+message MatrixWorkerPerformActionFromProcessingStart {
+    option(message_id) = 13378018;
+
+    optional uint64 ShardId = 1;
+    optional string ScheduledAt = 2;
+    optional string ActionId = 3;
+    optional string ActionGuid = 4;
+
+    optional string AddedToIncomingQueueAt = 5;
+
+    optional string MovedFromIncomingToProcessingQueueBySyncWithGuid = 6;
+    optional string MovedFromIncomingToProcessingQueueAt = 7;
+
+    optional string LastRescheduleBySyncWithGuid = 8;
+    optional string LastRescheduleAt = 9;
+}
+
+message MatrixWorkerPerformActionFromProcessingSuccess {
+    option(message_id) = 13378019;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerPerformActionFromProcessingError {
+    option(message_id) = 13378020;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerScheduledActionNotFoundInDatabase {
+    option(message_id) = 13378021;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerScheduledActionData {
+    reserved 3;
+
+    option(message_id) = 13378022;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional NMatrix.NApi.TScheduledAction ScheduledAction = 4;
+}
+
+message MatrixWorkerScheduledActionGuidMismatchedWithProcessingActionRowGuid {
+    option(message_id) = 13378023;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ProcessingActionRowGuid = 3;
+}
+
+message MatrixWorkerScheduledActionDeadlineArrived {
+    option(message_id) = 13378024;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string CurrentTime = 3;
+    optional string Deadline = 4;
+}
+
+message MatrixWorkerInterruptedScheduledActionAttemptFound {
+    option(message_id) = 13378025;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerScheduledActionMaxAttemptsReached {
+    option(message_id) = 13378026;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional uint64 MaxRetries = 3;
+    optional uint64 ConsecutiveFailuresCounter = 4;
+}
+
+message MatrixWorkerDoActionStart {
+    option(message_id) = 13378027;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ActionType = 3;
+}
+
+message MatrixWorkerDoActionSuccess {
+    option(message_id) = 13378028;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerDoActionError {
+    option(message_id) = 13378029;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerDoMockActionSuccess {
+    option(message_id) = 13378030;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string Name = 3;
+    optional uint64 FailUntilConsecutiveFailuresCounterLessThan = 4;
+    optional uint64 ConsecutiveFailuresCounter = 5;
+}
+
+message MatrixWorkerScheduledActionWithSendOncePolicySucceed {
+    option(message_id) = 13378031;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerDoMockActionError {
+    option(message_id) = 13378032;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string Name = 3;
+    optional uint64 FailUntilConsecutiveFailuresCounterLessThan = 4;
+    optional uint64 ConsecutiveFailuresCounter = 5;
+}
+
+message MatrixWorkerScheduledActionReschedule {
+    option(message_id) = 13378033;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string ScheduledAt = 3;
+}
+
+message MatrixWorkerDoSendTechnicalPushStart {
+    option(message_id) = 13378034;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string MatrixNotificatorHost = 3;
+    optional uint32 MatrixNotificatorPort = 4;
+    optional string Puid = 5;
+    optional string DeviceId = 6;
+    optional string PushId = 7;
+}
+
+message MatrixWorkerDoSendTechnicalPushSuccess {
+    option(message_id) = 13378035;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+    optional string PushId = 5;
+    optional uint32 MatrixNotificatorHttpResponseCode = 6;
+
+    oneof MatrixNotificatorResponse {
+        string MatrixNotificatorUnparsedRawResponse = 7;
+        NMatrix.NApi.TDeliveryResponse MatrixNotificatorProtoResponse = 8;
+    }
+}
+
+message MatrixWorkerDoSendTechnicalPushDeviceNotConnected {
+    option(message_id) = 13378036;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+    optional string PushId = 5;
+    optional uint32 MatrixNotificatorHttpResponseCode = 6;
+    oneof MatrixNotificatorResponse {
+        string MatrixNotificatorUnparsedRawResponse = 7;
+        NMatrix.NApi.TDeliveryResponse MatrixNotificatorProtoResponse = 8;
+    }
+}
+
+message MatrixWorkerDoSendTechnicalPushError {
+    option(message_id) = 13378037;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+    optional string Puid = 3;
+    optional string DeviceId = 4;
+    optional string PushId = 5;
+    optional uint32 MatrixNotificatorHttpResponseCode = 6;
+    oneof MatrixNotificatorResponse {
+        string MatrixNotificatorUnparsedRawResponse = 7;
+        NMatrix.NApi.TDeliveryResponse MatrixNotificatorProtoResponse = 9;
+    }
+    optional string ErrorMessage = 8;
+}
+
+message MatrixWorkerInterruptedSyncFound {
+    option(message_id) = 13378038;
+
+    optional uint64 ShardId = 1;
+    optional string LastLockGuid = 2;
+    optional string LastLockedBy = 3;
+    optional string CurrentSyncGuid = 4;
+}
+
+message MatrixWorkerEnsureShardLockLeadingStart {
+    option(message_id) = 13378039;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+}
+
+message MatrixWorkerEnsureShardLockLeadingAlreadyFailed {
+    option(message_id) = 13378040;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional string ErrorMessage = 3;
+}
+
+message MatrixWorkerEnsureShardLockLeadingSkip {
+    option(message_id) = 13378041;
+
+    optional string SyncGuid = 1;
+    optional uint64 ShardId = 2;
+    optional string CurrentTime = 3;
+    optional string LastEnsureLeadingAt = 4;
+    optional string MinEnsureLeadingAndDoHeartbeatPeriod = 5;
+}
+
+message MatrixWorkerAcquireShardLockTransactionLocksInvalidated {
+    option(message_id) = 13378042;
+
+    optional string SyncGuid = 1;
+}
+
+message MatrixWorkerPerformActionFromProcessingDoActionError {
+    option(message_id) = 13378043;
+
+    optional string ActionId = 1;
+    optional string ActionGuid = 2;
+}
+
+message MatrixWorkerManualSyncRequestData {
+    option(message_id) = 13378044;
+
+    optional NMatrix.NWorker.NServiceProtos.TManualSyncRequest Request = 1;
+}
+
+message MatrixWorkerManualSyncResponseData {
+    option(message_id) = 13378045;
+
+    optional NMatrix.NWorker.NServiceProtos.TManualSyncResponse Response = 1;
+    optional string ErrorMessage = 2;
+}
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Matrix notificator analytics events
+// [13379000; 13380000)
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+message MatrixNotificatorAnalyticsTechnicalPushValidationResult {
+    reserved 2;
+
+    option(message_id) = 13379000;
+
+    enum EResult {
+        UNKNOWN = 0 [(NMatrix.NAnalytics.enum_value_priority) = 0];
+
+        SUCCESS = 1 [(NMatrix.NAnalytics.enum_value_priority) = 6];
+
+        PUID_IS_EMPTY = 2 [(NMatrix.NAnalytics.enum_value_priority) = 1];
+        DEVICE_ID_IS_EMPTY = 3 [(NMatrix.NAnalytics.enum_value_priority) = 2];
+
+        NO_TECHNICAL_PUSH_IN_REQUEST = 4 [(NMatrix.NAnalytics.enum_value_priority) = 4];
+        BAD_TECHNICAL_PUSH_CONTENT = 5 [(NMatrix.NAnalytics.enum_value_priority) = 3];
+
+        PUID_IS_NOT_ALLOWED_TO_PROCESS = 6 [(NMatrix.NAnalytics.enum_value_priority) = 5];
+    }
+
+    optional string PushId = 1;
+    optional EResult Result = 3;
+}
+
+message MatrixNotificatorAnalyticsTechnicalPushDeliveryAcknowledge {
+    option(message_id) = 13379001;
+
+    optional string PushId = 1;
+}
+
+message MatrixNotificatorAnalyticsNewTechnicalPush {
+    option(message_id) = 13379002;
+
+    optional string PushId = 1;
+}

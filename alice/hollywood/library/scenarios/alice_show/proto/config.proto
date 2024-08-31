@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package NAlice.NHollywood.NAliceShow;
+
+import "alice/library/proto_eval/proto/expression.proto";
+import "alice/megamind/protos/common/frame.proto";
+
+import "google/protobuf/wrappers.proto";
+
+message TActionPart {
+    string UsePart = 1;
+    string PhraseId = 2;
+    repeated string AppendPhrases = 11;
+    string ImageId = 3;
+    TTypedSemanticFrame SemanticFrame = 4;
+    repeated TFrameNluHint NluHints = 5;
+    repeated string Modifiers = 7;
+    string Purpose = 8;
+    google.protobuf.BoolValue HaveContent = 9;
+    bool Listen = 10;
+
+    reserved "Directives";
+    reserved 6;
+}
+
+message TAction {
+    repeated TActionPart ActionParts = 1;
+    TProtoEvalExpression Condition = 2;     // include in plan if condition is satisfied
+    repeated string Flags = 3;              // and flags are present (or absent if prefixed with '!')
+    repeated string Tags = 6;               // and tags evaluated to true (or false if prefixed with '!')
+    bool Stop = 4;                          // when true, no callback is set and show stops
+    uint32 NextHardcodedShowIndex = 5;      // the index of the next part of the old hardcoded show
+}
+
+message TTransition {
+    string TargetVertex = 1;
+    TProtoEvalExpression Weight = 2;
+    repeated string Flags = 3;              // allow if flags are present (or absent if prefixed with '!')
+    repeated string Tags = 4;               // and tags evaluated to true (or false if prefixed with '!')
+}
+
+message TTransitionChoice {
+    enum EChoice {
+        Weighted = 0;   // choose randomly according to transition weight
+        First = 1;      // choose the first transition with positive weight
+    }
+    repeated TTransition Transitions = 1;
+    EChoice Choice = 2;
+    TActionQueue EntryActions = 3;          // actions to enqueue on this vertex entry
+}
+
+message TActionQueue {
+    repeated string Actions = 1;
+}
+
+message TConfig {
+    string InitialVertex = 1;
+    map<string, TTransitionChoice> Graph = 2;       // key: current vertex
+
+    map<string, TAction> Actions = 4;               // key: action name
+    map<string, TActionPart> Parts = 5;             // key: part id (for UsePart)
+
+    reserved 3;
+    reserved "EntryActions";
+}

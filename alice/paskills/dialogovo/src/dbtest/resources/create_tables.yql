@@ -1,0 +1,108 @@
+--!syntax_v1
+
+-- Creating skill_user_state table
+CREATE TABLE skill_user_state (
+user_id_hash Uint64,
+user_id STRING,
+skill_id STRING,
+is_anonymous BOOL,
+`timestamp` Uint64,
+state Json,
+changed_at Timestamp,
+PRIMARY KEY (user_id_hash, user_id, skill_id)
+);
+
+-- Creating skill_session_state table
+CREATE TABLE skill_session_state (
+session_id_hash Uint64,
+session_id STRING,
+skill_id STRING,
+`timestamp` Uint64,
+state Json,
+changed_at Timestamp,
+PRIMARY KEY (session_id_hash, session_id, skill_id)
+);
+
+-- Creating skill_application_state table
+CREATE TABLE skill_application_state (
+application_id_hash Uint64,
+application_id STRING,
+skill_id STRING,
+state Json,
+changed_at Timestamp,
+PRIMARY KEY (application_id_hash, application_id, skill_id)
+);
+
+-- Creating skill_app_metrica_first_user_event table
+CREATE TABLE skill_app_metrica_first_user_event (
+skill_id_uuid_hash Uint64,
+app_metrica_api_key STRING,
+skill_id STRING,
+`uuid` String,
+`timestamp` Uint64,
+PRIMARY KEY (skill_id_uuid_hash, app_metrica_api_key, skill_id, `uuid`)
+);
+
+-- Creating skill_request_log table
+-- see https://stakanviski.at.yandex-team.ru/476 for discussion on secondary indexes
+CREATE TABLE skill_request_log (
+shard_key Uint64,
+skill_id String,
+`timestamp` Uint64,
+req_id String,
+status String,
+session_id String,
+message_id Uint64,
+request_body Json,
+response_body Json,
+validation_errors Utf8,
+callDuration Uint64,
+mm_request_id String,
+device_id String,
+`uuid` String,
+event_id String,
+changed_at Timestamp,
+PRIMARY KEY (shard_key, skill_id, `timestamp`, req_id)
+);
+
+-- Creating purchase_complete_skill_response table
+CREATE TABLE purchase_complete_skill_response (
+user_id_hash Uint64,
+user_id STRING,
+skill_id STRING,
+purchase_offer_uuid String,
+`timestamp` Timestamp,
+response Json,
+PRIMARY KEY (user_id_hash, user_id, skill_id, purchase_offer_uuid)
+);
+
+-- Creating morning_show_personalized_episodes table
+CREATE TABLE morning_show_personalized_episodes (
+user_id_uuid_hash Uint64,
+user_id STRING,
+skill_id STRING,
+episode_id STRING,
+text STRING,
+tts STRING,
+publication_date Timestamp,
+valid_until Timestamp,
+PRIMARY KEY (user_id_uuid_hash, user_id, skill_id, episode_id)
+) WITH (
+UNIFORM_PARTITIONS = 10,
+TTL = Interval("PT30M") ON valid_until
+);
+
+-- Creating morning_show_unpersonalized_episodes table
+CREATE TABLE morning_show_unpersonalized_episodes (
+skill_id_uuid_hash Uint64,
+skill_id STRING,
+episode_id STRING,
+text STRING,
+tts STRING,
+publication_date Timestamp,
+valid_until Timestamp,
+PRIMARY KEY (skill_id_uuid_hash, skill_id, episode_id)
+) WITH (
+UNIFORM_PARTITIONS = 10,
+TTL = Interval("PT30M") ON valid_until
+);

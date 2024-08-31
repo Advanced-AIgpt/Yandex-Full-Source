@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package NAlice.NIoT;
+
+option go_package = "a.yandex-team.ru/alice/iot/bulbasaur/protos";
+
+import "alice/iot/bulbasaur/protos/capability.proto";
+import "alice/iot/bulbasaur/protos/device_type.proto";
+
+message Scenario {
+    string ID = 1;
+    string Name = 2;
+    string Icon = 3;
+    reserved 4; reserved "TriggerType";
+    repeated ScenarioDevice Devices = 5;
+    repeated ScenarioCapability RequestedSpeakerCapabilities = 7;
+    repeated ScenarioTrigger Triggers = 8;
+    repeated ScenarioStep Steps = 9;
+    bool PushOnInvoke = 10;
+}
+
+message ScenarioDevice {
+    string ID = 1;
+    repeated ScenarioCapability Capabilities = 2;
+}
+
+message ScenarioLaunchDevice {
+    string ID = 1;
+    string Name = 2;
+    DeviceType DeviceType = 3;
+    repeated Capability Capabilities = 4;
+    bytes CustomData = 5;
+    string SkillID = 6;
+}
+
+message ScenarioCapability {
+    CapabilityType Type = 1;
+    oneof State {
+        ColorSettingCapabilityState CSCState = 2;
+        CustomButtonCapabilityState CBCState = 3;
+        ModeCapabilityState MCState = 4;
+        OnOffCapabilityState OOCState = 5;
+        RangeCapabilityState RCState = 6;
+        ToggleCapabilityState TCState = 7;
+        QuasarServerActionCapabilityState QSACState = 8;
+        QuasarCapabilityState QCState = 9;
+        VideoStreamCapabilityState VSCState = 10;
+    }
+}
+
+message ScenarioTrigger {
+    ScenarioTriggerType TriggerType = 1;
+    oneof Value {
+        string VoiceTriggerPhrase = 2;
+        uint64 TimerTriggerTimestamp = 3;
+    }
+}
+
+enum ScenarioTriggerType {
+    VoiceScenarioTriggerType = 0;
+    TimerScenarioTriggerType = 1;
+    TimetableScenarioTriggerType = 2;
+    DevicePropertyScenarioTriggerType = 3;
+}
+
+message ScenarioStep {
+    ScenarioStepType Type = 1;
+    oneof Parameters {
+        ScenarioStepActionsParameters SSAParameters = 2;
+        ScenarioStepDelayParameters SSDParameters = 3;
+    }
+}
+
+enum ScenarioStepType {
+    ScenarioStepActionsType = 0;
+    ScenarioStepDelayType = 1;
+}
+
+message ScenarioStepActionsParameters {
+    repeated ScenarioLaunchDevice Devices = 1;
+    repeated ScenarioCapability RequestedSpeakerCapabilities = 2;
+}
+
+message ScenarioStepDelayParameters {
+    double Delay = 1;
+}

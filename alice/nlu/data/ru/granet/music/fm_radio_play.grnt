@@ -1,0 +1,123 @@
+import: common/filler.grnt
+import: common/commands.grnt
+
+form alice.music.fm_radio_play:
+    slots:
+        fm_radio:		
+            type:		
+                custom.fm_radio_station		
+                string		
+            source:		
+                $custom.fm_radio_station		
+                $ConfidentStationName		
+        fm_radio_freq:		
+            type:		
+                custom.fm_radio_freq		
+                string		
+            source:		
+                $custom.fm_radio_freq
+    root:
+        $RootPositive
+        %negative
+        $RootNegative
+
+$RootPositive:
+    [$TurnOn* $Radio+ $Station? $Fm*]
+    [$Radio+ $Station $Fm*]
+    [$TurnOn+ $Station $Fm*]
+    [$Station $Fm]
+    [$TurnOn* $Fm]
+    $ConfidentStationName
+
+$RootNegative:
+    [$TurnOn* $NotOnlyStation]
+    [$TurnOn* $RadioNarrow* хит+]
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    онлайн
+    на
+    любое
+    любую
+    обратно
+    какое-нибудь
+    какое нибудь
+    музыку
+
+$Station:
+    $StationName
+    $Frequency
+
+    %negative
+    $RadioNarrow* $TrickyStations
+
+$Frequency:
+    $custom.fm_radio_freq
+
+$StationName:
+    $custom.fm_radio_station
+    $ConfidentStationName
+
+    %negative
+    $RadioNarrow* $TrickyStations
+
+$ConfidentStationName:
+    $TrickyStations $Fm
+
+    # todo: make sure they are substituted with custom entity in the slot if possible
+    %lemma
+    европа плюс
+    europa plus
+    авторадио
+    эхо москвы
+    серебряный дождь
+    милицейская волна
+    dfm
+    монте карло
+    говорит москва
+    эльдорадио
+    для детей
+
+$TurnOn:
+    $Common.Play
+    $Common.PlayAudio
+    $Common.Find
+    переключи
+    поймай
+    настройся на
+
+$Radio:
+    %lemma
+    [$Fm? интернет? $RadioNarrow]
+
+$RadioNarrow:
+    %lemma
+    radio
+    радио
+    радиостанция
+    радио станция
+
+$Fm:
+    фм
+    fm
+
+$TrickyStations:
+    %lemma
+    алиса
+    хит
+
+$NotOnlyStation:
+    $TrickyStations
+
+    %lemma
+    один|первый|1
+    два|второй|2
+    три|третий|3
+    $sys.num
+    лайк
+    $Genre
+
+$Genre:
+    $custom.genre

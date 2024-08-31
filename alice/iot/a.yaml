@@ -1,0 +1,57 @@
+service: alice_iot
+title: Alice IoT
+
+arcanum:
+  auto_merge:  # настройки автовливания (они же настройки в меню Merge в запросах на слияние в Аркануме)
+    enabled: false  # разрешаем автовливание
+    requirements:  # требования к автовливанию
+      - system: arcanum
+        type: approved  # настройки утверждения
+        data:
+          min_approvers_count: 2  # минимум утвердивших
+          ignore_self_ship: true  # игнорировать утверждение автора
+      - system: arcanum
+        type: comment_issues_closed  # issues должны быть закрыты
+
+ci:
+  secret: sec-01de9bv57aewxmqg9kn1br8111
+  runtime:
+    sandbox-owner: alice_iot
+
+  triggers:
+    - on: commit
+      flow: build-bulbasaur-and-deploy-to-trunk-stage
+      filters:
+        - discovery: any
+          abs-paths: ['alice/iot/bulbasaur/**', 'alice/library/go/**']
+
+  flows:
+    build-bulbasaur-and-deploy-to-trunk-stage:
+      title: Build Bulbasaur and deploy to bulbasaur-trunk nanny stage
+      jobs:
+        build:
+          title: Build Bulbasaur package
+          stage: build
+          task: common/arcadia/ya_package
+          input:
+            packages: alice/iot/bulbasaur/pkg.json
+            resource_type: BULBASAUR_DOCKER_IMAGE
+            package_type: docker
+            docker_registry: registry.yandex.net
+            docker_image_repository: iot
+            docker_user: robot-bulbasaur
+            docker_token_vault_name: ROBOT_BULBASAUR_DOCKER_REGISTRY_TOKEN
+            docker_push_image: true
+            ya_yt_token_yav_secret: sec-01de9bv57aewxmqg9kn1br8111#yt.token
+        deploy-to-trunk-stage:
+          title: Deploy to bulbasaur-trunk
+          stage: deploy
+          needs: build
+          task: common/releases/release_to_sandbox
+          input:
+            config:
+              sandbox_resource_type: BULBASAUR_DOCKER_IMAGE
+              common_release_data:
+                release_stage: unstable
+                release_subject: Release from CI
+                release_notes: CI build launch \#${context.launch_number}

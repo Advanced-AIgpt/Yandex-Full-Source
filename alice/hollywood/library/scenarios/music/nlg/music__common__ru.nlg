@@ -1,0 +1,860 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music_tags__ru.nlg" import music_tags_data %}
+
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import inability, unable_to_provide_explicit_content %}
+{% ext_from "alice/hollywood/library/common_nlg/intents_ru.nlg" import tts_pause %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/alarm__common__ru.nlg" import stoit, stoyat, alarm_stoit, alarm_stoyat with context %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ru.nlg" import render_podcast_restricted_by_content_settings with context %}
+
+{% macro do_not_know() %}
+  {% chooseline %}
+    Мне в детстве медведь на ухо наступил. Не узнала мелодию.
+    Не нашла, что это за мелодия. Включите погромче.
+    Давайте еще раз попробуем.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro ya_plus() -%}
+  {%- tx -%}Яндекс.Плюс{%- etx -%}
+  {%- vc -%}Яндекс Плюс{%- evc -%}
+{%- endmacro %}
+
+{% macro render_ya_plus_required(content='музыку') %}
+  {% chooseitem %}
+    Чтобы слушать {{ content }}, вам нужно оформить подписку {{ ya_plus() }}.
+  {% or %}
+    Извините, но я пока не могу включить то, что вы просите. Для этого необходимо оформить подписку на Плюс.
+  {% or %}
+    Простите, я бы с радостью, но у вас нет подписки на Плюс.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_authorization_required(content='музыку') %}
+  {% chooseline %}
+    Если хотите послушать {{ content }}, авторизуйтесь, пожалуйста.
+    Авторизуйтесь, пожалуйста, и сразу включу вам все, что попросите!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_authorization_from_music_play() %}
+  {% chooseline %}
+    Пожалуйста, войдите в аккаунт на Яндексе, чтобы я вас узнала и запомнила ваши вкусы.
+    Пожалуйста, войдите в аккаунт, чтобы я могла ставить лайки вашим любимым песням.
+    Войдите в аккаунт на Яндексе, и я включу вам то, что вы любите.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_yaplus() %}
+  {% chooseline %}
+    Пожалуйста, оформите подписку Плюс, чтобы слушать музыку целиком.
+    Без подписки доступен только отрывок. Это неплохо, но с подпиской было бы идеально.
+    Без подписки можно слушать только часть трека.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_station_promo() %}
+  {% if context.attentions.get('has_plus') %}
+      Включаю. Хотя слушать музыку удобнее на Станции - и вы можете прямо сейчас получить ее, оформив специальную подписку.
+  {% else %}
+      Хорошо, включу для вас небольшой отрывок, потому что без подписки иначе не получится. Кстати, вы можете оформить подписку сейчас и получить вместе с ней Станцию. На ней слушать музыку гораздо удобнее.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_before_redirect_to_fm_radio() %}
+  {% chooseline %}
+    А пока могу включить вам кое-что другое.
+    Но совсем без музыки не оставлю!
+    А пока могу предложить вам радио, надеюсь, {%tx%}оцените{%etx%}{%vc%}оц+ените{%evc%}.
+    Зато я могу включить вам радио.
+    Но это не помешает нам послушать радио.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro own_song_joke() %}
+  {% chooseline %}
+    Сами напросились!
+    Танцуют все!
+    Сейчас спою!
+    Танцуйте!
+    Поехали!
+    Марш нейронных штурмовиков!
+    Вот {%tx%}нетленка{%etx%}{%vc%}нетл+енка{%evc%}, например.
+    Вот кое-что из раннего творчества.
+    Стихи автопоэта, музыка нейронная. Исполняет Алиса.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro alice_shots_stub() %}
+  Я бы с радостью, но умею такое только в приложении {%tx%}Яндекс.Музыка{%etx%}{%vc%}Яндекс Музыка{%evc%}, или в умных колонках.
+{% endmacro %}
+
+{% macro unable_to_provide_explicit_music_content() %}
+  {% if context.is_alarm_set_with_sound_intent %}
+    {% chooseline %}
+      А такую музыку я знаю, но поставить в детском режиме не могу.
+      А такую музыку я поставить бы и рада, но у вас включён детский режим поиска.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Я не могу поставить эту музыку в детском режиме.
+      Знаю такое, но не могу поставить в детском режиме.
+      В детском режиме такое включить не получится.
+      Не могу. Знаете почему? У вас включён детский режим.
+      Я бы и рада, но у вас включён детский режим поиска.
+      Не выйдет. У вас включён детский режим, а это не для детских ушей.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro content_type() -%}
+  {%- if 'content_type_fm_radio' in context.attentions -%}
+    радио
+  {%- else -%}
+    музыку
+  {%- endif -%}
+{%- endmacro %}
+
+{% phrase render_error__musicerror %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {{ inability() }}
+  {% elif context.error.data.code == 'alice_shots_stub' %}
+    {{ alice_shots_stub() }}
+  {% elif context.error.data.code == 'forbidden-content' %}
+    {{ unable_to_provide_explicit_music_content() }}
+  {% elif context.error.data.code == 'morning_show_not_supported' %}
+    Простите, я не могу включить Шоу здесь, но я легко сделаю это в умных колонках, в которых я живу
+  {% elif context.error.data.code == 'music_not_found' %}
+    {% if context.attentions.get('music_play_not_supported_on_device') %}
+      {% if context.is_tv_device %}
+        {% set special_playlist_slot = form.special_playlist or context.slots.special_playlist %}
+        {% if special_playlist_slot == 'fairy_tales_default' or context.attentions.get('is_fairy_tale_subscenario') %}
+          {% chooseline %}
+            Простите, но я не могу включить сказку здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+            Упс, сказки на телик пока не залила. Но могу с радостью рассказать их в приложении или через колонку, если попросите.
+          {% endchooseline %}
+        {% else %}
+          {% chooseline %}
+            Музыку я умею включать без телевизора, а здесь могу найти подходящий клип.
+            Кажется, здесь без картинки не получится. Давайте поищем музыкальный клип.
+            Я не могу включить здесь просто музыку, попробуйте поискать подходящий клип.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        Извините, я пока не умею искать музыку
+      {% endif %}
+    {% else %}
+      {% if context.is_alarm_set_with_sound_intent %}
+        {% chooseline %}
+          Но эту музыку я не нашла — попробуйте другую.
+          К сожалению, этой музыки я не нашла — попробуйте другую.
+        {% endchooseline %}
+      {% elif context.attentions.get('unknown_fairy_tale') %}
+        {% chooseline %}
+          Простите,{% vc %}sil <[200]>{% evc %} такой сказки у меня пока нет.
+          Простите,{% vc %}sil <[200]>{% evc %} такой сказки у меня нет.
+          Извините,{% vc %}sil <[200]>{% evc %} но такой сказки у меня нет.
+          Простите,{% vc %}sil <[200]>{% evc %} такой сказки нет.
+        {% endchooseline %}
+      {% else %}
+        {% chooseline %}
+          К сожалению, у меня нет такой музыки.
+          Была ведь эта музыка у меня где-то... Не могу найти, простите.
+          Как назло, именно этой музыки у меня нет.
+          У меня нет такой музыки, попробуйте что-нибудь другое.
+          Я не нашла музыки по вашему запросу, попробуйте ещё.
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% elif context.error.data.code in ('not_music', 'music_not_recognized') %}
+    {% if not context.is_smart_speaker %}
+      {{ do_not_know() }}
+    {% else %}
+      Мне кажется, сейчас ничего не играет.
+    {% endif %}
+  {% elif context.error.data.code == 'music_restricted_by_child_content_settings' %}
+    {% if context.attentions.get('forbidden_podcast') %}
+      {{ render_podcast_restricted_by_content_settings() }}
+    {% else %}
+      {% if 'content_type_fm_radio' in context.attentions %}
+        Лучше слушать эту станцию вместе с родителями.
+      {% else %}
+        Лучше послушай эту музыку вместе с родителями.
+      {% endif %}
+    {% endif %}
+  {% elif context.error.data.code == 'unavailable_for_legal_reasons' %}
+    {% chooseline %}
+      Простите, мне не разрешают включать эту музыку здесь.
+      Ой,{% vc %}sil <[300]>{% evc %} кажется, я в стране, где этот трек недоступен.
+      С радостью бы послушала вместе с вами, правда в этой стране трек пока недоступен.
+      Похоже, мы с вами в стране, где эту музыку пока нельзя послушать.
+      Ой,{% vc %}sil <[300]>{% evc %} кажется, мне не хватает прав, чтобы включать эту музыку здесь.
+    {% endchooseline %}
+  {% else %}
+    Произошло что-то непонятное, но вполне музыкальное. У программных ошибок своя печальная музыка.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__unauthorized %}
+  {% if 'launch_youtube_app' in context.attentions %}
+    Секунду.
+  {% elif context.error.data.code == 'music_authorization_problem' %}
+    {% chooseline %}
+      Кажется, вы не авторизованы. Войдите в свой аккаунт на Яндексе, чтобы слушать {{ content_type() }}.
+      Чтобы слушать {{ content_type() }}, нужно авторизоваться. Пожалуйста, войдите в свой аккаунт на Яндексе.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'unavailable_for_unauthorized' %}
+    Я не могу включить ваш плейлист, потому что не знаю вас. Проверьте авторизацию в приложении.
+  {% elif context.error.data.code == 'unauthorized_general' %}
+    {{ render_authorization_required() }}
+  {% elif context.error.data.code == 'payment-required' %}
+    {% if 'plus_push' in context.attentions %}
+      Чтобы слушать {{ content_type() }}, вам нужна подписка {{ ya_plus() }}.
+      Ссылка для покупки придёт на ваш смартфон — я уже её отправила.
+    {% elif 'fairy_tale_noplus' in context.attentions %}
+      Чтобы слушать аудиоконтент, необходима подписка на Яндекс.Плюс. Однако вы всегда можете сказать мне: «Включи навык "Сказки"», и я включу бесплатную подборку.
+    {% else %}
+      Чтобы слушать {{ content_type() }}, вам нужно оформить подписку {{ ya_plus() }}.
+    {% endif %}
+  {% elif context.error.data.code == 'promo_available' and req_info.experiments.get('alter_music_promo_nlg') != None %}
+    Чтобы слушать {{ content_type() }}, вам нужно оформить подписку {{ ya_plus() }}.
+    Откройте приложение Яндекса для активации промо-периода. Отправила ссылку на телефон.
+  {% elif context.error.data.code == 'promo_available' %}
+    Чтобы слушать {{ content_type() }}, вам нужно оформить подписку {{ ya_plus() }}.
+    Сейчас вам доступен промо-период. Вы можете активировать его в приложении Яндекс.
+  {% elif context.error.data.code == 'extra_promo_period_available' and context.extra_promo_period_expires_date is not none %}
+    Чтобы слушать {{ content_type() }}, вам нужно оформить подписку Яндекс.Плюс. Сейчас вам доступен промо-период.
+    Если активируете его в приложении яндекса до {{ context.extra_promo_period_expires_date | parse_dt | human_date }}, то получите месяц в подарок.
+  {% elif context.error.data.code == 'weekly_promo_available' %}
+    Кажется, у вас нет подписки на Яндекс Плюс. Повезло вам, что я сегодня добрая: слушайте 7 дней без ограничений, а потом, пожалуйста, активируйте подписку. Поехали?
+  {% elif context.is_auto %}
+    Не получается включить {{ content_type() }}. Вам сначала нужно войти в аккаунт на Яндексе.
+    Для этого зайдите в настройки и нажмите «Войти».
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+    {{ inability() }}
+{% endphrase %}
+
+{% macro launch(action_request) %}
+  {% if action_request %}
+    Включаю
+  {% else %}
+    Открываю
+  {% endif %}
+{% endmacro %}
+
+{% macro render_composers(music_answer, case, short=False)  %}
+  {% set composers = [] %}
+  {% for artist in music_answer.artists %}
+    {% if artist.composer %}
+      {% do composers.append(artist) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if composers %}
+    {% if short %}
+      {{ (composers|first).name }}
+    {% else %}
+      {{ composers|map(attribute='name')|join(', ') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_composers(music_answer, short=False)  %}
+  {% set artists = [] %}
+  {% for artist in music_answer.artists %}
+    {% if not artist.composer %}
+      {% do artists.append(artist) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if artists %}
+    {% if short %}
+      {{ (artists|first).name }}
+    {% else %}
+      {{ artists|map(attribute='name')|join(', ') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_artists(music_answer, short=False)  %}
+  {% if music_answer.artists %}
+    {% set composers = render_composers(music_answer, short) | trim %}
+    {% set artists = render_not_composers(music_answer, short) | trim %}
+
+    {% if composers %}
+      {{ composers }}
+      {% if artists %}
+        , {{ artists }}
+      {% endif %}
+    {% elif artists %}
+      {{ artists }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro track_keyword(music_answer, title) %}
+  {% if music_answer.genre == 'classical' or music_answer.genre == 'classicalmasterpieces' %}
+    композиция
+  {% else %}
+    {% if 'песня' not in title.lower() and 'песенка' not in title.lower() %}
+      песня
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro _render_music_answer(music_answer, case, render_album, shorten_artists, shorten_track_title) %}
+  {% if music_answer.type == 'track' %}
+    {% set artists=render_artists(music_answer, shorten_artists) | trim %}
+    {% if artists %}
+      {{ artists }},
+    {% endif %}
+
+    {% if render_album and music_answer.album %}
+      альбом
+      "{{ music_answer.album.title }}",
+    {% endif %}
+
+    {% set track_title = music_answer.title|music_title_shorten if shorten_track_title else music_answer.title %}
+    {% if not artists and (not render_album or not music_answer.album) %}
+      {{ track_keyword(music_answer, track_title) | inflect(case) }}
+    {% else %}
+      {{ track_keyword(music_answer, track_title) }}
+    {% endif %}
+    "{{ track_title }}"
+  {% elif music_answer.type == 'album' %}
+    {% set artists=render_artists(music_answer, shorten_artists) | trim %}
+    {% if artists %}
+      {{ artists }},
+    {% endif %}
+
+    {% if not artists %}
+      {{ 'альбом' | inflect(case) }}
+    {% else %}
+      альбом
+    {% endif %}
+    "{{ music_answer.title }}"
+  {% elif music_answer.type == 'artist' %}
+    {{ music_answer.name }}
+    {% if (render_album or not music_answer.track) and music_answer.album %}
+      , альбом
+      "{{ music_answer.album.title }}"
+    {% endif %}
+    {% if music_answer.track %}
+      {% set track_title = music_answer.track.title|music_title_shorten if shorten_track_title else music_answer.track.title %}
+      , {{ track_keyword(music_answer, track_title) }}
+      "{{ track_title }}"
+    {% endif %}
+  {% elif music_answer.type == 'playlist' %}
+    {{ 'подборка' | inflect(case) }}
+    "{{ music_answer.title }}"
+  {% elif music_answer.type == 'generative' %}
+    {# Should not go into here #}
+  {% elif music_answer.type == 'radio' %}
+    {% if music_answer.type == 'radio' and music_answer.station.is_personal %}
+      {{ 'ваша радиостанция' | inflect(case) }}
+    {% else %}
+      радио
+      "{{ music_answer.station.name }}"
+    {% endif %}
+  {% elif music_answer.type == 'filters' %}
+    {% if 'need_similar' in context.attentions %}
+      {% if music_answer.artists %}
+        {{ (music_answer.artists|first).name }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_generative_answer(music_answer) %}
+  {% if music_answer.station == 'generative:energy' %}
+    {% chooseitem %}
+      Добавим немного драйва — на Яндекс Музыке есть бодрая мелодия, которую алгоритмы написали по вашему вкусу.
+    {% or %}
+      {% text %}
+        Пора взбодриться под Нейромузыку, которую алгоритмы Яндекс Музыки написали специально для вас.
+      {% endtext %}
+      {% voice %}
+        Пора взбодриться под Нейро музыку, которую алгоритмы Яндекс Музыки написали специально для вас.
+      {% endvoice %}
+    {% endchooseitem %}
+  {% elif music_answer.station == 'generative:focus' %}
+    {% chooseline %}
+      Приготовьтесь творить – есть персональная мелодия, которая настроит на нужный лад.
+      Настройтесь на вдохновение! Алгоритмы Яндекс Музыки как раз написали мелодию специально для вас.
+      Не знаю, на что вам нужно вдохновиться, но знаю, как. Включаю вашу персональную мелодию от алгоритмов Яндекс Музыки!
+      Нас ждут великие дела! Включаю вдохновляющую мелодию, которую алгоритмы Яндекс Музыки написали для вас.
+    {% endchooseline %}
+  {% elif music_answer.station == 'generative:relax' %}
+    {% chooseline %}
+      Мысли становятся легкими, алгоритмы Яндекс Музыки уже подготовили вашу личную мелодию для расслабления.
+      Представьте, что вы облако. А я пока поставлю расслабляющую мелодию – алгоритмы Яндекс Музыки написали ее специально для вас.
+    {% endchooseline %}
+  {% else %}
+    {% text %}
+      Это – Нейромузыка. Она поможет отвлечься от шума и сфокусироваться на важном.
+    {% endtext %}
+    {% voice %}
+      Это – Нейро музыка. Она поможет отвлечься от шума и сфокусироваться на важном.
+    {% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_answer(music_answer, case, render_album=True, shorten=False) %}
+  {% set body = _render_music_answer(music_answer, case, render_album, False, False) %}
+  {% if (body|number_of_readable_tokens) > 10 and shorten %}
+    {% set body = _render_music_answer(music_answer, case, render_album, True, False) %}
+    {% if (body|number_of_readable_tokens) > 10 %}
+      {% set body = _render_music_answer(music_answer, case, render_album, True, True) %}
+    {% endif %}
+  {% endif %}
+  {{ body }}
+{% endmacro %}
+
+{% macro render_tts_pause() %}
+  {{ tts_pause(600) }}
+{% endmacro %}
+
+{% macro render_tag_info(filter_info, tag) %}
+  {% set tag_info = filter_info.get(tag) %}
+  {% if not tag_info is mapping %}
+    {{ tag_info }}
+  {% else %}
+    {% vc %}{{ tag_info.voice }}{% evc %}
+    {% tx %}{{ tag_info.text }}{% etx %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_default() %}
+  {% if context.is_alarm_set_sound_intent %}
+    Хорошо, вас разбудит выбранная подборка.
+  {% elif context.is_alarm_set_with_sound_intent %}
+    Вас разбудит выбранная подборка.
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} специальная подборка.
+  {% else %}
+    {% chooseline %}
+      Есть кое-что для вас.
+      Есть одна идея.
+      Такое у меня есть.
+      Есть музыка на этот случай.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_genre(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      Хорошо. Вас разбудит {{ tag_info }}.
+    {% or %}
+      Отличный выбор. Теперь на вашем будильнике {{ tag_info }}.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    Вас разбудит {{ tag_info }}.
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} {{ tag_info }}.
+  {% else %}
+    {% if context.attentions.get('restricted_content_settings') %}
+      Это лучше слушать вместе с родителями - попроси их включить. А пока для тебя - {{ tag_info }}.
+    {% else %}
+      {% chooseitem %}
+        Поняла. Для вас - {{ tag_info }}.
+      {% or %}
+        Легко. Для вас - {{ tag_info }}.
+      {% or %}
+        {{ tag_info | capitalize_first }} - отличный выбор.
+      {% endchooseitem %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_person_mood(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      Хорошо, разбужу вас музыкой под {{ tag_info | inflect('acc') }} настроение.
+    {% or %}
+      Окей, вас разбудит музыка для {{ tag_info | inflect('gen') }} настроения.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseitem %}
+      Разбужу вас музыкой под {{ tag_info | inflect('acc') }} настроение.
+    {% or %}
+      Вас разбудит музыка для {{ tag_info | inflect('gen') }} настроения.
+    {% endchooseitem %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} музыка
+    {% chooseitem %}
+      под {{ tag_info | inflect('acc') }} настроение.
+    {% or %}
+      для {{ tag_info | inflect('gen') }} настроения.
+    {% endchooseitem %}
+  {% else %}
+    {% chooseitem %}
+      Это как раз подойдёт под {{ tag_info | inflect('acc') }} настроение.
+    {% or %}
+      Вот, {{ render_tts_pause() }} отлично подойдёт под {{ tag_info | inflect('acc') }} настроение.
+    {% or %}
+      Есть отличная музыка для {{ tag_info | inflect('gen') }} настроения.
+    {% or %}
+      Знаю подходящую музыку для {{ tag_info | inflect('gen') }} настроения.
+    {% or %}
+      Вот, {{ render_tts_pause() }} самое то для {{ tag_info | inflect('gen') }} настроения.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_track_mood(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      Хорошо, вас разбудит {{ tag_info | inflect('nom') }} музыка.
+    {% or %}
+      Поставила на будильник {{ tag_info | inflect('acc') }} музыку.
+    {% or %}
+      Поняла. Разбужу вас {{ tag_info | inflect('ins') }} музыкой.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseitem %}
+      Вас разбудит {{ tag_info | inflect('nom') }} музыка.
+    {% or %}
+      Разбужу вас {{ tag_info | inflect('ins') }} музыкой.
+    {% endchooseitem %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} {{ tag_info | inflect('nom') }} музыка.
+  {% else %}
+    {% chooseitem %}
+      Есть {{ tag_info | inflect('nom') }} музыка на этот случай.
+    {% or %}
+      Для вас - {{ tag_info | inflect('nom') }} музыка.
+    {% or %}
+      Ставлю {{ tag_info | inflect('acc') }} музыку.
+    {% or %}
+      Послушаем {{ tag_info | inflect('acc') }} музыку.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_activity(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseline %}
+      Хорошо, вас разбудит музыка для
+      Окей. Поставила на будильник музыку для
+      Поняла. Разбужу вас музыкой для
+    {% endchooseline %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseline %}
+      Вас разбудит музыка для
+      Разбужу вас музыкой для
+    {% endchooseline %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} музыка для
+  {% else %}
+    {% chooseitem %}
+      Вот, {{ render_tts_pause() }} отлично подойдет для
+    {% or %}
+      Вот, {{ render_tts_pause() }} как раз для
+    {% or %}
+      Включаю музыку для
+    {% or %}
+      Хорошо, музыка для
+    {% or %}
+      Окей. Музыка для
+    {% endchooseitem %}
+  {% endif %}
+  {{ tag_info }}.
+{% endmacro %}
+
+{% macro render_music_tags(filter, tag) %}
+  {% set for_alarm_set = context.is_alarm_set_sound_intent %}
+  {% set for_alarm_set_combo = context.is_alarm_set_with_sound_intent %}
+  {% set for_alarm_what = context.is_alarm_what_sound_is_set_intent %}
+  {% set filter_info = music_tags_data.get(filter, None) %}
+  {% if filter == 'mood' %}
+    {% set person_mood = filter_info.get('person_mood') %}
+    {% set track_mood = filter_info.get('track_mood') %}
+    {% if tag == 'lullaby' %}
+      {% if for_alarm_set %}
+        Окей. Вас разбудят
+      {% elif for_alarm_set_combo %}
+        Вас разбудят
+      {% elif for_alarm_what %}
+        {{ alarm_stoyat() }}
+      {% else %}
+        Окей. Включаю
+      {% endif %}
+      колыбельные.
+    {% elif tag == 'discovery' %}
+      {% if for_alarm_set %}
+        Окей. Вас разбудит интересная музыка.
+      {% elif for_alarm_set_combo %}
+        Вас разбудит интересная музыка.
+      {% elif for_alarm_what %}
+        {{ alarm_stoit() }} интересная музыка.
+      {% else %}
+        {% chooseitem 1 %}
+          {% chooseline %}
+            Включаю. Обязательно поставьте лайк, если я угадала с этим треком. Это сделает мои рекомендации еще круче.
+            Включаю. Чтобы я стала лучшим диджеем вашего дома, не забудьте поставить лайк, если я угадала с песней.
+            Включаю музыку на свой вкус. Если наши вкусы совпадут, поставьте лайк, и я буду лучше их понимать.
+            Включаю, но предупреждаю, в этот раз я немного пошалила, и может быть необычно. Смело скажите: "Лайк!", если вам что-то понравится.
+            Включаю. А чтобы я лучше понимала ваши интересы, ставьте лайки особенно классным трекам и говорите: "Дальше!", если не нравится.
+            Включаю. И я хочу проверить, хорошо ли я вас знаю. Если понравится, поставьте лайк.
+            Включаю. Если какая-то песня запала в душу, так и скажите: "Лайк"!
+            Включаю. Если наши вкусы совпадут, скажите: "Лайк!", чтобы я поняла, что все правильно делаю.
+            Включаю. Если что-то понравится, скажите: "Лайк!", это сделает мои рекомендации точнее и разнообразнее.
+            Включаю. Если с чем-то промахнусь, не судите строго, просто скажите: "Дальше".
+            Включаю. Если что-то не зайдет, метните в меня дизлайк.
+            Включаю. Я старалась, но могу и ошибаться. Если что, используйте дизлайк.
+            Включаю. Если понравится, скажите: "Лайк!" - мне будет приятно.
+          {% endchooseline %}
+        {% or 2 %}
+          Включаю интересную музыку.
+        {% endchooseitem %}
+      {% endif %}
+    {% elif tag in person_mood %}
+      {% set tag_info = render_tag_info(person_mood, tag) %}
+      {{ render_music_tags_person_mood(tag_info) }}
+    {% elif tag in track_mood %}
+      {% set tag_info = render_tag_info(track_mood, tag) %}
+      {{ render_music_tags_track_mood(tag_info) }}
+    {% else %}
+      {{ render_music_tags_default() }}
+    {% endif %}
+  {% elif not filter_info or not tag in filter_info %}
+    {{ render_music_tags_default() }}
+  {% else %}
+    {% set tag_info = render_tag_info(filter_info, tag) %}
+    {% if filter == 'genre' %}
+      {{ render_music_tags_genre(tag_info) }}
+    {% elif filter == 'activity' %}
+      {% if tag == 'work_background' %}
+        {% if for_alarm_set %}
+          Окей. Поставила на будильник фоновую музыку.
+        {% elif for_alarm_set_combo %}
+          Вас разбудит фоновая музыка.
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} фоновая музыка.
+        {% else %}
+          Окей. Включаю фоновую музыку.
+        {% endif %}
+      {% elif tag == 'fall_asleep' %}
+        {% if for_alarm_set %}
+          Хорошо, вас разбудит музыка для приятного сна. Хотя не уверена, что вы так проснетесь.
+        {% elif for_alarm_set_combo %}
+          Вас разбудит музыка для приятного сна. Хотя не уверена, что вы так проснетесь.
+        {% elif for_alarm_what %}
+          На будильнике {{ stoit() }} музыка для приятного сна. Но не уверена, что она вас разбудит.
+        {% else %}
+          {% chooseline %}
+            Нет проблем. Музыка, чтобы заснуть.
+            Нет проблем. Музыка для приятного сна.
+          {% endchooseline %}
+        {% endif %}
+      {% elif tag == 'sex' and context.children_content_restriction %}
+        {% if for_alarm_set %}
+          Окей. Поставила на будильник взрослую музыку.
+        {% elif for_alarm_set_combo %}
+          Вас разбудит взрослая музыка.
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} взрослая музыка.
+        {% else %}
+          Окей. Включаю взрослую музыку.
+        {% endif %}
+      {% else %}
+        {{ render_music_tags_activity(tag_info) }}
+      {% endif %}
+    {% elif filter == 'epoch' %}
+      {% if tag == 'the_greatest_hits' %}
+        {% if for_alarm_set %}
+          Хорошо, вас разбудят
+        {% elif for_alarm_set_combo %}
+          Вас разбудят
+        {% elif for_alarm_what %}
+          {{ alarm_stoyat() }}
+        {% else %}
+          Включаю
+        {% endif %}
+        вечные хиты.
+      {% else %}
+        {% if for_alarm_set %}
+          Окей, поставила на будильник музыку
+        {% elif for_alarm_set_combo %}
+          Вас разбудит музыка
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} музыка
+        {% else %}
+          Включаю музыку
+        {% endif %}
+        {{ tag_info }}.
+      {% endif %}
+    {% elif not (for_alarm_set or for_alarm_set_combo or for_alarm_what) %}
+      {# reaching here should be impossible #}
+      {{ render_music_tags_default() }}
+    {% elif filter == 'personality' %}
+      {% if tag == 'is_personal' %}
+        {% if for_alarm_set %}
+          {% chooseline %}
+            Поставила вашу любимую музыку на будильник.
+            Хорошо, вас разбудят ваши любимые песни.
+          {% endchooseline %}
+        {% elif for_alarm_set_combo %}
+          {% chooseline %}
+            Поставила вашу любимую музыку.
+            Вас разбудят ваши любимые песни.
+          {% endchooseline %}
+        {% else %}
+          {{ alarm_stoyat() }} ваши любимые песни.
+        {% endif %}
+      {% else %} {# elif tag == 'is_user_stream' #}
+        {% if for_alarm_set %}
+          {% chooseline %}
+            Хорошо, поставила кое-что подходящее для вас.
+            Хорошо, поставила кое-что в вашем стиле.
+            Поставила песни, которые вам обычно нравятся.
+          {% endchooseline %}
+        {% elif for_alarm_set_combo %}
+          {% chooseline %}
+            Вас разбудит кое-что в вашем стиле.
+            Разбужу кое-чем подходящим для вас.
+            Вас разбудят песни, которые вам обычно нравятся.
+          {% endchooseline %}
+        {% else %}
+          {% chooseitem %}
+            На будильнике {{ stoit() }} музыка, которая должна вам понравиться.
+          {% or %}
+            Я поставила музыку, которая должна вам понравиться.
+          {% endchooseitem %}
+        {% endif %}
+      {% endif %}
+    {% else %} {# elif filter == 'special_playlist' #}
+      {% if tag == 'ny_alice_playlist' %}
+        {% if for_alarm_set %}
+          Окей, разбужу
+        {% elif for_alarm_set_combo %}
+          Разбужу
+        {% else %}
+          Я буду будить
+        {% endif %}
+        вас своим пением. Сами напросились!
+      {% else %}
+        {% if for_alarm_set %}
+          Хорошо, поставила на будильник
+        {% elif for_alarm_set_combo %}
+          Поставила на будильник
+        {% else %}
+          {{ alarm_stoit() }}
+        {% endif %}
+        {{ tag_info }}.
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_simple_music_answer(music_answer) -%}
+  "{{ music_answer.title }}"
+  {% if music_answer.artists %}
+    {% for artist in music_answer.artists %}
+      , {{ artist.name }}
+    {% endfor %}
+  {% endif %}
+{%- endmacro %}
+
+{% phrase render_suggest_caption__authorize %}
+  {% if 'suggest_authorization_from_music_play' in context.attentions %}
+    Войти
+  {% else %}
+    Авторизоваться
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__authorize %}
+  {{ context.authorize.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__yaplus %}
+  Подробнее
+{% endphrase %}
+
+{% phrase render_suggest_uri__yaplus %}
+  {{ context.yaplus.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__station_promo %}
+  Подробнее
+{% endphrase %}
+
+{% phrase render_suggest_uri__station_promo %}
+  {{ context.station_promo.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__fallback_to_music_vertical %}
+  Перейти
+{% endphrase %}
+
+{% phrase render_suggest_uri__fallback_to_music_vertical %}
+  {{ context.fallback_to_music_vertical.data.uri }}
+{% endphrase %}
+
+{% set supported_only_on_music_commands = ["player_dislike", "player_like", "player_shuffle"] %}
+
+{% macro render_supported_only_on_music() %}
+  {% text %} Пока я умею такое только в Яндекс.Музыке. {% endtext %}
+  {% voice %} Пока я умею такое только в Яндекс Музыке. {% endvoice %}
+{% endmacro %}
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("радио" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    радио "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_supported_on_radio(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    Не выйдет, извините. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Ничего не получится, увы. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Не могу. Это же прямой эфир.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_error_nothing_is_playing() %}
+  {% chooseline %}
+    Не могу, ведь сейчас ничего не играет.
+    Не получится. Сейчас ничего не играет.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_error__playererror %}
+{% set code = context.error.data|get_item('code') %}
+{% set command = context.error.data|get_item('command') %}
+{% set radio = context.error.data|get_item('radio') %}
+  {% if (code == 'radio_unsupported' or code == 'bluetooth_unsupported') and command in supported_only_on_music_commands %}
+    {{ render_supported_only_on_music() }}
+  {% elif code == 'radio_unsupported' %}
+    {{ render_not_supported_on_radio(radio|get_item('radioTitle')) }}
+  {% elif code == 'bluetooth_unsupported' %}
+    {{ inability() }}
+  {% elif code == 'nothing_is_playing' %}
+    {{ render_error_nothing_is_playing() }}
+  {% else %}
+    Произошло что-то непонятное, но вполне музыкальное. У программных ошибок своя печальная музыка.
+  {% endif %}
+{% endphrase %}
+
+{% macro render_repeated_skip() %}
+  {% if 'repeated_skip' in context.attentions %}
+    {% chooseline %}
+      Кажется, наши вкусы сегодня не совпадают. Что вы хотите послушать?
+      Похоже, вам не нравится то, что я ставлю. Что прикажете?
+      Что вам включить, чтобы вам понравилось?
+      Что вам включить, чтобы вас порадовать?
+      А давайте послушаем то, что вам нравится. Что вам включить?
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}

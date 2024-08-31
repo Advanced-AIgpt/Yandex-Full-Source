@@ -1,0 +1,57 @@
+<html lang="ru">
+<head>
+    <title>Alice social sharing test page</title>
+    <script>
+        const BASE_URL = "/ivangromov-apphost/social_sharing";
+        const CGI = "?srcrwr=NOTIFICATOR_DEVICE_LIST:notificator.alice.yandex.net:80&srcrwr=NOTIFICATOR_SEND_PUSH:notificator.alice.yandex.net:80";
+        const FETCH_API_OPTIONS = {
+            credentials: "same-origin",
+        };
+
+        async function sendPush(deviceId) {
+            const url = BASE_URL + "/send_to_device" + CGI;
+            const body = {
+                device_id: deviceId,
+            };
+            const response = await fetch(url, {
+                ...FETCH_API_OPTIONS,
+                method: "POST",
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+            alert(JSON.stringify(await response.json()));
+        }
+
+        function renderListItem(d) {
+            const deviceId = d.device_id;
+            const button = `<button onclick="sendPush('${deviceId}')">Send</button>`;
+            return `<li>${deviceId} (room: ${d.room}, type: ${d.type}) ${button}</li>`;
+        }
+
+        async function listDevices() {
+            const url = BASE_URL + "/list_devices" + CGI;
+            const response = await fetch(url, FETCH_API_OPTIONS)
+            const devices = (await response.json()).devices;
+            if (devices) {
+                const deviceList = devices.map(renderListItem).join("\n")
+                const title = "<p>Device list</p>";
+                const list = "<ul>" + deviceList + "</ul>";
+
+                document.getElementById("devices").innerHTML = [title, list].join("\n");
+            } else {
+                document.getElementById("devices").innerText = "No devices"
+            }
+        }
+
+        window.onload = listDevices;
+    </script>
+</head>
+<body>
+    <p id="devices">
+        Device list:
+    </p>
+</body>
+</html>

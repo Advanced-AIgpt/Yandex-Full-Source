@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+import "alice/protos/api/matrix/delivery.proto";
+import "alice/protos/api/matrix/user_device.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+message TScheduleAction {
+    // TODO Is it forbidden to schedule action at CurrectTime + BigConstant (year for example)?
+    // Maybe set limit to one week/month?
+    message TStartPolicy {
+        uint64 StartAtTimestampMs = 1;
+    }
+
+    message TSendPolicy {
+        // On first try TryId = 0, on second TryId = 1, etc
+        // After fail next try will be at CurrentTime + Min(MaxRestartPeriodMs, MinRestartPeriodMs + RestartPeriodScaleMs * (RestartPeriodBackoff ^ TryId))
+        // Matrix retry action until Maxretries has reached or Deadline has arrived
+        message TRetryPolicy {
+            // Do we need ability to do infinite number of attempts?
+            uint64 MaxRetries = 1;
+
+            uint64 RestartPeriodScaleMs = 3;
+            uint64 RestartPeriodBackOff = 4;
+            // Must be at least TODO(XXX)
+            uint64 MinRestartPeriodMs = 5;
+            uint64 MaxRestartPeriodMs = 6;
+
+            // Do not retry action if device is offline
+            // Usefull for TSendPeriodicallyPolicy
+            // WARNING: Not recommended for TSendOncePolicy
+            bool DoNotRetryIfDeviceOffline = 7;
+        }
+
+        message TSendOncePolicy {
+            TRetryPolicy RetryPolicy = 1;
+        }
+
+        message TSendPeriodicallyPolicy {
+            uint64 PeriodMs = 1;
+            // For periodically policy retries works a little differently than for send once policy
+            // On success next action will be scheduled at CurrentTime + PeriodMs and TryId counter will be set to zero
+            // On fail next action will be scheduled at normal time for retry policy: CurrentTime + Min(MaxRestartPeriodMs, MinRestartPeriodMs + RestartPeriodScaleMs * (RestartPeriodBackoff ^ TryId))
+            // and TryId will be increased by one
+            //
+            // Validation: MaxRestartPeriodMs <= PeriodMs
+            TRetryPolicy RetryPolicy = 2;
+        }
+
+        oneof Policy {
+            TSendOncePolicy SendOncePolicy = 1;
+            TSendPeriodicallyPolicy SendPeriodicallyPolicy = 2;
+        }
+
+        // Action will be removed from queue if deadline arrived
+        // Zero means no deadline
+        // TODO Maybe set Deadline to min(CurrentTime + one week, ReadDeadline)?
+        // TODO Is it allowed to set no deadline for TSendPeriodicallyPolicy?
+        uint64 DeadlineTimestampMs = 3;
+
+        // Action will be removed from queue if
+        //     1) Current attempt failed
+        //     2) CurrentTime - Max(FirstAttemt, LastSuccessAttemt) >= MaxConsecutiveFailuresPeriodMs
+        //
+        // This check is performed only after attempts, i.e. if we perform attemt first, only then check
+        // that CurrentTime - Max(FirstAttemt, LastSuccessAttemt) >= MaxConsecutiveFailuresPeriodMs
+        //
+        // Note: If the device is offline this is also considered as an error
+        // Usefull for TSendPeriodicallyPolicy
+        //
+        // Zero means default period (TODO(?) one day, week, ??)
+        uint64 MaxConsecutiveFailuresPeriodMs = 4;
+    }
+
+    message TAction {
+        oneof Action {
+            TMockAction MockAction = 1;
+            TOldNotificatorRequest OldNotificatorRequest = 2;
+        }
+    }
+
+    // Unique action id from user
+    // Used to avoid duplicates in the schedule for TSendOncePolicy (for exmaple on request retries)
+    // and for some sort of action control for TSendPeriodicallyPolicy policy (update/remove action if needed)
+    //
+    // It is recommened to use random GUID for TSendOncePolicy
+    // and something human readable for TSendPeriodicallyPolicy (for example get_screen_stat_<puid>_<device_id>)
+    //
+    // WARNING: if two requests with same id and different specifications came almost at
+    // the same time a random one will be selected
+    string Id = 1;
+
+    string Puid = 2;
+    string DeviceId = 3;
+    // TODO(ZION-42, ndnuriev): replace Puid/DeviceId with UserDeviceInfo
+    // WARNING: For now only Puid/DeviceId works
+    TUserDeviceInfo UserDeviceInfo = 8;
+
+    TStartPolicy StartPolicy = 4;
+    TSendPolicy SendPolicy = 5;
+    TAction Action = 6;
+
+    // If there is an action with this id, it will be updated
+    //
+    // WARNINGS:
+    //
+    // It may work slower than normal schedule
+    // so it's not recommended to enable this flag by default
+    // If you need to update old actions, just do it once with one batch operation
+    // and don't forget to inform https://abc.yandex-team.ru/services/speechkit_ops_alice_notificator/duty/ about this operation
+    //
+    // It is not guaranteed that after successful update action with old specification
+    // will not be performed
+    // Race:
+    //     1) Worker starts action (it's async http request)
+    //     2) Action update request
+    //     3) Worker completes action
+    bool Override = 7;
+}
+
+message TRemoveAction {
+    string ActionId = 1;
+}
+
+// Only for MVP. Will be deprecated in the future.
+message TOldNotificatorRequest {
+    oneof Request {
+        TDelivery Delivery = 1; // /delivery/push
+    }
+}
+
+// Just for example
+message TMockAction {
+    string Name = 1;
+    uint64 FailUntilConsecutiveFailuresCounterLessThan = 2;
+}

@@ -1,0 +1,166 @@
+{% ext_from "alice/hollywood/library/common_nlg/macros_ar.nlg" import inability %}
+
+{% macro format_time(time, case='acc', absolute=False, add_preposition=False) %}
+  {% if absolute %}
+    {% if add_preposition %}
+      في
+    {% endif %}
+    {% tx %} {{ time | time_format(cases=case) | attr('text') }} {% etx %}
+    {% vc %} {{ time | time_format(cases=case) | attr('voice') }} {% evc %}
+  {% else %}
+    {% if add_preposition %}
+      ل
+    {% endif %}
+    {% set v = time | render_units_time(cases=case) %}
+    {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_timer(time, absolute=False, specification=None, remaining=None) -%}
+  {% if specification == 'sleep' %}
+    مؤقت النوم
+  {% else %}
+    المؤقت
+  {% endif %}
+  {{ format_time(time, 'acc', absolute=absolute, add_preposition=True) }}
+  {% if remaining %}
+    , بقي أقل من {{ format_time(remaining, 'gen') }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_available_timer(timer) -%}
+  {% set time = timer.duration %}
+  {% set specification = timer.specification %}
+  {% set remaining = timer.remaining %}
+  {{ render_timer(time, False, specification, remaining) }}
+{%- endmacro %}
+
+{% macro render_timer_number(num) -%}
+  {% vc %}رقم {{ num }}{% evc %}{% tx %}{{ num }}.{% etx %}
+{%- endmacro %}
+
+{% macro render_timer_list_raw(available_timers, shift=0) -%}
+  {% for timer in available_timers %}
+    {{ render_timer_number(loop.index + shift) }}
+    {{ render_available_timer(timer) }}
+    .
+    {% if not loop.last %}
+      \n
+    {% endif %}
+  {% endfor %}
+{%- endmacro %}
+
+{% macro render_timer_list(available_timers) -%}
+  {% set not_paused = available_timers.not_paused %}
+  {% set paused = available_timers.paused %}
+
+  {% if not_paused|length == 1 %}
+    تم تفعيله على هذا الوقت
+    {% if paused|length > 0 %}
+      {{ render_timer_number(1) }}
+    {% endif %}
+    {{ render_available_timer(not_paused[0]) }}
+  {% elif not_paused|length > 0 %}
+    تم تفعيل المؤقتات التالية في هذا الوقت
+    \n{% vc %}-{% evc %}
+    {{ render_timer_list_raw(not_paused) }}
+  {% endif %}
+
+  {% set shift = not_paused|length %}
+
+  {% if paused|length == 1 %}
+    {% if shift == 0 %}
+      تم وضعه على الإيقاف المؤقت في هذا الوقت
+    {% else %}
+      \n{% vc %}-{% evc %}
+      على الإيقاف المؤقت أيضاً
+    {% endif %}
+    {% if shift > 0 %}
+      {{ render_timer_number(1+shift) }}
+    {% endif %}
+    {{ render_available_timer(paused[0]) }}
+  {% elif paused|length > 0 %}
+    {% if shift == 0 %}
+      المؤقتات التالية موضوعة حالياً على الإيقاف المؤقت
+    {% else %}
+      \n{% vc %}-{% evc %}
+      كذلك فإن المؤقتات التالية موضوعة على الإيقاف المؤقت
+    {% endif %}
+    \n{% vc %}-{% evc %}
+    {{ render_timer_list_raw(paused, shift) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_error(code, time=None, specification=None) -%}
+  {% if code == 'no_timers_available' or code == 'no_timers' %}
+    {% if specification == 'sleep' %}
+      حالياً فإن مؤقت النوم غير معين
+    {% else %}
+      {% chooseitem %}
+        ليس لديك مؤقتات مضبوطة
+      {% or %}
+        لم أعين شيئاً
+      {% endchooseitem %}
+      {% if time %}
+        ل {{ format_time(time, 'acc') }}
+      {% endif %}
+    {% endif %}
+  {% elif code == 'unsupported_operation' %}
+    {% if context.is_elari_watch %}
+      سأتعلم كيف أفعل ذلك قريباً. سيمر الوقت كالبرق.
+    {% else %}
+      {{ inability() }}
+    {% endif %}
+  {% elif code == 'already_playing' %}
+    المؤقت مضبوط.
+  {% elif code == 'already_paused' %}
+    المؤقت معين.
+  {% elif code == 'too_many_timers' %}
+    هناك 25 مؤقتاً مضبوط الآن. لا أستطيع أكثر من ذلك.
+  {% elif code == 'invalid_time' %}
+    {% if specification == 'sleep' %}
+      لم أفهم في أي وقت يجب ضبط مؤقت النوم.
+    {% else %}
+      لم أفهم في أي وقت يجب ضبط المؤقت.
+    {% endif %}
+  {% else %}
+    حدث خطأ ما، لنحاول فيما بعد؟
+  {% endif %}
+{%- endmacro %}
+
+{% macro no_such_timer() %}
+  ليس عندي مؤقت كهذا.
+{% endmacro %}
+
+{% macro suggest_show_timers() %}
+  {% chooseitem %}
+    ما رأيك بأن أفتح لك قائمة المؤقتات.
+  {% or %}
+    هيا نشاهد المؤقتات لديك.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro format_how_long(time, aggressive=True, case='acc') %}
+  {% set v = time | normalize_time_units() | ceil_seconds(aggressive) | render_units_time(cases=case) %}
+  {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+{% endmacro %}
+
+{% phrase render_error__timererror %}
+  {{ render_error(context.error.data.code, form.time, form.specification) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__timer__set_timer %}
+  هل أضبط المؤقت على {{format_time(context.timer__set_timer.data.time)}}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__timer__set_timer %}
+  هل أضبط المؤقت على {{format_time(context.timer__set_timer.data.time)}}
+{% endphrase %}
+
+{% phrase render_suggest_caption__timer__show_timers %}
+  مشاهدة جميع المؤقتات
+{% endphrase %}
+
+{% phrase render_suggest_uri__timer__show_timers %}
+  {{ context.timer__show_timers.data.uri }}
+{% endphrase %}

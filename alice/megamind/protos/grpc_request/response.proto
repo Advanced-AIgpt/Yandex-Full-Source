@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package NAlice.NRpc;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/grpc_request";
+option java_package = "ru.yandex.alice.megamind.protos.grpc_request";
+option java_outer_classname = "GrpcResponseProto";
+
+import "alice/protos/api/rpc/status.proto";
+
+import "alice/megamind/protos/grpc_request/analytics_info.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/any.proto";
+
+message TRpcResponseProto {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Response {
+        google.protobuf.Any ResponseBody = 1 [json_name = "response_body", (NYT.column_name) = "response_body"];
+        TStatus Error = 2 [json_name = "error", (NYT.column_name) = "error"];
+    }
+
+    // Data for analytics system.
+    TRpcAnalyticsInfo AnalyticsInfo = 3 [json_name = "analytics_info", (NYT.column_name) = "analytics_info"];
+
+    repeated NAlice.NScenarios.TServerDirective ServerDirectives = 4 [json_name = "server_directives", (NYT.column_name) = "server_directives"];
+
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 5 [json_name = "version", (NYT.column_name) = "version"];
+}

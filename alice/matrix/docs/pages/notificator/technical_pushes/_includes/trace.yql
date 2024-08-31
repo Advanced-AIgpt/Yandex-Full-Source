@@ -1,0 +1,67 @@
+USE hahn;
+PRAGMA udf("libalice_matrix_udf.so");
+PRAGMA yt.MaxRowWeight = "128M";
+
+$matrix_notificator = "//home/logfeller/logs/matrix-notificator-prod-eventlog/1d";
+$from = "2022-06-02";
+$to = "2022-06-02";
+
+-- Also you can use a 5min stream
+-- However, lag of 5min stream is 5 - 15 minutes,
+-- so if you want to get logs from 20:00, you need to use range 20:00 - 20:20
+-- to be completely sure that the logs will be found
+-- $matrix_notificator = "//home/logfeller/logs/matrix-notificator-prod-eventlog/stream/5min";
+-- $from = "2022-06-02T20:00:00";
+-- $to = "2022-06-02T20:20:00";
+
+$limit_events = 100;
+
+$push_id = "de9c7ea2-2527-8c31-8800-bd81d55fe50e";
+$puid = "235236314";
+$device_id = "0410789683084c250150";
+-- $push_id = NULL;
+-- $puid = NULL;
+-- $device_id = NULL;
+
+$expected_is_null_or_equal_to_actual = ($actual, $expected) -> {
+    RETURN $expected IS NULL OR $actual == $expected;
+};
+
+$event_filter = ($event) -> {
+    $event_yson = Yson::Parse(MatrixEventLog::GetYsonRepr($event));
+    RETURN
+        MatrixEventLog::GetName($event) IN [
+            "MatrixNotificatorAddDirectiveToDatabase",
+            "MatrixSubwayClientSendDirectiveToSubway",
+            "MatrixNotificatorChangeDirectiveStatus",
+        ] AND
+        $expected_is_null_or_equal_to_actual(Yson::ConvertToString(Yson::YPath($event_yson, "/EventBody/Fields/PushId")), $push_id) AND
+        $expected_is_null_or_equal_to_actual(Yson::ConvertToString(Yson::YPath($event_yson, "/EventBody/Fields/Puid")), $puid) AND
+        $expected_is_null_or_equal_to_actual(Yson::ConvertToString(Yson::YPath($event_yson, "/EventBody/Fields/DeviceId")), $device_id)
+    ;
+};
+
+DEFINE SUBQUERY $select_frames($event_filter) AS
+    SELECT
+        source_uri,
+        frame_id,
+        MatrixEventLog::GetEvents(MatrixEventLog::ParseFrame(frame)) AS events
+    FROM range($matrix_notificator, $from, $to)
+    WHERE ListHasItems(
+        ListFilter(
+            MatrixEventLog::GetEvents(MatrixEventLog::ParseFrame(frame)),
+            $event_filter
+        )
+    )
+END DEFINE;
+
+SELECT
+    DateTime::FromMicroseconds(MatrixEventLog::GetTimestamp(events)) AS event_timestamp,
+    source_uri,
+    frame_id,
+    MatrixEventLog::GetName(events) AS event_name,
+    Yson::SerializePretty(Yson::YPath(Yson::Parse(MatrixEventLog::GetYsonRepr(events)), "/EventBody/Fields")) AS event_pretty
+FROM $select_frames($event_filter)
+FLATTEN LIST BY events
+ORDER BY event_timestamp, source_uri, frame_id
+LIMIT $limit_events;

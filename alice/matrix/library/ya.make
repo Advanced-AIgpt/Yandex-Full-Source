@@ -1,0 +1,20 @@
+OWNER(
+    g:matrix
+)
+
+RECURSE(
+    config
+    daemon
+    clients
+    logging
+    metrics
+    mlock
+    monitoring
+    request
+    rtlog
+    service_runner
+    services
+    testing
+    version
+    ydb
+)

@@ -1,0 +1,58 @@
+use hahn;
+
+--PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma yson.DisableStrict = 'true';
+$base = select * from range(`home/paskills/recipes/sessions`);
+$stats = select fielddate, recipe_name??'_total_' as recipe_name,
+    count(*) as session_cnt,
+    count(distinct `uuid`) as dau,
+    sum(timespent_minutes) as timespent_minutes ,
+    sum(timespent_minutes_v2) as timespent_minutes_v2,
+    median(left_steps) as median_left_steps,
+    sum(session_total_duration_minutes) as session_total_duration_minutes,
+    sum(real_duration_minutes) as real_duration_minutes,
+    count(pre_start_postroll) as pre_start_postroll_cnt,
+    count_if(real_duration_minutes>2) as medium_sessions_count,
+    count_if(real_duration_minutes>10) as long_sessions_count,
+    count_if(real_duration_minutes>10 and left_steps < 3) as long_success_sessions_count,
+
+from $base
+group compact by
+grouping sets (
+    (fielddate, recipe_name),
+    (fielddate             )
+);
+
+insert into `home/paskills/recipes/recipes_stats` with truncate
+select fielddate, recipe_name,
+    session_cnt,
+    dau,
+    timespent_minutes,
+    timespent_minutes_v2,
+    median_left_steps,
+    session_total_duration_minutes,
+    real_duration_minutes,
+    pre_start_postroll_cnt,
+    long_sessions_count,
+    long_success_sessions_count,
+    medium_sessions_count,
+from $stats
+--where recipe_name != '_total_'
+--order by fielddate desc, recipe_name
+;
+
+-- select fielddate, recipe_name,
+--     session_cnt,
+--     dau,
+--     timespent_minutes,
+--     timespent_minutes_v2,
+--     median_left_steps,
+--     session_total_duration_minutes,
+--     real_duration_minutes,
+--     pre_start_postroll_cnt,
+--     long_sessions_count,
+--     long_success_sessions_count,
+-- from $stats
+-- where recipe_name = '_total_'
+-- order by fielddate desc, recipe_name;

@@ -1,0 +1,174 @@
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import showing_search_results_not_supported %}
+
+{% macro get_search_info(form, obj) %}
+  {% set obj.serp = form.search_results['serp'] if form.search_results and 'serp' in form.search_results else None %}
+  {% set obj.factoid = form.search_results['factoid'] if form.search_results and 'factoid' in form.search_results else None %}
+  {% set obj.object = form.search_results['object'] if form.search_results and 'object' in form.search_results else None %}
+  {% set obj.nav = form.search_results['nav'] if form.search_results and 'nav' in form.search_results else None %}
+  {% set obj.afisha = form.search_results['afisha_stub'] if form.search_results and 'afisha_stub' in form.search_results else None %}
+  {% set obj.kinopoisk = form.search_results['kinopoisk_stub'] if form.search_results and 'kinopoisk_stub' in form.search_results else None %}
+  {% set obj.translate = form.search_results['translate_stub'] if form.search_results and 'translate_stub' in form.search_results else None %}
+  {% set obj.music = form.search_results['music_stub'] if form.search_results and 'music_stub' in form.search_results else None %}
+  {% set obj.market = form.search_results['market_stub'] if form.search_results and 'market_stub' in form.search_results else None %}
+  {% set obj.rasp = form.search_results['rasp_stub'] if form.search_results and 'rasp_stub' in form.search_results else None %}
+  {% set obj.avia = form.search_results['avia_stub'] if form.search_results and 'avia_stub' in form.search_results else None %}
+  {% set obj.tv = form.search_results['tv_stub'] if form.search_results and 'tv_stub' in form.search_results else None %}
+  {% set obj.auto = form.search_results['auto_stub'] if form.search_results and 'auto_stub' in form.search_results else None %}
+  {% set obj.realty = form.search_results['realty_stub'] if form.search_results and 'realty_stub' in form.search_results else None %}
+  {% set obj.calculator = form.search_results['calculator'] if form.search_results and 'calculator' in form.search_results else None %}
+  {% set obj.pre_rendered_card = form.search_results['pre_rendered_card'] if form.search_results and 'pre_rendered_card' in form.search_results else None %}
+
+  # Response texts
+  {% set factoid = obj.factoid or obj.object %}
+  {% if factoid %}
+    {% set obj.factoid_text = factoid|get_item('text')|pluralize_tag %}
+    {% set obj.factoid_hostname = factoid|get_item('hostname') %}
+    {% set obj.factoid_voice_info = factoid|get_item('voice_info') %}
+    {% set obj.factoid_tts = (factoid|get_item('tts') or (obj.factoid_voice_info and obj.factoid_voice_info|get_item('text')|pluralize_tag)) %}
+    {% set obj.factoid_child_search = factoid|get_item('child_search') %}
+    {% set obj.related_query = factoid|get_item('related_query') %}
+  {% endif %}
+
+  # Response urls
+  {% set obj.serp_search_url = obj.serp['url'] if form.search_results else None %}
+  {% set obj.factoid_url = obj.factoid['url'] if obj.factoid and 'url' in obj.factoid else None %}
+  {% set obj.object_url = obj.object['url'] if obj.object and 'url' in obj.object else None %}
+  {% set obj.nav_url = obj.nav['url'] if obj.nav else None %}
+  {% set obj.afisha_url = obj.afisha['url'] if obj.afisha else None %}
+  {% set obj.kinopoisk_url = obj.kinopoisk['url'] if obj.kinopoisk else None %}
+  {% set obj.translate_url = obj.translate['url'] if obj.translate else None %}
+  {% set obj.music_url = obj.music['url'] if obj.music else None %}
+  {% set obj.market_url = obj.market['url'] if obj.market else None %}
+  {% set obj.rasp_url = obj.rasp['url'] if obj.rasp else None %}
+  {% set obj.avia_url = obj.avia['url'] if obj.avia else None %}
+  {% set obj.tv_url = obj.tv['url'] if obj.tv else None %}
+  {% set obj.auto_url = obj.auto['url'] if obj.auto else None %}
+  {% set obj.realty_url = obj.realty['url'] if obj.realty else None %}
+  {% set obj.map_search_url = form.search_results['map_search_url'] if form.search_results and 'map_search_url' in form.search_results else None %}
+
+  # Response type specific stuff
+  {% set obj.factoid_phone_uri = obj.factoid['phone_uri'] if obj.factoid and 'phone_uri' in obj.factoid else None %}
+  {% set obj.is_factoid_with_phone = obj.factoid_phone_uri or obj.factoid and 'source' in obj.factoid and obj.factoid['source'] == "russian_phones" %}
+{% endmacro %}
+
+{% macro append_related_query(related_query) %}
+  {% set accent %} {%vc%} <[accented]> {%evc%} {% endset %}
+  {% if related_query %}
+    .
+    {% chooseline %}
+      Хотите{{ accent }} узнать, {{ related_query }}?
+      Хотите{{ accent }} узнать, {{ related_query }}? Только скажите
+      А ещё я знаю, {{ related_query }}. Рассказать вам по секрету?
+      Давайте{{ accent }} заодно расскажу, {{ related_query }}?
+      А еще узнала, {{ related_query }}. Рассказать?
+      Как интересно, узнала, {{ related_query }}. Рассказать вам?
+      Ещё я тут узнала, {{ related_query }}. Давайте{{ accent }} расскажу?
+      Ещё могу рассказать, {{ related_query }}. Хотите послушать?
+      Кстати, я еще знаю, {{ related_query }}, если захотите послушать, только скажите
+      Возможно, вам будет любопытно узнать, {{ related_query }}. Рассказать?
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_factoid_answer(text, source, read_source_before_text, is_trusted_source, child_search, is_about_recipes) %}
+  {% set is_child_answer = child_search|get_item('is_child_answer', False) %}
+  {% if source and is_child_answer %}
+    {% set is_child_utterance = child_search|get_item('is_child_utterance', False) %}
+    {% if is_child_utterance %}
+      {% chooseline %}
+        Нашла ответ на {{ source }}:
+        Кто, как не они! Отвечает {{ source }}:
+        Отвечает {{ source }}:
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Нашла ответ на {{ source }}:
+        Кто, как не они! Отвечает {{ source }}:
+        Нашла ответ на {{ source }}! Поймет и ребенок!
+      {% endchooseline %}
+    {% endif %}
+    {{ text }}
+  {% else %}
+    {% if source and read_source_before_text %}
+      {% chooseline %}
+        На {{ source }} есть такой ответ:
+        Нашла ответ на {{ source }}. Слушайте:
+        Ответ есть на {{ source }}. Читаю:
+        Сайт {{ source }} даёт такой ответ:
+      {% endchooseline %}
+    {% elif not source and not is_trusted_source %}
+      {% chooseline %}
+        Нашла в интернете:
+        Вот, что нашла в сети:
+        Нашлось в интернете:
+        Ответ из интернета:
+        В интернете пишут:
+      {% endchooseline %}
+    {% endif %}
+
+    {% if is_about_recipes and source and not read_source_before_text %}
+        Нашла рецепт в интернете, но сама его ещё не пробовала. Если хотите узнать, какие есть проверенные рецепты, скажите: «Что приготовить?».
+    {% endif %}
+    {{ text }}
+    {% if source and not read_source_before_text %}
+      .
+      {% chooseline %}
+        Если что, это не моё. Читала с сайта {{ source }}.
+        Это с сайта {{ source }}, если что.
+        Это на {{ source }} написано.
+        Ответ нашла на {{ source }}.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_factoid_or_object(text, hostname, tts, voice_info, child_search, related_query, cant_show_search_result=False, is_about_recipes=False) %}
+  {% if text and not tts %}
+    # TODO: непонятно, эта ветка актуальна?
+    {% if cant_show_search_result %}
+      {{ showing_search_results_not_supported() }}
+    {% else %}
+      {% voice %}
+        {% chooseline %}
+          Есть такой ответ
+          Вот что я нашла
+          Есть ответ
+          Вот ответ на ваш вопрос
+        {% endchooseline %}
+      {% endvoice %}
+      {% text %} {{ text }} {% endtext %}
+    {% endif %}
+  {% elif tts %}
+    {% set rendered_text %} {%tx%} {{ text }} {%etx%} {%vc%} {{ tts }} {%evc%} {% endset %}
+
+    {% set voice_source=voice_info|get_item('source') %}
+    {% set text_source=hostname or voice_source %}
+    {% if voice_source and text_source %}
+      {% set rendered_source %}{%tx%} {{ text_source }} {%etx%} {%vc%} {{ voice_source }} {%evc%} {% endset %}
+    {% endif %}
+
+    {% set read_source_before_text = voice_info|get_item('read_source_before_text', True) %}
+    {% set is_trusted_source = voice_info|get_item('trusted_source', True) %}
+
+    {{ render_factoid_answer(rendered_text, rendered_source, read_source_before_text, is_trusted_source, child_search, is_about_recipes) }}
+    {{ append_related_query(related_query) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_search_images_invitation_message() %}
+  {% chooseline %}
+    Найдётся всё!
+    Ищу в Яндексе
+    Сейчас найду
+    Сейчас найдём
+    Одну секунду...
+    Давайте поищем
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase gallery_porno_warning %}
+  {% chooseline %}
+    Нашла вот такое. Только вслух читать не буду, давайте как-нибудь сами.
+    Без проблем, смотрите. Только зачитывать не буду, хорошо?
+  {% endchooseline %}
+{% endphrase %}

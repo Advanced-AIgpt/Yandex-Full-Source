@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package NAlice.NData;
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/video_call";
+option java_package = "ru.yandex.alice.protos.data.scenario.video_call";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TVideoCallMainScreenData {
+  oneof ProviderData {
+    option (NYT.variant_field_name) = "provider_data";
+    TTelegramCardData TelegramCardData = 1 [json_name = "telegram_card_data", (NYT.column_name) = "telegram_card_data"];
+  }
+
+  message TTelegramCardData {
+    bool LoggedIn = 1 [json_name = "logged_in", (NYT.column_name) = "logged_in"];
+    bool ContactsUploaded = 2 [json_name = "contacts_uploaded", (NYT.column_name) = "contacts_uploaded"];
+    string UserId = 3 [json_name = "user_id", (NYT.column_name) = "user_id"];
+    repeated TFavoriteContactData FavoriteContactData = 4 [json_name = "favorite_contact_data", (NYT.column_name) = "favorite_contact_data"];
+
+    message TFavoriteContactData {
+      string DisplayName = 1 [json_name = "display_name", (NYT.column_name) = "display_name"];
+      string UserId = 2 [json_name = "user_id", (NYT.column_name) = "user_id"];
+      string LookupKey = 3 [json_name = "lookup_key", (NYT.column_name) = "lookup_key"];
+    }
+  }
+}
+
+message TVideoCallContactChoosingData {
+  repeated TProviderContactData ContactData = 1 [json_name = "contact_data", (NYT.column_name) = "contact_data"];
+}
+
+message TIncomingTelegramCallData {
+  string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+  string CallId = 2 [json_name = "call_id", (NYT.column_name) = "call_id"];
+  TProviderContactData Caller = 3 [json_name = "caller", (NYT.column_name) = "caller"];
+}
+
+message TOutgoingTelegramCallData {
+  string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+  TProviderContactData Recipient = 2 [json_name = "recipient", (NYT.column_name) = "recipient"];
+}
+
+message TCurrentTelegramCallData {
+  string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+  string CallId = 2 [json_name = "call_id", (NYT.column_name) = "call_id"];
+  TProviderContactData Recipient = 3  [json_name = "recipient", (NYT.column_name) = "recipient"];
+}
+
+message TProviderContactList {
+  repeated TProviderContactData ContactData = 1 [json_name = "contact_data", (NYT.column_name) = "contact_data"];
+}
+
+message TProviderContactData {
+  oneof ProviderData {
+    option (NYT.variant_field_name) = "provider_data";
+    TTelegramContactData TelegramContactData = 1 [json_name = "telegram_contact_data", (NYT.column_name) = "telegram_contact_data"];
+  }
+
+  message TTelegramContactData {
+    string DisplayName = 1 [json_name = "display_name", (NYT.column_name) = "display_name"];
+    string UserId = 2 [json_name = "user_id", (NYT.column_name) = "user_id"];
+
+    reserved 3; reserved "LookupKey";
+  }
+}

@@ -1,0 +1,9 @@
+RECURSE(
+    nlg
+    nlg_renderer
+    python
+    runtime
+    runtime_api
+    testing
+    voice_prefix
+)

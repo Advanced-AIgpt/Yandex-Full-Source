@@ -1,0 +1,39 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ar.nlg" import alicesdk_player_response, render_supported_only_on_music with context %}
+
+{% macro shuffle_confirm() %}
+  {% if context.attentions.get('unknown_music') %}
+    {% chooseline %}
+      ليس هناك موسيقى تعمل الآن.
+      لكن لا يوجد شيء يعمل الآن.
+      بصراحة، لا يوجد شيء يعمل الآن.
+      لا أعرف ماذا أفعل، لا يوجد شيء يعمل.
+    {% endchooseline %}
+  {% elif context.is_generative %}
+    اعذرني لا أستطيع خلط موسيقى الأعصاب.
+  {% elif context.is_fm_radio %}
+    {{ render_supported_only_on_music() }}
+  {% elif context.is_radio %}
+    {% chooseline %}
+      لقد فعلتها.
+      كل شيء مخلوط بأي حال.
+      حسناً، شغلتها مرة أخرى من خلال الخلاط.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      قمت بذلك. سيكون كل شيء مخلوطاً بعد هذا المقطع الصوتي.
+      رجاءَ. خلط كل شيء - بعد هذا التسجيل الصوتي.
+      جاهز بعد هذا المقطع سأشغل القائمة بالكامل.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% elif context.has_alicesdk_player %}
+    {{ alicesdk_player_response(shuffle_confirm()) }}
+  {% else %}
+    {{ shuffle_confirm() }}
+  {% endif %}
+{% endphrase %}

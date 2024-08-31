@@ -1,0 +1,217 @@
+USE hahn;
+PRAGMA YSON.DisableStrict = 'true';
+
+$timeout = 30 * 1000;
+$preactivation_with_activation_min_tokens_intersection = 1;
+$activation_phrase_with_query_min_tokens_intersection = 1;
+
+$vins_logs = '//home/voice/vins/logs/dialogs';
+$preactivations_raw_results = '//home/paskills/discovery/datasets/PreActivations/raw/all';
+
+$start_date = '2019-09-01';
+$end_date   = '2019-11-08';
+
+$common_fillers = (SELECT AGGREGATE_LIST(text) FROM `//home/paskills/discovery/datasets/common-fillers`);
+$common_fillers_set = ToSet($common_fillers);
+
+$tokenizer = TextProcessing::MakeTokenizer(
+    True as Lowercasing,
+    True as Lemmatizing,
+    "BySense" as SeparatorType,
+    AsList("Word", "Number") as TokenTypes
+);
+
+$tokenize_without_common = ($text) -> {
+    $tokens = $tokenizer($text);
+    $tokens = ListMap($tokens, ($t) -> { RETURN $t.Token });
+    $tokens = ListFilter($tokens, ($token) -> {RETURN $token not in $common_fillers_set});
+    RETURN ToSet($tokens);
+};
+
+$check_intersection = ($phrase1, $phrase2) -> {
+
+    $phrase1 = $tokenize_without_common($phrase1);
+    $phrase2 = $tokenize_without_common($phrase2);
+
+    RETURN DictLength(SetIntersection($phrase1, $phrase2)) >= $preactivation_with_activation_min_tokens_intersection;
+};
+
+$get_dialog_id = ($response) -> {
+    $directives = Yson::ConvertToList($response.directives);
+    $open_dialog = ListFilter($directives, ($d) -> { RETURN Yson::LookupString($d, 'name') == 'open_dialog' })[0];
+    RETURN Yson::ConvertToString($open_dialog.payload.dialog_id);
+};
+
+$is_activation_form = ($form_name) -> {
+    RETURN $form_name  == 'personal_assistant.scenarios.external_skill' OR
+           $form_name  == 'personal_assistant.scenarios.external_skill__activate_only' AND
+           TRUE
+};
+
+$is_search_but_skills_discovery = ($response) -> {
+    $meta = Yson::ConvertToList($response.meta);
+    $is_skill_discovery = ListMap($meta, ($m) -> {
+        RETURN Yson::Contains($m, 'attention_type') AND
+               Yson::LookupString($m, 'attention_type') == 'skills_discovery';
+    });
+    RETURN ListAny($is_skill_discovery);
+};
+
+$__DIALOG_VINS_LOGS = (
+    SELECT
+        utterance_text as query,
+        form_name,
+        utterance_source,
+        server_time_ms,
+        response,
+        LAG(utterance_text)    over w AS prev_query,
+        LAG(form_name)         over w AS prev_form_name,
+        LAG(utterance_source)  over w AS prev_utterance_source,
+        LAG(server_time_ms)    over w AS prev_server_time_ms,
+        LAG(response)          over w AS prev_response
+    FROM
+        RANGE($vins_logs, $start_date, $end_date)
+    WINDOW w as (
+        PARTITION BY `uuid`
+        ORDER BY `server_time_ms`
+    )
+);
+
+$__SKILLS_ACTIVATIONS = (
+    SELECT
+        query,
+        DateTime::FromMilliseconds(server_time_ms) as _date,
+        form_name,
+        prev_form_name,
+        prev_query,
+        $get_dialog_id(response) as dialog_id,
+        NOT $is_search_but_skills_discovery(prev_response) AS prev_is_search
+    FROM
+        $__DIALOG_VINS_LOGS
+    WHERE
+        $is_activation_form(form_name) AND
+        query IS NOT NULL AND
+        utterance_source = 'voice' AND
+
+        prev_form_name NOT LIKE '%external_skill%' AND
+        prev_form_name NOT LIKE '%skill%' AND
+        prev_query IS NOT NULL AND
+        prev_utterance_source = 'voice' AND
+
+        (server_time_ms - prev_server_time_ms) <= $timeout AND
+        $get_dialog_id(response) != 'bd168a52-c2eb-43be-a3df-632e207cd02b' AND  -- fairytales
+        $check_intersection(query, prev_query) AND
+        TRUE
+);
+
+SELECT * FROM $__SKILLS_ACTIVATIONS
+LIMIT 10
+;
+
+SELECT COUNT(*) FROM $__SKILLS_ACTIVATIONS
+;
+
+$__ACTIVE_SKILLS = (
+    SELECT
+        name,
+        id,
+        activationPhrases,
+    FROM
+        `//home/paskills/skills/stable`
+    WHERE
+        channel = 'aliceSkill' AND
+        onAir AND
+        NOT isBanned AND
+        NOT hideInStore AND
+        isRecommended AND
+        deletedAt is NULL AND
+        TRUE
+);
+
+SELECT COUNT(*) FROM $__ACTIVE_SKILLS
+;
+
+$tokenize_phrases = ($name, $phrases) -> {
+    $phrases = Yson::ConvertToList($phrases);
+    $phrases = ListMap($phrases, ($p) -> {
+        $p = Yson::ConvertToString($p);
+        RETURN $tokenize_without_common($p);
+    });
+    $phrases = ListExtend(
+        $phrases,
+        AsList($tokenize_without_common($name)),
+    );
+
+    RETURN $phrases;
+};
+
+$__ACTIVE_SKILLS_WITH_PHRASES = (
+    SELECT
+        name,
+        id as skill_id,
+        $tokenize_phrases(name, activationPhrases) as phrases,
+    FROM
+        $__ACTIVE_SKILLS
+);
+
+SELECT * FROM $__ACTIVE_SKILLS_WITH_PHRASES
+LIMIT 10
+;
+
+SELECT COUNT(*) FROM $__ACTIVE_SKILLS_WITH_PHRASES
+;
+
+$contains_activation_phrase = ($query, $phrases)  -> {
+    $query_tokenized = $tokenize_without_common($query);
+
+    $checked_phrases = ListFilter($phrases, ($p) -> {
+        RETURN DictLength(SetIntersection($query_tokenized, $p)) >= $activation_phrase_with_query_min_tokens_intersection;
+    });
+
+    RETURN ListHasItems($checked_phrases);
+};
+
+$__PRE_ACTIVATIONS = (
+    SELECT
+        skills_activations._date as  `date`,
+        skills_activations.query AS utterance_text,
+        skills_activations.prev_query AS prev__utterance_text,
+        skills_activations.dialog_id AS skill_id,
+        $contains_activation_phrase(skills_activations.query, skills.phrases) AS utterance_has_activation,
+        $contains_activation_phrase(skills_activations.prev_query, skills.phrases) AS prev__utterance_has_activation
+    FROM
+        $__SKILLS_ACTIVATIONS AS skills_activations
+    INNER JOIN
+        $__ACTIVE_SKILLS_WITH_PHRASES AS skills
+    ON
+        (skills_activations.dialog_id == skills.skill_id)
+);
+
+SELECT * FROM $__PRE_ACTIVATIONS
+LIMIT 10
+;
+
+SELECT COUNT(*) FROM $__PRE_ACTIVATIONS
+;
+
+$__PRE_ACTIVATIONS = (
+    SELECT *
+    FROM $__PRE_ACTIVATIONS
+    WHERE utterance_has_activation AND prev__utterance_has_activation
+);
+
+SELECT * FROM $__PRE_ACTIVATIONS
+LIMIT 10
+;
+
+SELECT COUNT(*) FROM $__PRE_ACTIVATIONS
+;
+
+INSERT INTO $preactivations_raw_results WITH TRUNCATE
+SELECT
+     `date`,
+    prev__utterance_text as prev_query,
+    utterance_text as query,
+    skill_id
+FROM
+    $__PRE_ACTIVATIONS;

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package NAlice.NMegamind;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/modifiers";
+option java_package = "ru.yandex.alice.megamind.protos.modifiers";
+option java_outer_classname = "ModifierRequestProto";
+
+import "alice/protos/data/contextual_data.proto";
+
+import "alice/library/client/protos/promo_type.proto";
+
+import "alice/protos/data/language/language.proto";
+import "alice/megamind/protos/modifiers/modifier_body.proto";
+import "alice/megamind/protos/scenarios/request.proto";
+
+import "google/protobuf/struct.proto";
+
+message TModifierFeatures {
+    string ProductScenarioName = 1 [json_name = "product_scenario_name"];
+    string Intent = 2 [json_name = "intent"];
+    reserved 3;
+    reserved "Application";
+    NClient.EPromoType PromoType = 4 [json_name = "promo_type"];
+    NData.TContextualData ContextualData = 5 [json_name = "contextual_data"];
+
+    message TSoundSettings {
+        optional bool IsWhisper = 1 [json_name = "is_whisper"];
+        optional uint32 SoundLevel = 2 [json_name = "sound_level"];
+        optional string MultiroomSessionId = 3 [json_name = "multiroom_session_id"];
+
+        reserved 4;
+        reserved "WhisperMode";
+
+        optional bool IsPreviousRequestWhisper = 5 [json_name = "is_previous_request_whisper"];
+        optional bool IsWhisperTagDisabled = 6 [json_name = "is_whisper_tag_disabled"];
+    }
+
+    TSoundSettings SoundSettings = 6 [json_name = "sound_settings"];
+    ELang ScenarioLanguage = 7 [json_name = "scenario_language"];
+}
+
+message TModifierRequest {
+    TModifierFeatures Features = 1 [json_name = "features"];
+
+    message TBaseRequest {
+        // necessary fields from TScenarioBaseRequest
+        string RequestId = 1 [json_name = "request_id"];
+        uint64 ServerTimeMs = 2 [json_name = "server_time_ms"];
+        NScenarios.TInterfaces Interfaces = 3 [json_name = "interfaces"];
+        google.protobuf.Struct Experiments = 4 [json_name = "experiments"];
+        ELang UserLanguage = 5 [json_name = "user_language"];
+        uint64 RandomSeed = 6 [json_name = "random_seed"];
+    }
+
+    TBaseRequest BaseRequest = 2 [json_name = "base_request"];
+    TModifierBody ModifierBody = 3 [json_name = "modifier_body"];
+}

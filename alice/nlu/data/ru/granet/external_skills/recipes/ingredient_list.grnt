@@ -1,0 +1,98 @@
+import: common/filler.grnt
+        common/pronouns.grnt
+        external_skills/recipes/common.grnt
+
+form alice.recipes.ingredient_list:
+    slots:
+        delivery_method:
+            type: DeliveryMethod
+            source: $DeliveryMethod
+    root:
+        [$Which? $Ingredient $Required] $DeliveryMethod?
+        [$SayOrRepeat $Ingredient $DeliveryMethod?]
+        [$List $Ingredient] $DeliveryMethod?
+        ($Which|$What)? $Ingredient
+        [$What $Required] $Say? $DeliveryMethod?
+        [$Send $Ingredient? $List] $DeliveryMethod?
+        $Send $DeliveryMethod
+
+        %negative
+        $WithGoogle
+    $What:
+        что
+        какие
+    $Which:
+        %lemma
+        какой
+        сколько
+    $Ingredient:
+        %lemma
+        ингредиент
+        продукт
+    filler:
+        $Common.WayToCallAlice
+        $Common.Filler
+        $Common.LeftFiller
+        $SayOrRepeat
+        мне
+        были
+        ещё
+        раз
+
+form alice.recipes.ingredient_list.ellipsis:
+    slots:
+        delivery_method:
+            type: DeliveryMethod
+            source: $DeliveryMethod
+    root:
+        $Common.LeftFiller* [$Send? $DeliveryMethod]
+        $Common.LeftFiller* [$Say? $DeliveryMethod]
+
+        %negative
+        $WithGoogle
+        [$SayOrOpen .* $Google]
+    $SayOrOpen:
+        %lemma
+        скажи
+        открой
+        покажи
+    filler:
+        $Common.Filler
+        $Common.PronounMe
+        $Common.WayToCallAlice
+        %negative
+        $Google
+
+entity DeliveryMethod:
+    values:
+        read_slowly:
+            $Slowly
+            $OneByOne
+            $Say
+
+        push_notification:
+            [$Send $List?]
+            %lemma
+            (на|в)? (телефон|смартфон|айфон|приложение)
+            пушом
+            пуш? сообщением
+            сообщением
+            оповещением
+
+$List:
+    список
+$Send:
+    отправь
+    пришли
+    сбрось
+    скинь
+    закинь
+    отошли
+$WithGoogle:
+    [.* $Google]
+    [$DeliveryMethod $Google .*]
+$Google:
+    %lemma
+    гугл
+    гугла
+    google

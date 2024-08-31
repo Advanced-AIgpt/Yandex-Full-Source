@@ -1,0 +1,28 @@
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import render_precipitation, geo_changed_attention %}
+
+{% phrase render_result %}
+  {% if 'can_not_display_prec_map' in context.attentions %}
+    У меня не получается открыть карту осадков, однако могу сообщить вам, что
+    {{ context.forecast_location | city_prepcase }} {{ render_precipitation(context) | decapitalize_first }}.
+  {% else %}
+    {% set weather %}
+      Погода {{ render_precipitation(context) | capitalize_first + '.' }}
+    {% endset %}
+
+    {% if context.attentions.get('geo_changed') %}
+      {{ geo_changed_attention(context, weather) | capitalize_first }}
+    {% else %}
+      {{ weather }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro say_subtraction(x, y) %}
+    {{x}} минус {{y}} равняется {{x - y}}
+{% endmacro %}
+
+{% phrase say_hello_with_call %}
+    Привет! Я умею вычитать числа.
+    {{ say_subtraction(context.x, context.y) }}.
+    Я очень умная!
+{% endphrase %}

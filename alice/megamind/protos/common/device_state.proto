@@ -1,0 +1,692 @@
+package NAlice;
+
+// Documentation: https://wiki.yandex-team.ru/alice/vins/speechkitapi/#devicestate
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/common";
+option java_package = "ru.yandex.alice.megamind.protos.common";
+option java_outer_classname = "DeviceStateProto";
+
+import "google/protobuf/struct.proto";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/library/restriction_level/protos/content_settings.proto";
+import "alice/megamind/protos/common/conditional_action.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/subscription_state.proto";
+import "alice/megamind/protos/common/tandem_state.proto";
+import "alice/protos/data/external_entity_description.proto";
+import "alice/protos/data/scenario/reminders/device_state.proto";
+import "alice/protos/data/scenario/timer/timer.proto";
+import "alice/protos/data/search_result/search_result.proto";
+import "alice/protos/data/video/content_details.proto";
+import "alice/protos/data/video/video.proto";
+import "alice/protos/endpoint/capabilities/route_manager/route_manager.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TUntypedDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    optional string Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+    optional string AnalyticsType = 3 [json_name = "sub_name", (NYT.column_name) = "sub_name"];
+    optional bool IgnoreAnswer = 4 [json_name = "ignore_answer", (NYT.column_name) = "ignore_answer"];
+    optional google.protobuf.Struct Payload = 5 [json_name = "payload", (NYT.column_name) = "payload", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TDeviceStateAction {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TUntypedDirective Directives = 1 [json_name = "directives", (NYT.column_name) = "directives"];
+    optional TNluHint NluHint = 2 [json_name = "nlu_hint", (NYT.column_name) = "nlu_hint"];
+}
+
+message TNavigator {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TPoint {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional float Lat = 1 [json_name = "lat", (NYT.column_name) = "lat"];
+        optional float Lon = 2 [json_name = "lon", (NYT.column_name) = "lon"];
+    }
+
+    message TFavorite {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        optional float Lat = 2 [json_name = "lat", (NYT.column_name) = "lat"];
+        optional float Lon = 3 [json_name = "lon", (NYT.column_name) = "lon"];
+        repeated TPoint ArrivalPoints = 4 [json_name = "arrival_points", (NYT.column_name) = "arrival_points"];
+    }
+
+    message TLocation {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional float Lat = 1 [json_name = "lat", (NYT.column_name) = "lat"];
+        optional float Lon = 2 [json_name = "lon", (NYT.column_name) = "lon"];
+        repeated TPoint ArrivalPoints = 3 [json_name = "arrival_points", (NYT.column_name) = "arrival_points"];
+    }
+
+    message TMapView {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional float BottomRightLon = 1 [json_name = "br_lon", (NYT.column_name) = "br_lon"];
+        optional float TopRightLon = 2 [json_name = "tr_lon", (NYT.column_name) = "tr_lon"];
+        optional float TopLeftLon = 3 [json_name = "tl_lon", (NYT.column_name) = "tl_lon"];
+        optional float BottomLeftLon = 4 [json_name = "bl_lon", (NYT.column_name) = "bl_lon"];
+        optional float TopLeftLat = 5 [json_name = "tl_lat", (NYT.column_name) = "tl_lat"];
+        optional float BottomLeftLat = 6 [json_name = "bl_lat", (NYT.column_name) = "bl_lat"];
+        optional float BottomRightLat = 7 [json_name = "br_lat", (NYT.column_name) = "br_lat"];
+        optional float TopRightLat = 8 [json_name = "tr_lat", (NYT.column_name) = "tr_lat"];
+    }
+
+    message TRoute {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated TPoint Points = 1 [json_name = "points", (NYT.column_name) = "points", (FieldAccess) = A_PRIVATE_REQUEST];
+        optional float DistanceToDestination = 2 [json_name = "distance_to_destination", (NYT.column_name) = "distance_to_destination"];
+        optional int64 RawTimeToDestination = 3 [json_name = "raw_time_to_destination", (NYT.column_name) = "raw_time_to_destination"];
+        optional int64 ArrivalTimestamp = 4 [json_name = "arrival_timestamp", (NYT.column_name) = "arrival_timestamp"];
+        optional int64 TimeToDestination = 5 [json_name = "time_to_destination", (NYT.column_name) = "time_to_destination"];
+        optional int64 TimeInTrafficJam = 6 [json_name = "time_in_traffic_jam", (NYT.column_name) = "time_in_traffic_jam"];
+        optional float DistanceInTrafficJam = 7 [json_name = "distance_in_traffic_jam", (NYT.column_name) = "distance_in_traffic_jam"];
+    }
+
+    message TSpan {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional TPoint SouthWest = 1 [json_name = "south_west", (NYT.column_name) = "south_west"];
+        optional TPoint NorthEast = 2 [json_name = "north_east", (NYT.column_name) = "north_east"];
+    }
+
+    message TSearchOptions {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional TSpan Span = 1 [json_name = "span", (NYT.column_name) = "span"];
+    }
+
+    repeated TFavorite UserFavorites = 1 [json_name = "user_favorites", (NYT.column_name) = "user_favorites", (FieldAccess) = A_PRIVATE_REQUEST];
+    optional TLocation HomeLocation = 2 [json_name = "home", (NYT.column_name) = "home", (FieldAccess) = A_PRIVATE_REQUEST];
+    optional TLocation WorkLocation = 3 [json_name = "work", (NYT.column_name) = "work", (FieldAccess) = A_PRIVATE_REQUEST];
+    optional TMapView MapView = 4 [json_name = "map_view", (NYT.column_name) = "map_view"];
+    repeated string AvailableVoiceIds = 5 [json_name = "available_voice_ids", (NYT.column_name) = "available_voice_ids"];
+    optional bool ProjectedMode = 6 [json_name = "projected_mode", (NYT.column_name) = "projected_mode"];
+    optional TRoute CurrentRoute = 7 [json_name = "current_route", (NYT.column_name) = "current_route"];
+    repeated string States = 8 [json_name = "states", (NYT.column_name) = "states"];
+    optional TSearchOptions SearchOptions = 9 [json_name = "search_options", (NYT.column_name) = "search_options"];
+}
+
+message TDeviceState {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TAudioPlayer {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TCurrentlyPlaying {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            // audio_play.stream.id
+            optional string StreamId = 1 [json_name = "stream_id", (NYT.column_name) = "stream_id"];
+            optional double LastPlayTimestamp = 2 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+
+            // Title & Subtitle from TAudioPlayMetadata
+            optional string Title = 3 [json_name = "title", (NYT.column_name) = "title"];
+            optional string SubTitle = 4 [json_name = "subtitle", (NYT.column_name) = "subtitle"];
+
+            // audio_play.stream.type
+            optional string StreamType = 5 [json_name = "stream_type", (NYT.column_name) = "stream_type"];
+        }
+
+        enum TPlayerState {
+            Unknown = 0;
+            // Плеер готов играть после создания, но пока никаких команд не поступало
+            Idle = 1;
+            // Сейчас играет
+            Playing = 2;
+            // Проигрывание приостановлено в результате прерывания более приоритетным каналом
+            Paused = 3;
+            // Сейчас загружаетcя контент трека
+            Buffering = 4;
+            // Проигрывание остановлено в результате запроса пользователя или ошибки
+            Stopped = 5;
+            // Плеер доиграл, следующих треков нет в очереди
+            Finished = 6;
+        }
+
+        optional TPlayerState PlayerState = 1 [json_name = "player_state", (NYT.column_name) = "player_state"];
+        // identifies a track's offset in milliseconds at the time the request was sent
+        optional int32 OffsetMs = 2 [json_name = "offset_ms", (NYT.column_name) = "offset_ms"];
+        optional TCurrentlyPlaying CurrentlyPlaying = 3 [json_name = "current_stream", (NYT.column_name) = "current_stream"];
+        // from audio_play.scenario_meta
+        map<string, string> ScenarioMeta = 4 [json_name = "scenario_meta", (NYT.column_name) = "scenario_meta", (NYT.flags) = MAP_AS_DICT];
+        optional double LastPlayTimestamp = 5 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+        optional int32 DurationMs = 6 [json_name = "duration_ms", (NYT.column_name) = "duration_ms"];
+        // time since last status change to non-play(stopped, paused, etc) status
+        optional double LastStopTimestamp = 7 [json_name = "last_stop_timestamp", (NYT.column_name) = "last_stop_timestamp"];
+        // amount of milliseconds current track was actually played, taking into account rewinds
+        optional int32 PlayedMs = 8 [json_name = "played_ms", (NYT.column_name) = "played_ms"];
+    }
+
+    message TMusic {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TCurrentlyPlaying {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string TrackId = 1 [json_name = "track_id", (NYT.column_name) = "track_id"];
+            optional google.protobuf.Struct RawTrackInfo = 2 [json_name = "track_info", (NYT.column_name) = "track_info", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            optional double LastPlayTimestamp = 3 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+        }
+
+        message TPlayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional bool Pause = 1 [json_name = "pause", (NYT.column_name) = "pause"];
+            optional uint64 TimestampDeprecated = 2 [(NYT.column_name) = "timestamp_deprecated", deprecated = true];
+            optional double Timestamp = 3 [json_name = "timestamp", (NYT.column_name) = "timestamp"]; // timestamp только если pause = true, в секундах
+        }
+
+        optional TCurrentlyPlaying CurrentlyPlaying = 1 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+        optional string Uid = 2 [json_name = "uid", (NYT.column_name) = "uid"];
+        optional string PlaylistOwner = 3 [json_name = "playlist_owner", (NYT.column_name) = "playlist_owner"];
+        optional TPlayer Player = 4 [json_name = "player", (NYT.column_name) = "player"];
+        optional uint32 SoundLevel = 5 [json_name = "sound_level", (NYT.column_name) = "sound_level"];
+        optional bool SoundMuted = 6 [json_name = "sound_muted", (NYT.column_name) = "sound_muted"];
+        optional string SessionId = 7 [json_name = "session_id", (NYT.column_name) = "session_id"];
+        optional double LastPlayTimestamp = 8 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+        optional double LastStopTimestamp = 9 [json_name = "last_stop_timestamp", (NYT.column_name) = "last_stop_timestamp"];
+    }
+
+    message TScreen {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EScreenResolution {
+            video_format_unknown = 0;
+            video_format_SD = 1;
+            video_format_HD = 2;
+            video_format_UHD = 3;
+        }
+
+        enum EHdcpLevel {
+            current_HDCP_level_unknown = 0;
+            current_HDCP_level_none = 1;
+            current_HDCP_level_1X = 2;
+            current_HDCP_level_2X = 3;
+        }
+
+        enum EDynamicRange {
+            dynamic_range_unknown = 0;
+            dynamic_range_SDR = 1;
+            dynamic_range_HDR10 = 2;
+            dynamic_range_HDR10Plus = 3;
+            dynamic_range_DV = 4;
+            dynamic_range_HLG = 5;
+        }
+
+        repeated EScreenResolution SupportedScreenResolutions = 1 [json_name = "supported_screen_resolutions", (NYT.column_name) = "supported_screen_resolutions"];
+        optional EHdcpLevel HdcpLevel = 2 [json_name = "hdcp_level", (NYT.column_name) = "hdcp_level"];
+        repeated EDynamicRange DynamicRanges = 3 [json_name = "dynamic_ranges", (NYT.column_name) = "dynamic_ranges"];
+    }
+
+    message TVideo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TScreenState {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            reserved 1, 3, 4;
+            repeated uint32 VisibleItems = 2 [json_name = "visible_items", (NYT.column_name) = "visible_items"];
+            optional uint32 Season = 5 [json_name = "season", (NYT.column_name) = "season"]; // TODO uint64
+            repeated TVideoItem RawItems = 6 [json_name = "items", (NYT.column_name) = "items", (FieldAccess) = A_PRIVATE_REQUEST];
+            optional TVideoItem RawItem = 7 [json_name = "item", (NYT.column_name) = "item", (FieldAccess) = A_PRIVATE_REQUEST];
+            optional TVideoItem TvShowItem = 8 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item", (FieldAccess) = A_PRIVATE_REQUEST];
+            optional string Scenario = 9 [json_name = "scenario", (NYT.column_name) = "scenario", deprecated = true];
+            optional string ViewKey = 10 [json_name = "view_key", (NYT.column_name) = "view_key"];
+            optional string ScenarioName = 11 [json_name = "scenario_name", (NYT.column_name) = "scenario_name"];
+        }
+
+        message TCurrentlyPlaying {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            reserved 5, 6, 7;
+            message TProgress {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional double Played = 1 [json_name = "played", (NYT.column_name) = "played"];
+                optional double Duration = 2 [json_name = "duration", (NYT.column_name) = "duration"];
+            }
+
+            optional bool Paused = 1 [json_name = "paused", (NYT.column_name) = "paused", deprecated = true]; // yandex module still contains it
+            optional TProgress Progress = 2 [json_name = "progress", (NYT.column_name) = "progress"];
+
+            optional google.protobuf.Struct RawItemDeprecated = 3 [(NYT.column_name) = "raw_item_deprecated", deprecated = true, (NYT.flags) = SERIALIZATION_PROTOBUF];
+            optional google.protobuf.Struct RawNextItemDeprecated = 4 [(NYT.column_name) = "raw_next_item_deprecated", deprecated = true, (NYT.flags) = SERIALIZATION_PROTOBUF];
+
+            optional TVideoItem RawItem = 8 [json_name = "item", (NYT.column_name) = "item", (FieldAccess) = A_PRIVATE_REQUEST];
+            optional TVideoItem RawNextItem = 9 [json_name = "next_item", (NYT.column_name) = "next_item", (FieldAccess) = A_PRIVATE_REQUEST];
+            optional TVideoItem RawTvShowItem = 10 [json_name = "tv_show_item", (NYT.column_name) = "tv_show_item", (FieldAccess) = A_PRIVATE_REQUEST];
+
+            optional string AudioLanguage = 11 [json_name = "audio_language", (NYT.column_name) = "audio_language"];
+            optional string SubtitlesLanguage = 12 [json_name = "subtitles_language", (NYT.column_name) = "subtitles_language"];
+
+            optional double LastPlayTimestamp = 13 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+        }
+
+        message TPlayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional bool Pause = 1 [json_name = "pause", (NYT.column_name) = "pause"];
+        }
+
+        message TTvInterfaceState {
+            message TSearchResultsScreen {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                repeated TSearchResultGallery Galleries = 1 [json_name = "galleries", (NYT.column_name) = "galleries"];
+                optional string SearchQuery = 2 [json_name = "search_query", (NYT.column_name) = "search_query"];
+                repeated string Suggests = 3 [json_name = "suggests", (NYT.column_name) = "suggests"];
+            }
+
+            message TExpandedCollectionScreen {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                repeated TSearchResultGallery Galleries = 1 [json_name = "galleries", (NYT.column_name) = "galleries"];
+            }
+
+            message TContentDetailsScreen {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional TContentDetailsItem CurrentItem = 1 [json_name = "current_item", (NYT.column_name) = "current_item"];
+            }
+
+            message TLiveTvScreen {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                // 1-3 are not useful for channel switching
+                optional string CurrentChannelId = 1 [json_name = "current_channel_id", (NYT.column_name) = "current_channel_id", deprecated = true];
+                optional string NextChannelId = 2 [json_name = "next_channel_id", (NYT.column_name) = "next_channel_id", deprecated = true];
+                optional string PrevChannelId = 3 [json_name = "prev_channel_id", (NYT.column_name) = "prev_channel_id", deprecated = true];
+                optional string CurrentChannelUri = 4 [json_name = "current_channel_uri", (NYT.column_name) = "current_channel_uri"];
+                optional string NextChannelUri = 5 [json_name = "next_channel_uri", (NYT.column_name) = "next_channel_uri"];
+                optional string PrevChannelUri = 6 [json_name = "prev_channel_uri", (NYT.column_name) = "prev_channel_uri"];
+            }
+
+            // if the screen was opened/changed by Alice directive, save alice request id in the field
+            optional string InitialReqId = 1 [json_name = "initial_reqid", (NYT.column_name) = "initial_reqid"];
+            //reserve 2-20 for further common fields
+            oneof Screen {
+                TSearchResultsScreen SearchResultsScreen = 21 [json_name = "search_results_screen", (NYT.column_name) = "search_results_screen"];
+                TContentDetailsScreen ContentDetailsScreen = 22 [json_name = "content_details_screen", (NYT.column_name) = "content_details_screen"];
+                TExpandedCollectionScreen ExpandedCollectionScreen = 23 [json_name = "expanded_collection_screen", (NYT.column_name) = "expanded_collection_screen"];
+                TLiveTvScreen LiveTvScreen = 24 [json_name = "live_tv_screen", (NYT.column_name) = "live_tv_screen"];
+            }
+        }
+
+        enum EPlayerCapability {
+            nothing = 0;
+            stop = 1;
+            pause = 2;
+            play = 3;
+            rewind = 4;
+            skip_to_previous = 5;
+            skip_to_next = 6;
+            fast_forward = 7;
+            seek_to = 8;
+            play_pause = 9;
+        }
+
+        //TODO: Rewrite to enum
+        optional string CurrentScreen = 1 [json_name = "current_screen", (NYT.column_name) = "current_screen"]; // one of ("main", "gallery", "season_gallery", "description", "payment", "music_player", "video_player", "mordovia_webview", "search_results")
+        optional TScreenState ScreenState = 2 [json_name = "screen_state", (NYT.column_name) = "screen_state"];
+        optional TCurrentlyPlaying CurrentlyPlaying = 3 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+        reserved 4;
+        optional google.protobuf.Struct ViewState = 5 [json_name = "view_state", (NYT.column_name) = "view_state", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        reserved 6;
+        reserved 7;
+        // temporary fix for ALICE-7246
+        optional google.protobuf.Struct PageState = 8 [json_name = "page_state", (NYT.column_name) = "page_state", (NYT.flags) = SERIALIZATION_PROTOBUF, (FieldAccess) = A_PRIVATE_REQUEST];
+        optional double LastPlayTimestamp = 9 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+        optional double LastStopTimestamp = 10 [json_name = "last_stop_timestamp", (NYT.column_name) = "last_stop_timestamp"];
+        optional TPlayer Player = 11 [json_name = "player", (NYT.column_name) = "player"];
+        reserved 12;
+        reserved "TvScreenState";
+        optional TTvInterfaceState TvInterfaceState = 13 [json_name = "tv_interface_state", (NYT.column_name) = "tv_interface_state"];
+        repeated EPlayerCapability PlayerCapabilities = 14 [json_name = "player_capabilities", (NYT.column_name) = "player_capabilities"];
+        optional string PlayerName = 15 [json_name = "player_name", (NYT.column_name) = "player_name"];
+    }
+
+    message TLastWatched {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        reserved 1, 2, 3;
+        repeated TWatchedVideoItem RawMovies = 4 [json_name = "movies", (NYT.column_name) = "movies"];
+        repeated TWatchedTvShowItem RawTvShows = 5 [json_name = "tv_shows", (NYT.column_name) = "tv_shows"];
+        repeated TWatchedVideoItem RawVideos = 6 [json_name = "videos", (NYT.column_name) = "videos"];
+    }
+
+    message TTimers {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TTimer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string TimerId = 1 [json_name = "timer_id", (NYT.column_name) = "timer_id"];
+            optional uint64 StartTimestamp = 2 [json_name = "start_timestamp", (NYT.column_name) = "start_timestamp"]; // таймстемп когда был заведен таймер
+            optional uint32 Duration = 3 [json_name = "duration", (NYT.column_name) = "duration"]; // на сколько изначально был установлен таймер (секунды)
+            optional uint32 Remaining = 4 [json_name = "remaining", (NYT.column_name) = "remaining"]; // сколько осталось (нужно что бы после всех пауз понять: до коле!!) (секунды)
+            optional bool CurrentlyPlaying = 5 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+            optional bool Paused = 6 [json_name = "paused", (NYT.column_name) = "paused"];
+            repeated TUntypedDirective Directives = 7 [json_name = "directives", (NYT.column_name) = "directives"];
+            optional NAlice.NData.TTimerDescription TimerDescription = 8 [json_name = "timer_descripion", (NYT.column_name) = "timer_description"];
+        }
+
+        repeated TTimer ActiveTimers = 1 [json_name = "active_timers", (NYT.column_name) = "active_timers"];
+        optional TAlarmState AlarmState = 2 [json_name = "alarm_state", (NYT.column_name) = "alarm_state"];
+    }
+
+    message TAlarmState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TSoundAlarmSetting {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            optional google.protobuf.Struct RawInfo = 2 [json_name = "info", (NYT.column_name) = "info", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        }
+
+        optional string ICalendar = 1 [json_name = "icalendar", (NYT.column_name) = "icalendar"];
+        optional bool CurrentlyPlaying = 2 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+        optional TSoundAlarmSetting SoundAlarmSetting = 3 [json_name = "sound_alarm_setting", (NYT.column_name) = "sound_alarm_setting"];
+        optional uint32 MaxSoundLevel = 4 [json_name = "max_sound_level", (NYT.column_name) = "max_sound_level"];
+    }
+
+    message TDeviceConfig {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional EContentSettings ContentSettings = 1 [json_name = "content_settings", (NYT.column_name) = "content_settings"];
+        optional string Spotter = 2 [json_name = "spotter", (NYT.column_name) = "spotter"];
+        optional EContentSettings ChildContentSettings = 3 [json_name = "child_content_settings", (NYT.column_name) = "child_content_settings"];
+    }
+
+    message TTvSet {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TChannels {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TChannel {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                optional string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+                optional uint32 Number = 3 [json_name = "number", (NYT.column_name) = "number"];
+            }
+
+            optional string Authority = 1 [json_name = "authority", (NYT.column_name) = "authority"];
+            optional string InputType = 2 [json_name = "input_type", (NYT.column_name) = "input_type"];
+            repeated TChannel List = 3 [json_name = "list", (NYT.column_name) = "list"];
+        }
+
+        message TInputs {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TInput {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+                optional string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+                optional string CustomName = 3 [json_name = "custom_name", (NYT.column_name) = "custom_name"];
+                optional string DeviceName = 4 [json_name = "device_name", (NYT.column_name) = "device_name"];
+            }
+
+            optional string Authority = 1 [json_name = "authority", (NYT.column_name) = "authority"];
+            optional string InputType = 2 [json_name = "input_type", (NYT.column_name) = "input_type"];
+            optional string InputService = 3 [json_name = "input_service", (NYT.column_name) = "input_service"];
+            repeated TInput List = 4 [json_name = "list", (NYT.column_name) = "list"];
+        }
+
+        repeated TChannels TvChannels = 1 [json_name = "channels", (NYT.column_name) = "channels"];
+        repeated TInputs TvInputs = 2 [json_name = "inputs", (NYT.column_name) = "inputs"];
+    }
+
+    message TCarOptions {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        optional string Model = 2 [json_name = "model", (NYT.column_name) = "model"];
+        optional string Vendor = 3 [json_name = "vendor", (NYT.column_name) = "vendor"];
+    }
+
+    message TBattery {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional int32 Percent = 1 [json_name = "percent", (NYT.column_name) = "percent"];
+    }
+
+    message TBrowser {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional int32 IsReading = 1 [json_name = "is_reading", (NYT.column_name) = "is_reading"];
+        optional string SerpNeighbourWhiteList = 2 [json_name = "serp_neighbour_white_list", (NYT.column_name) = "serp_neighbour_white_list"];
+        optional string SerpNeighbourBlackList = 3 [json_name = "serp_neighbour_black_list", (NYT.column_name) = "serp_neighbour_black_list"];
+    }
+
+    message TTanker {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string GasStationId = 1 [json_name = "gas_station_id", (NYT.column_name) = "gas_station_id"];
+        optional string FuelType = 2 [json_name = "fuel_type", (NYT.column_name) = "fuel_type"];
+        optional bool CreditCard = 3 [json_name = "credit_card", (NYT.column_name) = "credit_card"];
+        optional string XPayment = 4 [json_name = "xPayment", (NYT.column_name) = "x_payment"];
+    }
+
+    message TMessengerCall {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TCall {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string CallId = 1 [json_name = "call_id", (NYT.column_name) = "call_id"];
+            optional string RecipientId = 2 [json_name = "recipient_id", (NYT.column_name) = "recipient_id"];
+            optional string CallerName = 3 [json_name = "caller_name", (NYT.column_name) = "caller_name", (FieldAccess) = A_PRIVATE_REQUEST];
+        }
+
+        optional TCall Incoming = 1 [json_name = "incoming", (NYT.column_name) = "incoming"];
+        optional TCall Current = 2 [json_name = "current", (NYT.column_name) = "current"];
+    }
+
+    message TMultiroom {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EMultiroomMode {
+            Unknown = 0;
+            Master = 1;
+            Slave = 2;
+        }
+
+        optional EMultiroomMode Mode = 1 [json_name = "mode", (NYT.column_name) = "mode"];
+        optional string MultiroomSessionId = 2 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id"];
+        optional TMusic Music = 3 [json_name = "music", (NYT.column_name) = "music"]; // Что в данный момент играет. Данные берутся с мастера.
+        optional string MasterDeviceId = 4 [json_name = "master_device_id", (NYT.column_name) = "master_device_id"];
+        // device_id-s of devices which are enabled and in the same local network (so they can form a new multiroom session)
+        repeated string VisiblePeerDeviceIds = 5 [json_name = "visible_peers", (NYT.column_name) = "visible_peers"];
+        // an ID for handling multiroom that is generated by backend side (not on client side)
+        optional string MultiroomToken = 6 [json_name = "multiroom_token", (NYT.column_name) = "multiroom_token"];
+        repeated string RoomDeviceIds = 7 [json_name = "room_device_ids", (NYT.column_name) = "room_device_ids"];
+    }
+
+    message TBluetooth {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        message TConnection {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+            optional string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+        }
+        message TCurrentlyPlaying {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string TrackId = 1 [json_name = "track_id", (NYT.column_name) = "track_id"];
+            optional google.protobuf.Struct RawTrackInfo = 2 [json_name = "track_info", (NYT.column_name) = "track_info", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            optional double LastPlayTimestamp = 3 [json_name = "last_play_timestamp",
+                                                   (NYT.column_name) = "last_play_timestamp",
+                                                   deprecated = true];
+        }
+        message TPlayer {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional bool Pause = 1 [json_name = "pause", (NYT.column_name) = "pause"];
+            optional double Timestamp = 2 [json_name = "timestamp", (NYT.column_name) = "timestamp", deprecated = true];
+        }
+
+        optional TPlayer Player = 1 [json_name = "player", (NYT.column_name) = "player"];
+        repeated TConnection CurrentConnections = 2 [json_name = "current_connections", (NYT.column_name) = "current_connections"];
+        optional TCurrentlyPlaying CurrentlyPlaying = 3 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+        optional double LastPlayTimestamp = 4 [json_name = "last_play_timestamp", (NYT.column_name) = "last_play_timestamp"];
+    }
+
+    message TInternetConnection {
+        enum EType {
+            Unknown = 0;
+            Wifi_2_4GHz = 1;
+            Wifi_5GHz = 2;
+            Ethernet = 3;
+        }
+
+        message TWifiNetwork {
+            optional string Ssid = 1 [json_name = "ssid", (NYT.column_name) = "ssid"];
+            optional string Bssid = 2 [json_name = "bssid", (NYT.column_name) = "bssid"];
+            optional int32 Channel = 3 [json_name = "channel", (NYT.column_name) = "channel"];
+        }
+
+        optional EType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        optional TWifiNetwork Current = 2 [json_name = "current", (NYT.column_name) = "current"];
+        repeated TWifiNetwork Neighbours = 3 [json_name = "neighbours", (NYT.column_name) = "neighbours", (NYT.flags) = SERIALIZATION_YT];
+    }
+
+    message TRcuState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum ESetupState {
+            None = 0;
+            Link = 1;
+            Auto = 2;
+            Check = 3;
+            Advanced = 4;
+            Manual = 5;
+        }
+
+        message TRcuCapabilities {
+            optional bool CanMakeSounds = 1 [json_name = "can_make_sounds", (NYT.column_name) = "can_make_sounds"];
+        }
+
+        optional bool IsRcuConnected = 1 [json_name = "is_rcu_connected", (NYT.column_name) = "is_rcu_connected"];
+        optional ESetupState SetupState = 2 [json_name = "setup_state", (NYT.column_name) = "setup_state"];
+        optional int32 TotalCodesets = 3 [json_name = "total_codesets", (NYT.column_name) = "total_codesets"];
+        optional TRcuCapabilities RcuCapabilities = 4 [json_name = "rcu_capabilities", (NYT.column_name) = "rcu_capabilities"];
+    }
+
+    message TPackagesState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TPackage {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+            optional string HumanReadableName = 2 [json_name = "human_readable_name", (NYT.column_name) = "human_readable_name"];
+        }
+
+        message TInstalledPackage {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional TPackage PackageInfo = 1 [json_name  = "package_info", (NYT.column_name) = "package_info"];
+            optional string MainActivity = 2 [json_name = "main_activity", (NYT.column_name) = "main_activity"];
+        }
+
+        repeated TInstalledPackage Installed = 1 [json_name = "installed", (NYT.column_name) = "installed"];
+    }
+
+    message TMediaSource {
+        optional string Name = 1 [json_name = "name"];
+    }
+
+    message TUniversalMediaApp { // universal media app - special app aggregating all media on Yandex Auto head unit
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional TMediaSource ActiveMediaSource = 1 [json_name = "active_media_source", (NYT.column_name) = "active_media_source"];
+        repeated TMediaSource AvailableMediaSources = 2 [json_name = "available_media_sources", (NYT.column_name) = "available_media_sources"];
+    }
+
+    message TClockDisplayState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional bool ClockEnabled = 1 [json_name = "clock_enabled", (NYT.column_name) = "clock_enabled"];
+    }
+
+    optional string DeviceId = 1 [json_name = "device_id", (NYT.column_name) = "device_id"];
+    optional uint32 SoundLevel = 2 [json_name = "sound_level", (NYT.column_name) = "sound_level"];
+    optional bool SoundMuted = 3 [json_name = "sound_muted", (NYT.column_name) = "sound_muted"];
+    optional bool IsTvPluggedIn = 4 [json_name = "is_tv_plugged_in", (NYT.column_name) = "is_tv_plugged_in"];
+    optional TMusic Music = 5 [json_name = "music", (NYT.column_name) = "music"];
+    optional TVideo Video = 6 [json_name = "video", (NYT.column_name) = "video"];
+    optional string AlarmsState = 7 [json_name = "alarms_state", (NYT.column_name) = "alarms_state"]; // (icalendar) Для обратной совместимости
+    optional TAlarmState AlarmState = 8 [json_name = "alarm_state", (NYT.column_name) = "alarm_state"];
+    optional TDeviceConfig DeviceConfig = 9 [json_name = "device_config", (NYT.column_name) = "device_config"];
+    optional TTimers Timers = 10 [json_name = "timers", (NYT.column_name) = "timers"];
+    optional google.protobuf.Struct Radio = 11 [json_name = "radio", (NYT.column_name) = "radio", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    optional TNavigator Navigator = 12 [json_name = "navigator", (NYT.column_name) = "navigator"];
+    map<string, TDeviceStateAction> Actions = 13 [deprecated = true, json_name = "actions", (NYT.column_name) = "actions", (NYT.flags) = MAP_AS_DICT];
+    optional TLastWatched LastWatched = 14 [json_name = "last_watched", (NYT.column_name) = "last_watched", (FieldAccess) = A_PRIVATE_REQUEST];
+    optional TTvSet TvSet = 15 [json_name = "tv_set", (NYT.column_name) = "tv_set"];
+    optional TCarOptions CarOptions = 16 [json_name = "car_options", (NYT.column_name) = "car_options"];
+    optional TBattery Battery = 17 [json_name = "battery", (NYT.column_name) = "battery"];
+    optional TBrowser Browser = 18 [json_name = "browser", (NYT.column_name) = "browser"];
+    optional TTanker Tanker = 19 [json_name = "tanker", (NYT.column_name) = "tanker"];
+    map<string, string> InstalledApps = 20 [json_name = "installed_apps", (NYT.column_name) = "installed_apps", (NYT.flags) = MAP_AS_DICT];
+    optional TMessengerCall MessengerCall = 21 [json_name = "messenger_call", (NYT.column_name) = "messenger_call"];
+    optional TAudioPlayer AudioPlayer = 22 [json_name = "audio_player", (NYT.column_name) = "audio_player"];
+    optional TMultiroom Multiroom = 23 [json_name = "multiroom", (NYT.column_name) = "multiroom"];
+    optional TBluetooth Bluetooth = 24 [json_name = "bluetooth", (NYT.column_name) = "bluetooth"];
+    optional TInternetConnection InternetConnection = 25 [json_name = "internet_connection", (NYT.column_name) = "internet_connection"];
+    optional bool MicsMuted = 26 [json_name = "mics_muted", (NYT.column_name) = "mics_muted"];
+    optional TScreen Screen = 27 [json_name = "screen", (NYT.column_name) = "screen"];
+    optional TRcuState RcuState = 28 [json_name = "rcu", (NYT.column_name) = "rcu"];
+    optional TUniversalMediaApp UniversalMediaApp = 29 [json_name = "uma", (NYT.column_name) = "uma"];
+    optional bool IsDefaultAssistant = 30 [json_name = "is_default_assistant", (NYT.column_name) = "is_default_assistant"];
+    reserved 31;
+    optional uint32 SoundMaxLevel = 32 [json_name = "sound_max_level", (NYT.column_name) = "sound_max_level"];
+
+    message TActiveActions {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TScreenConditionalActions {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            repeated TConditionalAction ConditionalActions = 1 [json_name = "conditional_actions", (NYT.column_name) = "conditional_actions"];
+        }
+
+        // Mapping from SemanticFrame name to SemanticFrameRequestData to be invoked
+        map<string, TSemanticFrameRequestData> SemanticFrames = 1 [json_name = "semantic_frames", (NYT.column_name) = "semantic_frames"];
+        reserved 2;
+        reserved "ConditionalActions";
+        // Mapping from screen name to ConditionalActions on it
+        map<string, TScreenConditionalActions> ScreenConditionalActions = 3 [json_name = "screen_conditional_action", (NYT.column_name) = "screen_conditional_action"];
+    }
+    // This field will never be forwarded to scenarios
+    optional TActiveActions ActiveActions = 33 [json_name = "active_actions", (NYT.column_name) = "active_actions"];
+    reserved 34;
+    reserved "SubscriptionState";
+    optional TTandemState TandemState = 35 [json_name = "tandem_state", (NYT.column_name) = "tandem_state"];
+    optional TSubscriptionState DeviceSubscriptionState = 36 [json_name = "subscription_state", (NYT.column_name) = "subscription_state"];
+    optional NData.NReminders.TDeviceRemindersState DeviceReminders = 37 [json_name = "device_reminders", (NYT.column_name) = "device_reminders"];
+    optional TPackagesState PackagesState = 38 [json_name = "packages", (NYT.column_name) = "packages"];
+
+    reserved 39, 40, 41;
+    reserved "EndpointId", "Capabilities", "Endpoint";
+    // look for endpoint in DeviceState
+
+    repeated NData.TExternalEntityDescription ExternalEntitiesDescription = 42 [json_name = "external_entities_description", (NYT.column_name) = "external_entities_description"];
+    optional TRouteManagerCapability.TState RouteManagerState = 43 [json_name = "route_manager_state", (NYT.column_name) = "route_manager_state"];
+    optional TClockDisplayState ClockDisplayState = 44 [json_name = "clock_display_state", (NYT.column_name) = "clock_display_state"];
+    reserved 45;
+}

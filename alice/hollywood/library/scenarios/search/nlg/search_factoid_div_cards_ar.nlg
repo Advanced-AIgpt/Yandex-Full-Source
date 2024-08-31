@@ -1,0 +1,185 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ar.nlg" import font_color, open_uri_action with context %}
+
+{% macro search_fact_card(title, text, image, search_url, source_url, image_search_url=None, market_url=None, source_name=None) -%}
+{% set minimal_ratio = 0.75 %} {# from DIALOG-828 #}
+{% with phone_uri = context.data|get_item('phone_uri'),
+        action_url = search_url %}
+{
+    "states": [
+        {
+            "state_id": 1,
+            "blocks": [
+                { "size": "xs", "type": "div-separator-block" },
+                {
+                  "title": "{{ font_color('#000000', title|html_escape|div2_escape) }}",
+                  {% if title|length < 18 %}
+                    "title_style": "numbers_s",
+                  {% elif not text and title|length > 50 %}
+                    "title_style": "text_s",
+                  {% else %}
+                    "title_style": "title_s",
+                  {% endif %}
+                  {% if text %}
+                    "text": "{{ font_color('#7F7F7F', text|html_escape|div2_escape) }}",
+                    "text_style": "text_s",
+                  {% endif %}
+                  {% if image|get_item('src') %}
+                    "side_element": {
+                        "element": {
+                            "image_url": "{{ image|get_item('src') }}",
+                            {% with ratio = image|get_item('w', 1)/image|get_item('h', 1) %}
+                              "ratio": {{ ratio if ratio > minimal_ratio else minimal_ratio }},
+                            {% endwith %}
+                            "type": "div-image-element"
+                        },
+                        "size": "m",
+                        "position": "right"
+                    },
+                  {% endif %}
+
+                  "type": "div-universal-block"
+                }
+                {% if source_url %}
+                  {% set action_url = source_url %}
+                  ,
+                  {
+                      "title": "{{ font_color('#7F7F7F', source_name) }}",
+                      "title_style": "text_s",
+                      "type": "div-universal-block"
+                  }
+                {% endif %}
+                {% if phone_uri %}
+                  {% set action_url = phone_uri %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'اتصال') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(phone_uri, 'phone_call__button', None) }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% else %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'الفتح في محرك البحث') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(search_url, 'open_serp__button', 'open_factoid_search_button', dict(intent_name='personal_assistant.scenarios.search')) }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+                {% if image_search_url %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'مشاهدة صور مشابهة') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(image_search_url, 'open_serp__button', 'open_factoid_similar_images_button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+                {% if market_url %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'البحث على ياندكس ماركت') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(market_url, 'open_serp__button', 'open_factoid_search_in_market_button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+            ],
+        "action": {
+            "url": "{{ open_uri_action(action_url, 'whole_card', 'search_factoid_whole_card', dict(intent_name='personal_assistant.scenarios.search')) }}",
+            "log_id": "whole_card"
+        }
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+}
+{% endwith %}
+{%- endmacro %}
+
+{% card search_fact %}
+{% if context.data|get_item("snippet_type") == "calories_fact" %}
+  {{ search_fact_card(
+          title=context.data|get_item("text"),
+          text=context.data|get_item("serp_data.data.question.0.text") + " - القيم الغذائية",
+          image=context.data|get_item("image"),
+          search_url=context.data|get_item("search_url"),
+          source_url=context.data|get_item("url"),
+          source_name=context.data|get_item("hostname"))
+  }}
+{% elif context.data|get_item("snippet_type") == "entity-fact" and context.data|get_item("serp_data.base_info.title") and context.data|get_item("serp_data.requested_facts.item.0.name") %}
+  {{ search_fact_card(
+          title=context.data|get_item("text"),
+          text=context.data|get_item("serp_data.base_info.title") + ' - ' + context.data|get_item("serp_data.requested_facts.item.0.name"),
+          image=context.data|get_item("image"),
+          search_url=context.data|get_item("search_url"),
+          source_url=context.data|get_item("url"),
+          source_name=context.data|get_item("hostname"))
+  }}
+{% else %}
+    {{ search_fact_card(
+            title=context.data|get_item("text"),
+            text=context.data|get_item("title"),
+            image=context.data|get_item("image"),
+            search_url=context.data|get_item("search_url"),
+            source_url=context.data|get_item("url"),
+            source_name=context.data|get_item("hostname"))
+    }}
+{% endif %}
+{% endcard %}
+
+{% card search_object %}
+  {{ search_fact_card(
+          title=context.data|get_item("title"),
+          text=context.data|get_item("text"),
+          image=context.data|get_item("image"),
+          search_url=context.data|get_item("search_url"),
+          source_url=context.data|get_item("url"),
+          source_name=context.data|get_item("hostname"))
+  }}
+{% endcard %}
+
+{% card image_search_object %}
+  {{ search_fact_card(
+          title=context.data|get_item("title"),
+          text=context.data|get_item("text"),
+          image=context.data|get_item("image"),
+          search_url=context.data|get_item("serp_url"),
+          image_search_url=context.data|get_item("image_serp_url"),
+          source_url=context.data|get_item("url"),
+          market_url=context.data|get_item("market_deals")
+     )
+  }}
+{% endcard %}

@@ -1,0 +1,141 @@
+{% from "alice/hollywood/library/scenarios/market/common/nlg/common.nlg" import
+  market_short_name %}
+{% from "alice/hollywood/library/scenarios/market/common/nlg/cards/common.nlg" import
+  render_action,
+  render_price,
+  render_sale_price with context %}
+
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import
+  font_color, logged_action_url with context %}
+
+{% macro render_gallery_item(item) %}
+  {
+    {{ render_action(item.action_url) -}},
+    "direction": "vertical",
+    "type": "div-container-block",
+    "background": [
+      {
+        "color": "{{- '#FFFFFF' -}}",
+        "type": "div-solid-background"
+      }
+    ],
+    "children": [
+      {
+        "image": {
+          "ratio": 1,
+          "type": "div-image-element",
+          "image_url": "{{- item.picture.url -}}"
+        },
+        "type": "div-image-block"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      },
+      {
+        "type": "div-table-block",
+        "height": {
+          "value": "wrap_content",
+          "type": "predefined"
+        },
+        "width": {
+          "value": "match_parent",
+          "type": "predefined"
+        },
+        "rows": [
+          {
+            "type": "row_element",
+            "cells": [
+              {% if item.price.before_discount is defined %}
+                {
+                  "text": "{{- render_price(item.price) -}}",
+                  "text_style": "title_l",
+                  "vertical_alignment": "bottom"
+                },
+                {
+                  "text": "{{- render_sale_price(item.price) -}}",
+                  "text_style": "text_s",
+                  "vertical_alignment": "bottom"
+                }
+              {% else %}
+                {
+                  "text": "{{- render_price(item.price) -}}",
+                  "text_style": "title_l",
+                  "vertical_alignment": "bottom"
+                }
+              {% endif %}
+            ]
+          }
+        ]
+      },
+      {
+        "text": "{{- item.title | html_escape -}}",
+        "text_max_lines": 2,
+        "type": "div-universal-block",
+        "text_style": "text_s"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "s"
+      }
+    ],
+    "width": {
+      "value": 200,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{- '#e6e8eb' -}}"
+    },
+    "height": {
+      "value": 273,
+      "type": "numeric"
+    }
+  }
+{%- endmacro %}
+
+{% macro get_text_for_more_action(total_count) -%}
+  Посмотреть {{ total_count }} {{ 'вариант' | pluralize(total_count, 'acc') }} на {{ market_short_name("GREEN") | inflect("abl") -}}
+{%- endmacro %}
+
+{% macro render_gallery_base_block(items, total_info) %}
+{
+  "background": [
+    {
+    "color": "{{- '#FFFFFF' -}}",
+    "type": "div-solid-background"
+    }
+  ],
+  "states": [{
+    "state_id": 1,
+    "blocks": [{
+      "type": "div-gallery-block",
+      {% if total_info|get_item('url') %}
+        "tail": {
+          "text": "{{- get_text_for_more_action(total_info.count) -}}",
+          {{ render_action(total_info.url) }},
+          "icon": {
+            "image_url": "https://avatars.mds.yandex.net/get-marketpic/330747/market-logo/100x100",
+            "border_color": "{{- '#8B0000' -}}",
+            "icon_color": "{{- '#FF1000' -}}"
+          }
+        },
+      {% endif %}
+      "items": [
+        {% for item in items %}
+          {% if loop.index0 %}
+            ,
+          {% endif %}
+          {{ caller(item, loop.index) }}
+        {% endfor %}
+      ]
+    }]
+  }]
+}
+{% endmacro %}
+
+{% macro render_gallery(items, total_info) %}
+  {% call(item, _) render_gallery_base_block(items, total_info) %}
+    {{ render_gallery_item(item) }}
+  {% endcall %}
+{% endmacro %}

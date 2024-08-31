@@ -1,0 +1,50 @@
+import: common/adverbs.grnt
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.repeat_after_me:
+    slots:
+        request:
+            type:
+                sys.swear
+                string
+            source:
+                $Request
+                $RequestWord
+    root:
+        $Prefix* [$Common.Repeat $AfterMe] $MyWords? $Request
+        $Prefix* [$Common.Repeat $MyWords] $AfterMe? $Request
+        $Prefix* [$Common.Speak слово] $AfterMe? $RequestWord $AfterMe?
+
+        %force_negative
+        .* еще раз .* повторишь .* и .*
+
+$Request:
+    %cover_fillers
+    .+
+    .* $sys.swear .*
+$RequestWord:
+    %cover_fillers
+    .
+    $sys.swear
+$AfterMe:
+    за мной
+$MyWords:
+    $My* $Words
+    все? то? что я (скажу|говорю)
+$My:
+    мой | мою | мои | мое | моё
+    этот | эти | это | эту
+    такой | такие | такую
+    все | каждое
+$Words:
+    текст | фразу | слова | слово | скороговорку
+$Prefix:
+    $Common.LeftFiller
+    $Common.Lets
+    поиграем в игру | поиграем в | поиграем | игра
+    сыграем в игру | сыграем в | сыграем | я тебя научу | еще раз
+filler:
+    $Common.Filler
+    $Common.Now
+    короче | быстро | теперь

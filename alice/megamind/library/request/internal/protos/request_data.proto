@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package NAlice.NMegamind;
+
+import "alice/megamind/library/stack_engine/protos/stack_engine.proto";
+import "alice/megamind/protos/common/directive_channel.proto";
+import "alice/megamind/protos/common/events.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/common/origin.proto";
+import "alice/megamind/protos/guest/guest_data.proto";
+import "alice/megamind/protos/guest/guest_options.proto";
+import "alice/megamind/protos/scenarios/request.proto";
+
+import "alice/memento/proto/user_configs.proto";
+
+import "alice/protos/data/contacts.proto";
+
+option java_package = "ru.yandex.alice.megamind.library.request.internal.protos";
+option java_outer_classname = "RequestDataProto";
+
+message TRequestData {
+    TEvent Event = 1 [json_name = "event"];
+
+    string DialogId = 2 [json_name = "dialog_id"];
+    string ScenarioDialogId = 3 [json_name = "scenario_dialog_id"];
+
+    message TScenarioInfo {
+        enum EScenarioNameSource {
+            Undefined = 0;
+            DialogId = 1;
+            ServerAction = 2;
+            VinsDialogId = 3;
+            VinsServerAction = 4;
+        }
+        string Name = 1 [json_name = "name"];
+        EScenarioNameSource Source = 2 [json_name = "source"];
+    }
+
+    message TWhisperInfo {
+        bool IsVoiceInput = 1 [json_name = "is_voice_input"];
+        uint64 LastWhisperTimeMs = 2 [json_name = "last_whisper_time_ms"];
+        uint64 ServerTimeMs = 3 [json_name = "server_time_ms"];
+        uint64 WhisperTtlMs = 4 [json_name = "whisper_ttl_ms"];
+        bool IsAsrWhisper = 5 [json_name = "is_asr_whisper"];
+        ru.yandex.alice.memento.proto.TTtsWhisperConfig WhisperConfig = 6 [json_name = "whisper_config"];
+    }
+
+    TScenarioInfo Scenario = 4 [json_name = "scenario"];
+
+    message TLocation {
+        double Latitude = 1 [json_name = "latitude"];
+        double Longitude = 2 [json_name = "longitude"];
+        double Accuracy = 3 [json_name = "accuracy"];
+        double Recency = 4 [json_name = "recency"];
+        double Speed = 5 [json_name = "speed"];
+    }
+    TLocation Location = 5 [json_name = "location"];
+
+    message TUserLocation {
+        int32 UserRegion = 1 [json_name = "user_region"];
+        int32 UserCountry = 2 [json_name = "user_country"];
+        string UserTld = 3 [json_name = "user_tld"];
+        string UserTimeZone = 4 [json_name = "user_time_zone"];
+    }
+    TUserLocation UserLocation = 6 [json_name = "user_location"];
+
+    enum EContentRestrictionLevel {
+        Undefined = 0;
+        Medium = 1;
+        Children = 2;
+        Without = 3;
+        Safe = 4;
+    };
+    EContentRestrictionLevel ContentRestrictionLevel = 7 [json_name = "content_restriction_level"];
+
+    repeated TSemanticFrame SemanticFrames = 8 [json_name = "semantic_frames"];
+
+    reserved 9; reserved "RecognizedActionEffectFrame";
+
+    TStackEngineCore StackEngineCore = 10 [json_name = "stack_engine_core"];
+
+    uint64 ServerTimeMs = 11 [json_name = "server_time_ms"];
+
+    NScenarios.TInterfaces Interfaces = 12 [json_name = "interfaces"];
+    NScenarios.TOptions Options = 13 [json_name = "options"];
+    NScenarios.TUserPreferences UserPreferences = 14 [json_name = "user_preferences"];
+    NScenarios.TUserClassification UserClassification = 15 [json_name = "user_classification"];
+
+    message TParameters {
+        oneof OptionalForcedShouldListen {
+            bool ForcedShouldListen = 1 [json_name = "forced_sould_listen"];
+        }
+        oneof OptionalChannel {
+            TDirectiveChannel.EDirectiveChannel Channel = 2 [json_name = "channel"];
+        }
+        oneof OptionalForcedEmotion {
+            string ForcedEmotion = 3 [json_name = "forced_emotion"];
+        }
+    }
+    TParameters Parameters = 16 [json_name = "parameters"];
+
+    NScenarios.TScenarioBaseRequest.ERequestSourceType RequestSource = 17 [json_name = "request_source"];
+
+    TIoTUserInfo IoTUserInfo = 18 [json_name = "iot_user_info"];
+
+    NAlice.NData.TContactsList ContactsList = 19 [json_name = "contacts_list"];
+
+    TOrigin Origin = 20 [json_name = "origin"];
+
+    TWhisperInfo WhisperInfo = 21 [json_name = "whisper_info"];
+
+    optional string CallbackOwnerScenario = 22 [json_name = "callback_owner_scenario"];
+
+    bool IsWarmUp = 23 [json_name = "is_warm_up"];
+
+    repeated TSemanticFrame AllParsedSemanticFrames = 24 [json_name = "all_parsed_semantic_frames"];
+
+    optional TGuestData GuestData = 25 [json_name = "guest_data"];
+    optional TGuestOptions GuestOptions = 26 [json_name = "guest_options"];
+
+    bool DisableVoiceSession = 27 [json_name = "disable_voice_session"];
+    bool DisableShouldListen = 28 [json_name = "disable_should_listen"];
+
+    repeated TSemanticFrame RecognizedActionEffectFrames = 29 [json_name = "recognized_action_effect_frames"];
+}

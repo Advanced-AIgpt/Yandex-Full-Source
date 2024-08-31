@@ -1,0 +1,221 @@
+import: common/adverbs.grnt
+import: common/commands.grnt
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/surfaces.grnt    
+
+$ClockFace.OptionalPart:
+    $Common.At? $ClockFace.Image
+    $Common.At? $ClockFace.ClockPlacement
+
+$ClockFace.CustomFiller:
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.PronounMe
+    $Common.PronounYou
+    $Common.PronounPossessive3Person
+    $Common.PronounThis
+    $Common.PronounThat
+    $Common.ConjunctionThat
+    $Common.ConjunctionWhere
+    $Common.Pronoun3Person
+    $nonsense
+    $ClockFace.Current
+    $Now
+    %lemma
+    новый
+    обратно
+    сделай так
+    чтоб
+    чтобы
+    салют
+    у
+    пусть
+    будь добра
+    нужно будет?
+    функция
+    как
+    ровно
+
+    %negative
+    скажи
+
+$ClockFace.WhatTimeIsIt:
+    %exact
+    который час
+    сколько время
+    сколько времени
+    сколько часов
+    часы со временем
+
+$ClockFace.Clock:
+    %lemma
+    часы
+    часики
+    циферблат
+    время
+    на часах
+    часами
+    %negative
+    %lemma off
+    часов
+    часа
+    час
+
+$ClockFace.Lightning:
+    %lemma
+    подсветка
+    свет
+    свечение
+    яркость
+
+$ClockFace.Screen:
+    %lemma
+    дисплей
+    экран
+    led
+    циферблат
+    панель
+
+$ClockFace.ClockPlacement:
+    %lemma
+    $ClockFace.Screen
+    $Common.SmartSpeaker
+    станция? мини два
+
+$ClockFace.Image:
+    %lemma
+    %enable_synonyms all
+    отображение
+    изображение
+    экран
+    картинка
+    показание
+
+$ClockFace.ClockNotHour:
+    %exact
+    часов
+
+$ClockFace.ClockComplex:
+    $ClockFace.WhatTimeIsIt
+    $ClockFace.Clock
+    [$ClockFace.Clock $Common.At? $ClockFace.ClockPlacement (в доме|дома)]
+    [с? $ClockFace.Image $ClockFace.ClockNotHour]
+    [$ClockFace.Screen с $ClockFace.Clock]
+    [$ClockFace.Lightning? $ClockFace.Screen $ClockFace.ClockNotHour]
+    [$ClockFace.Lightning $ClockFace.Screen? $ClockFace.ClockNotHour]
+
+$Now:
+    сейчас
+    в данный момент
+    в текущий момент
+    в настоящее время
+
+$ClockFace.Current:
+    %lemma
+    %enable_synonyms all
+    текущее
+    настоящее
+    точное
+
+$ClockFace.Do:
+    %lemma
+    сделай
+    настрой
+
+$ClockFace.TimePreposition:
+    %type "clock_face.time_preposition"
+
+    %value "at"
+    в
+    к
+    под
+
+    %value "until"
+    до
+
+    %value "from"
+    с
+
+    %value "to"
+    по
+
+    %value "for"
+    на
+    в течение
+    
+    %value "after"
+    через
+    после
+    спустя
+
+    %value "before"
+    перед
+
+$ClockFace.DayPart:
+    %type "clock_face.day_part"
+    %lemma off
+
+    %value "night"
+    ночью
+    когда взойдет луна
+    $ClockFace.TimePreposition ночь
+    $ClockFace.TimePreposition ночи
+    $ClockFace.TimePreposition полуночи
+
+    %value "evening"
+    вечером
+    вечерочком
+    $ClockFace.TimePreposition вечеру
+    $ClockFace.TimePreposition вечера
+    $ClockFace.TimePreposition сном
+    $ClockFace.TimePreposition сну
+
+    %value "afternoon"
+    днем
+    днём
+    $ClockFace.TimePreposition обеда
+    $ClockFace.TimePreposition обедом
+    
+    %value "morning"
+    рано? утром
+    по утру
+    когда я проснусь
+    $ClockFace.TimePreposition самого? утра
+    $ClockFace.TimePreposition утреца
+    $ClockFace.TimePreposition завтрака
+    $ClockFace.TimePreposition завтраку
+    $ClockFace.TimePreposition завтраком
+    $ClockFace.TimePreposition утру
+    $ClockFace.TimePreposition пробуждения
+    $ClockFace.TimePreposition подъема
+    $ClockFace.TimePreposition рассвета
+    $ClockFace.TimePreposition утро
+
+$ClockFace.SlotTime:
+    $typeparser.time
+    $sys.time
+    $sys.units_time
+
+$ClockFace.UncertainTime:
+    %type "clock_face.custom_time"
+    %lemma off
+    
+    %value "temporary"
+    $ClockFace.TimePreposition некоторое? время сна?
+    временно
+    $ClockFace.TimePreposition несколько часов
+
+    %value "later"
+    чуть? позже
+    попозже
+
+$ClockFace.Delay: 
+    [$Common.Approximately? $ClockFace.TimePreposition $ClockFace.SlotTime]
+    $ClockFace.TimePreposition? $ClockFace.UncertainTime
+    $ClockFace.DayPart
+    $ClockFace.TimePreposition? $sys.date
+    $ClockFace.TimePreposition? $sys.weekdays
+    %negative
+    сейчас

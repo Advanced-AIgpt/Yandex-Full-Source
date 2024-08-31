@@ -1,0 +1,207 @@
+{% macro render_poster_gallery_item(gallery_item, idx) %}
+  {% set image_url = gallery_item|get_item('cover_url') %}
+  {% set kinopoisk_id = gallery_item|get_item('kinopoisk_id') %}
+  {
+    "type": "div-container-block",
+    "frame": {
+      "style": "border",
+      "color": "{{ '#E6E8EB' }}"
+    },
+    "width": {
+      "value": 164,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 246,
+      "type": "numeric"
+    },
+    "action": {
+      "url": "@@mm_deeplink\u0023show_description_{{ kinopoisk_id }}",
+      "log_id": "movie_akinator_gallery_whole_card_click_{{- idx -}}"
+    },
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ image_url }}",
+          "ratio": 0.667
+        }
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_poster_gallery_card(items) %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% for item in items %}
+                {% if loop.index0 %}
+                  ,
+                {% endif %}
+                {{ render_poster_gallery_item(item, loop.index) }}
+              {% endfor %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card poster_gallery %}
+  {{ render_poster_gallery_card(context.items) }}
+{% endcard %}
+
+{% macro render_ios_poster_cloud_card(left_image_url, right_image_url) %}
+  {
+    "type": "div-gallery-block",
+    "items": [
+      {
+        "type": "div-container-block",
+        "direction": "horizontal",
+        "width": {
+          "value": 177,
+          "type": "numeric"
+        },
+        "height": {
+          "value": 302,
+          "type": "numeric"
+        },
+        "frame": {
+          "style": "border",
+          "color": "{{ '#E6E8EB' }}"
+        },
+        "children": [
+          {
+            "type": "div-image-block",
+            "image": {
+              "type": "div-image-element",
+              "image_url": "{{ left_image_url }}",
+              "ratio": 0.526
+            },
+            "action": {
+              "url": "@@mm_deeplink\u0023choose_left_by_button",
+              "log_id": "movie_akinator_word_cloud_choose_left"
+            }
+          }
+        ]
+      },
+      {
+        "type": "div-container-block",
+        "direction": "horizontal",
+        "width": {
+          "value": 177,
+          "type": "numeric"
+        },
+        "height": {
+          "value": 302,
+          "type": "numeric"
+        },
+        "frame": {
+          "style": "border",
+          "color": "{{ '#E6E8EB' }}"
+        },
+        "children": [
+          {
+            "type": "div-image-block",
+            "image": {
+              "type": "div-image-element",
+              "image_url": "{{ right_image_url }}",
+              "ratio": 0.526
+            },
+            "action": {
+              "url": "@@mm_deeplink\u0023choose_right_by_button",
+              "log_id": "movie_akinator_word_cloud_choose_right"
+            }
+          }
+        ]
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_android_poster_cloud_card(left_image_url, right_image_url) %}
+  {
+    "type": "div-container-block",
+    "direction": "horizontal",
+    "width": {
+      "value": "match_parent",
+      "type": "predefined"
+    },
+    "height": {
+      "value": "wrap_content",
+      "type": "predefined"
+    },
+    "frame": {
+        "style": "only_round_corners"
+    },
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ left_image_url }}",
+          "ratio": 0.585
+        },
+        "action": {
+          "url": "@@mm_deeplink\u0023choose_left_by_button",
+          "log_id": "movie_akinator_word_cloud_choose_left"
+        }
+      },
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ right_image_url }}",
+          "ratio": 0.585
+        },
+        "action": {
+          "url": "@@mm_deeplink\u0023choose_right_by_button",
+          "log_id": "movie_akinator_word_cloud_choose_right"
+        }
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_poster_cloud_card(clouds) %}
+  {% set left_image_url = clouds|get_item('left_image_url') %}
+  {% set right_image_url = clouds|get_item('right_image_url') %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {% if context.get('is_ios') %}
+            {{ render_ios_poster_cloud_card(left_image_url, right_image_url) }}
+          {% else %}
+            {{ render_android_poster_cloud_card(left_image_url, right_image_url) }}
+          {% endif %}
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card poster_cloud %}
+  {{ render_poster_cloud_card(context.clouds) }}
+{% endcard %}

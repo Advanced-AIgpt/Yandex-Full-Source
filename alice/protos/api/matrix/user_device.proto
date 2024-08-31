@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+// Matrix identifies device by pair (Puid, DeviceId)
+// This is done so that when the device is transferred to a new owner,
+// they do not receive pushes/notifications/etc from the old one
+message TUserDeviceIdentifier {
+    string Puid = 1;
+    string DeviceId = 2;
+}
+
+message TUserDeviceInfo {
+    reserved 1, 2;
+    reserved "Puid";
+    reserved "DeviceId";
+
+    // Explanation why this enum is needed near the SupportedFeatures field
+    // If you want to add a new value to this enum, contact the support chat: https://docs.yandex-team.ru/alice-matrix/pages/contacts
+    enum ESupportedFeature {
+        UNKNOWN = 0;
+
+        // "audio_client"
+        AUDIO_CLIENT = 1;
+    }
+
+    TUserDeviceIdentifier UserDeviceIdentifier = 4;
+
+    string DeviceModel = 3;
+
+    // ZION-284
+    // We need this field, because an api was added a long time ago,
+    // for the correct operation of which you need to know the set of supported features
+    //
+    // We cannot and do not want to store this set as strings, because it is too expensive
+    // At the time of writing this comment, data without supported features occupies 600 MiB, with 5 GiB
+    // and all this data is sent once every 10 seconds
+    //
+    // So, we are introducing our enum, which will save us space (int is better than string)
+    // and at the same time will be a whitelist at the same time as saving space
+    repeated ESupportedFeature SupportedFeatures = 5;
+}

@@ -1,0 +1,208 @@
+{% macro tts_pause_raw(n) %}
+  .sil<[{{n}}]>
+{% endmacro %}
+
+{% macro tts_pause(n) %}
+  {% voice %} {{ tts_pause_raw(n) }} {% endvoice %}
+{% endmacro %}
+
+{% macro render_call() %}
+  {% chooseline %}
+    Минуточку.
+    Секундочку.
+    Одну минутку.
+    Одну секунду.
+    Одну минуточку.
+    Одну секундочку.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro calls_not_supported() %}
+  {% chooseitem 1 %}
+    Я справлюсь с этим лучше на телефоне.
+  {% or 1 %}
+    Это я могу, но лучше с телефона.
+  {% or 1 %}
+    Для звонков телефон как-то удобнее, давайте попробую там.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro not_supported__can_do_action() %}
+  {% chooseline %}
+    поставить музыку
+    включить музыку
+    включить фильм
+    найти фильм
+    рассказать анекдот
+    рассказать о погоде
+    сыграть с вами в города
+    сыграть с вами в «Верю — не верю»
+    сыграть с вами в фантастический квест
+    рассказать что-нибудь интересное
+    рассказать интересный факт
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__do_you_want_action() %}
+  {% chooseline %}
+    поставлю музыку
+    включу музыку
+    включу фильм
+    расскажу анекдот
+    расскажу о погоде
+    расскажу что-нибудь интересное
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__can_search() %}
+  {% chooseline %}
+    найти
+    поискать
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro not_supported__phone_or_desktop() %}
+  {% chooseline %}
+    телефоне
+    компьютере
+  {% endchooseline %}
+{% endmacro %}
+
+{%macro nothing_found() %}
+  {% chooseline %}
+    По вашему запросу
+    К сожалению,
+  {% endchooseline %}
+  {% chooseline %}
+    я ничего не нашла
+    ничего не нашлось
+    не получилось ничего найти
+    ничего найти не получилось
+  {% endchooseline %}
+  .
+{% endmacro %}
+
+{% macro showing_news_details_not_supported() %}
+  {% chooseitem 1 %}
+    Подробнее в двух словах не расскажешь. Попробуйте спросить в Яндексе.
+  {% or 1 %}
+    Я справлюсь с этим лучше на компьютере или на мобильном.
+  {% or 1 %}
+    Спросите меня на телефоне, там как-то привычнее.
+  {% or 0.1 %}
+    От новостей аппетит портится. Давайте я вам лучше {{ not_supported__do_you_want_action() }}.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro showing_search_results_not_supported() %}
+  {% chooseline %}
+    Извините, у меня нет хорошего ответа.
+    У меня нет ответа на такой запрос.
+    Я пока не умею отвечать на такие запросы.
+    Простите, я не знаю что ответить.
+    Я не могу на это ответить.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro showing_serp_not_supported() %}
+  {% chooseitem %}
+    Я справлюсь с этим лучше на телефоне или на компьютере.
+  {% or %}
+    Спросите меня об этом на телефоне. Или на компьютере.
+  {% or %}
+    Спросите меня об этом на телефоне, там я справлюсь лучше.
+  {% or %}
+    Спросите меня на телефоне, там как-то привычнее.
+  {% or %}
+    Я могу {{ not_supported__can_do_action() }}. А это могу {{ not_supported__can_search() }} на телефоне.
+  {% or %}
+    Я могу {{ not_supported__can_do_action() }}. А это могу {{ not_supported__can_search() }} в Яндексе, только с телефона.
+  {% or %}
+    Я могу {{ not_supported__can_do_action() }}, а это могу {{ not_supported__can_search() }} на телефоне.
+  {% or %}
+    Я умею многое, но, увы, не всё. По крайней мере, пока. Хотите {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    Я умею многое, но, увы, пока не всё. Давайте я вам лучше {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    Я умею многое, но, увы, не всё. Может, оно и к лучшему. Хотите я вам лучше {{ not_supported__do_you_want_action() }}?
+  {% or %}
+    Спросите меня об этом на телефоне. А тут я могу {{ not_supported__can_do_action() }}.
+  {% or %}
+    Неужели у нас нет темы поинтереснее?
+  {% or %}
+    Я бы поискала в Яндексе, но модуль поиска сейчас на профилактике.
+  {% or %}
+    Давайте не здесь и не сейчас.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro showing_map_not_supported() %}
+  {% chooseitem %}
+    Я справлюсь с этим лучше на компьютере или на мобильном.
+  {% or %}
+    Я бы и рада показать, но никак. Такое мне удобнее делать на {{ not_supported__phone_or_desktop() }}.
+  {% or %}
+    Я бы и рада показать, но никак. Спросите меня на {{ not_supported__phone_or_desktop() }}, там как-то привычнее.
+  {% or %}
+    Я бы и рада, но словами тут не обойтись.
+  {% or %}
+    Я могу разве что {{ not_supported__can_do_action() }}.
+  {% or %}
+    Сейчас под рукой нет карты. Да и рук у меня нет. Давайте сменим тему.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_serp_caption() %}
+  Поискать в Яндексе
+{% endmacro %}
+
+{% macro render_serp_invitation_message() %}
+  {% chooseline %}
+    Ищу ответ
+    Найдётся всё!
+    Ищу в Яндексе
+    Сейчас найду
+    Сейчас найдём
+    Одну секунду...
+    Открываю поиск
+    Ищу для вас ответ
+    Давайте поищем
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro opening_sites_or_apps_not_supported(info = None, simple_open_link = False, send_push = False) %}
+  {% if info and info.nav and info.nav['fallback_tts'] and info.nav['fallback_text'] %}
+    {% tx %}{{ info.nav['fallback_text'] }}{% etx %}{% vc %}{{ info.nav['fallback_tts'] }}{% evc %}
+    {% if send_push %}
+      Отправила вам ссылку в приложение Яндекса.
+    {% endif %}
+  {% elif info and info.nav and info.nav['voice_name'] and info.nav['text_name'] %}
+    {% if send_push %}
+      К сожалению, не могу открыть {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} здесь, отправила вам ссылку в приложение Яндекса!
+    {% elif simple_open_link %}
+      {% chooseline %}
+        К сожалению, не могу открыть {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} здесь, но легко сделаю это в приложении Яндекса, если {% tx %}попросите{% etx %}{% vc %}попр+осите{% evc %}!
+        Ох, не могу открыть {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} здесь, но сделаю это в приложении Яндекса, если {% tx %}попросите{% etx %}{% vc %}попр+осите{% evc %}!
+      {% endchooseline %}
+    {% else %}
+      К сожалению, не могу открыть {% tx %}{{ info.nav['text_name'] }}{% etx %}{% vc %}{{ info.nav['voice_name'] }}{% evc %} здесь.
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      Извините, у меня нет хорошего ответа.
+      У меня нет ответа на такой запрос.
+      Я пока не умею отвечать на такие запросы.
+      Простите, я не знаю что ответить.
+      Я не могу на это ответить.
+      Я не могу открывать сайты и приложения на этом устройстве.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    В часах такое провернуть сложновато.
+    Я бы и рада, но здесь не могу. Эх.
+    Здесь точно не получится.
+  {% endchooseline %}
+{% endmacro %}

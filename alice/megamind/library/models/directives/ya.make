@@ -1,0 +1,60 @@
+LIBRARY()
+
+OWNER(
+    alkapov
+    g:megamind
+)
+
+PEERDIR(
+    alice/megamind/library/common
+    alice/megamind/library/models/interfaces
+    alice/megamind/protos/common
+    alice/megamind/protos/scenarios
+    alice/megamind/protos/speechkit
+    alice/memento/proto
+)
+
+SRCS(
+    add_conditional_actions.cpp
+    add_contact_book_asr_directive_model.cpp
+    add_external_entities_description.cpp
+    alarm_new_directive_model.cpp
+    alarm_set_sound_directive_model.cpp
+    audio_play_directive_model.cpp
+    callback_directive_model.cpp
+    client_directive_model.cpp
+    close_dialog_directive_model.cpp
+    defer_apply_directive_model.cpp
+    end_dialog_session_directive_model.cpp
+    find_contacts_directive_model.cpp
+    get_next_callback_directive_model.cpp
+    memento_change_user_objects_directive_model.cpp
+    music_play_directive_model.cpp
+    open_dialog_directive_model.cpp
+    open_settings_directive_model.cpp
+    player_rewind_directive_model.cpp
+    protobuf_uniproxy_directive_model.cpp
+    search_callback_directive_model.cpp
+    server_directive_model.cpp
+    set_cookies_directive_model.cpp
+    set_search_filter_directive_model.cpp
+    set_timer_directive_model.cpp
+    show_buttons_directive_model.cpp
+    theremin_play_directive_model.cpp
+    typed_semantic_frame_request_directive_model.cpp
+    uniproxy_directive_model.cpp
+    universal_client_directive_model.cpp
+    universal_uniproxy_directive_model.cpp
+    update_datasync_directive_model.cpp
+    update_dialog_info_directive_model.cpp
+    update_space_actions.cpp
+)
+
+GENERATE_ENUM_SERIALIZATION(open_settings_directive_model.h)
+GENERATE_ENUM_SERIALIZATION(player_rewind_directive_model.h)
+GENERATE_ENUM_SERIALIZATION(set_search_filter_directive_model.h)
+GENERATE_ENUM_SERIALIZATION(theremin_play_directive_model.h)
+GENERATE_ENUM_SERIALIZATION(update_datasync_directive_model.h)
+GENERATE_ENUM_SERIALIZATION(audio_play_directive_model.h)
+
+END()

@@ -1,0 +1,487 @@
+import:
+    common/adjectives.grnt
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/prepositions.grnt
+    common/verbs.grnt
+    iot/common.grnt
+    iot/action/common.grnt
+
+form alice.iot.action.capability.range.ifexp.bg_enable_iot_action_forms:
+    slots:
+        intent_parameters:
+            source:
+                $OpenIncrease
+                $OpenDecrease
+                $OpenValue
+                $BrightnessIncrease
+                $BrightnessDecrease
+                $BrightnessValue
+                $TemperatureIncrease
+                $TemperatureDecrease
+                $TemperatureValue
+                $HumidityIncrease
+                $HumidityDecrease
+                $HumidityValue
+                $VolumeIncrease
+                $VolumeDecrease
+                $VolumeValue
+                $ChannelIncrease
+                $ChannelDecrease
+                $ChannelValue
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $LightDeviceTypeWithoutSvetlana
+                $LightDeviceType  # в некоторых формах $LightDeviceType используется вне $IotDeviceOrDemo, учитываем это здесь
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+        range_value:
+            source:
+                $NumValueRelative
+                $NumValueAbsolute
+                $MaxValue
+                $MinValue
+                $BrightnessValue.SetMaxBrightness
+                $BrightnessValue.SetMinBrightness
+                $HumidityValue.SetMaxHumidity
+                $HumidityValue.SetMinHumidity
+            type:
+                sys.num
+                string
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+        for_datetime:
+            keep_variants: true
+            source: $ForDateTime
+            type: sys.datetime_range
+
+    root:
+        $OpenIncrease
+        $OpenDecrease
+        $OpenValue
+        $BrightnessIncrease
+        $BrightnessDecrease
+        $BrightnessValue
+        $TemperatureIncrease
+        $TemperatureDecrease
+        $TemperatureValue
+        $HumidityIncrease
+        $HumidityDecrease
+        $HumidityValue
+        $VolumeIncrease
+        $VolumeDecrease
+        $VolumeValue
+        $ChannelIncrease
+        $ChannelDecrease
+        $ChannelValue
+
+    $OpenIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "open",
+            "relativity_type": "increase"
+        }
+
+        [$Subopen+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Open|$Subopen)+ $DeviceWithPrepositions+ $IncreaseAdjective+ ($NumValueRelative|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $OpenDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "open",
+            "relativity_type": "decrease"
+        }
+
+        [$Subclose+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Close|$Subclose)+ $DeviceWithPrepositions+ (ещё|$DecreaseAdjective)+ ($NumValueRelative|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Open|$Subopen)+ $DeviceWithPrepositions+ $DecreaseAdjective+ (ещё|$NumValueRelative|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $OpenValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "open"
+        }
+
+        [($Open|$Subopen|$Close|$Subclose)+ $DeviceWithPrepositions+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [$Set+ $Openness+ $DeviceWithPrepositions+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $BrightnessIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "brightness",
+            "relativity_type": "increase"
+        }
+
+        # есть общая фраза $Common.Increase, поэтому требуется $Common.TheBrightness или $LightDeviceType, чтобы убедиться, что речь о яркости
+        [$Set* ($Common.Increase|$IncreaseAdjective)+ ($Common.TheBrightness|$LightDeviceType)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Brighter) точно ясно, что речь о яркости, поэтому больше маркеров не требуем
+        [$Set* $Common.Brighter+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheBrightness|$NumValueRelative|$Common.TheLevel)*]
+
+    $BrightnessDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "brightness",
+            "relativity_type": "decrease"
+        }
+
+        # есть общая фраза $Common.Decrease, поэтому требуется $Common.TheBrightness или $LightDeviceType, чтобы убедиться, что речь о яркости
+        [$Set* ($Common.Decrease|$Common.Dim|$DecreaseAdjective)+ ($Common.TheBrightness|$LightDeviceType)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Darker) точно ясно, что речь о яркости, поэтому больше маркеров не требуем
+        [($Set|$Common.Dim)* $Common.Darker+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheBrightness|$NumValueRelative|$Common.TheLevel)*]
+
+    $BrightnessValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "brightness"
+        }
+
+        # "Установи на 5" валидно, поэтому разрешаем $NumValueRelative
+        [$Set* ($Common.TheBrightness|$LightDeviceTypeWithoutSvetlana)+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+
+        # "Уменьши на 5" – уже не $BrightnessValue, поэтому не разрешаем $NumValueRelative
+        [($Common.Increase|$Common.Decrease|$Common.Dim)+ ($Common.TheBrightness|$LightDeviceTypeWithoutSvetlana)+ ($NumValueAbsolute|$MinValue|$MaxValue)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+
+        $SetMaxBrightness
+        $SetMinBrightness
+
+        $SetMaxBrightness:
+            %type string
+            %value max
+            [$Set+ $Common.Bright+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)+]
+            [$Set+ $Common.BrightShort+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $SetMinBrightness:
+            %type string
+            %value min
+            [$Set+ $Common.Dark+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)+]
+            [$Set+ $Common.DarkShort+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $TemperatureIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "temperature",
+            "relativity_type": "increase"
+        }
+
+        # есть общая фраза $Common.Increase, поэтому требуется $Common.TheTemperature, чтобы убедиться, что речь о температуре
+        [$Set* ($Common.Increase|$IncreaseAdjective)+ $Common.TheTemperature+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Warmer) точно ясно, что речь о температуре, поэтому больше маркеров не требуем
+        [($Set|$Common.HeatUp)+ $Common.Warmer+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheTemperature|$NumValueRelative|$Common.TheLevel)*]
+        [$Common.HeatUp+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)+ ($IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        %force_negative
+        %lemma
+        .* ($LightDeviceType|цветовая|цвет) .*
+
+    $TemperatureDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "temperature",
+            "relativity_type": "decrease"
+        }
+
+        # есть общая фраза $Common.Decrease, поэтому требуется $Common.TheTemperature, чтобы убедиться, что речь о температуре
+        [$Set* ($Common.Decrease|$DecreaseAdjective)+ $Common.TheTemperature+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Colder) точно ясно, что речь о температуре, поэтому больше маркеров не требуем
+        [($Set|$Common.CoolDown)+ $Common.Colder+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheTemperature|$NumValueRelative|$Common.TheLevel)*]
+        [$Common.CoolDown+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)+ ($IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        %force_negative
+        %lemma
+        .* ($LightDeviceType|цветовая|цвет) .*
+
+    $TemperatureValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "temperature"
+        }
+
+        # "Установи на 5" валидно, поэтому разрешаем $NumValueRelative
+        [$Common.TheTemperature+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($Set|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)+ ($IotDateTime|$Common.TheLevel)*]
+
+        # "Уменьши на 5" – уже не $TemperatureValue, поэтому не разрешаем $NumValueRelative
+        [($Common.Increase|$Common.Decrease)+ $Common.TheTemperature+ ($NumValueAbsolute|$MinValue|$MaxValue)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+        [($Common.HeatUp|$Common.CoolDown)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$Common.TheTemperature)+ ($NumValueAbsolute|$MinValue|$MaxValue)+ ($IotDateTime|$Common.TheLevel)*]
+
+        %force_negative
+        %lemma
+        .* ($LightDeviceType|цветовая|цвет) .*
+
+    $HumidityIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "humidity",
+            "relativity_type": "increase"
+        }
+
+        # есть общая фраза $Common.Increase, поэтому требуется $Common.TheHumidity, чтобы убедиться, что речь о влажности
+        [$Set* ($Common.Increase|$IncreaseAdjective)+ $Common.TheHumidity+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel|$Common.TheAir)*]
+
+        # по ($Set* $Common.MoreHumid) точно ясно, что речь о влажности, поэтому больше маркеров не требуем
+        [$Set* $Common.MoreHumid+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheHumidity|$NumValueRelative|$Common.TheLevel|$Common.TheAir)*]
+
+    $HumidityDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "humidity",
+            "relativity_type": "decrease"
+        }
+
+        # есть общая фраза $Common.Decrease, поэтому требуется $Common.TheHumidity, чтобы убедиться, что речь о влажности
+        [$Set* ($Common.Decrease|$DecreaseAdjective)+ $Common.TheHumidity+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel|$Common.TheAir)*]
+
+        # по ($Set* $Common.Drier) точно ясно, что речь о влажности, поэтому больше маркеров не требуем
+        [$Set* $Common.Drier+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheHumidity|$NumValueRelative|$Common.TheLevel|$Common.TheAir)*]
+
+    $HumidityValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "humidity"
+        }
+
+        # "Установи на 5" валидно, поэтому разрешаем $NumValueRelative
+        [$Set* $Common.TheHumidity+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel|$Common.TheAir)*]
+
+        # "Уменьши на 5" – уже не $HumidityValue, поэтому не разрешаем $NumValueRelative
+        [($Common.Increase|$Common.Decrease)+ $Common.TheHumidity+ ($NumValueAbsolute|$MinValue|$MaxValue)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel|$Common.TheAir)*]
+
+        $SetMaxHumidity
+        $SetMinHumidity
+
+        $SetMaxHumidity:
+            %type string
+            %value max
+            %lemma
+            [$Set+ $Common.Humid+ $Common.TheAir+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+            [$Set+ $Common.HumidShort+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheAir)*]
+
+        $SetMinHumidity:
+            %type string
+            %value min
+            [$Set+ $Common.Dry+ $Common.TheAir+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)+]
+            [$Set+ $Common.DryShort+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheAir)*]
+
+    $VolumeIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "volume",
+            "relativity_type": "increase"
+        }
+
+        # есть общая фраза $Common.Increase, поэтому требуется $Common.TheSoundVolume, чтобы убедиться, что речь о громкости
+        [$Set* ($Common.Increase|$IncreaseAdjective)+ $Common.TheSoundVolume+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Louder) точно ясно, что речь о громкости, поэтому больше маркеров не требуем
+        [$Set* $Common.Louder+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheSoundVolume|$NumValueRelative|$Common.TheLevel)*]
+
+    $VolumeDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "volume",
+            "relativity_type": "decrease"
+        }
+
+        # есть общая фраза $Common.Decrease, поэтому требуется $Common.TheSoundVolume, чтобы убедиться, что речь о громкости
+        [$Set* ($Common.Decrease|$DecreaseAdjective)+ $Common.TheSoundVolume+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative|$Common.TheLevel)*]
+
+        # по ($Set* $Common.Quieter) точно ясно, что речь о громкости, поэтому больше маркеров не требуем
+        [$Set* $Common.Quieter+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheSoundVolume|$NumValueRelative|$Common.TheLevel)*]
+
+    $VolumeValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "volume"
+        }
+
+        # "Установи на 5" валидно, поэтому разрешаем $NumValueRelative
+        [$Set* $Common.TheSoundVolume+ $DeviceWithPrepositions+ ($NumValueAbsolute|$NumValueRelative|$MinValue|$MaxValue)+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+
+        # "Уменьши на 5" – уже не $VolumeValue, поэтому не разрешаем $NumValueRelative
+        [($Common.Increase|$Common.Decrease)+ $Common.TheSoundVolume+ $DeviceWithPrepositions+ ($NumValueAbsolute|$MinValue|$MaxValue)+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+
+    $ChannelIncrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "channel",
+            "relativity_type": "increase"
+        }
+        %lemma
+
+        [$Set* ($Common.Increase|$IncreaseAdjective|((на|в|к)* $Common.Next)|$Common.Change|перейди)+ $Common.TheTVChannel+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative)*]
+
+    $ChannelDecrease:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "channel",
+            "relativity_type": "decrease"
+        }
+        %lemma
+
+        [$Set* ($Common.Decrease|$DecreaseAdjective|(($Common.Change|перейди|$Common.Return)* (на|в|к)* $Common.Previous)|$Common.Return)+ $Common.TheTVChannel+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$NumValueRelative)*]
+
+    $ChannelValue:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "channel"
+        }
+        %lemma
+
+        [($Set|$Common.Return|$Common.Change|перейди)* [(на|в|к)* $Common.TheTVChannel $NumValueAbsolute]+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        %force_negative
+        %exact
+        .* дважды два .*
+
+
+$Open:
+    %lemma
+    $Common.Open
+    $Common.LiftUp
+    $Common.MoveApart
+    отворить
+    %force_negative
+    %exact
+    $Common.Display
+    $Common.TurnOn
+    (отворен|отворена|отворено|отворены|отворенный|отворенная|отворенное|отворенные)
+
+$Close:
+    %lemma
+    $Common.Close
+    $Common.LowerDown
+    затворить
+    %force_negative
+    %exact
+    (затворен|затворена|затворено|затворены|затворенный|затворенная|затворенное|затворенные)
+
+$Subclose:
+    $Common.Subclose
+    $Common.Sublower
+
+$Subopen:
+    $Common.Subopen
+    $Common.Subraise
+
+$Openness:
+    %lemma
+    (открытие|раскрытие|открытость|раскрытость)
+
+$NumValueRelative:
+    [(на+ $sys.num) $Unit*]
+    на ($OneQuarter|$OneThird|$OneHalf)
+    на $OneUnit
+
+$NumValueAbsolute:
+    [(до* $sys.num) $Unit*]
+    до* ($OneQuarter|$OneThird|$OneHalf)
+    до* $OneUnit
+
+$OneUnit:
+    %type sys.num
+    %value 1
+    %lemma
+    $Unit
+
+$OneQuarter:
+    %type sys.num
+    %value 25
+    %lemma
+    одна* (четверть|четвертинка)
+    одна четвёртая часть*
+
+$OneThird:
+    %type sys.num
+    %value 33
+    %lemma
+    одна* треть
+    одна третья часть*
+
+$OneHalf:
+    %type sys.num
+    %value 50
+    %lemma
+    наполовину
+    на половину
+    на половинку
+    наполовинку
+    одна* половина
+    одна вторая часть*
+
+$MaxValue:
+    %type string
+    %value max
+    %lemma
+    [((на|в|до)* (максимум|максимальный)) ($Unit|$Common.TheLevel)*]
+    %exact
+    на (всю|полную) катушку*
+    до предела
+    до упора
+
+$MinValue:
+    %type string
+    %value min
+    %lemma
+    [((на|в|до)* (минимум|минимальный)) ($Unit|$Common.TheLevel)*]
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Lets
+    $Common.Little
+    все

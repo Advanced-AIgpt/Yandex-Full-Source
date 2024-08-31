@@ -1,0 +1,66 @@
+import: common/commands.grnt
+import: common/common.grnt
+import: common/conjunctions.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+import: player/common.grnt
+
+form personal_assistant.scenarios.player.next_track:
+    slots:
+        player_type:
+            type:
+                custom.player_type
+            source:
+                $Common.Player.PlayerType
+    root:
+        $Root
+    filler:
+        $Common.Commands.Do
+        $Common.WayToCallAlice
+        $Common.Please
+        $Common.Thanks
+        $Common.Hey
+        $Common.ForMe
+        $Common.ForUs
+        $Common.Conjunctions.And
+        $Common.Conjunctions.Or
+        $Common.Prepositions.In
+        $Common.Pronouns.That
+        $Common.Pronouns.This
+        $Common.Verbs.Want
+        $Common.Prepositions.That
+        $Common.Lets
+
+$Root:
+    $StopThis? $LaunchNext
+    ($Common.Player.ItemWithPlayerType .*)?  ($Common.Next | $Common.Other)
+    $StopThis? $SwitchToNext
+    (.* $Common.Player.ItemWithPlayerType .*)? $Common.Commands.Switch
+    $StopThis? $SearchNext
+    $Common.Commands.Skip $Common.Player.ItemWithPlayerType? $Common.Prepositions.To? $Common.Player.ItemWithPlayerType? $Common.Next?
+    $Common.Next $Common.Player.ItemWithPlayerType? # for English
+    %negative
+    .* $Common.Other $Common.Player.Item .*
+    %force_negative
+    .* $Common.Time $Common.Other .*
+    .* ($Common.Commands.Launch $Common.Prepositions.To? | $Common.Prepositions.To) $Common.Player.ItemWithPlayerType .* $Common.Verbs.Contains .* $Common.Next .*
+    %force_positive
+    .* $Common.Commands.Switch $Common.Player.ItemWithPlayerType .*
+
+$LaunchNext:
+    .* ($Common.Commands.Launch $Common.Prepositions.To? | $Common.Prepositions.To) $Common.Player.ItemWithPlayerType .* $Common.Next $Common.Player.ItemWithPlayerType? .*
+    .* ($Common.Commands.Launch $Common.Prepositions.To? | $Common.Prepositions.To) $Common.Player.ItemWithPlayerType .* $Common.Other
+    .* $Common.Commands.Launch $Common.Prepositions.To? ($Common.Next | $Common.Other)
+    $Common.Prepositions.To ($Common.Next | $Common.Other)
+
+$SwitchToNext:
+    .* $Common.Commands.Switch (.* $Common.Player.ItemWithPlayerType .*)? $Common.Prepositions.To (.* $Common.Player.ItemWithPlayerType .*)? $Common.Next .*
+    .* $Common.Commands.Switch $Common.Player.ItemWithPlayerType .* $Common.Next .*
+    $Common.Commands.Switch
+
+$SearchNext:
+    $Common.Commands.Search ($Common.Prepositions.On | $Common.Prepositions.About) $Common.Player.ItemWithPlayerType? $Common.Next
+
+$StopThis:
+    ($Common.Commands.Stop | $Common.Commands.Skip) $Common.Player.ItemWithPlayerType

@@ -1,0 +1,309 @@
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import temp, min_max_temp, format_date, render_day_part, render_precipitation, render_smart_joined %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather_nowcast_text_cases_ru.nlg" import render_precipitation_type %}
+
+{% macro __render_weather(date, city, temperature, condition, current_forecast, yesterday_forecast, context) %}
+  {{ date }} {{ city }}
+  {{
+    render_smart_joined(
+      ' ',
+      [
+        render_relative_temp(current_forecast, yesterday_forecast),
+        temperature
+      ]
+    )
+  }}
+  {% if context.precipitation_current != 1 and condition is defined and condition %}
+    ,
+    {% if context.forecast_next is defined and context.forecast_next and context.forecast_next_next is defined and context.forecast_next_next
+            and condition == context.forecast_next.condition and condition == context.forecast_next_next.condition
+    %}
+      весь день
+    {% endif %}
+    {{ condition | lower}}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_relative_temp(current_forecast, yesterday_forecast) -%}
+  {% if yesterday_forecast is defined and yesterday_forecast is not none
+        and yesterday_forecast.temperature is defined and yesterday_forecast.temperature is not none -%}
+    {% if yesterday_forecast.temperature > current_forecast.temperature %}
+    холоднее, чем вчера
+    {% elif yesterday_forecast.temperature < current_forecast.temperature %}
+    теплее, чем вчера
+    {% endif %}
+  {%- endif %}
+{%- endmacro %}
+
+
+{% macro __render_today_no_precipitations() %}
+  Сегодня осадков не обещали
+{% endmacro %}
+
+
+{% macro render_rain_part(context) %}
+  {#
+  These two cases are well covered in the `render_case` macro. But it uses slightly different phrases
+  thus they are overrided here. If you know a way of passing a block to the `render_precipitation` macro to use
+  instead of just calling `render_case`, fell sure to go for it.
+  The caller is not used as it doesn't allow for passing multiple blocks. And that `render_case` is anything but
+  the central functionality in `render_precipitation`.
+  #}
+  {% if context.weather_nowcast_alert is defined and context.weather_nowcast_alert is not none %}
+    {{ context.weather_nowcast_alert }}
+  {% elif context.precipitation_current == 0 and context.precipitation_change_hours == 0 %}
+    {{ __render_today_no_precipitations() }}
+  {% elif context.precipitation_current == 0 and context.precipitation_change_hours >= 12
+            and (context.weather_forecast.day_part == 'morning' or context.weather_forecast.day_part == 'day')
+  %}
+    {{ __render_today_no_precipitations() }}
+  {% else %}
+    {{ render_precipitation(context, skip_tomorrow_part=false) | capitalize_first }}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro __render_next(temperature, condition, current_prec, current_prec_type, forecast_prec, forecast_prec_type) %}
+  {% if temperature is number %}
+    {{ temp(temperature) }}
+  {% else %}
+    {% set (min, max) = temperature %}
+    до {{ temp(max) }}
+  {% endif %}
+  {% if condition is defined and condition %}
+    , {{ condition }}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro __render_after_nexts_phrase(context) -%}
+  {% if context.forecast_next is not defined or context.forecast_next is none
+        or context.forecast_next_next is not defined or context.forecast_next_next is none -%}
+    {# Nothing #}
+  {%- elif context.precipitation_current == 0 and context.precipitation_change_hours != 0 and context.precipitation_next_change_hours == 0 -%}
+    {# Nothing #}
+  {%- elif context.forecast_next.condition is defined and context.forecast_next.condition and context.forecast_next.condition == context.forecast_next_next.condition
+          and context.weather_forecast.condition != context.forecast_next.condition
+  -%}
+    {% if context.precipitation_current == 1 and context.forecast_next.precipitation_current == 1 and context.forecast_next_next.precipitation_current == 1 -%}
+      {# Nothing #}
+    {%- else %}
+      {%- if context.forecast_next.precipitation_current == 1 %}
+        Ожидается
+      {% else %}
+        Будет
+      {% endif %}
+      {{ context.forecast_next.condition }}
+    {% endif %}
+  {%- endif %}
+{%- endmacro %}
+
+
+{% macro __render_level_condition(context, level) -%}
+  {% if level == 1 -%}
+    {{ context.forecast_next.condition }}
+  {%- elif level == 2 -%}
+    {{ context.forecast_next_next.condition }}
+  {%- endif %}
+{%- endmacro %}
+
+{% macro __render_next_condition(context, level) -%}
+  {% if context.forecast_next is defined and context.forecast_next and context.forecast_next_next is defined and context.forecast_next_next -%}
+    {%- if context.precipitation_debug is defined and context.precipitation_debug is not none -%}
+      {{ '\n' }}
+      next_current - {{ context.forecast_next.precipitation_current }}.
+      next_next_current - {{ context.forecast_next_next.precipitation_current }}.
+      weather_condition - {{ context.weather_forecast.condition }}.
+      next_condition - {{ context.forecast_next.condition }}.
+      next_next_condition - {{ context.forecast_next_next.condition }}.
+      next_day_part - {{ context.forecast_next.day_part }}.
+      next_next_day_part - {{ context.forecast_next_next.day_part }}.
+      weather_day_part - {{ context.weather_forecast.day_part }}.
+      precipitation_day_part - {{ context.precipitation_day_part }}.
+      precipitation_change_hours - {{ context.precipitation_change_hours }}.
+      precipitation_next_change_hours - {{ context.precipitation_next_change_hours }}.
+      precipitation_next_day_part - {{ context.precipitation_next_day_part }}.
+      precipitation_next_next_change_hours - {{ context.precipitation_next_next_change_hours }}.
+      precipitation_next_next_day_part - {{ context.precipitation_next_next_day_part }}.
+      {{ '\n' }}
+    {%- endif -%}
+    {%- if context.precipitation_current == 1 and context.forecast_next.precipitation_current == 1 and context.forecast_next_next.precipitation_current == 1 -%}
+      {# No condition #}
+    {%- elif context.forecast_next.condition == context.forecast_next_next.condition -%}
+      {# No condition #}
+    {%- elif (context.forecast_next.precipitation_current == 0 and context.forecast_next_next.precipitation_current == 0) -%}
+      {% if context.forecast_next.condition != context.forecast_next_next.condition -%}
+        {{ __render_level_condition(context, level) }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 1 and context.precipitation_change_hours <= 5 and (context.precipitation_day_part is defined and context.precipitation_day_part is not none) -%}
+      {% if context.precipitation_day_part == context.weather_forecast.day_part -%}
+        {{ __render_level_condition(context, level) }}
+      {%- elif level == 2 -%}
+        {{ context.forecast_next_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 0 and context.precipitation_next_change_hours <= 5 and (context.precipitation_next_day_part is defined and context.precipitation_next_day_part is not none) -%}
+      {% if context.precipitation_next_day_part == context.weather_forecast.day_part -%}
+        {{ __render_level_condition(context, level) }}
+      {%- elif level == 2 and context.forecast_next.condition != context.forecast_next_next.condition -%}
+        {{ context.forecast_next_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 1 and (context.precipitation_day_part is defined) -%}
+      {% if context.precipitation_day_part != context.forecast_next.day_part and context.precipitation_day_part != context.forecast_next_next.day_part
+            and context.forecast_next.condition != context.forecast_next_next.condition
+      -%}
+        {{ __render_level_condition(context, level) }}
+      {%- elif context.precipitation_day_part == context.forecast_next.day_part and level == 2 -%}
+        {{ context.forecast_next_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 0 and (context.precipitation_next_day_part is defined and context.precipitation_next_day_part is not none) -%}
+      {% if context.precipitation_next_day_part != context.forecast_next.day_part and context.precipitation_next_day_part != context.forecast_next_next.day_part
+            and context.forecast_next.condition != context.forecast_next_next.condition
+      -%}
+        {{ __render_level_condition(context, level) }}
+      {%- elif context.precipitation_next_day_part == context.forecast_next.day_part and level == 2 -%}
+        {{ context.forecast_next_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 0 and context.precipitation_change_hours != 0 and context.precipitation_next_change_hours == 0 -%}
+      {# Nothing #}
+    {%- else -%}
+      {{ __render_level_condition(context, level) }}
+    {%- endif %}
+  {%- elif context.forecast_next is defined -%}
+    {%- if context.precipitation_debug is defined and context.precipitation_debug is not none -%}
+      {{ '\n' }}
+      current - {{ context.precipitation_current }}.
+      next_current - {{ context.forecast_next.precipitation_current }}.
+      weather_condition - {{ context.weather_forecast.condition }}.
+      next_condition - {{ context.forecast_next.condition }}.
+      next_day_part - {{ context.forecast_next.day_part }}.
+      weather_day_part - {{ context.weather_forecast.day_part }}.
+      precipitation_day_part - {{ context.precipitation_day_part }}.
+      precipitation_change_hours - {{ context.precipitation_change_hours }}.
+      precipitation_next_change_hours - {{ context.precipitation_next_change_hours }}.
+      precipitation_next_day_part - {{ context.precipitation_next_day_part }}.
+      {{ '\n' }}
+    {%- endif -%}
+    {%- if context.precipitation_current == 0 and context.forecast_next.precipitation_current == 0 -%}
+      {{ context.forecast_next.condition }}
+    {%- elif context.precipitation_current == 1 and context.forecast_next.precipitation_current == 1 -%}
+      {# Nothing here #}
+    {%- elif context.precipitation_current == 1 and context.precipitation_change_hours <= 5 and (context.precipitation_day_part is defined and context.precipitation_day_part is not none) -%}
+      {% if context.weather_forecast.day_part == context.precipitation_day_part -%}
+        {{ context.forecast_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 0 and context.precipitation_next_change_hours <= 5 and (context.precipitation_next_day_part is defined and context.precipitation_next_day_part is not none) -%}
+      {% if context.weather_forecast.day_part == context.precipitation_next_day_part -%}
+        {{ context.forecast_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 1 and (context.precipitation_day_part is defined and context.precipitation_day_part is not none) -%}
+      {% if context.forecast_next.day_part != context.precipitation_day_part -%}
+        {{ context.forecast_next.condition }}
+      {%- endif %}
+    {%- elif context.precipitation_current == 0 and (context.precipitation_next_day_part is defined and context.precipitation_next_day_part is not none) -%}
+      {% if context.forecast_next.day_part != context.precipitation_next_day_part -%}
+        {{ context.forecast_next.condition }}
+      {%- endif %}
+    {%- endif %}
+  {%- endif %}
+{%- endmacro %}
+
+
+{% macro render_next_forecast(context) -%}
+  {% if context.forecast_next is defined and context.forecast_next is not none %}
+    {% if (context.precipitation_current == 1 and context.precipitation_day_part == context.forecast_next.day_part and context.precipitation_change_hours > 5)
+          or (context.precipitation_current == 0 and context.precipitation_next_day_part == context.forecast_next.day_part and context.precipitation_next_change_hours > 5)
+    %}
+      Температура будет
+      {#
+      {% if (context.forecast_next_next is not defined or context.forecast_next_next is none) and context.forecast_next.day_part == "day" %}
+        завтра
+      {% endif %}
+      #}
+    {% else %}
+      {% if (context.forecast_next_next is not defined or context.forecast_next_next is none) and context.forecast_next.day_part == "day" %}
+        Завтра
+      {% endif %}
+      {% if (
+              (context.precipitation_change_hours is not none and context.precipitation_change_hours > 5 and context.precipitation_day_part == context.forecast_next.day_part)
+              or (context.precipitation_next_change_hours is not none and context.precipitation_next_change_hours > 5 and context.precipitation_next_day_part == context.forecast_next.day_part)
+            )
+            and context.forecast_next.day_part == 'day'
+      %}
+        будет
+      {% else %}
+        {{ render_day_part(context.forecast_next.day_part) }}
+        {% if context.forecast_next.day_part == "night" %}
+          будет
+        {% endif %}
+      {% endif %}
+    {% endif %}
+    {% set next_condition = __render_next_condition(context, 1) %}
+    {{
+      __render_next(
+               context.forecast_next.temperature,
+               next_condition,
+               context.precipitation_current,
+               context.precipitation_type,
+               context.forecast_next.precipitation_current,
+               context.forecast_next.precipitation_type
+      )
+    }}
+    {% if context.forecast_next_next is defined and context.forecast_next_next is not none %}
+      {% set next_next_condition = __render_next_condition(context, 2) %}
+      {%
+        set next_next = render_day_part(context.forecast_next_next.day_part) + " "
+                        + __render_next(
+                                 context.forecast_next_next.temperature,
+                                 next_next_condition,
+                                 context.precipitation_current,
+                                 context.precipitation_type,
+                                 context.forecast_next_next.precipitation_current,
+                                 context.forecast_next_next.precipitation_type
+                          )
+      %}
+      {% if (next_condition is defined and next_condition) or (next_next_condition is defined and next_next_condition) %}
+        . А {{ next_next }}
+      {% else %}
+        , а {{ next_next }}
+      {% endif %}
+    {% endif %}
+    {% set after_nexts = __render_after_nexts_phrase(context) %}
+    {% if after_nexts is defined and after_nexts %}
+      . {{ after_nexts | capitalize_first }}
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+
+{% macro render_now_phrase() %}
+  {# This should be different from the current_weather phrase. See https://st.yandex-team.ru/DIALOG-4922#5d2ed72663890d001d7e5275 #}
+  сейчас
+{% endmacro %}
+
+
+{% macro render_current_condition(context) %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set condition=context.weather_forecast.condition %}
+
+  # render result
+  {{ __render_weather(date, city, temp(context.weather_forecast.temperature), condition, context.weather_forecast, context.yesterday_forecast, context) }}
+{% endmacro %}
+
+
+{% macro weather_today(context) %}
+  {{
+    render_smart_joined(
+      '. ',
+      [
+        render_current_condition(context) | capitalize_first,
+        render_rain_part(context) | capitalize_first,
+        render_next_forecast(context) | capitalize_first
+      ]
+    )
+  }}
+  {{ '.' }}
+{% endmacro %}

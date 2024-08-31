@@ -1,0 +1,141 @@
+{#               #}
+{# RANDOM NUMBER #}
+{#               #}
+{% phrase render_result %}
+  {% set lowbound = context.LowerBound | int %}
+  {% if context.LowerBound == context.UpperBound %}
+    {% chooseline %}
+      هذا هو السؤال. التاريخ {{ context.Value }}.
+      لقد حيرتني. التاريخ {{ context.Value }}.
+      العدد {{ context.Value }}. لا داعي للشكر.
+      حسناً إذاً. عدد {{ context.Value }}.
+    {% endchooseline %}
+  {% elif lowbound > 1073741824 %} {# 0x40000000 #}
+    {% chooseline %}
+      للأسف هذا رقم كبير جداً لي.
+      أتمنى، ألن تسأل عن الرمز بي؟
+      عدد كبير للغاية، لا أستطيع التخمين.
+    {% endchooseline %}
+  {% else %}
+    {% voice %}
+      <speaker audio="rolling-dice.opus"/>.sil<[100]>
+    {% endvoice %}
+    {% chooseline %}
+      التاريخ {{ context.Value }}.
+      {{ context.Value }}.
+      صادف تاريخ {{ context.Value }}.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{#            #}
+{# THROW DICE #}
+{#            #}
+
+{# macro dice_count #}
+{# count (int) - число кубиков #}
+{# add_gen (bool) - true, если надо добавить #gen для голоса #}
+{% macro dice_count(count, add_gen) %}
+  {% if add_gen %}
+    {% voice %}
+      {{ '#gen' }}
+    {% endvoice %}
+    {% set case = 'gen' %}
+  {% else %}
+    {% set case = 'nom' %}
+  {% endif %}
+  {{ context.DiceCount }}
+  {{ 'نرد' | pluralize(count, case) }}
+{% endmacro %}
+
+{# macro score_count #}
+{# count (int) - число очков #}
+{% macro score_count(count) %}
+  {{ count }}
+  {{ 'نقطة' | pluralize(count, 'nom') }}
+{% endmacro %}
+
+{# macro enum_numbers #}
+{% macro enum_numbers() %}
+  {% text %}
+    {% for number in context.Values %}
+      {% if loop.first %}
+        {{ number }}
+      {% else %}
+        {% if loop.last %}
+          و
+        {% else %}
+          ,
+        {% endif %}
+        {{ number }}
+      {% endif %}
+    {% endfor %}
+    ,
+  {% endtext %}
+  {% voice %}
+    {# для голоса просто указываем список чисел в именительном падеже без запятых и иных местоимений #}
+    {% for number in context.Values %}
+      {{ '#nom' }} {{ number }}.
+    {% endfor %}
+  {% endvoice %}
+{% endmacro %}
+
+{% phrase dice_result %}
+  {% voice %}
+    <speaker audio="rolling-dice.opus"/>.sil<[100]>
+  {% endvoice %}
+  {% if context.DiceCount == 1 %}
+    {% if context.NewSession %}
+      {% chooseline %}
+        رميت. حصلنا على
+        سأقوم بالرمي. جاهزة: العدد
+        حسناً: العدد
+        تم رمي المكعب. العدد
+        تم وضع الرهانات ورمي المكعب. حصلت على
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        رميت. حصلنا على
+        سأقوم بالرمي. جاهزة: العدد
+        حسناً: العدد
+        تم رمي المكعب. العدد
+      {% endchooseline %}
+    {% endif %}
+    {{ context.Sum }}.
+  {% else %}
+    {% if context.NewSession %}
+      {% chooseitem %}
+        حصلت على {{ enum_numbers() }} نقطة {{ context.Sum }}.
+      {% or %}
+        رميت. {{ enum_numbers() }} مقدار {{ score_count(context.Sum) }}.
+      {% endchooseitem %}
+    {% else %}
+      {% chooseitem %}
+        {{ enum_numbers() }} مقدار {{ context.Sum }}.
+      {% or %}
+        {{ enum_numbers() }} بمبلغ {{ context.Sum }}.
+      {% endchooseitem %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  اعذرني لم أفهم. كرر مرة أخرى؟
+{% endphrase %}
+
+{% phrase wrong_dice_count %}
+  عذراً، لكنني أستطيع رمي من مكعب إلى عشر مكعبات.
+{% endphrase %}
+
+{% phrase to_many_edges %}
+  {% chooseline %}
+    {{ context.EdgeCount }} {{ 'حد' | pluralize(context.EdgeCount, 'nom') }}؟ لا يوجد لدي هذا القدر.
+    في أي كون توجد هذه الحدود؟ لا يوجد مكعب كهذا لدي.
+    هذه سطوح كثيرة لمكعب واحد.
+    لا يوجد مكعب كهذا لدي، جميع الأسئلة موجهة إلى روبيك.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase dont_know_game %}
+  عذراً، لا أعرف هذه اللعبة. يمكنك أن تطلب مني رمي حجراً أو عدة حجارة زهر.
+{% endphrase %}

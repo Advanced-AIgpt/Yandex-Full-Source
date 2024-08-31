@@ -1,0 +1,66 @@
+{% macro render_hours(hours, case='nom') -%}
+  {% if hours == 1 %}
+    {{ 'ساعة' | pluralize(hours, case) }}
+  {% else %}
+    {{ hours }} {{ 'ساعة' | pluralize(hours, case) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_error(message=none) %}
+  حدث خطأ ما. عذرًا
+  {% if message is defined and message %}
+    . {{ message }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_type(type, case='nom') %}
+  {% if type == 1 or type == 'rain' %}
+    {{ 'المطر' | inflect(case) }}
+  {% elif type == 2 or type == 'snow_with_rain' %}
+    {{ 'الثلج' | inflect(case) + '  والمطر' }}
+  {% elif type == 3 or type == 'snow' %}
+    {{ 'الثلج' | inflect(case) }}
+  {% elif type == 4 or type == 'hail' %}
+    {{ 'حائل' | inflect(case) }}
+  {% else %}
+    {{ 'هطول الأمطار' | inflect(case) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro choose_line_from_list(cases_data, number) %}
+  {% if cases_data is defined and cases_data is not none %}
+    {% set text = cases_data[number % (cases_data|length)] %}
+    {{ text }}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_case(type, case, state=1, change_hours=0, next_change=None) -%}
+  {% if type == 0 %}
+    {% set nowcast_text_cases = dict(
+      no_rain=[
+        'في الأيام القليلة القادمة، لن يكون هناك أي هطولات',
+        'وفقًا لمعلوماتي، في الـ 24 ساعة القادمة ' + render_precipitation_type(type, case='gen') + ' لن يحدث',
+        'في الـ 24 ساعة القادمة ' + render_precipitation_type(type, case='gen') + ' من غير المتوقع'
+      ],
+      day_part_00=[
+        ' بدون هطولات.'
+      ]
+    ) %}
+  {% elif not next_change or next_change == -1 %}
+    {% set nowcast_text_cases = dict(
+      no_rain=[
+        'في الأيام المقبلة من غير المتوقع ' + render_precipitation_type(type, case='gen'),
+        'وفقًا لمعلوماتي، في الـ 24 ساعة القادمة ' + render_precipitation_type(type, case='gen') + ' لن يحدث',
+        'في الـ 24 ساعة القادمة ' + render_precipitation_type(type, case='gen') + ' من غير المتوقع'
+      ],
+      only_rain=[
+        'في الأيام المقبلة ' + render_precipitation_type(type, case='nom') + ' لن يتوقف. للأسف',
+        'خلال اليوم ' + render_precipitation_type(type, case='nom') + ' لن يتوقف. للأسف'
+      ]
+    ) %}
+
+  {% endif %}
+  {{ choose_line_from_list(nowcast_text_cases.get(case), state) }}
+{% endmacro %}

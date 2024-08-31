@@ -1,0 +1,13 @@
+OWNER(
+    samoylovboris
+    g:alice_quality
+)
+
+UNION()
+
+FROM_SANDBOX(1750483349 OUT_NOAUTO random3v1.tsv)
+FROM_SANDBOX(1750473040 OUT_NOAUTO random4v1.tsv)
+FROM_SANDBOX(1117908137 OUT_NOAUTO random5v1.tsv)
+FROM_SANDBOX(1118845504 OUT_NOAUTO random6v1.tsv)
+
+END()

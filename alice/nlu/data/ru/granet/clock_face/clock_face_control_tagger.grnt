@@ -1,0 +1,131 @@
+form alice.clock_face_control.turn_off.tagger:
+    enable_granet_parser: true
+    enable_alice_tagger: false
+    lemma: true
+    root:
+        [.* $TimeSlot* .*]
+
+    slots:
+        time_preposition:
+            source: $TimePreposition
+            type: clock_face.time_preposition
+        time:
+            source: $SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+        date:
+            source: $sys.date; $sys.weekdays
+            type:
+                sys.weekdays
+                sys.date
+        day_part:
+            source: $DayPart
+            type: clock_face.day_part
+
+    $TimeSlot:
+        $TimePreposition
+        $SlotTime
+        $sys.date
+        $sys.weekdays
+        $DayPart
+        %negative
+        сейчас
+
+
+form alice.clock_face_control.turn_on.tagger:
+    enable_granet_parser: true
+    enable_alice_tagger: false
+    lemma: true
+    root:
+        [.* $TimeSlot* .*]
+    slots:
+        time_preposition:
+            source: $TimePreposition
+            type: clock_face.time_preposition
+        time:
+            source: $SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+        date:
+            source: $sys.date; $sys.weekdays
+            type:
+                sys.weekdays
+                sys.date
+        day_part:
+            source: $DayPart
+            type: clock_face.day_part
+
+    $TimeSlot:
+        $TimePreposition
+        $SlotTime
+        $sys.date
+        $sys.weekdays
+        $DayPart
+        %negative
+        сейчас
+
+$TimePreposition:
+    %type "clock_face.time_preposition"
+
+    %value "at"
+    в
+    к
+    после
+
+    %value "until"
+    до
+
+    %value "from"
+    с
+
+    %value "to"
+    по
+
+    %value "on"
+    на
+
+$DayPart:
+    %type "clock_face.day_part"
+
+    %value "night"
+    ночью
+    когда взойдет луна
+    ночное время
+    $TimePreposition ночи
+    $TimePreposition ночное время
+
+    %value "evening"
+    вечером
+    вечерочком
+    $TimePreposition вечеру
+    $TimePreposition вечера
+
+    %value "afternoon"
+    днем
+    днём
+    $TimePreposition обеда
+    
+    %value "morning"
+    рано? утром
+    по утру
+    $TimePreposition самого? утра
+    $TimePreposition утреца
+    $TimePreposition завтрака
+    $TimePreposition завтраку
+    $TimePreposition утру
+    $TimePreposition пробуждения
+
+$SlotTime:
+    $typeparser.time
+    $sys.time
+    $sys.units_time
+
+$Delay: 
+    $TimePreposition $SlotTime
+    $DayPart
+    $sys.date
+    $sys.weekdays

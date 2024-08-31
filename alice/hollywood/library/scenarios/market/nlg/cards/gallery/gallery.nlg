@@ -1,0 +1,237 @@
+{% from "alice/hollywood/library/scenarios/market/nlg/cards/common.nlg" import
+  render_item_price,
+  render_sale_price with context %}
+{% from "alice/hollywood/library/scenarios/market/nlg/cards/gallery/common.nlg" import
+  render_gallery_base_block,
+  gallery_item_log_id,
+  gallery_item_button_log_id,
+  ACTION with context %}
+
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import
+  font_color, logged_action_url with context %}
+
+{% set GALLERY_TYPE = 'gallery' %}
+
+{% macro render_gallery_item(doc, index, currency, scenario_type, market_type) %}
+  {% set is_recurring_purchase = scenario_type == "recurring_purchase" %}
+  {% set gallery_open_shop = market_type == "GREEN" and req_info.experiments["market_gallery_dont_open_shop"] == None %}
+  {% set gallery_open_url = market_type == "GREEN" and not gallery_open_shop and req_info.experiments["market_gallery_open_url"] != None %}
+  {% set gallery_open_beru = market_type == "BLUE" and not is_recurring_purchase %}
+  {% set gallery_open_any = gallery_open_shop or gallery_open_url or gallery_open_beru %}
+  {
+    "action": {
+      {% if scenario_type == "how_much" %}
+        "url": "{{- doc.url -}}",
+        "log_id": "{{- gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_MARKET) -}}"
+      {% elif doc.form_update and not gallery_open_any %}
+        "url": "{{-
+          logged_action_url([
+            client_action_directive(
+              name="type_silent",
+              sub_name="gallery_type_silent",
+              payload={
+                "text": doc.title
+              }
+            ),
+            server_action_directive(
+              "update_form",
+              {
+                "form_update": doc.form_update,
+                "resubmit": true
+              }
+            )
+          ], dict(item_number=index))
+        -}}",
+        "log_id": "{{- gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_PRODUCT_CARD) -}}"
+      {% elif (gallery_open_shop or gallery_open_beru) and doc.get("shop_url") %}
+        "url": "{{- doc.shop_url -}}",
+        "log_id": "{{- gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_SHOP) -}}"
+      {% else %}
+        "url": "{{- doc.url -}}",
+        "log_id": "{{- gallery_item_log_id(GALLERY_TYPE, ACTION.OPEN_MARKET) -}}"
+      {% endif %}
+    },
+    "direction": "vertical",
+    "type": "div-container-block",
+    "background": [
+      {
+        "color": "{{- '#FFFFFF' -}}",
+        "type": "div-solid-background"
+      }
+    ],
+    "children": [
+      {
+        "image": {
+          "ratio": 1,
+          "type": "div-image-element",
+          "image_url": "{{- doc.picture.url -}}"
+        },
+        "type": "div-image-block"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      },
+      {
+        "type": "div-table-block",
+        "height": {
+          "value": "wrap_content",
+          "type": "predefined"
+        },
+        "width": {
+          "value": "match_parent",
+          "type": "predefined"
+        },
+        "rows": [
+          {
+            "type": "row_element",
+            "cells": [
+              {% if doc.prices.before_discount is defined %}
+                {
+                  "text": "{{- render_item_price(doc, currency) -}}",
+                  "text_style": "title_l",
+                  "vertical_alignment": "bottom"
+                },
+                {
+                  "text": "{{- render_sale_price(doc, currency) -}}",
+                  "text_style": "text_s",
+                  "vertical_alignment": "bottom"
+                }
+              {% else %}
+                {
+                  "text": "{{- render_item_price(doc, currency) -}}",
+                  "text_style": "title_l",
+                  "vertical_alignment": "bottom"
+                }
+              {% endif %}
+            ]
+          }
+        ]
+      },
+      {% if gallery_open_shop %}
+        {
+          "text": "{{- doc.title | html_escape -}}",
+          "text_max_lines": 2,
+          "type": "div-universal-block",
+          "text_style": "text_m"
+        },
+        {
+          "size": "match_parent",
+          "type": "div-separator-block"
+        },
+        {
+          "text": "{{- font_color("#15d682", doc.get("shop_name", "Яндекс.Маркет") | html_escape) -}}",
+          "text_max_lines": 1,
+          "text_style": "text_s",
+          "type": "div-universal-block"
+        },
+      {% else %}
+        {
+          {% if market_type == "BLUE" %}
+            "text": "{{- doc.title | html_escape -}}",
+            "text_max_lines": 3,
+          {% else %}
+            "text": "{{- doc.title | html_escape -}}",
+            "text_max_lines": 2,
+          {% endif %}
+          "type": "div-universal-block",
+          "text_style": "text_s"
+        },
+      {% endif %}
+      {% if gallery_open_any or (doc.get("voice_purchase") and market_type == "GREEN") %}
+        {% if gallery_open_shop %}
+          {
+            "size": "xxs",
+            "delimiter_color": "{{- '#f0f0f0' -}}",
+            "weight": 1,
+            "type": "div-separator-block",
+            "has_delimiter": 1
+          },
+        {% else %}
+          {
+            "size": "match_parent",
+            "delimiter_color": "{{- '#f0f0f0' -}}",
+            "weight": 1,
+            "type": "div-separator-block",
+            "has_delimiter": 1
+          },
+        {% endif %}
+        {
+          "type": "div-buttons-block",
+          "items": [
+           {
+             {% if doc.get("voice_purchase") %}
+               "text": "{{- font_color('#FFFFFF', 'Заказ через Алису') -}}",
+             {% else %}
+               "text": "{{- font_color('#FFFFFF', 'Подробнее с Алисой') -}}",
+             {% endif %}
+             "background_color": "{{- '#6839CF' -}}",
+             "action": {
+                 "url": "{{
+                     logged_action_url([
+                      client_action_directive(
+                        name="type_silent",
+                        sub_name="gallery_type_silent",
+                        payload={
+                           "text": doc.title
+                        }
+                      ),
+                      server_action_directive(
+                        "update_form",
+                        {
+                            "form_update": doc.form_update,
+                            "resubmit": true
+                        }
+                      )
+                     ], dict(item_number=index))
+                 }}",
+                 "log_id": "{{- gallery_item_button_log_id(GALLERY_TYPE, ACTION.OPEN_PRODUCT_CARD) -}}",
+               }
+             }
+           ]
+        }
+      {% else %}
+        {
+          "type": "div-separator-block",
+          "size": "s"
+        }
+      {% endif %}
+    ],
+    "width": {
+      "value": 200,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{- '#e6e8eb' -}}"
+    },
+    "height": {
+      "value":
+        {% if scenario_type == "how_much" %}
+          273
+        {% elif market_type == "BLUE" %}
+          {% if gallery_open_beru %}
+            345
+          {% else %}
+            300
+          {% endif %}
+        {% elif gallery_open_shop %}
+          356
+        {% else %}
+          328
+        {% endif %},
+      "type": "numeric"
+    }
+  }
+{%- endmacro %}
+
+{% macro render_models_and_offers_card(models_and_offers, total_info, currency, scenario_type,
+                                       market_type=None, total_count=0) %}
+  {% call(item, index) render_gallery_base_block(
+                GALLERY_TYPE,
+                models_and_offers,
+                total_info,
+                total_count) %}
+    {{ render_gallery_item(item, index, currency, scenario_type, market_type) }}
+  {% endcall %}
+{% endmacro %}

@@ -1,0 +1,40 @@
+{% macro ask_for_opinion(title, video_type) %}
+  {% chooseline %}
+    А как вам {{ video_type | inflect('acc')}} "{{ title }}"?
+    А {{ video_type | inflect('acc')}} "{{ title }}"?
+    Спасибо, а что вы скажете про {{ video_type | inflect('acc')}} "{{ title }}"?
+    Хорошо! Что вы думаете про {{ video_type | inflect('acc')}} "{{ title }}"?
+    Ясно. А про {{ video_type | inflect('acc')}} "{{ title }}" что думаете?
+    Отлично. А {{ video_type | inflect('acc')}} "{{ title }}"?
+    Записала. А {{ video_type | inflect('acc')}} "{{ title }}"?
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase ask_current_film %}
+  {% set video_type = context.get('video_type') or 'фильм' %}
+  {% if context.attentions.get('intro') %}
+    Давайте начнем!
+    Что вы думаете про {{ video_type | inflect('acc')}} "{{ context.video_title }}"?
+  {% else %}
+    {{ ask_for_opinion(context.video_title, video_type) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase goodbye %}
+  Окей! Вы можете в любой момент продолжить оценивать фильмы, сказав "Алиса, хочу оценить фильм".
+{% endphrase %}
+
+{% phrase dont_understand %}
+  Простите, не понимаю вашу оценку. Если устали, скажите "Хватит".
+{% endphrase %}
+
+{% phrase no_more_questions %}
+  Спасибо, что оценили эти фильмы!
+  У меня больше нет к вам вопросов.
+  Скоро я начну рекомендовать вам более уместный видеоконтент.
+{% endphrase %}
+
+{% phrase undefined %}
+  Произошла непредвиденная ошибка в сценарии оценки фильмов.
+  Чтобы выйти из сценария, скажите "хватит".
+{% endphrase %}

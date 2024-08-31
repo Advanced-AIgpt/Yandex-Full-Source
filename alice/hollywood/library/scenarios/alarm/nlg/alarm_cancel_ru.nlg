@@ -1,0 +1,59 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" import render_error, render_alarm_time, render_alarm_list %}
+
+{% macro render_available_alarms(available_alarms) %}
+  {% if available_alarms|length == 1 %}
+    Сейчас установлен только один будильник
+    {{ render_alarm_time(available_alarms[0].date, available_alarms[0].time) }}, выключить его?
+  {% else %}
+    Сейчас установлено несколько будильников:
+    \n{% vc %}-{% evc %}
+    {{ render_alarm_list(available_alarms) }}
+    \n{% vc %}-{% evc %}
+    Какой из них вы хотите выключить?
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('alarm__is_android') %}
+    {% chooseline %}
+      Давайте я вам список будильников открою.
+      Давайте посмотрим на ваши будильники.
+    {% endchooseline %}
+  {% elif context.attentions.get('invalid_id') %}
+    У меня нет такого будильника.
+    {{ render_available_alarms(context.data.available_alarms) }}
+  {% elif context.attentions.get('no_alarms')
+      or context.attentions.get('alarm__multiple_alarms') %}
+    {{ render_available_alarms(context.data.available_alarms) }}
+  {% else %}
+    {% if context.data.cancel_all_alarms %}
+      Хорошо, выключила все будильники.
+    {% elif context.data.cancel_alarms %}
+      Хорошо, выключила будильники.
+    {% else %}
+      Хорошо, выключила будильник {{ render_alarm_time(context.data.date, context.data.time) }}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_no_alarms_available_phrase() %}
+  {% chooseitem 8 %}
+    У вас нет включенных будильников.
+  {% or 5 %}
+    У вас нет включенных будильников. Счастливый вы человек!
+  {% or 2 %}
+    Будильников не обнаружено. Сон в безопасности.
+  {% or 5 %}
+    У вас нет включенных будильников. Наверное, вам все завидуют.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase no_alarms %}
+    {{ render_no_alarms_available_phrase() }}
+{% endphrase %}
+
+
+{% phrase bad_arguments %}
+    Не понимаю какой будильник вы хотите отменить.
+{% endphrase %}

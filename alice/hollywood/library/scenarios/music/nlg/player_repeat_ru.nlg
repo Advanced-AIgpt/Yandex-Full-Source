@@ -1,0 +1,23 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" import alicesdk_player_response, render_not_supported_on_radio with context %}
+
+{% macro repeat_confirm() %}
+  {% chooseline %}
+    Хорошо, буду повторять.
+    Ок, ставлю на повтор.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% elif context.is_generative %}
+    Простите, не могу поставить на повтор нейромузыку.
+  {% elif context.is_fm_radio %}
+    {{ render_not_supported_on_radio(context.fm_radio_name) }}
+  {% elif context.has_alicesdk_player %}
+    {{ alicesdk_player_response(repeat_confirm()) }}
+  {% else %}
+    {{ repeat_confirm() }}
+  {% endif %}
+{% endphrase %}

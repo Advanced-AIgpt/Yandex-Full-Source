@@ -1,0 +1,102 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ru.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import format_date, render_day_part, range_attention %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import render_pressure_phrase, render_now_phrase %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import geo_changed_attention_pressure, render_short_now_phrase %}
+
+
+{% macro pressure_current() %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set pressure=render_pressure_phrase(context.weather_forecast, is_for_now=true) %}
+
+  # render result
+  {{ date }} {{ city }} {{ pressure }}
+{% endmacro %}
+
+
+{% macro render_day_pressure(forecast, is_capitalized, mock_ts=None) %}
+  {% set date=format_date(forecast.date, forecast.tz, mock_ts) %}
+  {% if is_capitalized %}
+    {% set date=date|capitalize %}
+  {% endif %}
+  {{ date }}
+
+  {% if not is_capitalized %}
+    {% set pressure=render_pressure_phrase(forecast) %}
+    {{ pressure }}
+  {% else %}
+    {% tx %}- {{ forecast.pressure }}{% etx %}{% vc %} .sil<[1]> {{ forecast.pressure }}{% evc %}.
+  {% endif %}
+{% endmacro %}
+
+
+{% macro pressure_for_range() %}
+  {% if context.attentions.get('no_weather_for_next_weekend') %}
+    {% chooseline %}
+      Я так далеко не заглядываю, но знаю давление на ближайшие выходные.
+      К сожалению, я не знаю давление на следующие выходные, однако могу рассказать вам про ближайшие.
+    {% endchooseline %}
+  {% endif %}
+
+  {{ context.forecast_location | city_prepcase | capitalize_first }}
+  {% for day in context.weather_forecast.days %}
+    {{ render_day_pressure(day, loop.index0, context.mock_timestamp) }}\n
+  {% endfor %}
+  {{ range_attention(context.attentions) }}
+{% endmacro %}
+
+
+{% macro pressure_for_date() %}
+  {% set date %}
+    {{ format_date(context.weather_forecast.date, context.weather_forecast.tz, context.mock_timestamp) }}
+    {{ render_day_part(context.day_part) }}
+  {% endset %}
+
+  {% set city=context.forecast_location | city_prepcase %}
+  {% set pressure=render_pressure_phrase(context.weather_forecast) %}
+
+  # render result
+  {{ date }} {{ city }} {{ pressure }}
+{% endmacro %}
+
+
+{% macro render_next_pressure_forecast() %}
+  {% if context.forecast_next is defined and context.forecast_next is not none %}
+
+    {{ render_day_part(context.forecast_next.day_part) }} ожидается {{ context.forecast_next.pressure }}
+
+    {% if context.forecast_next_next is defined and context.forecast_next_next is not none %}
+      , {{ render_day_part(context.forecast_next_next.day_part) }} - {{ context.forecast_next_next.pressure }}
+    {% endif %}
+
+    {% tx %}мм рт. ст.{% etx %}{% vc %}мм ртутного столба{% evc %}
+
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_pressure_with_geo_changed_attention(pressure) %}
+  {% if context.attentions.get('geo_changed') %}
+    {{ geo_changed_attention_pressure(context, pressure) }}
+  {% else %}
+    {{ pressure | capitalize_first }}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase render_pressure_current %}
+  {{ render_pressure_with_geo_changed_attention(pressure_current()) }}
+{% endphrase %}
+
+{% phrase render_pressure_for_date %}
+  {{ render_pressure_with_geo_changed_attention(pressure_for_date()) }}
+{% endphrase %}
+
+{% phrase render_pressure_for_range %}
+  {{ render_pressure_with_geo_changed_attention(pressure_for_range()) }}
+{% endphrase %}

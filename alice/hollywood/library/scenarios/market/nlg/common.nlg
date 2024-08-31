@@ -1,0 +1,143 @@
+{% set DELIVERY_NAMES = {
+    "COURIER": "Курьерская доставка",
+    "PICKUP": "Самовывоз",
+  }
+%}
+
+{% set CURRENCIES = {
+    'RUR': {
+      "name": "рубль",
+      "sign": "₽",
+    },
+    'BYN': {
+      "name": "белорусский рубль",
+      "sign": "б.р.",
+    },
+    'KZT': {
+      "name": "тенге",
+      "sign": "тнг.",
+    },
+    'UAH': {
+      "name": "гривна",
+      "sign": "грн.",
+    },
+    'UE': {
+      "name": "условная единица",
+      "sign": "у.е.",
+    },
+  }
+%}
+
+{% set YANDEX_NAVIGATOR -%}
+  {%- tx -%}Яндекс.Навигатор{%- etx -%}
+  {%- vc -%}Яндекс-Навигатор{%- evc -%}
+{%- endset %}
+
+{% macro delivery_name(delivery_type) -%}
+  {{- DELIVERY_NAMES.get(delivery_type, "") -}}
+{%- endmacro %}
+
+{% macro currency(currency) -%}
+  {%- if currency in CURRENCIES -%}
+    {{- caller(CURRENCIES[currency]) -}}
+  {%- else -%}
+    {{- caller(CURRENCIES['RUR']) -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro currency_name(currency) -%}
+  {%- call(currency_info) currency(currency) -%}
+    {{- currency_info["name"] -}}
+  {%- endcall -%}
+{%- endmacro %}
+
+{% macro currency_sign(currency) -%}
+  {%- call(currency_info) currency(currency) -%}
+    {{- currency_info["sign"] -}}
+  {%- endcall -%}
+{%- endmacro %}
+
+{% macro render_market(case='nom') -%}
+  {%- text -%}
+    Яндекс.{{- 'Маркет'|inflect(case) -}}
+  {%- endtext -%}
+  {%- voice -%}
+    яндекс {{ 'маркет'|inflect(case) -}}
+  {%- endvoice -%}
+{%- endmacro %}
+
+{% macro market_short_name(type) %}
+  {{-
+    {
+      "GREEN": "Маркет",
+      "BLUE": "Беру",
+    }.get(type or "", "Маркет")
+  -}}
+{% endmacro %}
+
+
+{% phrase render_suggest_caption__market__debug__trace %}
+  {{ context.market__debug__trace.data.caption }}
+{% endphrase %}
+
+{% phrase render_suggest_uri__market__debug__trace %}
+  {{ context.market__debug__trace.data.url }}
+{% endphrase %}
+
+{% macro render_price(price, currency, case='nom') -%}
+  {{ price }} {{ currency_name(currency) | pluralize(price, case) }}
+{%- endmacro %}
+
+{% macro attempts_reminder(form) %}
+  {% if form.attempt_reminder %}
+    Напоминаю, если надоест - скажите «Алиса, хватит».
+  {% endif %}
+{% endmacro %}
+
+{% macro checkout_attempts_reminder(form) %}
+  {% if form.state.attemptReminder %}
+    Напоминаю, если надоест - скажите «Алиса, хватит».
+  {% endif %}
+{% endmacro %}
+
+{% macro render_beru() -%}
+  {%- text -%}
+    beru.ru
+  {%- endtext -%}
+  {%- voice -%}
+    беру точка ру
+  {%- endvoice -%}
+{%- endmacro %}
+
+{% macro render_big_number(num) -%}
+  {%- text -%}
+    {{- num -}}
+  {%- endtext -%}
+  {%- voice -%}
+    {{- num | split_big_number -}}
+  {%- endvoice -%}
+{%- endmacro %}
+
+{% macro render_cancel() %}
+  {% chooseline %}
+    ОК
+    Хорошо.
+    Поняла.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase market_common__checkout_is_not_allowed_for_this_user %}
+  Для данного пользователя
+  {% text %}
+    с email {{ context.data.email }}
+  {% endtext %}
+  создание заказа недоступно. Создайте заказ под другим пользователем.
+{% endphrase %}
+
+{% phrase market_common__scenario_disabled %}
+  {% chooseline %}
+    К сожалению, сейчас я не смогу вам подсказать по товарам. Но мои разработчики уже решают эту проблему!
+    Что-то пошло не так. Но мы уже чиним! Обратитесь попозже, пожалуйста.
+    Пока не смогу вам ответить, увы. Предпринимаем все усилия для разрешения ситуации.
+  {% endchooseline %}
+{% endphrase %}

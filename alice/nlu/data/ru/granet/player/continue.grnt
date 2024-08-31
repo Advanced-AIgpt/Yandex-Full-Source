@@ -1,0 +1,151 @@
+import:
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/prepositions.grnt
+    player/common.grnt
+    player/entities/action_type.grnt
+    player/entities/entity_type.grnt
+
+
+form personal_assistant.scenarios.player.continue:
+    slots:
+        player_type:
+            type:
+                custom.player_type
+                string
+            source:
+                $PlayerType
+                $Player
+        player_action_type:
+            type:
+                custom.player_action_type
+                string
+            source:
+                $PlayerActionType
+        player_entity_type:
+            type:
+                custom.player_entity_type
+                string
+            source:
+                $PlayerEntityType
+
+    root:
+        $Common.LeftFiller* [$Continue+ $PlayerActionType* $PlayerEntityType+]
+        $Common.LeftFiller* [$Continue+ $PlayerActionType* $PlayerEntityType* $PlayerType*]
+        $Common.LeftFiller* [$ContinueAction $PlayerActionType $PlayerType*]
+        $Common.LeftFiller* [($Common.Open|$Common.ReturnTo) $Player]
+        $Common.LeftFiller* [$Start $Again $PlayerType*]
+        $Common.LeftFiller* $Start
+        $Common.LeftFiller* $KeepThat
+        %force_negative
+        .* [(хочу|хотим|буду|будем|давай|начинаем)+ (играть|спеть|петь)] .*
+
+    filler:
+        $Common.Filler
+        [((дорогая|родная|любимая)? (алиса|алис|алисонька|алисочка)) (наша|моя)?]
+        $Common.Immediately
+        $Common.PronounMe (слушаю|слушаем|жду|ждём)
+        (да|наконец|хочу|$Again)
+
+        %negative
+        (сири|яндекс|гугл)
+
+
+$Continue:
+    $ContinuePure
+    [($ContinuePure|$BringBack) $Common.ThePlayback]
+    [(сними|снять|убери|убрать) $PlayerEntityType* $PlayerType* (($Common.From паузы)|(паузу для))]
+    (нажми|нажать) (плей|продолжить|играть|воспроизводить|запустить)
+    дальше
+
+    $ContinuePure:
+        %lemma
+        продолжить
+        возобновить
+        $Common.TurnOn $Current
+
+        $Current:
+            то? [что+ вот* только* сейчас*] (играло|воспроизводилось|проигрывалось|слушали|смотрели)
+            (последнее|последний|последнюю)
+            (текущее|текущий|текущую)
+
+    $BringBack:
+        %lemma
+        (вернуть|возвращать) [назад? обратно? снова? (как раньше)?]
+
+$ContinueAction:
+    %lemma
+    продолжить
+    еще
+    дальше
+    давай
+    начинай
+    давай дальше
+    назад
+
+$Start:
+    включай
+    включи
+    включите
+    включить
+    воспроизведи
+    воспроизведение
+    воспроизвести
+    врубай
+    вруби
+    врубить
+    запускай
+    запусти
+    запустить
+    играй
+    играть
+    начни
+    начать
+    плей
+    пой
+    послушаем
+    послушать
+    поставить
+    поставь
+    прослушать
+    спеть
+    спой
+    сыграй
+    услышать
+    play
+
+$Again:
+    снова
+    опять
+    дальше
+
+$Player:
+    %lemma
+    (музыкальный|видео)? плеер
+    видеоплеер
+
+$PlayerType:
+    $custom.player_type
+
+$PlayerActionType:
+    $custom.player_action_type
+
+$PlayerEntityType:
+    $custom.player_entity_type
+
+$KeepThat:
+    [$Filler* $Keep+ вот* $That?]
+
+    $That:
+        ($Common.PronounThis|$Common.PronounThat)? ($PlayerEntityType|музыку)
+        (эту|это)
+        все
+    $Keep:
+        оставляй
+        оставь
+    $Filler:
+        (нормально|пойдет|хорошо|заебись|ладно|ок|окей|норм|отлично|идеально|как раз|что нужно|замечательно|здорово)
+        (нет|не)
+        (о|а)

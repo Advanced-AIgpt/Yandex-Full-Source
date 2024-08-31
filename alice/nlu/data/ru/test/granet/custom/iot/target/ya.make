@@ -1,0 +1,67 @@
+OWNER(
+    igor-darov
+    g:alice_quality
+)
+
+UNION()
+
+FILES(
+    player.pause.tsv
+    player.pause.pos.tsv
+    player.pause.neg.tsv
+    action.capability.color_setting.neg.tsv
+    action.capability.color_setting.pos.tsv
+    action.capability.color_setting.tsv
+    action.capability.custom_button.neg.tsv
+    action.capability.custom_button.pos.tsv
+    action.capability.custom_button.tsv
+    action.capability.mode.neg.tsv
+    action.capability.mode.pos.tsv
+    action.capability.mode.tsv
+    action.capability.on_off.neg.tsv
+    action.capability.on_off.pos.tsv
+    action.capability.on_off.tsv
+    action.capability.range.neg.tsv
+    action.capability.range.pos.tsv
+    action.capability.range.tsv
+    action.capability.toggle.neg.tsv
+    action.capability.toggle.pos.tsv
+    action.capability.toggle.tsv
+    query.capability.color.setting.neg.tsv
+    query.capability.color.setting.pos.tsv
+    query.capability.color.setting.tsv
+    query.capability.mode.pos.tsv
+    query.capability.mode.neg.tsv
+    query.capability.mode.tsv
+    query.capability.on.off.neg.tsv
+    query.capability.on.off.pos.tsv
+    query.capability.on.off.tsv
+    query.capability.range.neg.tsv
+    query.capability.range.pos.tsv
+    query.capability.range.tsv
+    query.capability.toggle.neg.tsv
+    query.capability.toggle.pos.tsv
+    query.capability.toggle.tsv
+    query.property.float.neg.tsv
+    query.property.float.pos.tsv
+    query.property.float.tsv
+    query.state.neg.tsv
+    query.state.pos.tsv
+    query.state.tsv
+    scenario.launch.neg.tsv
+    scenario.launch.pos.tsv
+    sound.set_level.tsv
+    sound.set_level.neg.tsv
+    sound.set_level.pos.tsv
+    sound.louder.tsv
+    sound.louder.neg.tsv
+    sound.louder.pos.tsv
+    sound.quiter.tsv
+    sound.quiter.neg.tsv
+    sound.quiter.pos.tsv
+    start_multiroom.neg.tsv
+    start_multiroom.pos.tsv
+    start_multiroom.tsv
+)
+
+END()

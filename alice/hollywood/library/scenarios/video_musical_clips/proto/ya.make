@@ -1,0 +1,12 @@
+PROTO_LIBRARY()
+SET(PROTOC_TRANSITIVE_HEADERS "no")
+
+OWNER(doggywolf)
+
+SRCS(
+    musical_clips.proto
+)
+
+EXCLUDE_TAGS(GO_PROTO)
+
+END()

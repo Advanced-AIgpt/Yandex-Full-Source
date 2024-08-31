@@ -1,0 +1,189 @@
+agent_log:
+    priority: INFO
+monitoring:
+    port: 85
+status:
+    port: 84
+
+storages:
+-   name: logs_storage_setrace
+    plugin: fs
+    config:
+        directory: ./logs/storage
+        max_partition_size: 35gb
+        data_retention:
+            by_age: 3h
+        api:
+            port: 22123
+-   name: logs_storage_megamind_analytics_log
+    plugin: fs
+    config:
+        directory: ./logs/megamind_analytics_log_storage
+        max_partition_size: 1gb
+        data_retention:
+            by_age: 1h
+-   name: logs_storage_megamind_proactivity_log
+    plugin: fs
+    config:
+        directory: ./logs/megamind_proactivity_log_storage
+        max_partition_size: 1gb
+        data_retention:
+            by_age: 1h
+
+channels:
+-   name: megamind_analytics_log_channel
+    channel:
+        pipe:
+        -   storage_ref:
+                storage: logs_storage_megamind_analytics_log
+        -   filter:
+                plugin: batch
+                config:
+                    limit:
+                        count: 100
+                        bytes: 2000kb
+                    delimiter: "\n"
+        output:
+            plugin: logbroker
+            config:
+                endpoint: logbroker.yandex.net
+                topic: megamind/analytics-log
+                codec: zstd
+                tvm:
+                    client_id: 2000464
+                    secret:
+                        env: PUSH_CLIENT_TVM_SECRET
+                    disk_cache_directory: ./logs/monitoring_tvm_cache
+-   name: megamind_proactivity_log_channel
+    channel:
+        pipe:
+        -   storage_ref:
+                storage: logs_storage_megamind_proactivity_log
+        -   filter:
+                plugin: batch
+                config:
+                    limit:
+                        count: 100
+                        bytes: 2000kb
+                    delimiter: "\n"
+        output:
+            plugin: logbroker
+            config:
+                endpoint: logbroker.yandex.net
+                topic: megamind/proactivity-log
+                codec: zstd
+                tvm:
+                    client_id: 2000464
+                    secret:
+                        env: PUSH_CLIENT_TVM_SECRET
+                    disk_cache_directory: ./logs/monitoring_tvm_cache
+
+routes:
+-   input:
+        plugin: grpc
+        config:
+            uri: localhost:86
+    channel:
+        pipe:
+            - storage_ref:
+                storage: logs_storage_setrace
+        fanout:
+            - channel:
+                pipe:
+                    - filter:
+                        plugin: split_session
+                        config:
+                            sessions_count: 5
+                    - filter:
+                        plugin: batch
+                        config:
+                            limit:
+                                count: 20
+                                bytes: 2000kb
+                            delimiter: ""
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/megamind-rtlog
+                        tvm:
+                            client_id: 2000464
+                            secret:
+                                env: PUSH_CLIENT_TVM_SECRET
+                            disk_cache_directory: ./logs/monitoring_tvm_cache
+            - channel:
+                pipe:
+                    - filter:
+                        plugin: alice_rtlog
+                        config:
+                            port: 22123
+                            service_name: megamind
+                    - filter:
+                        plugin: split_session
+                        config:
+                            sessions_count: 2
+                    - filter:
+                        plugin: batch
+                        config:
+                            limit:
+                                count: 20
+                                bytes: 2000kb
+                            delimiter: "\n"
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/rtlog-index/megamind
+                        tvm:
+                            client_id: 2000464
+                            secret:
+                                env: PUSH_CLIENT_TVM_SECRET
+                            disk_cache_directory: ./logs/monitoring_tvm_cache
+            - channel:
+                pipe:
+                    - filter:
+                        plugin: alice_error_booster
+                        config:
+                            service_name: megamind
+                            i_type: !expr "{$env('a_itype')}"
+                            host_name: !expr "{$fqdn_host_name}"
+                            dc: !expr "{$env('a_dc')}"
+                            c_type: !expr "{$env('a_ctype')}"
+                            reg_exes:
+                                - "yexception"
+                                - "Scenario.*error"
+                    - filter:
+                        plugin: batch
+                        config:
+                            limit:
+                                count: 20
+                                bytes: 1000kb
+                            delimiter: "\n"
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/error-booster-log
+                        tvm:
+                            client_id: 2000464
+                            secret:
+                                env: PUSH_CLIENT_TVM_SECRET
+                            disk_cache_directory: ./logs/monitoring_tvm_cache
+-   input:
+        plugin: grpc
+        config:
+            uri: localhost:87
+    channel:
+        case:
+        -   when:
+                session:
+                    log_type: megamind_analytics_log
+            channel:
+                channel_ref:
+                    name: megamind_analytics_log_channel
+        -   when:
+                session:
+                    log_type: megamind_proactivity_log
+            channel:
+                channel_ref:
+                    name: megamind_proactivity_log_channel

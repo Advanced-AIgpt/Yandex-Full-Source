@@ -1,0 +1,66 @@
+{% macro render_hours(hours, case='nom') -%}
+  {% if hours == 1 %}
+    {{ 'час' | pluralize(hours, case) }}
+  {% else %}
+    {{ hours }} {{ 'час' | pluralize(hours, case) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_error(message=none) %}
+  Что-то пошло не так. Извините
+  {% if message is defined and message %}
+    . {{ message }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_type(type, case='nom') %}
+  {% if type == 1 or type == 'rain' %}
+    {{ 'дождь' | inflect(case) }}
+  {% elif type == 2 or type == 'snow_with_rain' %}
+    {{ 'снег' | inflect(case) + ' с дождём' }}
+  {% elif type == 3 or type == 'snow' %}
+    {{ 'снег' | inflect(case) }}
+  {% elif type == 4 or type == 'hail' %}
+    {{ 'град' | inflect(case) }}
+  {% else %}
+    {{ 'осадки' | inflect(case) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro choose_line_from_list(cases_data, number) %}
+  {% if cases_data is defined and cases_data is not none %}
+    {% set text = cases_data[number % (cases_data|length)] %}
+    {{ text }}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_case(type, case, state=1, change_hours=0, next_change=None) -%}
+  {% if type == 0 %}
+    {% set nowcast_text_cases = dict(
+      no_rain=[
+        'В ближайшие сутки — без осадков',
+        'По моим данным, в ближайшие 24 часа ' + render_precipitation_type(type, case='gen') + ' не будет',
+        'В ближайшие 24 часа ' + render_precipitation_type(type, case='gen') + ' не обещали'
+      ],
+      day_part_00=[
+        ' без осадков.'
+      ]
+    ) %}
+  {% elif not next_change or next_change == -1 %}
+    {% set nowcast_text_cases = dict(
+      no_rain=[
+        'В ближайшие сутки не должно быть ' + render_precipitation_type(type, case='gen'),
+        'По моим данным, в ближайшие 24 часа ' + render_precipitation_type(type, case='gen') + ' не будет',
+        'В ближайшие 24 часа ' + render_precipitation_type(type, case='gen') + ' не обещали'
+      ],
+      only_rain=[
+        'В ближайшие сутки ' + render_precipitation_type(type, case='nom') + ' не закончится. Увы',
+        'В течение суток ' + render_precipitation_type(type, case='nom') + ' не закончится. Увы'
+      ]
+    ) %}
+
+  {% endif %}
+  {{ choose_line_from_list(nowcast_text_cases.get(case), state) }}
+{% endmacro %}

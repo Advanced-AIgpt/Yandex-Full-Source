@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package NAlice.NIot;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/iot;iotpb";
+option java_package = "ru.yandex.alice.protos.data.iot";
+option java_outer_classname = "IotProto";
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+
+// dependency
+message TLocalScenarioCondition {
+    oneof Condition {
+        option (NYT.variant_field_name) = "condition";
+
+        TCapabilityEventCondition CapabilityEventCondition = 1 [json_name = "capability_event_condition", (NYT.column_name) = "capability_event_condition"];
+        TAnyOfCondition AnyOfCondition = 2 [json_name = "any_of_condition", (NYT.column_name) = "any_of_condition"];
+    }
+
+    message TAnyOfCondition {
+        repeated TLocalScenarioCondition Conditions = 1 [json_name = "conditions", (NYT.column_name) = "conditions"];
+    }
+
+    message TCapabilityEventCondition {
+        string EndpointID = 1 [json_name = "endpoint_id", (NYT.column_name) = "endpoint_id"];
+        google.protobuf.Any EventCondition = 2 [json_name = "event_condition", (NYT.column_name) = "event_condition"];
+    }
+}
+
+message TLocalScenario {
+    string ID = 1 [json_name = "id", (NYT.column_name) = "id"];
+    TLocalScenarioCondition Condition = 2 [json_name = "condition", (NYT.column_name) = "condition"];
+    repeated TStep Steps = 3 [json_name = "steps", (NYT.column_name) = "steps"];
+    TEffectiveTime EffectiveTime = 4 [json_name = "effective_time", (NYT.column_name) = "effective_time"];
+
+    message TEffectiveTime {
+        // TEffectiveTime represents schedule when scenario should be active
+        // StartTimeSeconds and EndTimeSeconds are number of seconds from day start in UTC+0
+        //
+        // Note that EndTimeSeconds can be smaller than StartTimeSeconds.
+        // That means we start in the current day and end in the next day
+        // Example range [23:00:00 - 1:00:00] will become StartTimeSeconds=82800 and EndTimeSeconds=3600
+
+        uint32 StartTimeSeconds = 1 [json_name = "start_time_seconds", (NYT.column_name) = "start_time_seconds"];
+        uint32 EndTimeSeconds = 2 [json_name = "end_time_seconds", (NYT.column_name) = "end_time_seconds"];
+        repeated string DaysOfWeek = 3 [json_name = "days_of_week", (NYT.column_name) = "days_of_week"];
+    }
+
+    message TStep {
+        oneof Step {
+            option (NYT.variant_field_name) = "step";
+
+            TDirectivesStep DirectivesStep = 1 [json_name = "directives_step", (NYT.column_name) = "directives_step"];
+        }
+        message TDirectivesStep {
+            // Directive items should be capability directives
+            repeated google.protobuf.Any Directives = 1 [json_name = "directives", (NYT.column_name) = "directives"];
+        }
+    }
+
+    message TStepResult {
+        oneof Step {
+            option (NYT.variant_field_name) = "step";
+
+            TDirectivesStepResult DirectivesStepResult = 1 [json_name = "directives_step_result", (NYT.column_name) = "directives_step_result"];
+        }
+
+        message TDirectivesStepResult {
+            enum EStatus {
+                Unknown = 0;
+                Success = 1;
+                Failure = 2;
+            }
+
+            EStatus Status = 1 [json_name = "status", (NYT.column_name) = "status"];
+        }
+    }
+}

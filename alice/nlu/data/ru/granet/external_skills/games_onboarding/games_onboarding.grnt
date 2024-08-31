@@ -1,0 +1,62 @@
+import: external_skills/games_onboarding/common.grnt
+import: common/commands.grnt
+import: common/verbs.grnt
+
+form alice.external_skill_games_onboarding:
+    root:
+        $LetsPlay
+        $WhatGamesCanYouPlay
+        [$ImBored $LetsPlay]
+        $AnotherGame
+        [посоветуй (игру|игры|игрушки)]
+        поиграем
+
+        %negative
+        [$DontWant $Play]
+        $Music
+        %negative
+        $Common.LeftFiller* [$StartAppAction* яндекс.игры]
+        %lemma
+        $Common.LeftFiller* [$StartAppAction* (yandex|яндекс) игры]
+
+$StartAppAction:
+    $Common.Open
+    $Common.TurnOn
+$Game:
+    %lemma
+    $GameAdjective? игра
+$AnotherGame:
+    %lemma
+    другая $Game
+$LetsPlay:
+    %lemma
+    [($Play|$PlayInf) $Anything]
+    [$Common.Lets $Play $Anything? $Game?]
+    [$Common.Lets $PlayInf]
+    [($Play|$PlayInf) $Game]
+    [$Play $GameAdjective]
+    [$Common.ToWant $Game]
+    $Play (с|со) $Someone
+    # запросы вида "нет, давай поиграем"
+    нет $Play
+$Play:
+    поиграй
+    поиграем
+    пойграем
+    сыграем
+    сыграй
+    $Common.ToWant (поиграть|играть)
+$WhatGamesCanYouPlay:
+    %lemma
+    [$Anything $CanPlay $GameAdjective?]
+    [$Game $Can $Play?]
+    [$Anything $Game $Can $PlayInf?]
+    [$Anything $Game (есть|$PlayInf)?]
+    [$Game есть]
+    (покажи|включи) $Game
+    хочу $Game
+    $TurnOn $Game
+    [$TurnOn $Anything есть? $Game]
+    [$Anything $Like ($Play|$Game)]
+filler:
+    $Onboarding.Filler

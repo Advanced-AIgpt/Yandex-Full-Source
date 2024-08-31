@@ -1,0 +1,12 @@
+PROTO_LIBRARY()
+SET(PROTOC_TRANSITIVE_HEADERS "no")
+
+OWNER(g:alice_fun)
+
+INCLUDE_TAGS(GO_PROTO)
+
+SRCS(
+    extension.proto
+)
+
+END()

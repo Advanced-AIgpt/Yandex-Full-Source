@@ -1,0 +1,44 @@
+service: megamind
+title: Beggins
+ci:
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+  autocheck:
+    strong: true
+
+  actions:
+    medium-tests:
+      title: 'Medium Tests'
+      flow: binary-classification-tests
+      triggers:
+        - on: pr
+      flow-vars:
+        targets: alice/nlu/data/ru/test/binary_classifiers/medium
+    small-tests:
+      title: 'Small Tests'
+      flow: binary-classification-tests
+      triggers:
+        - on: pr
+      flow-vars:
+        targets: alice/nlu/data/ru/test/binary_classifiers/small
+
+  flows:
+    binary-classification-tests:
+      title: Tests
+      jobs:
+        run-binary-classification-tests:
+          title: Run Tests
+          task: common/arcadia/ya_make
+          input:
+            build_type: release
+            sandbox_tags: GENERIC & SSD
+            targets: ${flow-vars.targets}
+            test: True
+            disable_test_timeout: True
+            env_vars: "YQL_TOKEN='$(vault:value:robot-beggins:robot-beggins_yql-token)'"
+
+arcanum:
+  review:
+    required: true
+    disabling_policy: need_reason

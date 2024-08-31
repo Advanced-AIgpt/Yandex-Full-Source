@@ -1,0 +1,44 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import get_alice_name with context %}
+
+{% phrase render_result %}
+  {% set is_known_user = not context.attentions.get('biometry_guest') %}
+
+  {% chooseitem %}
+    Окей
+    {% if is_known_user and form.user_name %}
+        , {{ form.user_name | capitalize }}
+    {% endif %}.
+    Если вы и правда хотите, чтобы я перестала
+    {% if is_known_user %}
+        вас узнавать
+    {% else %}
+        узнавать голос
+        {% if form.user_name %}
+            {{ form.user_name | capitalize | inflect('gen') }}
+        {% endif %}
+    {% endif %}{% tx %},{% etx %}{% vc %} —{% evc %} скажите: «{{ get_alice_name() }}, забудь
+    {% if is_known_user %}
+        мой
+    {% endif %}
+    голос». А если передумаете, скажите{% vc %} -{% evc %} «отмена».
+  {% or %}
+    Нет проблем
+    {% if is_known_user and form.user_name %}
+        , {{ form.user_name | capitalize }}
+    {% endif %}.
+    Если вы действительно хотите, чтобы я перестала
+    {% if is_known_user %}
+        вас узнавать
+    {% else %}
+        узнавать голос
+        {% if form.user_name %}
+            {{ form.user_name | capitalize | inflect('gen') }}
+        {% endif %}
+    {% endif %}{% tx %},{% etx %}{% vc %} —{% evc %} скажите: «{{ get_alice_name() }}, забудь
+    {% if is_known_user %}
+        мой
+    {% endif %}
+    голос». Или{% vc %} -{% evc %} «отмена», если передумаете.
+  {% endchooseitem %}
+{% endphrase %}

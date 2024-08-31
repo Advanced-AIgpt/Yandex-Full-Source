@@ -1,0 +1,42 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: iot/common.grnt
+
+form alice.iot.scenario.launch:
+    slots:
+        scenario:
+            source:
+                $user.iot.scenario
+                $user.iot.triggered_scenario
+            type:
+                user.iot.scenario
+                user.iot.triggered_scenario
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+
+    root:
+        $LaunchByName
+        $LaunchByTriggerPhrase
+
+    $LaunchByName:
+        %lemma
+        [$Common.Lets* ($Common.TurnOn|$Common.Start)+ $UselessPronoun* сценарий+ $user.iot.scenario ($ExactDateTime|$RelativeDateTime|$ThatIsNamed)*]
+
+    $LaunchByTriggerPhrase:
+        %lemma
+        $user.iot.triggered_scenario
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice

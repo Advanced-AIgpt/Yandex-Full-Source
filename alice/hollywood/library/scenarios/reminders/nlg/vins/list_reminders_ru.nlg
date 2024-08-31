@@ -1,0 +1,378 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/reminders/nlg/vins/reminders__common_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import dialog_actions_url with context %}
+{% from "alice/hollywood/library/scenarios/reminders/nlg/vins/reminders__common_ru.nlg" import reminders_unsupported_device with context %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import tts_pause %}
+
+{% macro reminder_card_datetime(dt) -%}
+{%- set dt_parsed = datetime(year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, minute=dt.minute) -%}
+{{- dt_parsed | human_day_rel }} в {{ dt_parsed | human_time -}}
+{%- endmacro %}
+
+{% card reminders_card %}
+{
+    "log_id": "reminders_card",
+    "states": [
+        {
+            "state_id": 0,
+            "div": {
+                "type": "reminders_card",
+                "card_items": [
+                    {
+                        "type": "reminders_header",
+                        "title": "Ваши напоминания:"
+                    }
+                {% for r in form.answer.reminders %}
+                    ,
+                    {
+                        "type": "reminder",
+                        "title": "{{ r.what | capitalize_first | html_escape }}",
+                        "description": "{{- reminder_card_datetime(r.datetime) -}}",
+                        "cancel_action": "{{-
+                            dialog_actions_url(
+                                [
+                                    client_action_directive(name='reminders_cancel',
+                                                            sub_name='reminders_set_directive',
+                                                            payload={
+                                                                'scenario_name': 'alice.reminders',
+                                                                'action': 'id',
+                                                                'id': [r.id],
+                                                                'on_fail_callback': {
+                                                                    'name': 'reminders_on_fail_callback',
+                                                                    'type': 'server_action',
+                                                                    'payload': {
+                                                                        'type': 'Cancelation',
+                                                                        'success': False,
+                                                                        'reminders' : [
+                                                                            {
+                                                                                'epoch' : r.datetime.epoch,
+                                                                                'id' : r.id,
+                                                                                'origin' : r.origin,
+                                                                                'text' : r.what,
+                                                                                'timezone' : r.datetime.tzinfo
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                'on_success_callback': {
+                                                                    'name': 'reminders_on_success_callback',
+                                                                    'type': 'server_action',
+                                                                    'payload': {
+                                                                        'type': 'Cancelation',
+                                                                        'success': True,
+                                                                        'reminders': [
+                                                                            {
+                                                                                'epoch': r.datetime.epoch,
+                                                                                'id': r.id,
+                                                                                'origin': r.origin,
+                                                                                'text' : r.what,
+                                                                                'timezone': r.datetime.tzinfo
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                ]
+                            )
+                        -}}"
+                    }
+                {% endfor %}
+                ]
+            }
+        }
+    ]
+}
+{% endcard %}
+
+{% cardtemplate reminders_card %}
+{
+   "type" : "container",
+   "background" : [
+       {
+           "type": "solid",
+           "color": "{{ '#FFFFFF' }}"
+       }
+   ],
+   "paddings" : {
+      "right" : 20,
+      "left" : 20,
+      "bottom" : 20,
+      "top" : 8
+   },
+   "$items" : "card_items",
+   "border" : {
+      "corner_radius" : 16,
+      "stroke" : {
+         "color" : "{{ '#E2E4EB' }}",
+         "width" : 1
+      }
+   },
+   "margins": {
+       "top": 2,
+       "bottom": 2,
+       "left": 10,
+       "right": 10
+   },
+   "orientation" : "vertical"
+}
+{% endcardtemplate %}
+
+{% cardtemplate reminder %}
+{
+   "orientation" : "horizontal",
+   "type" : "container",
+   "items" : [
+      {
+         "type" : "container",
+         "orientation" : "vertical",
+         "items" : [
+            {
+               "font_size" : 20,
+               "$text" : "title",
+               "font_weight" : "medium",
+               "text_color" : "{{ '#000000' }}",
+               "type" : "text",
+               "line_height" : 23
+            },
+            {
+               "type" : "text",
+               "text_color" : "{{ '#919CB5' }}",
+               "font_weight" : "medium",
+               "line_height" : 18,
+               "paddings" : {
+                  "top" : 2
+               },
+               "font_size" : 13,
+               "$text" : "description"
+            }
+         ]
+      },
+      {
+         "height" : {
+            "value" : 24,
+            "type" : "fixed"
+         },
+         "action" : {
+            "$url" : "cancel_action",
+            "log_id" : "cancel_reminder"
+         },
+         "image_url" : "https://yastatic.net/s3/home/demo/alice_cards/close_2.png",
+         "preview" : "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgBAMAAAAQtmoLAAAACXBIWXMAACxLAAAsSwGlPZapAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAeUExURQAAAI+Xr4+ft4+atZCctZKctZCctJGctpGctZGctRiylMkAAAAJdFJOUwAgIDCvr7+/7ztAMmEAAAEVSURBVFjD7ZZLDoJAEEQJXsBjuHTpFTwCN9ElITFhj5G6rRJk5FM905W40unlVA2Pz9BdRZErV67frPJy30vKAWj4hhNQk+UK6I/Mv2uBB1kHDMQLgJ6st+CIAQCQDVcDMQDQ8YdmiBFQFxa6oQD+NqhkXMbWIgAqxgBUjQKIHAcQPQHYGFKAjSMJWFnSgJXHAViYPICFywWY2XyAmc8JCEYvICDcgAnhBkwIP+CN8AM+CC8gIBp3Xx4RfoC+Qb0l+aHV1yp/OPVoyIdPPd7yD6T+onITUNuM3MjUVik3Y7XdywNFHVnyUFTHrjzY1egghxM5/lSxgGVlPjPCWZnPDIlG5rNjaPeNoFueb1aUNpVcuf68nnOQbbCInXSZAAAAAElFTkSuQmCC",
+         "width" : {
+            "type" : "fixed",
+            "value" : 24
+         },
+         "alignment_vertical" : "center",
+         "type" : "image"
+      }
+   ],
+   "paddings" : {
+      "top" : 12
+   }
+}
+{% endcardtemplate %}
+
+{% cardtemplate reminders_header %}
+{
+   "text_color" : "{{ '#919CB5' }}",
+   "paddings" : {
+      "top" : 12
+   },
+   "$text" : "title",
+   "type" : "text",
+   "font_size" : 13
+}
+{% endcardtemplate %}
+
+{% macro print_on_date_if_set(date) %}
+  {% if date %}
+    {{ date | render_date_with_on_preposition }}
+  {% endif %}
+{% endmacro %}
+
+{% macro print_reminder(reminder, separate_what=False) %}
+  {% if separate_what %}
+    "{{ reminder.what }}"
+  {% else %}
+    {{ reminder.what }}
+  {% endif %}
+  {{ reminder.date | render_date_with_on_preposition }} в {{ reminder.time | human_time_raw }}
+{% endmacro %}
+
+{% macro print_reminders(reminders_arr, max_print_count, is_print_date) %}
+  {% set curr_count= [max_print_count, reminders_arr|length] | min %}
+  {% set prev_date = {'date': None } %}
+
+  {% for i in range(curr_count) %}
+    {% if prev_date.date != reminders_arr[i].date and is_print_date %}
+      {% if prev_date.update({'date': reminders_arr[i].date}) %}{% endif %}
+      {% vc %} {{ prev_date.date | render_datetime_raw | attr('voice') }} {% evc %}
+      {% tx %} {{ prev_date.date | render_datetime_raw | attr('text') }}:\n {% etx %}
+      {{ tts_pause(500) }}
+    {% endif %}
+
+    {% vc %}номер {% evc %}{{ loop.index }}. {{ reminders_arr[i].what }} в
+    {{ reminders_arr[i].time | human_time_raw }}
+    {% tx %} .\n{% etx %}
+    {% if i != curr_count - 1 %}
+      {{ tts_pause(500) }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro print_reminders_number(number) %}
+  {{ number }}
+  {{ 'напоминаний'|pluralize(number) }}
+{% endmacro %}
+
+{% macro print_reminders_list_size(total_count, date, time, reminders_will_be_printed, reminders_per_page=3) %}
+  Сейчас установлено
+  {{ print_reminders_number(total_count) }}
+  {{ print_on_date_if_set(date) }}
+  .\n
+
+  {% if total_count > reminders_per_page and reminders_will_be_printed %}
+    {{ tts_pause(300) }}
+    Вот первые
+    {{ reminders_per_page }}
+    :\n
+  {% endif %}
+{% endmacro %}
+
+{% macro build_voice_answer(total_count, reminders_arr, date, time, reminders_per_page=3) %}
+  {% set one_item_is_left = total_count > 1 and total_count - form.offset == 1 %}
+
+  {% if total_count == 1 or one_item_is_left %}
+    {% if one_item_is_left %}
+      Осталось одно напоминание:\n
+    {% elif date %}
+      Я нашла только одно
+      {% if form.answer.soonest == "yes" %}
+        ближайшее
+      {% endif %}
+      подходящее напоминание:\n
+    {% else %}
+      Сейчас установлено только одно напоминание:\n
+    {% endif %}
+    {{ print_reminder(reminders_arr[0]) }}
+    .
+  {% elif total_count > 1 %}
+    {% set need_print_reminders = form.answer.all_cancelation_confirmation != "yes" %}
+    {% if form.offset == 0 %}
+      {{ print_reminders_list_size(total_count, date, time, need_print_reminders, reminders_per_page) }}
+    {% endif %}
+
+    {% if date %}
+      {% set is_print_date = False %}
+    {% else %}
+      {% set is_print_date = True %}
+    {% endif %}
+
+    {% if need_print_reminders %}
+      {% if form.offset == 0 %}
+        {{ tts_pause(500) }}
+      {% endif %}
+      {{ print_reminders(reminders_arr, reminders_per_page, is_print_date) }}
+    {% endif %}
+
+    {% if form.action != "cancel_action" and form.offset + reminders_per_page < total_count%}
+      {{ tts_pause(500) }}
+      {% if total_count >= form.offset + reminders_per_page * 2 %}
+        Прочитать следующие
+        {{ reminders_per_page }}?
+      {% else %}
+        {% set balance= total_count - form.offset - reminders_per_page %}
+        Осталось
+        {{ print_reminders_number(balance) }}. Прочитать?
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro build_voice_empty_list_answer(date, time) %}
+  {% if date or time %}
+    Я не нашла напоминаний
+    {% if date %}
+      {{ date | render_date_with_on_preposition }}
+    {% endif %}
+    {% if time %}
+      в {{ time | human_time_raw }}
+    {% endif %}
+    .
+  {% else %}
+    {% chooseline %}
+      У вас нет напоминаний.
+      У вас нет напоминаний. А я не могу показать то, чего нет — я же не фокусник.
+      Чтобы что-то показать, нужно это сначала создать.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro build_cancel_question() %}
+  {% set one_item_is_left = form.answer.total_reminders_count - form.offset == 1 %}
+  {% if form.answer.total_count == 1 or (one_item_is_left and form.answer.all_local_cancelation_confirmation != "yes") %}
+    Вы хотите его удалить?
+  {% else %}
+    {% if form.answer.all_cancelation_confirmation == "yes" %}
+      Вы хотите удалить их {% text %}все{% endtext %}{% voice %}вс+е{% endvoice %}?
+    {% elif form.answer.all_local_cancelation_confirmation == "yes" %}
+      Вы хотите удалить {{ print_reminders_number(form.answer.reminders|length) }}?
+    {% else %}
+      Какое напоминание вы хотите удалить?
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro build_cancel_report() %}
+  {% if not form.answer.silent %}
+    Хорошо, удалила
+    {% if form.answer.total_reminders_count == 1 %}
+      напоминание {{ print_reminder(form.answer.reminders[0], True) }}.
+    {% else %}
+      {{ print_reminders_number(form.answer.total_reminders_count) }}
+      {{ print_on_date_if_set(form.date) }}
+      .
+      {% maybe 0.5 %}
+        Они вас не потревожат.
+      {% endmaybe %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if form.answer.type == "authorization" %}
+    Для этого вам нужно авторизоваться. Затем повторите, что нужно сделать.
+  {% elif form.answer.type == "voice" %}
+    {% if form.answer.is_finish == "yes" %}
+      У вас больше нет напоминаний.
+    {% elif form.answer.canceled == "yes" %}
+      {{ build_cancel_report() }}
+    {% elif form.answer.id_without_cancelation == "yes" %}
+      Извините, вас не поняла.
+    {% else %}
+      {% if form.answer.total_reminders_count > 0 %}
+        {% if form.answer.invalid_id == "yes" %}
+          У меня нет такого напоминания.
+          {{ tts_pause(500) }}
+        {% endif %}
+        {% if form.answer.all_local_cancelation_confirmation != "yes" %}
+          {% set perpage = form.answer.scroll.perpage if form.answer.get('scroll') else 3 %}
+          {{ build_voice_answer(form.answer.total_reminders_count, form.answer.reminders, form.date, form.time, perpage) }}
+        {% endif %}
+        {% if form.action == "cancel_action" %}
+          {% if form.answer.all_local_cancelation_confirmation != "yes" %}
+            {{ tts_pause(500) }}
+          {% endif %}
+          {{ build_cancel_question() }}
+        {% endif %}
+      {% else %}
+        {{ build_voice_empty_list_answer(form.date, form.time) }}
+      {% endif %}
+    {% endif %}
+  {% elif form.answer.type == "textandvoice" %}
+    Открываю напоминания.
+  {% else %}
+    {{ reminders_unsupported_device() }}
+  {% endif %}
+{% endphrase %}

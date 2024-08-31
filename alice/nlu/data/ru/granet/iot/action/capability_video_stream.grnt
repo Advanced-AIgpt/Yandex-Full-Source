@@ -1,0 +1,50 @@
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/commands.grnt
+
+form alice.iot.action.show_video_stream.ifexp.bg_enable_show_video_stream_form:
+    slots:
+        intent_parameters:
+            source: $TurnOnVideoStream
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $user.iot.room
+            type: user.iot.room
+        household:
+            source: $user.iot.household
+            type: user.iot.household
+        device:
+            keep_variants: true
+            source: $user.iot.device
+            type: user.iot.device
+        device_type:
+            source: $Camera
+            type: custom.iot.device_type
+
+    root:
+        $TurnOnVideoStream
+
+    $TurnOnVideoStream:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.video_stream",
+            "capability_instance": "get_stream"
+        }
+
+        [$Common.Display ($user.iot.device|$Camera) ($Common.At? $user.iot.room)? ($Common.At? $user.iot.household)?]
+
+        %force_negative
+        %lemma
+        .* включи .*
+
+    $Camera:
+        %type custom.iot.device_type
+        %value devices.types.camera
+        %lemma
+        камера
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice

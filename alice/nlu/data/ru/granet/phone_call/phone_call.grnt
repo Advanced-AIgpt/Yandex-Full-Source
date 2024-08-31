@@ -1,0 +1,183 @@
+import: common/filler.grnt
+import: common/verbs.grnt
+import: messenger_call/device_call_shortcuts.grnt
+import: phone_call/address_book.grnt
+
+form alice.phone_call:
+    lemma: true
+    slots:
+        item_name:
+            matching_type: exact
+            source: $ItemName
+            keep_variants: true
+            type:
+                device.address_book.item_name
+    root:
+        $Root
+        %force_negative
+        $ForceNegatives
+    filler:
+        $Filler
+
+form alice.phone_call.one_word_extension:
+    lemma: true
+    slots:
+        item_name:
+            matching_type: exact
+            source: $ItemName
+            keep_variants: true
+            type:
+                device.address_book.item_name
+    root:
+        $RootOneWordExtension
+        %force_negative
+        $ForceNegatives
+    filler:
+        $Filler
+
+form alice.phone_call.ifexp.bg_constant_address_book:
+    lemma: true
+    slots:
+        item_name:
+            matching_type: exact
+            source: $ItemNameConstantAddressBookExp
+            keep_variants: true
+            type:
+                custom.address_book.item_name
+    root:
+        $RootConstantAddressBookExp
+    filler:
+        $Filler
+
+$ForceNegatives:
+    .* $CallShortcut .*
+    .* [(вызови|вызвать|вызов) яндекс? такси] .*
+    .* песня .*
+    .* музыка .*
+    .* фильм .*
+    поговори со мной
+    давай поговорим
+    вызови акушерку
+    я набираю номер твой
+
+$Operator:
+    %fillers off
+    %type "custom.day_part"
+    %lemma
+
+    %value "mts"
+    мтс
+    %value "tele2"
+    теле 2
+    %value "megafon"
+    мегафон
+    %value "beeline"
+    билайн
+
+$Root:
+    [$Common.LeftFiller? $Common.WayToCallAlice?] [$PhoneCall $Where]
+$RootOneWordExtension:
+    [$Common.LeftFiller? $Common.WayToCallAlice?] [$PhoneCall $WhereOneWordExtension]
+$RootConstantAddressBookExp:
+    [$Common.LeftFiller? $Common.WayToCallAlice?] [$PhoneCall $WhereConstantAddressBookExp]
+
+$PhoneCall:
+    [$Want? $Call]
+    $Find и? $Call
+
+$Where:
+    (с|в|на|до)? (контакт|номер|абонент|сотовый)? $ItemName
+$WhereOneWordExtension:
+    (с|в|на|до)? (контакт|номер|абонент|сотовый)? [$ItemName .]
+$WhereConstantAddressBookExp:
+    (с|в|на|до)? (контакт|номер|абонент|сотовый)? $ItemNameConstantAddressBookExp
+
+$Want:
+    $Common.ToWant
+    попробуй
+    можешь
+    необходим
+    осуществи
+    совершить
+    сделай
+    попрошу
+    прошу
+    начать
+    необходимо
+    треба
+    соверши
+    из номеров
+
+$Find:
+    [(найти|найди) (в контактах)?]
+
+$Filler:
+    $Common.Filler
+    дай
+    уважаемый
+    срочно
+
+$Call:
+    %fillers off
+    позвони
+    позвонить
+    набери
+    (аудио|телефонный|быстрый)? звонок
+    звякни
+    набрать
+    соедини меня? с?
+    звони
+    дозвонись
+    вызови
+    вызовите
+    дозвонитесь
+    найди номер
+    поговорить
+    позвоника
+    дозвон
+    связаться
+    вызов
+    перезвони
+    дозвонись
+    свяжись
+    позвоните
+    позвонить
+    наберите
+    прозвони
+    звяктите
+    тренькни
+    звоночек
+    позввони
+    звякните
+    брякнуть
+    звякнуть
+    вызываю
+    звякнем
+    свяжись
+    вызвони
+    набирай
+    вызывай
+    звонить
+    свяжи
+    соедини
+    вызвать
+    набрать
+    позвони
+    звякни
+    созвон
+    вызови
+    звоним
+    брякни
+    вызов
+    набор
+    звони
+    наберем
+    отправь вызов
+    созвонись
+    созвониться
+    протелефонизируй
+
+$ItemName:
+    $device.address_book.item_name
+$ItemNameConstantAddressBookExp:
+    $custom.address_book.item_name

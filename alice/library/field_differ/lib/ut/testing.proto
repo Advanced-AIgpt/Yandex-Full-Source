@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package NAlice;
+
+import "google/protobuf/any.proto";
+
+import "alice/library/field_differ/protos/extension.proto";
+
+message TTestingMessage {
+    enum EEnum {
+        Undefined = 0;
+        First = 1;
+        Second = 2;
+    }
+
+    message TInnerMessage {
+        string StringValue = 1;
+    }
+
+    message TRecursiveInnerMessage {
+        string StringValue = 1;
+        TRecursiveInnerMessage RecursiveInnerMessage = 2;
+        google.protobuf.Any AnyValue = 3;
+    }
+
+    message TInnerMessage2 {
+        message TInnerMessage3 {
+            string StringValue = 1 [(ImportantFieldCheck) = IFC_DIFF];
+            int64 Int64Value = 2;
+        }
+
+        TInnerMessage3 InnerMessage3 = 1;
+    }
+
+    double DoubleValue = 1 [(ImportantFieldCheck) = IFC_DIFF];
+    repeated double DoubleValues = 2 [(ImportantFieldCheck) = IFC_DIFF];
+    EEnum EnumValue = 3 [(ImportantFieldCheck) = IFC_DIFF];
+    repeated EEnum EnumValues = 4 [(ImportantFieldCheck) = IFC_DIFF];
+    TInnerMessage InnerMessage = 5 [(ImportantFieldCheck) = IFC_DIFF];
+    repeated TInnerMessage InnerMessages = 6 [(ImportantFieldCheck) = IFC_DIFF];
+    string StringValue = 7 [(ImportantFieldCheck) = IFC_DIFF];
+    repeated string StringValues = 8 [(ImportantFieldCheck) = IFC_DIFF];
+    TRecursiveInnerMessage RecursiveInnerMessage = 9;
+    TInnerMessage2 InnerMessage2 = 10;
+    repeated TInnerMessage2 InnerMessages2 = 11;
+    map<string, TInnerMessage2.TInnerMessage3> MapValue = 12;
+    int64 ImportantInt64Value = 13 [(ImportantFieldCheck) = IFC_DIFF];
+    int64 NotImportantInt64Value = 14;
+    double PresenceDoubleValue = 15 [(ImportantFieldCheck) = IFC_PRESENCE];
+    repeated double PresenceDoubleValues = 16 [(ImportantFieldCheck) = IFC_PRESENCE];
+    EEnum PresenceEnumValue = 17 [(ImportantFieldCheck) = IFC_PRESENCE];
+    TInnerMessage PresenceInnerMessage = 19 [(ImportantFieldCheck) = IFC_PRESENCE];
+}

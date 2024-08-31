@@ -1,0 +1,105 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path"
+
+	"a.yandex-team.ru/library/go/core/log/zap"
+
+	uberzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
+	"a.yandex-team.ru/alice/iot/bulbasaur/db"
+	"a.yandex-team.ru/alice/library/go/cli"
+	"a.yandex-team.ru/kikimr/public/sdk/go/ydb"
+	"a.yandex-team.ru/kikimr/public/sdk/go/ydb/table"
+)
+
+var logger *zap.Logger
+
+func initLogging() (logger *zap.Logger, stop func()) {
+	encoderConfig := uberzap.NewDevelopmentEncoderConfig()
+	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	encoder := zapcore.NewConsoleEncoder(encoderConfig)
+
+	core := zapcore.NewCore(encoder, zapcore.AddSync(os.Stderr), uberzap.DebugLevel)
+	stop = func() {
+		_ = core.Sync()
+	}
+	logger = zap.NewWithCore(core, uberzap.AddStacktrace(uberzap.FatalLevel), uberzap.AddCaller())
+
+	return
+}
+
+func do(ctx context.Context, client *db.DBClient) (err error) {
+	tableName := "ExternalUsers"
+	tableOptions := []table.CreateTableOption{
+		table.WithColumn("hskid", ydb.Optional(ydb.TypeUint64)),
+		table.WithColumn("skill_id", ydb.Optional(ydb.TypeString)),
+		table.WithColumn("user_id", ydb.Optional(ydb.TypeUint64)),
+		table.WithColumn("external_id", ydb.Optional(ydb.TypeString)),
+		table.WithPrimaryKeyColumn("hskid", "skill_id", "user_id"),
+		table.WithProfile(
+			table.WithPartitioningPolicy(
+				table.WithPartitioningPolicyUniformPartitions(4),
+			),
+		),
+	}
+
+	return table.Retry(ctx, client.SessionPool, table.OperationFunc(func(ctx context.Context, s *table.Session) error {
+		err := s.CreateTable(ctx, path.Join(client.Prefix, tableName), tableOptions...)
+		if err != nil {
+			return err
+		}
+
+		logger.Infof("create done\n")
+		return nil
+	}))
+}
+
+func main() {
+	logger, stop := initLogging()
+	defer stop()
+
+	endpoint := os.Getenv("YDB_ENDPOINT")
+	if len(endpoint) == 0 {
+		panic("YDB_ENDPOINT env is not set")
+	}
+
+	prefix := os.Getenv("YDB_PREFIX")
+	if len(prefix) == 0 {
+		panic("YDB_PREFIX env is not set")
+	}
+
+	token := os.Getenv("YDB_TOKEN")
+	if len(token) == 0 {
+		panic("YDB_TOKEN env is not set")
+	}
+
+	_, trace := os.LookupEnv("YDB_DEBUG")
+
+	dbcli, err := db.NewClient(context.Background(), logger, endpoint, prefix, ydb.AuthTokenCredentials{AuthToken: token}, trace)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	//msg := fmt.Sprintf("You cannot perform this operation at `%s%s`", endpoint, prefix)
+	//cli.Ban(`production|quasar`, prefix, msg, logger)
+
+	msg := fmt.Sprintf("Do you really want to perfrom migration at `%s%s`", endpoint, prefix)
+	c := cli.AskForConfirmation(msg, logger)
+	if !c {
+		logger.Info("Bye")
+		os.Exit(0)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := do(ctx, dbcli); err != nil {
+		logger.Fatal(err.Error())
+	}
+}

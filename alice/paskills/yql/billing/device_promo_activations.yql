@@ -1,0 +1,18 @@
+use hahn;
+pragma AnsiInForEmptyOrNullableItemsCollections;
+
+insert into `home/paskills/billing/used_device_promo_stats_by_day` with truncate
+select fielddate, promotype, platform, total_count, used_count, used_count - lag(used_count,1) over w as used_at_day
+from (
+    select fielddate, promotype, platform, 
+    sum(total_count) as total_count, 
+    sum(used_count) as used_count, 
+    from like(`//home/paskills/billing/snapshots`,'____-__-__','v_used_device_promo_stats') as t
+    where provider in ('yandexplus','kinopoisk') and promotype != 'amediateka90'
+    group by cast(substring(TablePath(),length('home/paskills/billing/snapshots/'), 10) as Date) as fielddate,
+        promotype, 
+        platform
+)
+window w as (partition by promotype, platform order by fielddate rows between 1 preceding and current row)
+order by fielddate, promotype, platform;
+

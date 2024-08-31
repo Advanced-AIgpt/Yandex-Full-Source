@@ -1,0 +1,309 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/intents_ar.nlg" import tts_pause %}
+
+{% from "alice/hollywood/library/scenarios/news/nlg/get_news_ar__phrases.nlg" import choose_concrete_news_source_if_want, choose_news_source_if_you_want, choose_more_news_suggest, choose_news_source_push, choose_specific_news_source, dont_want_choose_news_source, get_conclusion_text_for_top, get_conclusion_text_for_personal, get_conclusion_text_default, get_introduction_text_default, get_introduction_text_for_top, get_introduction_text_for_personal, get_news_ended_text, more_news_promo_text_before, more_news_promo_text_after, news_rubric_promo_text, no_news_rubric_promo_text, source_not_found, send_push_with_link, continue_news_after_handoff %}
+{% nlgimport "alice/hollywood/library/scenarios/news/nlg/get_news_ar__cards.nlg" %}
+
+{% macro init_ns(ns) %}
+  {% set ns.has_promo_before = false %}
+  {% set ns.has_promo_after = false %}
+
+  {# Flag used in tests to filter intro and ending prhases #}
+  {% set ns.no_promo = req_info.experiments.get('alice_news_no_promo') or context.attentions.get('news_continuous_request') %}
+{% endmacro %}
+
+{% macro replace_vertical_bars(text) %}
+  {{ text.replace('|', ',') }}
+{% endmacro %}
+
+
+{% macro render_full_article_voice(article) %}
+  {% set have_title = not article.get('skip_title') %}
+  {% if have_title %}
+    {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+  {% endif %}
+  {% if article.snippet %}
+    {% if have_title %}
+      {{ tts_pause(500) }}
+    {% endif %}
+    {% voice %}{{ replace_vertical_bars(article.snippet) }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_article_text(article) %}
+  {% text %}{{ article.text }}.{% endtext %}
+{% endmacro %}
+
+{% macro render_short_article_voice(article) %}
+  {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+{% endmacro %}
+
+{% macro render_station_short_news(news) %}
+  {% if context.fixlist.block_mode == "intro" and news | length > 0 %}
+    {{ render_short_article_text(news[0]) }}
+  {% elif context.fixlist.block_mode == "ending" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "news_item" %}
+    {{ render_short_article_text(news[context.fixlist.block_news_item_idx]) }}
+    {{ render_short_article_voice(news[context.fixlist.block_news_item_idx]) }}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode %}
+    {% for article in news[:-1] %}
+      {{ render_short_article_text(article) }}
+      {% text %} \n\n {% endtext %}
+      {{ render_short_article_voice(article) }}
+      {% voice %} \n\n {% endvoice %}
+      {{ render_pause_between_stories() }}
+    {% endfor %}
+    {{ render_short_article_text(news[-1]) }}
+    {{ render_short_article_voice(news[-1]) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_pause_between_stories() %}
+  {% if (not context.is_smart_speaker and not req_info.experiments.get('alice_news_pause_sound')) or req_info.experiments.get('alice_news_no_pause_sound') %}
+    {{ tts_pause(1000) }}
+  {% else %}
+    {{ tts_pause(500) }}
+    {% if req_info.experiments.get('news_pause_pampam_sound') %}
+      {% voice %}<speaker audio="pampam.opus">{% endvoice %}
+    {% else %}
+      {% voice %}<speaker audio="between_news.opus">{% endvoice %}
+    {% endif %}
+    {{ tts_pause(500) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_news(news) %}
+  {% if context.fixlist.block_mode == "intro" and news | length > 0 %}
+    {{ render_short_article_text(news[0]) }}
+  {% elif context.fixlist.block_mode == "ending" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "ending_should_listen" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "news_item" %}
+    {{ render_short_article_text(news[context.fixlist.block_news_item_idx]) }}
+    {{ render_full_article_voice(news[context.fixlist.block_news_item_idx]) }}
+    {% if context.fixlist.block_news_item_idx < (news | length) - 1 %}
+      {{ tts_pause(1000) }}
+    {% endif%}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode %}
+    {% for article in news[:-1] %}
+      {{ render_short_article_text(article) }}
+      {% text %} \n\n {% endtext %}
+      {{ render_full_article_voice(article) }}
+      {% voice %} \n\n {% endvoice %}
+      {{ render_pause_between_stories() }}
+    {% endfor %}
+    {{ render_short_article_text(news[-1]) }}
+    {{ render_full_article_voice(news[-1]) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_intro(ns) %}
+  {% if not ns.no_promo and form.news.post_news_mode == 'more_news_promo_before_mode' %}
+    {% voice %}{{ more_news_promo_text_before() }}{% endvoice %}
+    {% set ns.has_promo_before = true %}
+  {% endif %}
+
+  {% if not ns.has_promo_before %}
+    {% if form.news.smi %}
+      {% voice %} جاري قراءة آخر الأخبار من موقع {{ form.news.smi }} {% endvoice %}
+    {% else %}
+      {{ render_alice_introduction() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_alice_introduction() %}
+  {% if context.attentions.get('personal_news') %}
+    {% voice %}{{ get_introduction_text_for_personal() }}{% endvoice %}
+  {% elif context.attentions.get('top_news') %}
+    {% voice %}{{ get_introduction_text_for_top() }}{% endvoice %}
+  {% else %}
+    {% voice %}{{ get_introduction_text_default() }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_after_promo(ns) %}
+  {% if form.news.post_news_mode == 'more_news_promo_mode' %}
+    {{ tts_pause(1000) }}
+    {% voice %}{{ more_news_promo_text_after() }}{% endvoice %}
+  {% endif %}
+  {% if form.news.post_news_mode == 'station_news_rubric_promo_mode' %}
+    {{ tts_pause(1000) }}
+    {% voice %}{{ news_rubric_promo_text() }}{% endvoice %}
+  {% endif %}
+  {% if form.news.post_news_mode == 'news_change_source_postroll_mode' %}
+    {{ tts_pause(1000) }}
+    {% if context.fixlist.topic %}
+      {% voice %}{{ choose_concrete_news_source_if_want(context.fixlist.topic) }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ choose_news_source_if_you_want() }}{% endvoice %}
+    {% endif %}
+  {% endif %}
+  {% if form.news.post_news_mode == 'news_radio_news_change_source_postroll_mode' %}
+    {{ tts_pause(1000) }}
+    {% voice %} {{ context.fixlist.radio_news_postroll }} {% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_ending(ns) %}
+  {% if not (ns.no_promo or ns.has_promo_before) %}
+    {{ render_after_promo(ns) }}
+  {% endif %}
+
+  {% if not form.news.post_news_mode %}
+    {{ tts_pause(1000) }}
+
+    {% if context.attentions.get('personal_news') %}
+      {% voice %}{{ get_conclusion_text_for_personal() }}{% endvoice %}
+    {% elif context.attentions.get('top_news') %}
+      {% voice %}{{ get_conclusion_text_for_top() }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ get_conclusion_text_default() }}{% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_postroll_negative_response %}
+  {{ dont_want_choose_news_source() }}
+{% endphrase %}
+
+{% phrase render_postroll_response %}
+  {{ choose_news_source_push() }}
+{% endphrase %}
+
+{% phrase render_postroll_unknown_source_response %}
+  {{ source_not_found() }}
+{% endphrase %}
+
+{% phrase render_postroll_new_source_set %}
+  {{ choose_specific_news_source(context.source) }}
+{% endphrase %}
+
+{% phrase render_postroll_error %}
+  حاولت أن أرسل لك رسالة لكنني لم أفلح. حدث خطأ ما.
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set ns = namespace() %}
+  {% do init_ns(ns) %}
+
+  {% if form.news.speaker_speed %}
+    {% voice %}<speaker speed="{{ form.news.speaker_speed }}">{% endvoice %}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode or context.fixlist.block_mode == "intro"%}
+    {% if context.voice_has_intro_and_ending %}
+      {{ render_result_intro(ns) }}
+      {% if not context.fixlist.block_mode or req_info.experiments.get('news_block_pause') %}
+        {{ tts_pause(1000) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% if req_info.experiments.get('alice_station_short_news') %}
+    {{ render_station_short_news(form.news.news) }}
+  {% else %}
+    {{ render_news(form.news.news) }}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode or context.fixlist.block_mode == "ending"%}
+    {% if context.voice_has_intro_and_ending %}
+      {{ render_result_ending(ns) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__get_news__details %}
+  {{ form.news.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__details %}
+  فتح الأخبار
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__more %}
+  {{ choose_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__more %}
+  {{ choose_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__rubric %}
+  {{ context.get_news__rubric.data.caption }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__rubric %}
+  {{ context.get_news__rubric.data.utterance }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__settings%}
+  ضبط إعدادات الأخبار
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__settings %}
+  ضبط إعدادات الأخبار
+{% endphrase %}
+
+{% phrase render_error__nonews %}
+  {% set ns = namespace() %}
+  {% do init_ns(ns) %}
+
+  {% if context.attentions.get('news_ended') %}
+    {{ get_news_ended_text() }}
+  {% else %}
+    للأسف، لم أستطع العثور على أخبار متعلقة بهذا الطلب.
+  {% endif %}
+
+  {% if not ns.no_promo and req_info.experiments.get('alice_station_news_rubric_promo') %}
+    {% maybe 0.2 %}
+      {{ tts_pause(1000) }}
+      {% voice %}{{ no_news_rubric_promo_text() }}{% endvoice %}
+    {% endmaybe %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__news_settings %}
+  فتح
+{% endphrase %}
+
+{% phrase render_suggest_uri__news_settings %}
+  {% set info = namespace() %}
+  {% set info.nav = form.search_results['nav'] if form.search_results and 'nav' in form.search_results else None %}
+  {% set info.nav_url = info.nav['url'] if info.nav else None %}
+  {{ info.nav_url }}
+{% endphrase %}
+
+{% phrase render_search_app_news_settings %}
+  {% text %}
+    إعدادات أخبار أليسا
+  {% endtext %}
+  {% voice %}
+    جاري الفتح
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_news_settings_without_auth %}
+  {% text %}
+    لضبط إعدادات الإخبار يجب الدخول على حساب ياندكس
+  {% endtext %}
+  {% voice %}
+    لضبط إعدادات الإخبار يجب الدخول على حساب ياندكس
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_error__system %}
+  للأسف، لم أستطع العثور على أخبار متعلقة بهذا الطلب.
+{% endphrase %}
+
+{% phrase render_news_more_info %}
+  {{ send_push_with_link() }}
+  {{ tts_pause(500) }}
+  {{ continue_news_after_handoff() }}
+{% endphrase %}

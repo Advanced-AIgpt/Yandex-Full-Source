@@ -1,0 +1,285 @@
+{% macro apply_attentions_prefix() %}
+  {% set attentions = context|get_item('attentions') %}
+  {% if attentions %}
+    {% if attentions.get('something_went_wrong') %}
+      {% chooseline %}
+        Извините, что-то пошло не так, придётся начать сначала.
+      {% endchooseline %}
+    {% elif attentions.get('show_help') %}
+      {% chooseline %}
+        Я сгруппировала для вас фильмы по похожести. Просто выбирайте группу, в которой есть интересные вам фильмы, пока не заметите тот, что захотите посмотреть.
+      {% endchooseline %}
+    {% elif attentions.get('choose_similar_content') %}
+      {% chooseline %}
+        Мне кажется, эти фильмы достаточно похожи на «{{ attentions.get('choose_similar_content') }}».
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro apply_attentions_suffix(is_poster_cloud) %}
+  {% set attentions = context|get_item('attentions') %}
+  {% if attentions %}
+    {% if is_poster_cloud and attentions.get('directions_action_help') %}
+      {% chooseline %}
+        Скажите «Левые», если вам хочется увидеть больше фильмов как на левой карточке, или нажмите на эту карточку.
+        Скажите «Правые», если вам хочется увидеть больше фильмов как на правой карточке.
+        Нажмите на ту карточку, фильмы с которой вам больше нравятся.
+      {% endchooseline %}
+    {% elif attentions.get('reset_action_help') %}
+      {% chooseline %}
+        Скажите «Начать сначала», если вас не привлекают никакие из представленных фильмов.
+      {% endchooseline %}
+    {% elif attentions.get('choose_content_action_help') %}
+      {% chooseline %}
+        Вы можете выбрать жанр предлагаемого контента. Например, скажите: «Хочу комедийные фильмы».
+        Вы можете выбрать тип предлагаемого контента. Например, попросите: «Давай драматичные сериалы».
+        Вы можете контролировать предлагаемый контент. Например, скажите: «Порекомендуй смешные мультики».
+      {% endchooseline %}
+    {% elif attentions.get('choose_similar_content_action_help') %}
+      {% chooseline %}
+        Вы можете найти фильмы, похожие на ваш любимый. Например, скажите: «Порекомендуй фильмы, похожие на "Начало"».
+        Вы можете найти кино, напоминающее ваше любимое. Например, попросите: «Посоветуй фильмы, похожие на "Королевство полной луны"».
+        Вы можете поискать фильмы, похожие на ваш любимый. Например, скажите: «Хочу фильмы в стиле "Интерстеллара"».
+      {% endchooseline %}
+    {% elif is_poster_cloud and attentions.get('show_gallery_action_help') %}
+      {% chooseline %}
+        Скажите «Покажи галерею из правых», если хотите получить галерею фильмов, показанных на правой карточке.
+        Скажите «Покажи галерею из левых, если хотите получить галерею фильмов, показанных на левой карточке.
+      {% endchooseline %}
+    {% elif attentions.get('show_description_action_help') %}
+      {% chooseline %}
+        Вы можете узнать описание фильма, который вас заинтересовал. Например, скажите: «О чём фильм "Начало"?»
+        Вы можете узнать описание фильма, который вас заинтересовал. Например, спросите: «Какой сюжет у фильма "Начало"?»
+      {% endchooseline %}
+    {% elif attentions.get('show_discuss_action_help') %}
+      {% chooseline %}
+        Мы можем поговорить про фильм, который вас заинтересовал. Например, скажите: «Давай обсудим фильм "Начало"»
+        Мы можем обсудить фильм, который вас заинтересовал. Например, попросите: «Давай поговорим про фильм "Начало"»
+        Мы можем поболтать про какой-нибудь фильм. Например, спросите: «Как тебе сюжет фильма "Начало"?»
+        Вы можете спросить меня про какой-нибудь фильм. Например, узнаете: «Как тебе актеры в фильме "Начало"?»
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro generate_text_for_poster_gallery() %}
+  {{ apply_attentions_prefix() }}
+  {% chooseline %}
+    Я могу предложить следующие фильмы.
+    Какой фильм хотите посмотреть?
+  {% endchooseline %}
+  {{ apply_attentions_suffix(false) }}
+{% endmacro %}
+
+{% phrase render_poster_gallery %}
+  {% set rendered_text = generate_text_for_poster_gallery() %}
+  {% if context.attentions %}
+    {% voice %}
+      {{ rendered_text }}
+    {% endvoice %}
+  {% endif %}
+
+  {% text %}
+    {{ rendered_text }}
+  {% endtext %}
+{% endphrase %}
+
+{% macro generate_text_for_poster_cloud() %}
+  {{ apply_attentions_prefix() }}
+  {% chooseline %}
+    Какие фильмы больше похожи на то, что вам хотелось бы увидеть?
+    Какая группа фильмов ближе к тому, что вам хотелось бы посмотреть?
+  {% endchooseline %}
+  {{ apply_attentions_suffix(true) }}
+{% endmacro %}
+
+{% phrase render_poster_cloud %}
+  {% set rendered_text = generate_text_for_poster_cloud() %}
+  {% if context.attentions %}
+    {% voice %}
+      {{ rendered_text }}
+    {% endvoice %}
+  {% endif %}
+
+  {% text %}
+    {{ rendered_text }}
+  {% endtext %}
+{% endphrase %}
+
+{% phrase render_description %}
+  {{ context.description }}
+{% endphrase %}
+
+{% phrase render_invalid_movie_id %}
+  Извините, я не знаю описания для этого фильма.
+{% endphrase %}
+
+{% phrase render_irrelevant %}
+  Что-то пошло не так.
+{% endphrase %}
+
+{% phrase render_unrecognized %}
+  Извините, я не смогла узнать фильм с таким названием.
+{% endphrase %}
+
+{% macro render_movie_type(movie_type) %}
+  {% if movie_type == "movie" %}
+    фильм
+  {% elif movie_type == "cartoon" %}
+    мультфильм
+  {% elif movie_type == "tv_show" %}
+    сериал
+  {% elif movie_type == "tv_show_cartoon" %}
+    мультсериал
+  {% else %}
+    видео
+  {% endif %}
+{% endmacro %}
+
+{% macro render_discuss_suggest_prefix_nom() %}
+  {% chooseline %}
+    Давай обсудим
+    Что ты думаешь про
+    Как ты оцениваешь
+    Как тебе
+    Ты любишь
+    Тебе нравится
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_discuss_suggest_prefix_gen() %}
+  {% chooseline %}
+    Что ты думаешь про сюжет
+    Что ты думаешь про концовку
+    Как тебе музыка
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_discuss_suggest_feature() %}
+  {% chooseline %}
+    атмосферный
+    известный
+    легкий
+    смешной
+    трагичный
+    увлекательный
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_discuss_suggest_suffix() %}
+  {% chooseline %}
+    интересные герои
+    не слишком банальный главный герой
+    предсказуемый конец
+    продуманный сюжет
+    хорошая музыка
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_show_description_prefix() %}
+  {% chooseline %}
+    О чём
+    Про что
+    Опиши
+    Расскажи про
+    Что за
+    Что такое
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_discuss_and_show_description_suggest() %}
+  {% chooseitem 1 %}
+    {{ render_discuss_suggest_prefix_nom() }} {{ render_movie_type(context.discuss_suggest_movie_type) }} «{{ context.discuss_suggest_movie_name }}»?
+  {% or 0.5 %}
+    {{ render_discuss_suggest_prefix_gen() }} {{ render_movie_type(context.discuss_suggest_movie_type) | inflect('gen') }} «{{ context.discuss_suggest_movie_name }}»?
+  {% or 1 %}
+    «{{ context.discuss_suggest_movie_name }}» - {{ render_discuss_suggest_feature() }} {{ render_movie_type(context.discuss_suggest_movie_type) }}?
+  {% or 0.5 %}
+    По-твоему, в {{ render_movie_type(context.discuss_suggest_movie_type) | inflect('abl') }} «{{ context.discuss_suggest_movie_name }}» {{ render_discuss_suggest_suffix() }}?
+  {% or 1 %}
+    {{ render_show_description_prefix() }} {{ render_movie_type(context.discuss_suggest_movie_type) }} «{{ context.discuss_suggest_movie_name }}»?
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_only_discuss_suggest() %}
+  {% chooseitem 1 %}
+    {{ render_discuss_suggest_prefix_nom() }} {{ render_movie_type(context.discuss_suggest_movie_type) }} «{{ context.discuss_suggest_movie_name }}»?
+  {% or 0.5 %}
+    {{ render_discuss_suggest_prefix_gen() }} {{ render_movie_type(context.discuss_suggest_movie_type) | inflect('gen') }} «{{ context.discuss_suggest_movie_name }}»?
+  {% or 1 %}
+    «{{ context.discuss_suggest_movie_name }}» - {{ render_discuss_suggest_feature() }} {{ render_movie_type(context.discuss_suggest_movie_type) }}?
+  {% or 0.5 %}
+    По-твоему, в {{ render_movie_type(context.discuss_suggest_movie_type) | inflect('abl') }} «{{ context.discuss_suggest_movie_name }}» {{ render_discuss_suggest_suffix() }}?
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase render_discuss_suggest %}
+  {% if context.discuss_suggest_can_show_description %}
+    {{ render_discuss_and_show_description_suggest() }}
+  {% else %}
+    {{ render_only_discuss_suggest() }}
+  {% endif %}
+{% endphrase %}
+
+{% macro get_feedback_question() %}
+  {% set attentions = context|get_item('attentions') %}
+  {% if attentions %}
+    {% if attentions.get('show_description_feedback_question') %}
+      {% chooseline %}
+        Ну как, стали бы вы смотреть этот фильм?
+        Ну что, заинтересовала ли я вас этим фильмом?
+        Скажите, собираетесь ли посмотреть этот фильм?
+        Что скажете, интересный фильм?
+      {% endchooseline %}
+    {% elif attentions.get('show_gallery_feedback_question') %}
+      {% chooseline %}
+        Ну как вам предложенные фильмы?
+        Ну что, интересные я вам подобрала фильмы?
+        Что скажете, хорошие подобрались фильмы?
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_feedback_question %}
+  {% set rendered_text = get_feedback_question() %}
+  {% if context.attentions and context.attentions.get('feedback_question_voice') %}
+    {% voice %}
+      {{ rendered_text }}
+    {% endvoice %}
+  {% endif %}
+
+  {% text %}
+    {{ rendered_text }}
+  {% endtext %}
+{% endphrase %}
+
+{% phrase render_positive_feedback_suggest %}
+  {{ ':thumbsup:' | emojize }}
+{% endphrase %}
+
+{% phrase render_negative_feedback_suggest %}
+  {{ ':thumbsdown:' | emojize }}
+{% endphrase %}
+
+{% phrase render_feedback %}
+  {% set attentions = context|get_item('attentions') %}
+  {% if attentions %}
+    {% if attentions.get('feeback') == 'positive' %}
+      {% chooseline %}
+        Я рада, что вам нравится!
+        Отлично, я старалась!
+        Я так и думала, что вам понравится!
+        Как же приятно угадывать ваши желания!
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Эх, а я так надеялась... Давайте попробуем подыскать что-нибудь другое?
+        Ну вот, хотела как лучше, но не получилось. Поищем что-нибудь другое?
+        Жаль. Посмотрим что-нибудь другое?
+        Давайте подыщу другие фильмы тогда?
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

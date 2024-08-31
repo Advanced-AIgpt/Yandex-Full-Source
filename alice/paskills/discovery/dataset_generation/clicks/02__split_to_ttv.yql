@@ -1,0 +1,107 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+
+$between = ($value, $l, $r) -> {
+    RETURN $l <= $value AND $value < $r;
+};
+
+$choose = ($query, $l, $r) -> {
+    $hash = Digest::MurMurHash($query) % 100;
+    RETURN $between($hash, $l, $r);
+};
+
+$extract_skill_id_clicks_from_relevant_skills = ($clicks, $relevant_skills) -> {
+    $clicks = ListMap($clicks, ($click) -> { RETURN $click.0});
+    $clicks_unique = ListUniq($clicks);
+    $relevant_skills_with_clicks = ListMap($relevant_skills, ($relevant_skill_id) -> { RETURN ($relevant_skill_id, $relevant_skill_id in $clicks_unique) });
+    RETURN $relevant_skills_with_clicks;
+};
+
+$__RAW = (
+    SELECT
+        utterance_text as query,
+        IF(relevant_skill_click.1, "YES", "NO") as answer,
+        relevant_skill_click.0 as skill_id,
+        `date`
+    FROM `home/paskills/discovery/datasets/Clicks/raw/all`
+    FLATTEN LIST BY ($extract_skill_id_clicks_from_relevant_skills(clicks, relevant_skills) as relevant_skill_click)
+);
+
+$__TRAIN = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between(`date`, '2019-09-01', '2019-10-00')
+);
+
+$__VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between(`date`, '2019-11-01', '2019-11-08')
+);
+
+$__TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between(`date`, '2019-11-01', '2019-11-08')
+);
+
+
+$__SAAS_TRAIN_VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between(`date`, '2019-09-01', '2019-10-00')
+);
+
+
+$__SAAS_TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 100) AND $between(`date`, '2019-10-01', '2019-11-00')
+);
+
+$__TRAIN = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between(`date`, '2019-09-01', '2019-10-00')
+);
+
+$__VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between(`date`, '2019-11-01', '2019-11-08')
+);
+
+$__TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between(`date`, '2019-11-01', '2019-11-08')
+);
+
+
+$__SAAS_TRAIN_VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between(`date`, '2019-09-01', '2019-10-00')
+);
+
+
+$__SAAS_TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 100) AND $between(`date`, '2019-10-01', '2019-11-00')
+);
+
+INSERT INTO `//home/paskills/discovery/datasets/Clicks/split/train` WITH TRUNCATE
+SELECT * FROM $__TRAIN;
+
+INSERT INTO `//home/paskills/discovery/datasets/Clicks/split/test` WITH TRUNCATE
+SELECT * FROM $__TEST;
+
+INSERT INTO `//home/paskills/discovery/datasets/Clicks/split/valid` WITH TRUNCATE
+SELECT * FROM $__VALID;
+
+INSERT INTO `//home/paskills/discovery/datasets/Clicks/split/saas__train_valid` WITH TRUNCATE
+SELECT * FROM $__SAAS_TRAIN_VALID;
+
+INSERT INTO `//home/paskills/discovery/datasets/Clicks/split/saas__test` WITH TRUNCATE
+SELECT * FROM $__SAAS_TEST;

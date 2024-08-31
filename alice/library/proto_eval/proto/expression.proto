@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/wrappers.proto";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/library/proto_eval/proto;myapi";
+option java_package = "ru.yandex.alice.library.proto_eval.proto";
+option java_outer_classname = "Expression";
+
+// Rules for protobuf evaluation
+message TProtoEvalExpression {
+    enum EReducer {
+        Undefined = 0;
+        Count = 1;
+        Sum = 2;
+        Min = 3;
+        Max = 4;
+        Avg = 5;
+        And = 6;
+        Or = 7;
+        First = 8;
+    }
+    message TAggregate {
+        // Name for currently iterated field, it will be locally available in parameter paths as the name of protobuf
+        // (if iterating over messages) or in expressions as the name of parameter (if iterating over primitive types).
+        // The index of currently iterated field is also available by the name NameIndex (substitute the name).
+        // Default: the name of iterated field.
+        string Name = 1;
+
+        // Boolean expression which indicates whether current submessage should be included in aggregation
+        TProtoEvalExpression Filter = 2; // optional
+
+        // Expression to calculate value for aggregation
+        TProtoEvalExpression Value = 3;
+
+        // Method of aggregation
+        EReducer Reducer = 4;
+    }
+    message TParameter {
+        // Dot-separated path in the protobufs. The first component is the name of protobuf, others specify nested fields in the protobuf.
+        // Repeated field names may have an index in square brackets after their name.
+        // Simple paths can be included in the Expression directly without explicit Parameter declaration.
+        // Path can end with .empty() or .size() to produce emptiness trait or count of repeated fields.
+        string Path = 1;
+
+        // Name of the parameter, default is the last component of the path. This name will be available in the Expression.
+        // The parameter value will be either extracted from protobufs by path or calculated using the aggregation rules below.
+        string Name = 2;
+
+        // Aggregation rules for repeated fields
+        TAggregate Aggregate = 3; // optional
+    }
+
+    // library/cpp/expression to evaluate
+    // Default: the value of the first parameter.
+    string Expression = 1;
+
+    // Parameters for the expression
+    repeated TParameter Parameters = 2;
+
+    // When true, invoke the trace callback; false to inhibit tracing
+    google.protobuf.BoolValue TraceEnabled = 3 [(NYT.column_name) = "trace_enabled"];
+}

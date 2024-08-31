@@ -1,0 +1,97 @@
+LIBRARY()
+
+OWNER(
+    stupnik
+    g:alice
+    g:hollywood
+)
+
+FROM_SANDBOX(FILE 2217121581 OUT_NOAUTO metatags.json)
+
+RESOURCE(
+    metatags.json metatags.json
+)
+
+JOIN_SRCS(
+    all.cpp
+    change_track_version_proxy_prepare.cpp
+    change_track_version_response_parsers.cpp
+    entity_search_response_parsers.cpp
+    find_track_idx_proxy_prepare.cpp
+    find_track_idx_response_parsers.cpp
+    get_track_url_handles.cpp
+    like_dislike_handlers.cpp
+    multiroom.cpp
+    music_common.cpp
+    music_request_init.cpp
+    novelty_album_search_prepare.cpp
+    playlist_proxy_prepare.cpp
+    repeated_skip.cpp
+    report_handlers.cpp
+    result_renders.cpp
+    shots.cpp
+    track_announce.cpp
+    unauthorized_user_directives.cpp
+    vsid.cpp
+)
+
+PEERDIR(
+    alice/bass/libs/client
+    alice/hollywood/library/base_scenario
+    alice/hollywood/library/bass_adapter
+    alice/hollywood/library/biometry
+    alice/hollywood/library/capability_wrapper
+    alice/hollywood/library/crypto
+    alice/hollywood/library/http_proxy
+    alice/hollywood/library/multiroom
+    alice/hollywood/library/personal_data
+    alice/hollywood/library/phrases
+    alice/hollywood/library/player_features
+    alice/hollywood/library/request
+    alice/hollywood/library/response
+    alice/hollywood/library/s3_animations
+    alice/hollywood/library/scenarios/music/analytics_info
+    alice/hollywood/library/scenarios/music/biometry
+    alice/hollywood/library/scenarios/music/fairy_tales
+    alice/hollywood/library/scenarios/music/music_backend_api/api_path
+    alice/hollywood/library/scenarios/music/music_backend_api/audio_play_builder
+    alice/hollywood/library/scenarios/music/music_backend_api/content_id
+    alice/hollywood/library/scenarios/music/music_backend_api/content_parsers
+    alice/hollywood/library/scenarios/music/music_backend_api/content_requests
+    alice/hollywood/library/scenarios/music/music_backend_api/get_track_url
+    alice/hollywood/library/scenarios/music/music_backend_api/music_queue
+    alice/hollywood/library/scenarios/music/music_backend_api/play_audio
+    alice/hollywood/library/scenarios/music/music_backend_api/saved_progress
+    alice/hollywood/library/scenarios/music/music_request_builder
+    alice/hollywood/library/scenarios/music/proto
+    alice/hollywood/library/scenarios/music/s3_animations
+    alice/hollywood/library/scenarios/music/show_view_builder
+    alice/hollywood/library/scenarios/music/util
+    alice/hollywood/library/sound
+    alice/hollywood/library/tags
+    alice/library/analytics/common
+    alice/library/billing
+    alice/library/biometry
+    alice/library/cachalot_cache
+    alice/library/data_sync
+    alice/library/equalizer
+    alice/library/experiments
+    alice/library/json
+    alice/library/logger
+    alice/library/metrics
+    alice/library/music
+    alice/library/network
+    alice/library/proto
+    alice/library/scled_animations
+    alice/library/util
+    alice/megamind/protos/common
+    alice/protos/data/device
+    apphost/api/service/cpp
+    library/cpp/cgiparam
+    library/cpp/digest/md5
+    library/cpp/resource
+    library/cpp/string_utils/base64
+    library/cpp/string_utils/url
+)
+
+END()

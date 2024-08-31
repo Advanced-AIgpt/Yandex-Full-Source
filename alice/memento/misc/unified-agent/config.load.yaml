@@ -1,0 +1,122 @@
+status:
+  port: 16301
+
+storages:
+  - name: main
+    plugin: fs
+    config:
+      directory: /logs/app-log
+      max_partition_size: 100mb
+  - name: main2
+    plugin: fs
+    config:
+      directory: /logs/app-log2
+      max_partition_size: 100mb
+
+routes:
+  - input:
+      plugin: grpc
+      id: logs
+      config:
+        uri: localhost:16400
+    channel:
+      pipe:
+        - storage_ref:
+            name: main
+      case:
+        - when:
+            message:
+              logger_name: ACCESS_LOG
+          channel:
+            pipe:
+              - filter:
+                  plugin: batch
+                  config:
+                    delimiter: "\n"
+                    flush_period: 100ms
+                    limit:
+                      bytes: 256kb
+              - filter:
+                  plugin: assign
+                  config:
+                    session:
+                      - server: "{$host_name}"
+            output:
+              plugin: logbroker
+              id: logbroker_topic_access_log
+              config:
+                endpoint: logbroker.yandex.net
+                topic: paskills/test/memento/access-log
+                # https://mikari.at.yandex-team.ru/126
+                codec: zstd
+                compression_quality: 3
+                tvm:
+                  client_id: 2021570
+                  secret:
+                    env: TVM_SECRET
+                  disk_cache_directory: /home/app/unified-agent/tvm_cache
+                export_session_meta_keys:
+                  - server
+        - channel:
+            pipe:
+              - filter:
+                  plugin: batch
+                  config:
+                    delimiter: "\n"
+                    flush_period: 100ms
+                    limit:
+                      bytes: 256kb
+              - filter:
+                  plugin: assign
+                  config:
+                    session:
+                      - server: "{$host_name}"
+            output:
+              plugin: logbroker
+              id: logbroker_topic_logs
+              config:
+                endpoint: logbroker.yandex.net
+                topic: paskills/test/memento/logs
+                codec: zstd
+                compression_quality: 3
+                tvm:
+                  client_id: 2021570
+                  secret:
+                    env: TVM_SECRET
+                  disk_cache_directory: /home/app/unified-agent/tvm_cache
+                export_session_meta_keys:
+                  - server
+  - input:
+      plugin: grpc
+      id: setrace_logs
+      config:
+        uri: localhost:16402
+    channel:
+      pipe:
+        - storage_ref:
+            name: main2
+        - filter:
+            plugin: assign
+            config:
+              session:
+                - server: "{$host_name}"
+        - filter:
+            # https://logbroker.yandex-team.ru/docs/unified_agent/configuration#protoseq_batch_filter
+            plugin: protoseq_batch
+            config:
+              limit:
+                count: 10
+      output:
+        plugin: logbroker
+        id: logbroker_topic_setrace
+        config:
+          endpoint: logbroker.yandex.net
+          topic: paskills/test/memento/setrace
+          codec: raw
+          tvm:
+            client_id: 2021570
+            secret:
+              env: TVM_SECRET
+            disk_cache_directory: /home/app/unified-agent/tvm_cache
+          export_session_meta_keys:
+            - server

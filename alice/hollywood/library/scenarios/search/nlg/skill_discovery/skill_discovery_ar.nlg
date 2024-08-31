@@ -1,0 +1,90 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ar.nlg" import simple_open_uri_action, logged_action_url, font_color with context %}
+
+{% macro separator(size="xxs", delimiter=False) %}
+  {
+    "size": "{{ size }}",
+    "type": "div-separator-block"
+  {% if delimiter %}
+    , "has_delimiter": 1
+  {% endif %}
+  },
+{% endmacro %}
+
+{% macro get_click_action(case_name, item_number, activation) -%}
+  {% set logged_payload = dict(case_name=case_name) %}
+  {%- if item_number is defined -%}
+    {% do logged_payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+        client_action_directive(name='type', sub_name='relevant_skills_type', payload={'text': activation | html_escape | capitalize_first }),
+     ], logged_payload,
+     dict(utm_medium='discovery_relevant_skills', utm_campaign='', utm_term='', utm_content='textlink'))
+  }}
+{%- endmacro %}
+
+{% macro render_skill(skill, item_number, source_intent) %}
+  {% set log_id = 'relevant_skills__' + source_intent + '__' + skill['id'] %}
+  {% set action_url = get_click_action(log_id, item_number, skill['activation']) %}
+  {% set title = skill['activation'] | html_escape | capitalize_first %}
+  {% set text = font_color('#7f7f7f', skill['description'] | html_escape | capitalize_first) %}
+  {
+    "title": "{{ title }}",
+    "text": "{{ text }}",
+    "title_max_lines": 2,
+    "text_max_lines": 2,
+    "type": "div-universal-block",
+    "action": {
+      "url": "{{ action_url }}",
+      "log_id": "{{ log_id }}"
+    },
+    "side_element": {
+      "element": {
+        "image_url": "{{ skill['logo'] }}",
+        "ratio": 1,
+        "type": "div-image-element"
+      },
+      "size": "s",
+      "position": "left"
+    }
+  },
+{% endmacro %}
+
+{% macro render_card() %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {{ separator("xs") }}
+          {% for skill in context['skills'] %}
+            {{ render_skill(skill, loop.index, context['source_intent']) }}
+          {%- endfor %}
+          {{ separator("xs", True) }}
+          {
+            "text": "{{ font_color('#0A4DC3', 'جميع المهارات') }}",
+            "type": "div-footer-block",
+            "action": {
+                "url": "{{ simple_open_uri_action(context['store_url'], 'relevant_skills__all_skills', dict(utm_medium='discovery_relevant_skills', utm_campaign='', utm_term='', utm_content='textlink')) }}",
+                "log_id": "relevant_skills__all_skills"
+            }
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#FFFFFF" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% card relevant_skills %}
+  {{ render_card() }}
+{% endcard %}
+
+{% phrase relevant_skills %}
+  حسناً. إليك من يمكنه مساعدتك:
+{% endphrase %}

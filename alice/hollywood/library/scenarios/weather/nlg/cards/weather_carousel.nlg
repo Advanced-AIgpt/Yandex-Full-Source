@@ -1,0 +1,265 @@
+{% from "alice/hollywood/library/scenarios/weather/nlg/cards/weather.nlg" import temp_text, city with context %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/cards/weather_show_view.nlg" import background_url, s3_url, icon_128_url %}
+
+{% card weather__curday_carousel %}
+  {% set data = context.data %}
+
+  {{ render_curr_forecast(data) }}
+{% endcard %}
+
+{% macro render_curr_forecast(data) -%}
+{
+  "templates": {
+    "weather-button": {
+      "type": "text",
+      "width": {
+        "type": "wrap_content"
+      },
+      "paddings": {
+        "left": 24,
+        "top": 28,
+        "right": 24,
+        "bottom": 28
+      },
+      "background": [
+        {
+          "type": "solid",
+          "color": "{{ '#4D121316' }}"
+        }
+      ],
+      "border": {
+        "corner_radius": 14
+      },
+      "font_size": 28,
+      "text_color": "{{ '#FFF' }}"
+    },
+    "weather-card": {
+      "type": "container",
+      "width": {
+        "type": "fixed",
+        "value": 140
+      },
+      "height": {
+        "type": "fixed",
+        "value": 240
+      },
+      "orientation": "vertical",
+      "content_alignment_horizontal": "center",
+      "items": [
+        {
+          "type": "text",
+          "width": {
+            "type": "wrap_content"
+          },
+          "margins": {
+            "top": 32
+          },
+          "alpha": 0.5,
+          "font_size": 40,
+          "text_color": "{{ '#FFF' }}",
+          "$text": "time"
+        },
+        {
+          "type": "image",
+          "width": {
+            "type": "fixed",
+            "value": 80
+          },
+          "height": {
+            "type": "fixed",
+            "value": 80
+          },
+          "margins": {
+            "top": 16
+          },
+          "$image_url": "icon",
+          "preload_required": 1
+        },
+        {
+          "type": "text",
+          "width": {
+            "type": "wrap_content"
+          },
+          "margins": {
+            "top": 8
+          },
+          "text_color": "{{ '#FFF' }}",
+          "font_size": 44,
+          "$text": "temp"
+        }
+      ]
+    }
+  },
+  "card": {
+    "log_id": "weather_card",
+    "states": [
+      {
+        "state_id": 1,
+        "div": {
+          "type": "state",
+          "div_id": "root",
+          "width": {
+            "type": "match_parent"
+          },
+          "height": {
+            "type": "match_parent"
+          },
+          "background": [
+            {
+              "type": "image",
+              "image_url": "{{ background_url(data.day.day_part, data.day.condition.type) }}",
+              "preload_required": 1
+            }
+          ],
+          "states": [
+            {
+              "state_id": "active",
+              "animation_in": {
+                "name": "fade"
+              },
+              "div": {
+                "type": "container",
+                "width": {
+                  "type": "match_parent"
+                },
+                "height": {
+                  "type": "match_parent"
+                },
+                "orientation": "vertical",
+                "items": [
+                  {
+                    "type": "container",
+                    "id": "header",
+                    "height": {
+                      "type": "wrap_content"
+                    },
+                    "paddings": {
+                      "left": 48,
+                      "top": 48,
+                      "right": 48
+                    },
+                    "items": [
+                      {
+                        "type": "text",
+                        "alpha": 0.5,
+                        "font_size": 40,
+                        "text_color": "{{ '#FFF' }}",
+                        "text": "Сейчас {{ city() }}"
+                      },
+                      {
+                        "type": "container",
+                        "orientation": "horizontal",
+                        "content_alignment_vertical": "center",
+                        "height": {
+                          "type": "wrap_content"
+                        },
+                        "items": [
+                          {
+                            "type": "text",
+                            "width": {
+                              "type": "wrap_content"
+                            },
+                            "font_size": 128,
+                            "text_color": "{{ '#FFF' }}",
+                            "text": "{{ temp_text(data|get_item('day.temp.avg')) }}"
+                          },
+                          {
+                            "type": "image",
+                            "width": {
+                              "type": "fixed",
+                              "value": 176
+                            },
+                            "height": {
+                              "type": "fixed",
+                              "value": 176
+                            },
+                            "margins": {
+                              "top": 8,
+                              "left": 16
+                            },
+                            "image_url": "{{ data.day.icon }}",
+                            "preload_required": 1
+                          },
+                          {
+                            "type": "container",
+                            "width": {
+                              "type": "wrap_content"
+                            },
+                            "height": {
+                              "type": "wrap_content"
+                            },
+                            "orientation": "vertical",
+                            "margins": {
+                              "left": 36
+                            },
+                            "items": [
+                              {
+                                "type": "text",
+                                "alpha": 0.5,
+                                "width": {
+                                  "type": "wrap_content"
+                                },
+                                "font_size": 40,
+                                "text_color": "{{ '#FFF' }}",
+                                "text": "Ощущается как {{ temp_text(data.day.condition.feels_like) }},"
+                              },
+                              {
+                                "type": "text",
+                                "alpha": 0.5,
+                                "width": {
+                                  "type": "wrap_content"
+                                },
+                                "font_size": 40,
+                                "text_color": "{{ '#FFF' }}",
+                                "text": "{{ data.day.condition.title }}",
+                                "margins": {
+                                  "top": 8
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "gallery",
+                    "width": {
+                      "type": "match_parent"
+                    },
+                    "height": {
+                      "type": "wrap_content"
+                    },
+                    "paddings": {
+                      "left": 24,
+                      "top": 48,
+                      "right": 48
+                    },
+                    "orientation": "horizontal",
+                    "item_spacing": 24,
+                    "items": [
+                      {% for hour in data.day.hours %}
+                        {% if loop.index0 < 6 %}
+                          {% if loop.index0 %}
+                            ,
+                          {% endif %}
+                          {
+                            "type": "weather-card",
+                            "time": "{{ hour|get_item('local_day_time') }}",
+                            "icon": "{{ icon_128_url(hour|get_item('icon_type')) }}",
+                            "temp": "{{ temp_text(hour|get_item('temperature')) }}"
+                          }
+                        {% endif %}
+                      {% endfor %}
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+{%- endmacro %}

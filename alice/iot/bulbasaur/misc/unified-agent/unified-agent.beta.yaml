@@ -1,0 +1,137 @@
+storages:
+  - name: history_metrics_storage
+    plugin: fs
+    config:
+      directory: /pdata/unified_agent/storage/history_metrics
+      max_partition_size: 500mb
+services:
+  - type: tvm_client  # tvm_client is reused if different sections
+    name: tvm_default
+    config:
+      client_id: 2009295
+      disk_cache_directory: /pdata/unified_agent/monitoring_tvm_cache
+      fetch: # allow generating outgoing service tickets
+        secret:
+          env: TVM_SECRET
+        destinations: [ 2010242 ]
+      check: { } # allow checking incoming service tickets
+monitoring:
+  enabled: true
+  port: 23888
+routes:
+  - input:
+      plugin: metrics
+      flow_control:
+        inflight:
+          limit: 100mb
+        new_sessions_rate_limit: 50
+      config:
+        port: 23445
+        endpoints:
+          - path: '/history/float-property-humidity'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-humidity
+            cluster: beta
+          - path: '/history/float-property-temperature'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-temperature
+            cluster: beta
+          - path: '/history/float-property-co2_level'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-co2_level
+            cluster: beta
+          - path: '/history/float-property-water_level'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-water_level
+            cluster: beta
+          - path: '/history/float-property-amperage'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-amperage
+            cluster: beta
+          - path: '/history/float-property-voltage'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-voltage
+            cluster: beta
+          - path: '/history/float-property-power'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-power
+            cluster: beta
+          - path: '/history/float-property-pm1_density'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-pm1_density
+            cluster: beta
+          - path: '/history/float-property-pm2.5_density'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-pm2.5_density
+            cluster: beta
+          - path: '/history/float-property-pm10_density'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-pm10_density
+            cluster: beta
+          - path: '/history/float-property-tvoc'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-tvoc
+            cluster: beta
+          - path: '/history/float-property-pressure'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-pressure
+            cluster: beta
+          - path: '/history/float-property-battery_level'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-battery_level
+            cluster: beta
+          - path: '/history/float-property-timer'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-timer
+            cluster: beta
+          - path: '/history/float-property-illumination'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-illumination
+            cluster: beta
+          - path: '/history/float-property-gas_concentration'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-gas_concentration
+            cluster: beta
+          - path: '/history/float-property-smoke_concentration'
+            metric_name_label: 'sensor'
+            project: alice-iot-sensors
+            service: float-property-smoke_concentration
+            cluster: beta
+    channel:
+      pipe:
+        - storage_ref:
+            name: history_metrics_storage
+        - filter:
+            plugin: accumulate_metrics
+            config:
+              period: 5s
+              functions:
+                - function: "batch"
+              function: "batch"
+      output:
+        plugin: metrics
+        config:
+          set_host_label: null
+          installation: production
+          request_timeout: 10s
+          random_delay:
+            fixed: 3s
+          tvm_ref:
+            name: tvm_default
+            destination_id: solomon

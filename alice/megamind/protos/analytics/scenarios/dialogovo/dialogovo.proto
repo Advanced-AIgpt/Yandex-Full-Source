@@ -1,0 +1,253 @@
+syntax="proto3";
+
+package NAlice.NDialogovo;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/analytics/scenarios/dialogovo";
+option java_package = "ru.yandex.alice.megamind.protos.analytics.scenarios.dialogovo";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+enum TSkillDeveloperType {
+    DeveloperTypeNotDefined = 0;
+    External = 1;
+    Yandex = 2;
+}
+
+message TAudioPlayerControlActionPayload {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum TActionType {
+        Play = 0;
+        Stop = 1;
+        Rewind = 2;
+    }
+
+    TActionType ActionType = 1 [json_name = "action_type", (NYT.column_name) = "action_type"];
+}
+
+message TAudioPlayerCallbackActionPayload {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum TCallbackType {
+        OnStarted = 0;
+        OnStopped = 1;
+        OnFinished = 2;
+        OnFailed = 3;
+        OnGetNext = 4;
+    }
+
+    TCallbackType CallbackType = 1 [json_name = "callback_type", (NYT.column_name) = "callback_type"];
+}
+
+message TThereminPlayActionPayload {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TThereminInstrument {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        TSkillDeveloperType DeveloperType = 2 [json_name = "developer_type", (NYT.column_name) = "developer_type"];
+        bool IsPublic = 3 [json_name = "is_public", (NYT.column_name) = "is_public"];
+    }
+
+    enum TThereminStartPhraseType {
+        ThereminStartPhraseNotDefined = 0;
+        Short = 1;
+        Full = 2;
+    }
+
+    TThereminInstrument Instrument = 1 [json_name = "instrument", (NYT.column_name) = "instrument"];
+    TThereminStartPhraseType StartPhraseType = 2 [json_name = "start_phrase_type", (NYT.column_name) = "start_phrase_type"];
+}
+
+message TSkill {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EBackendType {
+        UNDEFINED = 0;
+        WEBHOOK = 1;
+        CLOUD_FUNCTION = 2;
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    TSkillDeveloperType DeveloperType = 3 [json_name = "developer_type", (NYT.column_name) = "developer_type"];
+    string DeveloperName = 4 [json_name = "developer_name", (NYT.column_name) = "developer_name"];
+    string Category = 5 [json_name = "category", (NYT.column_name) = "category"];
+    string Voice = 6 [json_name = "voice", (NYT.column_name) = "voice"];
+    string AdBlockId = 7 [json_name = "ad_block_id", (NYT.column_name) = "ad_block_id"];
+    EBackendType BackendType = 8 [json_name = "backend_type", (NYT.column_name) = "backend_type"];
+}
+
+message TSkillUser {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string SkillUserId = 1 [json_name = "skill_user_id", (NYT.column_name) = "skill_user_id"];
+    string PersistentSkillUserId = 2 [json_name = "persistent_skill_user_id", (NYT.column_name) = "persistent_skill_user_id"];
+}
+
+message TSkillSession {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum TActivationSourceType {
+        // not used in real code
+        TActivationSourceTypeNotDefined = 0;
+        Undetected = 1;
+        Discovery = 2;
+        GamesOnboarding = 3;
+        Store = 4;
+        DeepLink = 5;
+        Direct = 6;
+        Morda = 7;
+        DevConsole = 8;
+        GetGreetings = 9;
+        Onboarding = 10;
+        Postroll = 11;
+        TubroAppKids = 12;
+        RadionewsInternalPostroll = 13;
+        StoreAlicePriceCandidate = 14;
+        SocialSharing = 15;
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    TActivationSourceType ActivationSourceType = 6 [json_name = "activation_source_type", (NYT.column_name) = "activation_source_type"];
+}
+
+message TSkillActivationActionPayload {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    map<string, string> Utm = 1 [json_name = "utm", (NYT.column_name) = "utm", (NYT.flags) = MAP_AS_DICT];
+    string MatchedActivationPhrase = 2 [json_name = "activation_phrase", (NYT.column_name) = "activation_phrase"];
+}
+
+message TRequestSkillWebhookEvent {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EProxy {
+        UNDEFINED = 0;
+        DIRECT = 1;
+        ZORA_ONLINE = 2;
+        GOZORA = 3;
+    }
+
+    message TWebhookError {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string ErrorType = 1 [json_name = "error_type", (NYT.column_name) = "error_type"];
+        string ErrorDetail = 2 [json_name = "error_detail", (NYT.column_name) = "error_detail"];
+    }
+
+    string Url = 1 [json_name = "url", (NYT.column_name) = "url"];
+    int64 ResponseTimeMs = 2 [json_name = "response_time_ms", (NYT.column_name) = "response_time_ms"];
+    reserved 3;
+    //TWebhookError Error = 3 [json_name = "error", (NYT.column_name) = "error"];
+    repeated TWebhookError Errors = 4 [json_name = "errors", (NYT.column_name) = "errors"];
+    EProxy Proxy = 5 [json_name = "proxy", (NYT.column_name) = "proxy"];
+}
+
+message TSkillRecommendations {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum TSkillRecommendationType {
+        GamesOnboardingRecommnedation = 0;
+    }
+
+    repeated string SkillId = 1 [json_name = "skill_id", (NYT.column_name) = "skill_id"];
+    TSkillRecommendationType SkillRecommendationType = 2 [json_name = "skill_recommendation_type", (NYT.column_name) = "skill_recommendation_type"];
+}
+
+message TAudioStream {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Token = 1 [json_name = "token", (NYT.column_name) = "token"];
+    int64 OffsetMs = 2 [json_name = "offset_ms", (NYT.column_name) = "offset_ms"];
+}
+
+message TFallbackDetectedEvent {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Reason = 1 [json_name = "reason", (NYT.column_name) = "reason"];
+}
+
+// Deprecated, use NAlice.NDialogovo.TSkillSuggestedExit info object instead
+message TSuggestedExitEvent {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Reason = 1 [json_name = "reason", (NYT.column_name) = "reason"];
+}
+
+message TSkillSuggestedExit {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Reason = 1 [json_name = "reason", (NYT.column_name) = "reason"];
+}
+
+message TFeedbackRequestedEvent {
+
+}
+
+message TFeedbackSavedEvent {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int64 Rating = 1 [json_name = "rating", (NYT.column_name) = "rating"];
+}
+
+message TFeedbackUnknownRatingEvent {
+
+}
+
+message TIngredient {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+//    int32 Quantity = 2 [json_name = "quantity", (NYT.column_name) = "quantity", deprecated = true];
+//    string MeasurementUnit = 3 [json_name = "measurement_unit", (NYT.column_name) = "measurement_unit", deprecated = true];
+    string Name = 4 [json_name = "name", (NYT.column_name) = "name"];
+    string HumanReadableQuantity = 5 [json_name = "human_readable_quantity", (NYT.column_name) = "human_readable_quantity"];
+}
+
+message TEquipment {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+}
+
+message TRecipe {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIngredient Ingredients = 1 [json_name = "ingredients", (NYT.column_name) = "ingredients"];
+    repeated TEquipment Equipment = 2 [json_name = "equipment", (NYT.column_name) = "equipment"];
+    int32 NumberOfSteps = 3 [json_name = "number_of_steps", (NYT.column_name) = "number_of_steps"];
+    int32 NumberOfServings = 4 [json_name = "number_of_servings", (NYT.column_name) = "number_of_servings"];
+    string HumanReadableCookingTime = 5 [json_name = "human_readable_cooking_time", (NYT.column_name) = "human_readable_cooking_time"];
+}
+
+message TRecipeStep {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TIngredient Ingredients = 1 [json_name = "ingredients", (NYT.column_name) = "ingredients"];
+}
+
+message TRecipeSession {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int32 CurrentStepId = 1 [json_name = "current_step_id", (NYT.column_name) = "current_step_id"];
+}
+
+message TRecipeProactiveSuggestEvent {
+    enum TSuggestType {
+        NotDefined = 0;
+        Music = 1;
+    }
+
+    TSuggestType SuggestType = 1 [json_name = "suggest_type", (NYT.column_name) = "suggest_type"];
+}
+
+message TNewsProvider {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    string FeedId = 2 [json_name = "feed_id", (NYT.column_name) = "feed_id"];
+}
+

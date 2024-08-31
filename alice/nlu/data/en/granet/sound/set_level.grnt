@@ -1,0 +1,66 @@
+import: common/commands.grnt
+import: common/prepositions.grnt
+import: sound/common.grnt
+
+form personal_assistant.scenarios.sound.set_level:
+    slots:
+        level:
+            type:
+                sys.num
+                sys.float
+                custom.number
+            source:
+                $Level
+        denominator:
+            type:
+                sys.num
+                custom.percent
+            source:
+                $Denominator
+                $PercentEnum
+    root:
+        $Root
+    
+$Root:
+    [$Common.Set* $SoundLevel+ $On* ($Level+ ($Common.From+ $Denominator)?)]
+    %lemma
+    [$Common.Set* $SoundLevel* $On* $Level+ [$PercentEnum $Common.From* maximum*]]
+
+$On:
+    on
+    to
+    (up | down | equal) to
+    exactly
+
+$SoundLevel:
+    $Sound.Common.Source level?
+
+$Level:
+    $sys.num
+    $sys.float
+    $Sound.Common.Level
+    $LevelEnum
+
+$LevelEnum:
+    %type "custom.number"
+    %lemma
+    %value 10
+    full
+    maximum
+    total
+    %value 5
+    half
+    medium
+
+$Denominator:
+    $sys.num
+
+$PercentEnum:
+    %type "custom.percent"
+    %value 100
+    %lemma
+    percent
+
+
+filler:
+    $Sound.Common.Filler

@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package NAlice.NMegamind;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/proactivity";
+option java_package = "ru.yandex.alice.megamind.protos.proactivity";
+option java_outer_classname = "Proactivity";
+
+import "alice/megamind/protos/common/frame.proto";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/protos/data/proactivity/analytics.proto";
+
+import "dj/lib/proto/action.proto";
+import "dj/services/alisa_skills/profile/proto/context/context.proto";
+import "dj/services/alisa_skills/server/proto/data/analytics/analytics.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+// Used for logs
+message TProactivityInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int64 Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Intent = 2 [json_name = "intent", (NYT.column_name) = "intent"];
+    // Sometimes we update the data but not the answer
+    bool Appended = 3 [json_name = "appended", (NYT.column_name) = "appended"];
+    bool DisabledInApp = 4 [json_name = "disabled_in_app", (NYT.column_name) = "disabled_in_app"];
+    bool FromSkillRec = 5 [json_name = "from_skill_rec", (NYT.column_name) = "from_skill_rec"];
+    string ItemId = 6 [json_name = "item_id", (NYT.column_name) = "item_id"];
+    string ItemInfo = 7 [json_name = "item_info", (NYT.column_name) = "item_info"];
+    repeated string Tags = 8 [json_name = "tags", (NYT.column_name) = "tags"];
+    repeated string PostrollClickIds = 9 [json_name = "postroll_click_ids", (NYT.column_name) = "postroll_click_ids"];
+
+    message TFramesToMatchPostrollInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EFrameSource {
+            Begemot = 0;
+            Response = 1;
+        }
+        oneof Value {
+            EFrameSource Source = 1 [json_name = "source", (NYT.column_name) = "source"];
+        }
+        repeated TSemanticFrame SemanticFrames = 2 [json_name = "semantic_frames", (NYT.column_name) = "semantic_frames", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    }
+    TFramesToMatchPostrollInfo SemanticFramesInfo = 10 [json_name = "semantic_frames_info", (NYT.column_name) = "semantic_frames_info"];
+
+    string Source = 11 [json_name = "source", (NYT.column_name) = "source"];
+
+    message TClick {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string ItemId = 1 [json_name = "item_id", (NYT.column_name) = "item_id"];
+        string BaseId = 2 [json_name = "base_id", (NYT.column_name) = "base_id"];
+        string ItemInfo = 3 [json_name = "item_info", (NYT.column_name) = "item_info"];
+        string ShowReqId = 4 [json_name = "show_req_id", (NYT.column_name) = "show_req_id"];
+    }
+    repeated TClick PostrollClicks = 12 [json_name = "postroll_clicks", (NYT.column_name) = "postroll_clicks"];
+
+    bool IsMarketingPostroll = 13 [json_name = "is_marketing_postroll", (NYT.column_name) = "is_marketing_postroll"];
+
+    NAlice.NData.NProactivity.ESkillRecQuotaType QuotaType = 14 [json_name = "quota_type", (NYT.column_name) = "quota_type"];
+}
+
+// Saved in session
+message TProactivityStorage {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TTagStats {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        uint64 LastShowTime = 1;
+        // The value of PostrollCount when tag was last shown
+        uint64 LastShowPostrollCount = 2;
+        // The value of RequestCount when tag was last shown
+        uint64 LastShowRequestCount = 3;
+    }
+
+    uint64 LastStorageUpdateTime = 15;
+
+    uint64 LastShowTime = 1;
+    uint64 PostrollCount = 7;
+    uint64 RequestCount = 13;
+    uint64 LastShowRequestCount = 14;
+    map<string, TTagStats> TagStats = 8;
+
+    uint64 MovieSuggestPossibleLaunchCount = 3;
+
+    repeated int64 ShownPhrases = 2 [deprecated = true];
+    // Not last shown cause 0 is default
+    uint64 NextPhraseIndex = 4;
+    int64 LastShownPhrase = 5;
+    uint64 LastShownPhraseNextTextIndex = 9;
+    string LastShownActionFrameName = 10;
+    // Phrase id to text index
+    map<int64, uint64> ShownPhrasesMap = 6;
+
+    message TPostrollView {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string ItemId = 1;
+        NDJ.NAS.TItemAnalytics Analytics = 2;
+        repeated string Tags = 3;
+        string Source = 4;
+        NDJ.NAS.TPostrollContext Context = 5;
+        string RequestId = 6;
+        string BaseId = 7 [(NYT.column_name) = "base_id"];
+    }
+
+    repeated TPostrollView LastPostrollViews = 11;
+
+    string LastPostrollRequestId = 12;
+}
+
+// Used for proactivity logging
+message TProactivityLogStorage {
+    repeated NDJ.TActionProto Actions = 1 [json_name = "actions", (NYT.column_name) = "actions"];
+    NDJ.NAS.TItemAnalytics Analytics = 2 [json_name = "analytics", (NYT.column_name) = "analytics"];
+}
+
+// Saved in DataSync
+message TVideoRaterProactivityStorage {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    uint64 LastShowTime = 1;
+}

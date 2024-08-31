@@ -1,0 +1,120 @@
+package NAlice;
+
+import "google/protobuf/any.proto";
+
+import "alice/megamind/library/session/protos/state.proto";
+import "alice/megamind/library/stack_engine/protos/stack_engine.proto";
+import "alice/megamind/protos/analytics/megamind_analytics_info.proto";
+import "alice/megamind/protos/common/directive_channel.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/gc_memory_state.proto";
+import "alice/megamind/protos/modifiers/modifiers.proto";
+import "alice/megamind/protos/quality_storage/storage.proto";
+import "alice/megamind/protos/scenarios/request.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+import "alice/megamind/protos/speechkit/response.proto";
+
+import "dj/services/alisa_skills/server/proto/client/proactivity_response.proto";
+
+import "google/protobuf/wrappers.proto";
+
+message TSessionProto {
+    // Used to save wrapper internal state between run and deferred apply.
+    message TProtocolInfo {
+        oneof Arguments {
+            google.protobuf.Any ApplyArguments = 1;
+            NAlice.NScenarios.TScenarioRunResponse.TCommitCandidate CommitCandidate = 2;
+            google.protobuf.Any ContinueArguments = 6;
+        }
+
+        optional bool RequestIsExpected = 4;
+        optional string Intent = 5 [deprecated = true];
+        optional NScenarios.TScenarioBaseRequest.ERequestSourceType RequestSourceType = 7;
+        optional TDirectiveChannel.EDirectiveChannel Channel = 8;
+        optional google.protobuf.BoolValue ForcedShouldListen = 9;
+        optional string ForcedEmotion = 10;
+
+        reserved "CombineIntent";
+        reserved 3;
+    }
+
+    optional string PreviousScenarioName = 1;
+    optional TState ScenarioState = 2 [deprecated = true];
+
+    // This field must not be used, but is being kept for correct
+    // handling of already stored sessions.
+    // optional TFeatures ScenarioFeatures = 3;
+
+    optional TResponseBuilderProto ScenarioResponseBuilder = 4 [deprecated = true];
+    repeated string DialogHistory = 5 [deprecated = true];
+    repeated string RewrittenRequestHistory = 9 [deprecated = true];
+    optional TSemanticFrame ResponseFrame = 6;
+
+    optional TProtocolInfo ProtocolInfo = 8;
+    // optional int32 ConsequentIrrelevantResponseCount = 10 [deprecated = true];
+    reserved 10;
+
+    // map<string, NAlice.NScenarios.TAction> Actions = 11;
+    reserved 11;
+    reserved 12;
+
+    message TScenarioSession {
+        optional TState State = 1;
+        optional int32 ActivityTurn = 2;
+        optional int32 ConsequentIrrelevantResponseCount = 3;
+        optional int32 ConsequentUntypedSlotRequests = 4;
+        optional uint64 Timestamp = 5;
+    }
+
+    // Scenario name to session.
+    map<string, TScenarioSession> ScenarioSessions = 13;
+
+    map<string, NAlice.NScenarios.TFrameAction> Actions = 14;
+
+    // TODO(ikorobtsev): move to TProtocolInfo when MM will disable non-protocol scenarios
+    // https://st.yandex-team.ru/MEGAMIND-693
+    // Only saved on defer apply
+    optional NMegamind.TMegamindAnalyticsInfo MegamindAnalyticsInfo = 15;
+    optional TQualityStorage QualityStorage = 16;
+    optional string IntentName = 19;
+    reserved 20;
+    reserved "ProactivityRecommendation";
+    repeated NDJ.NAS.TProactivityRecommendation ProactivityRecommendations = 29;
+
+    optional NMegamind.TModifiersStorage ModifiersStorage = 17;
+
+    optional TGcMemoryState GcMemoryState = 18;
+
+    // For vins case only.
+    optional bool RequestIsExpected = 21 [deprecated = true];
+
+    optional NMegamind.TStackEngineCore StackEngineCore = 22;
+
+    repeated TClientEntity ResponseEntities = 23;
+
+    message TDialogHistoryInfo {
+        message TDialogTurn {
+            optional string Request = 1;
+            optional string RewrittenRequest = 2;
+            optional string Response = 3;
+            optional string ScenarioName = 4;
+            optional uint64 ServerTimeMs = 5;
+            optional uint64 ClientTimeMs = 6;
+        }
+
+        repeated TDialogTurn DialogTurns = 1;
+    }
+
+    message TResponseHistoryInfo {
+        optional NScenarios.TLayout Layout = 1;
+    }
+
+    optional TDialogHistoryInfo DialogHistoryInfo = 24;
+    reserved 25;
+    reserved "PrevResponse";
+
+    optional NAlice.NScenarios.TInput Input = 26;
+    optional NScenarios.TLayout Layout = 27;
+    optional string PreviousProductScenarioName = 28;
+    optional uint64 LastWhisperServerTimeMs = 30;
+}

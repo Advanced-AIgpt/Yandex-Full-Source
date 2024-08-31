@@ -1,0 +1,58 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import get_alice_name with context %}
+{% ext_from "alice/hollywood/library/common_nlg/error_ru.nlg" import render_error %}
+{% nlgimport "alice/hollywood/library/scenarios/voiceprint/nlg/voiceprint_common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/voiceprint/nlg/voiceprint_common_ru.nlg" import name_not_present with context %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% macro bad_hearing() %}
+    {% chooseitem %}
+        Простите, не расслышала.
+    {% or %}
+        Простите, не поняла.
+    {% endchooseitem %}
+{% endmacro %}
+
+{% macro explain_rules() %}
+     Если вы хотите, чтобы я запомнила ваше имя, скажите «Меня зовут...» и добавьте своё имя.
+{% endmacro %}
+
+
+{% phrase render_result %}
+  {% if context.attentions.get('server_error') %}
+    {{ render_error() }}
+  {% else %}
+    {% if form.is_user_name_swear %}
+      {{ name_not_present() }}
+    {% else %}
+      {% if form.distractor %}
+          {{ bad_hearing() }}{{ explain_rules() }}
+      {% else %}
+          {% if form.old_user_name %}
+            Хорошо, {{ form.old_user_name|capitalize }}. Теперь я буду называть вас {{ form.user_name|capitalize }}.
+          {% else %}
+            {% chooseitem %}
+              Хорошо, {{ form.user_name|capitalize }}.
+            {% or %}
+              Рада познакомиться, {{ form.user_name|capitalize }}.
+            {% or %}
+              Очень приятно, {{ form.user_name|capitalize }}. Я, кстати, всё ещё Алиса.
+            {% or %}
+              Очень приятно, {{ form.user_name|capitalize }}. А я Алиса.
+            {% endchooseitem %}
+          {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase ask__user_name %}
+    {% if form.distractor %}
+        {{ bad_hearing() }}{{ explain_rules() }}
+    {% else %}
+        {{ name_not_present() }}
+    {% endif %}
+{% endphrase %}

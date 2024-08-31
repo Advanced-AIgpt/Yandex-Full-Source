@@ -1,0 +1,24 @@
+OWNER(g:alice_iot)
+
+RECURSE(
+    action
+    callback
+    deferredevents
+    discovery
+    experiments
+    history
+    irhub
+    localscenarios
+    notificator
+    oauth
+    quasarconfig
+    query
+    repository
+    scenario
+    settings
+    sharing
+    sup
+    timemachine
+    unlink
+    updates
+)

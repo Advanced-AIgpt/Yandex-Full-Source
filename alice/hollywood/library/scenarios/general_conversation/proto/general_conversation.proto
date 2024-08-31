@@ -1,0 +1,308 @@
+syntax = "proto3";
+
+import "alice/hollywood/library/gif_card/proto/gif.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/protos/data/language/language.proto";
+import "alice/boltalka/libs/factors/proto/nlgsearch_factors.proto";
+import "alice/boltalka/generative/service/proto/bert_response.proto";
+
+package NAlice.NHollywood.NGeneralConversation;
+
+message TEmbedding {
+     repeated float Value = 1 [json_name = "value"];
+}
+
+message TMovie {
+    uint32 Id = 1 [json_name = "id"];
+    string Title = 2 [json_name = "title"];
+    string Type = 3 [json_name = "type"];
+    double NegativeAnswerFraction = 4 [json_name = "negative_answer_fraction"];
+}
+
+message TMusicBand {
+    string Id = 1 [json_name = "id"];
+}
+
+message TVideoGame {
+    string Id = 1 [json_name = "id"];
+}
+
+message TEntity {
+    oneof Entity {
+        TMovie Movie = 1 [json_name = "movie"];
+        TMusicBand MusicBand = 2 [json_name = "music_band"];
+        TVideoGame VideoGame = 3 [json_name = "video_game"];
+    }
+}
+
+message TEntityDiscussion {
+    enum EDiscussionSentiment {
+        UNDEFINED = 0;
+        POSITIVE = 1;
+        NEGATIVE = 2;
+    }
+
+    reserved 1; // LastTimestamp
+    uint32 LastSequenceNumber = 2 [json_name = "last_sequence_number"];
+    TEntity Entity = 3 [json_name = "entity"];
+    EDiscussionSentiment DiscussionSentiment = 4 [json_name = "discussion_sentiment"];
+    uint64 LastTimestampMs = 5 [json_name = "last_timestamp_ms"];
+}
+
+message TEntitySearchCache {
+    uint64 LastUpdateTimeMs = 1 [json_name = "last_update_time_ms"];
+    repeated string EntityKeys = 2 [json_name = "entity_keys"];
+}
+
+message TNlgSearchReplyCandidate {
+    uint32 DocId = 1 [json_name = "doc_id"];
+    string Text = 2 [json_name = "text"];
+    double Relevance = 3 [json_name = "relevance"];
+    string Source = 4 [json_name = "source"];
+    string Action = 5 [json_name = "action"];
+    map<string, TEmbedding> Embeddings = 6 [json_name = "embeddings"];
+    repeated TGif Gifs = 7 [json_name = "gifs"];
+    NBoltalka.TNlgSearchFactors Factors = 8 [json_name = "factors"];
+}
+
+message TSeq2SeqReplyCandidate {
+    uint32 DocId = 1 [json_name = "doc_id"];
+    string Text = 2 [json_name = "text"];
+    double Relevance = 3 [json_name = "relevance"];
+    uint32 NumTokens = 4 [json_name = "num_tokens"];
+}
+
+message TAggregatedReplyCandidate {
+    oneof ReplySource {
+        TNlgSearchReplyCandidate NlgSearchReply = 1 [json_name = "nlg_search_reply"];
+        TSeq2SeqReplyCandidate Seq2SeqReply = 2 [json_name = "seq2seq_reply"];
+    }
+
+    double Relevance = 100 [json_name = "relevance"];
+    map<string, TEmbedding> Embeddings = 101 [json_name = "embeddings"];
+    double BertScore = 102 [json_name = "bertScore", deprecated = true];
+    NGenerativeBoltalka.Proto.TBertOutput BertOutput = 103 [json_name = "bertOutput"];
+}
+
+message TAggregatedRepliesState {
+    repeated TAggregatedReplyCandidate ReplyCandidates = 1 [json_name = "reply_candidates"];
+}
+
+message TMovieAkinatorReply {
+}
+
+message TReplyInfo {
+    message TGenericStaticReply {
+    }
+
+    message TGenerativeTaleReply {
+        string Text = 1 [json_name = "text"];
+        string Character = 2 [json_name = "character"];
+        TGenerativeTaleState TaleState = 3 [json_name = "tale_state"];
+    }
+
+    message TGenerativeToastReply {
+        string Text = 1 [json_name = "text"];
+        string Topic = 2 [json_name = "topic"];
+    }
+
+    message TEasterEggReply {
+        uint32 SequenceNumber = 1 [json_name = "sequence_number"];
+        int32 Days = 2 [json_name = "days"];
+    }
+
+    message TProactivityReply {
+        TNlgSearchReplyCandidate NlgSearchReply = 1 [json_name = "nlg_search_reply"];
+    }
+
+    message TEntityInfo {
+        TEntitySearchCache EntitySearchCache = 1 [json_name = "entity_search_cache"];
+        TEntity Entity = 2 [json_name = "entity"];
+        TEntityDiscussion.EDiscussionSentiment DiscussionSentiment = 3 [json_name = "discussion_sentiment"];
+    }
+
+    message TFactsCrossPromoInfo {
+        string FactsCrossPromoText = 1 [json_name = "facts_crosspromo_text"];
+        string FactsCrossPromoEntityKey = 2 [json_name = "facts_crosspromo_entity_key"];
+        bool FactsCrossPromoPeriod = 3 [json_name = "facts_crosspromo_period"];
+    }
+
+    message TGifsAndEmojiInfo {
+        string Emoji = 1 [json_name = "emoji"];
+        TGif Gif = 2 [json_name = "gif"];
+    }
+
+    string Intent = 1 [json_name = "intent"];
+    string RenderedText = 2 [json_name = "rendered_text"];
+    TGifsAndEmojiInfo GifsAndEmojiInfo = 3 [json_name = "gifs_and_emoji_info"];
+    TEntityInfo EntityInfo = 4 [json_name = "entity_info"];
+    TFactsCrossPromoInfo FactsCrossPromoInfo = 5 [json_name = "facts_cross_promo_info"];
+    string RenderedVoice = 6 [json_name = "rendered_voice"];
+    ELang Language = 7 [json_name = "language"];
+    double TtsSpeed = 8 [json_name = "tts_speed"];
+
+    oneof ReplySource {
+        TNlgSearchReplyCandidate NlgSearchReply = 101 [json_name = "nlg_search_reply"];
+        TGenericStaticReply GenericStaticReply = 102 [json_name = "generic_static_reply"];
+        TProactivityReply ProactivityReply = 103 [json_name = "proactivity_reply"];
+        TMovieAkinatorReply MovieAkinatorReply = 104 [json_name = "akinator_reply"];
+        TEasterEggReply EasterEggReply = 105 [json_name = "easter_egg_reply"];
+        TSeq2SeqReplyCandidate Seq2SeqReply = 106 [json_name = "seq2seq_reply"];
+        TGenerativeToastReply GenerativeToastReply = 107 [json_name = "generative_toast_reply"];
+        TAggregatedReplyCandidate AggregatedReply = 108 [json_name = "aggregated_reply"];
+        TGenerativeTaleReply GenerativeTaleReply = 109 [json_name = "generative_tale_reply"];
+    }
+}
+
+message TCandidatesState {
+    repeated TNlgSearchReplyCandidate Candidates = 1 [json_name = "candidates"];
+}
+
+message TClassificationResult {
+    message TError {
+        string Type = 1 [json_name = "type"];
+        string Message = 2 [json_name = "message"];
+    }
+
+    TSemanticFrame RecognizedFrame = 1 [json_name = "recognized_frame"];
+    TError Error = 2 [json_name = "error"];
+    bool IsFrameFeatured = 3 [json_name = "is_frame_featured"];
+    bool HasSearchReplyRequest = 4 [json_name = "has_search_reply_request"];
+    bool HasSearchSuggestsRequest = 5 [json_name = "has_search_suggests_request"];
+    bool HasEntitySearchRequest = 6 [json_name = "has_entity_search_request"];
+    bool HasSeq2SeqReplyRequest = 7 [json_name = "has_seq2seq_reply_request"];
+    bool HasGenerativeToastRequest = 8 [json_name = "has_generative_toast_request"];
+    bool HasGenerativeTaleRequest = 9 [json_name = "has_generative_tale_request"];
+    bool IsInvalidModalMode = 10 [json_name = "is_invalid_modal_mode"];
+
+    TReplyInfo ReplyInfo = 101 [json_name = "reply_info"];
+    bool IsProactivityTimeAllowed = 102 [json_name = "is_proactivity_time_allowed"];
+    bool IsProactivityDialogHistoryAllowed = 103 [json_name = "is_proactivity_dialog_history_allowed"];
+    bool IsEntitySearchRequestAllowed = 104 [json_name = "is_entity_search_request_allowed"];
+    bool IsChildTalking = 105 [json_name = "is_child_talking"];
+    uint64 CurrentRequestServerTimeMs = 106 [json_name = "current_request_server_time_ms"];
+    uint64 CurrentRequestSequenceNumber = 107 [json_name = "current_request_sequence_number"];
+    bool IsAggregatedRequest = 108 [json_name = "is_aggregated_request"];
+    float GcClassifierScore = 109 [json_name = "gc_classifier_score"];
+    bool NeedContinue = 110 [json_name = "need_continue"];
+    bool IgnoresExpectedRequest = 111 [json_name = "ignores_expected_request"];
+    ELang UserLanguage = 112 [json_name = "user_language"];
+}
+
+message TReplyState {
+    TReplyInfo ReplyInfo = 1 [json_name = "reply_info"];
+}
+
+message TStateReplyInfo {
+    uint64 Hash = 1 [json_name = "hash"];
+    string Text = 2 [json_name = "text"];
+}
+
+message TMovieAkinatorState {
+    bool WasHelpShown = 1 [json_name = "was_help_shown"];
+    uint64 NodeId = 2 [json_name = "node_id"];
+    uint64 LeftChildId = 3 [json_name = "left_child_id"];
+    uint64 RightChildId = 4 [json_name = "right_child_id"];
+    repeated string ShownHelpActions = 5 [json_name = "shown_help_actions"];
+}
+
+message TEasterEggState {
+    uint64 SuggestsClickCount = 1 [json_name = "suggests_click_count"];
+}
+
+message TGenerativeTaleState {
+    enum EStage {
+        Undefined = 0;
+        UndefinedCharacter = 11;
+        FirstQuestion = 1;
+        ClosedQuestion = 2;
+        OpenQuestion = 3;
+        Sharing = 4;
+        SharingReask = 10;
+        Stop = 5;
+        Error = 6;
+        SharingAskTaleName = 7;
+        reserved 8;
+        reserved "SharingReaskTaleName";
+        SharingDone = 9;
+        UndefinedQuestion = 12;
+        SendMeMyTale = 20;
+    }
+
+    string Text = 1 [json_name = "text"];
+    EStage Stage = 2 [json_name = "stage"];
+    uint32 SilenceCounter = 3 [json_name = "silence_counter"];
+    bool HasSilence = 4 [json_name = "has_silence"];
+    bool HasObscene = 5 [json_name = "has_obscene"];
+    string ActiveQuestion = 6 [json_name = "active_question"];
+    repeated string ActiveAnswers = 7 [json_name = "active_answers"];
+    bool SkipUtterance = 8 [json_name = "skip_utterance"];
+    uint32 BadSeq2SeqCounter = 9 [json_name = "bad_seq2seq"];
+    string TaleName = 10 [json_name = "tale_name"];
+    string SharedLink = 11 [json_name = "shared_link"];
+    uint64 LastRequestTime = 12 [json_name = "last_request_time"];
+    bool HadOnboarding = 13 [json_name = "had_onboarding"];
+    bool OpenQuestions = 14 [json_name = "open_questions"];
+    string Character = 15 [json_name = "character"];
+    string AvatarsIdForSharedLink = 16 [json_name = "avatars_id_for_shared_link"];
+    bool IsLoggedIn = 17 [json_name = "is_logged_in"];
+    bool GotTaleNameFromUser = 18 [json_name = "got_tale_name_from_user"];
+    bool NoActionFrameReceived = 19 [json_name = "no_action_frame_received"];
+}
+
+message TSessionState {
+    reserved 1;
+    repeated TStateReplyInfo UsedRepliesInfo = 2 [json_name = "used_replies_info"];
+    bool ModalModeEnabled = 3 [json_name = "modal_mode_enabled"];
+    uint64 LastRequestServerTimeMs = 4 [json_name = "last_request_server_time_ms"];
+    uint64 LastProactivityRequestServerTimeMs = 5 [json_name = "last_proactivity_request_server_time_ms"];
+    uint64 LastRequestSequenceNumber = 6 [json_name = "last_request_sequence_number"];
+    uint64 LastProactivityRequestSequenceNumber = 7 [json_name = "last_proactivity_request_sequence_number"];
+    TEntityDiscussion EntityDiscussion = 8 [json_name = "entity_dicussion"];
+    repeated string RecentDiscussedEntities = 9 [json_name = "recent_discussed_entities"];
+    uint64 LastFactsCrosspromoRequestServerTimeMs = 10 [json_name = "last_crosspromo_request_server_time_ms"];
+    repeated uint64 FactsCrosspromoHashHistory = 11 [json_name = "facts_crosspromo_hash_history"];
+    TEntitySearchCache EntitySearchCache = 12 [json_name = "entity_search_cache"];
+    TMovieAkinatorState MovieAkinatorState = 13 [json_name = "movie_akinator_state"];
+    TEasterEggState EasterEggState = 14 [json_name = "easter_egg_state"];
+    bool IsHeavyScenario = 15 [json_name = "is_heavy_scenario"];
+    TGenerativeTaleState GenerativeTaleState = 16 [json_name = "generative_tale_state"];
+}
+
+message TLongSession {
+    uint64 ProactivityLastSuggestServerTimeMs = 3 [json_name = "proactivity_last_suggest_server_time_ms"];
+}
+
+message TGeneralConversationProactivityCommitArgumets {
+    TLongSession LongSession = 1 [json_name = "long_session"];
+}
+
+message TLineCombinationCoefficients {
+    double Relev = 1;
+    double Informativeness = 2;
+    double Interest = 3;
+    double NotRude = 4;
+    double NotMale = 5;
+    double Respect = 6;
+}
+
+message TCoefficientsSamplePerDay {
+    map<int32, TLineCombinationCoefficients> DailySetOfLineCombinations  = 1;
+}
+
+message TGeneralConversationFastDataProto {
+    string ResponseBanlist = 1 [json_name = "response_banlist"];
+    string GifResponseUrlBanlist = 2 [json_name = "gif_response_url_banlist"];
+    string FactsCrosspromoResponseBanlist = 3 [json_name = "facts_crosspromo_banlist"];
+    map<string, TCoefficientsSamplePerDay> LineCombinationCoefficientsDict = 4 [json_name = "coefficients_dict"];
+    string RequestBanlist = 5 [json_name = "request_banlist"];
+    string RequestTaleBanlist = 6 [json_name = "request_tale_banlist"];
+}
+
+message TGeneralConversationProactivityFastDataProto {
+    repeated TMovie MoviesToDiscuss = 1 [json_name = "movies_to_discuss"];
+}
+
+message TGeneralConversationContinueArguments {
+    TClassificationResult ClassificationResult = 1 [json_name = "classification_result"];
+}

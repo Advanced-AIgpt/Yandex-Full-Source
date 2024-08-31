@@ -1,0 +1,391 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/verbs.grnt
+    iot/action/common.grnt
+    iot/common.grnt
+
+form alice.iot.action.capability.toggle.ifexp.bg_enable_iot_action_forms:
+    slots:
+        intent_parameters:
+            source:
+                $ToggleMute
+                $InvertMute
+                $ToggleBacklight
+                $InvertBacklight
+                $ToggleControlsLocked
+                $InvertControlsLocked
+                $ToggleIonization
+                $InvertIonization
+                $ToggleOscillation
+                $InvertOscillation
+                $ToggleKeepWarm
+                $InvertKeepWarm
+                $TogglePause
+                $InvertPause
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source: $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+        toggle_value:
+            source:
+                $ToggleMute.ToggleOn
+                $ToggleMute.ToggleOff
+                $ToggleBacklight.ToggleOn
+                $ToggleBacklight.ToggleOff
+                $ToggleControlsLocked.ToggleOn
+                $ToggleControlsLocked.ToggleOff
+                $ToggleIonization.ToggleOn
+                $ToggleIonization.ToggleOff
+                $ToggleOscillation.ToggleOn
+                $ToggleOscillation.ToggleOff
+                $ToggleKeepWarm.ToggleOn
+                $ToggleKeepWarm.ToggleOff
+                $TogglePause.ToggleOn
+                $TogglePause.ToggleOff
+            type:
+                custom.iot.toggle.value
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+        for_datetime:
+            keep_variants: true
+            source: $ForDateTime
+            type: sys.datetime_range
+
+    root:
+        $ToggleMute
+        $InvertMute
+        $ToggleBacklight
+        $InvertBacklight
+        $ToggleControlsLocked
+        $InvertControlsLocked
+        $ToggleIonization
+        $InvertIonization
+        $ToggleOscillation
+        $InvertOscillation
+        $ToggleKeepWarm
+        $InvertKeepWarm
+        $TogglePause
+        $InvertPause
+
+    $ToggleMute:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "mute"
+        }
+
+        $ToggleOn
+        $ToggleOff
+        %force_negative
+        [$TurnOff+ $Common.TheSoundVolume+ $sys.num+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [$TurnOn+ $Common.TheSoundVolume+ $sys.num+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            # Выключить звук == включить mute
+            [$TurnOff+ $Common.TheSoundVolume+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+            [(замьють|заглуши)+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            # Включить звук == выключить mute
+            [$TurnOn+ $Common.TheSoundVolume+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+            [размьють+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $InvertMute:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "mute",
+            "relativity_type": "invert"
+        }
+        %lemma
+        [звук+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        %force_negative
+        [звук+ $DeviceNoLight+ $sys.num+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $ToggleBacklight:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "backlight"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$TurnOn+ подсветка+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [$TurnOff+ подсветка+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $InvertBacklight:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "backlight",
+            "relativity_type": "invert"
+        }
+
+        [подсветка+ $DeviceNoLight+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $ToggleControlsLocked:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "controls_locked"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$Set+ $ChildMode+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+            [$Common.ToBlock+ управление+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [$TurnOff+ $ChildMode+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+            [$Unblock+ управление+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $Unblock:
+            $Common.ToUnblock
+            $Common.StopObject блокировать
+
+    $InvertControlsLocked:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "controls_locked",
+            "relativity_type": "invert"
+        }
+
+        [$ChildModeForInvert+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ChildModeForInvert:
+            %lemma
+            [блокировка управления]
+            [детский режим]
+
+    $ToggleIonization:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "ionization"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$TurnOn+ ((ионизатор|ионизация|ионизирование) $Common.TheAir*)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [$TurnOff+ ((ионизатор|ионизация|ионизирование) $Common.TheAir*)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $InvertIonization:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "ionization",
+            "relativity_type": "invert"
+        }
+
+        [((ионизатор|ионизация|ионизирование) $Common.TheAir*)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $ToggleOscillation:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "oscillation"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$TurnOn+ (вращение|осцилляция)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [$TurnOff+ (вращение|осцилляция)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $InvertOscillation:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "oscillation",
+            "relativity_type": "invert"
+        }
+
+        [(вращение|осцилляция)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $ToggleKeepWarm:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "keep_warm"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$TurnOn+ $WarmKeeping+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [$TurnOff+ $WarmKeeping+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $InvertKeepWarm:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "keep_warm",
+            "relativity_type": "invert"
+        }
+
+        [$WarmKeeping+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $TogglePause:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "pause"
+        }
+
+        $ToggleOn
+        $ToggleOff
+
+        $ToggleOn:
+            %type custom.iot.toggle.value
+            %value true
+            %lemma
+            [$Set+ пауза+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.At)*]
+            [приостановить+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+        $ToggleOff:
+            %type custom.iot.toggle.value
+            %value false
+            %lemma
+            [($TurnOff|убрать|снять)+ пауза+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.From)*]
+
+    $InvertPause:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "pause",
+            "relativity_type": "invert"
+        }
+
+        [пауза+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+$DeviceNoLight:
+    $DeviceWithPrepositions
+    %force_negative
+    $LightDeviceType
+
+$TurnOn:
+    $Common.TurnOn
+    $Common.Start
+    $Common.Return
+    %force_negative
+    $Common.Connect
+
+$TurnOff:
+    $Common.TurnOff
+    $Common.ToStop
+    убрать
+    без
+    %force_negative
+    $Common.TurnedOff
+
+$ChildMode:
+    %lemma
+    [блокировка управления*]
+    [детский режим]
+
+$WarmKeeping:
+    %lemma
+    [(поддержание|поддержка|поддерживать) тепла]
+
+$DoorLatch:
+    %lemma
+    дверь
+    [центральный* дверной* замок]
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Lets
+    $Common.Little
+    (назад|опять|обратно)
+    все

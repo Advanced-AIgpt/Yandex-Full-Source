@@ -1,0 +1,250 @@
+import: common/commands.grnt
+import: common/prepositions.grnt
+import: sound/common.grnt
+
+form personal_assistant.scenarios.sound.louder:
+    enable_alice_tagger: true
+    slots:
+        absolute_change:
+            type:
+                sys.num
+                custom.number
+            source:
+                $AbsoluteNumberValue
+                $Common.Sound.CustomAbsoluteNumberValue
+        relative_change:
+            type:
+                sys.num
+            source:
+                $RelativeNumberValue
+        percentage_change:
+            type:
+                sys.num
+            source:
+                $PercentNumberValue
+        degree_change:
+            type:
+                custom.degree
+            source:
+                $LouderDegreeValue
+    root:
+        $Root
+
+    filler:
+        $Common.Sound.Filler
+        $SoundLevelLow
+        $FromToCurrentLevel
+        $OneMoreTime
+        $Common.Sound.By
+        $Common.Sound.Quiet
+        $FromCurrentLevel
+        $Common.Sound.Ration
+        $Common.Prepositions.From
+
+    $Root:
+        $LouderDegreeValue
+        $LouderNumberOrPercent
+        $LouderRelative
+
+$LouderDegreeValue:
+    %type custom.degree
+    %value "small"
+    $Louder
+    %value "medium"
+    $MoreLouder
+    %value "big"
+    $VeryLouder
+
+$Louder:
+    $Common.Commands.TurnUp+ $Common.Sound.SoundLevel* $Common.Sound.LittleBit*
+    $TurnUpSoundLevel+
+    $TurnUpSoundLevel+ ($Common.Sound.LittleBit+ .*)+
+    [$Common.Commands.TurnUp+ $Common.Sound.SoundLevel+ $Common.Sound.LittleBit*]
+    $Common.Commands.TurnUp+ $Common.Sound.LittleBit
+    $SetSoundLevelHigher+ $Common.Sound.LittleBit*
+    $Common.Sound.SoundLevel* $Common.Sound.Higher+ $Common.Sound.LittleBit*
+
+$MoreLouder:
+    $Common.Sound.Higher+
+    [$Common.Commands.TurnUp+ $Common.Sound.SoundLevel* $Common.Sound.More+]
+    $TurnUpSoundLevel+ $Common.Prepositions.To* $AverageHigher $Common.Sound.LittleBit*
+    [$SetSoundLevelHigher+ ($Common.Sound.LittleBit+ | $Common.Sound.Average+)]
+    $Common.Commands.TurnUp+ $Common.Sound.SoundLevel* $AverageHigher $Common.Sound.LittleBit*
+    [$SetOrChange* $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.More+ $Common.Sound.HighWord+]
+
+$AverageHigher:
+    $Common.Sound.More+ | $Common.Sound.Higher+ | $Common.Sound.Average+
+
+$VeryLouder:
+    [$TurnUpSoundLevel+ ($Common.Sound.More+ | $Common.Sound.Lower+)* $Common.Sound.Very+]
+    [$SetSoundLevelHigher+ $Common.Sound.Very+]
+    [$Common.Commands.TurnUp+ $Common.Sound.SoundLevel* ($Common.Sound.More+ | $Common.Sound.Higher+)* $Common.Sound.Very+]
+
+$LouderNumberOrPercent:
+    .* $SetOrTurnUpSound $NumberWithDegree $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    .* $SetOrTurnUpSound $Common.Prepositions.To+ $NumberWithDegree $Common.Sound.Higher+ .*
+    .* $TurnUpSoundLevel+ $NumberWithDegree .*
+    $Common.Commands.TurnUp+ $NumberWithDegree $Common.Sound.SoundLevel* $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    $Common.Commands.TurnUp+ $NumberWithDegree $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    ($SetOrChange | $Common.Commands.TurnUp+)* $Common.Sound.SoundLevel* $NumberWithDegree ($Common.Sound.Higher+ | $Common.Sound.More+)
+    %negative
+    .* $TurnUpSoundLevel+ $Common.Prepositions.To+ $Common.Sound.Level* $sys.num $Common.Sound.PercentWord*
+    .* $TurnUpSoundLevel+ $Common.Prepositions.To+ $AbsoluteNumberValue ($Common.Sound.Unit .*)*
+    .* $TurnUpSoundLevel+ $Common.Prepositions.To+ $Common.Sound.CustomAbsoluteNumberValue .*
+    .* $SetOrChange+ $Common.Prepositions.To* $NumberWithDegree .*
+    %force_positive
+    .* [$TurnUpSoundLevel+ $PercentNumberValue $Common.Sound.PercentWord+ $Common.Prepositions.To* $Common.Sound.SoundLevel*]
+
+$LouderRelative:
+    .* [$TurnUpSoundLevel+ $RelativeNumberValue $Common.Sound.Times+]
+
+$TurnUpSoundLevel:
+    [$Common.Commands.TurnUp+ $Common.Sound.SoundLevel+]
+
+$SetSoundLevelHigher:
+    $SetOrChange* $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.Higher+
+
+$SoundLevelLow:
+    [$Common.Sound.Level+ ($Common.Sound.Quiet+ | $Common.Sound.VeryQuiet+) ($Common.Sound.LittleBit | $Common.Sound.Very)*]
+
+$SetOrTurnUpSound:
+    ($TurnUpSoundLevel+ | $SetSoundLevelHigher+)
+
+form personal_assistant.scenarios.sound.quiter:
+    enable_alice_tagger: true
+    slots:
+        absolute_change:
+            type:
+                sys.num
+                custom.number
+            source:
+                $AbsoluteNumberValue
+                $Common.Sound.CustomAbsoluteNumberValue
+        relative_change:
+            type:
+                sys.num
+            source:
+                $RelativeNumberValue
+        percentage_change:
+            type:
+                sys.num
+            source:
+                $PercentNumberValue
+        degree_change:
+            type:
+                custom.degree
+            source:
+                $QuieterDegreeValue
+    root:
+        $Root
+
+    filler:
+        $Common.Sound.Filler
+        $SoundLevelHigh
+        $FromToCurrentLevel
+        $OneMoreTime
+        $Common.Sound.By
+        $Common.Sound.High
+        $FromCurrentLevel
+        $Common.Sound.Ration
+        $Common.Prepositions.From
+
+    $Root:
+        $QuieterDegreeValue
+        $QuieterNumberOrPercent
+        $QuieterRelative
+
+$QuieterDegreeValue:
+    %type custom.degree
+    %value "small"
+    $Quieter
+    %value "medium"
+    $MoreQuieter
+    %value "big"
+    $VeryQuieter
+
+$Quieter:
+    $Common.Commands.TurnDown+ $Common.Sound.SoundLevel* $Common.Sound.LittleBit*
+    $TurnDownSoundLevel+
+    $TurnDownSoundLevel+ ($Common.Sound.LittleBit+ .*)+
+    $Common.Commands.TurnDown+ $Common.Sound.SoundLevel+ $Common.Sound.LittleBit*
+    $Common.Commands.TurnDown+ $Common.Sound.LittleBit+
+    $SetSoundLevelLower+ $Common.Sound.LittleBit*
+    $Common.Sound.SoundLevel* $Common.Sound.Lower+ $Common.Sound.LittleBit*
+
+$MoreQuieter:
+    $Common.Sound.Lower+
+    [$Common.Commands.TurnDown+ $Common.Sound.SoundLevel* $Common.Sound.Lower+]
+    $TurnDownSoundLevel+ $LowerAverage $Common.Sound.LittleBit*
+    [$SetSoundLevelLower+ ($Common.Sound.LittleBit+ | $Common.Sound.Average+)]
+    $Common.Commands.TurnDown+ $Common.Sound.SoundLevel* $LowerAverage $Common.Sound.LittleBit*
+    [$SetOrChange* $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.More+ $Common.Sound.QuietWord+]
+
+$LowerAverage:
+    $Common.Sound.More+ | $Common.Sound.Lower+ | $Common.Sound.Average+
+
+$VeryQuieter:
+    [$TurnDownSoundLevel+ ($Common.Sound.More+ | $Common.Sound.Lower)* $Common.Sound.Very+]
+    [$SetSoundLevelLower+ $Common.Sound.Very+]
+    [$Common.Commands.TurnDown+ $Common.Sound.SoundLevel* ($Common.Sound.More+ | $Common.Sound.Lower+)* $Common.Sound.Very+]
+
+$QuieterNumberOrPercent:
+    .* SetOrTurnDounSound $NumberWithDegree $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    .* SetOrTurnDounSound $Common.Prepositions.To+ $NumberWithDegree $Common.Sound.Lower+ .*
+    .* $TurnDownSoundLevel+ $NumberWithDegree .*
+    $Common.Commands.TurnDown+ $NumberWithDegree $Common.Sound.SoundLevel* $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    $Common.Commands.TurnDown+ $NumberWithDegree $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.SoundLevel*
+    ($SetOrChange | $Common.Commands.TurnDown+)* $Common.Sound.SoundLevel* $NumberWithDegree $Common.Sound.Lower+
+    %negative
+    .* $TurnDownSoundLevel+ $Common.Prepositions.To+ $Common.Sound.Level* $sys.num $Common.Sound.PercentWord*
+    .* $TurnDownSoundLevel+ $Common.Prepositions.To+ $AbsoluteNumberValue ($Common.Sound.Unit .*)*
+    .* $TurnDownSoundLevel+ $Common.Prepositions.To+ $Common.Sound.CustomAbsoluteNumberValue .*
+    .* $SetOrChange+ $Common.Prepositions.To* $NumberWithDegree .*
+    %force_positive
+    .* [$TurnDownSoundLevel+ $PercentNumberValue $Common.Sound.PercentWord+ $Common.Prepositions.To* $Common.Sound.SoundLevel*]
+
+$QuieterRelative:
+    .* [$TurnDownSoundLevel+ $RelativeNumberValue $Common.Sound.Times+]
+
+$TurnDownSoundLevel:
+    [$Common.Commands.TurnDown+ $Common.Sound.SoundLevel+]
+
+$SetSoundLevelLower:
+    $SetOrChange* $Common.Sound.SoundLevel+ $Common.Prepositions.To* $Common.Sound.Lower+
+
+$SoundLevelHigh:
+    [$Common.Sound.Level+ ($Common.Sound.High+ | $Common.Sound.VeryHigh+) ($Common.Sound.LittleBit | $Common.Sound.Very)*]
+
+$SetOrTurnDounSound:
+    $TurnDownSoundLevel+ | $SetSoundLevelLower+
+
+# common
+$FromCurrentLevel:
+    [$Common.Sound.SoundLevel+ $Common.Current*]
+
+$FromToCurrentLevel:
+    [$Common.Prepositions.To* ($Common.Sound.SoundLevel+ | $Common.Sound.Level) $Common.Current+]
+
+$OneMoreTime:
+    [($Common.Time+ | $Common.Sound.Times+)+ $Common.Other+]
+
+$AbsoluteNumberValue:
+    $sys.num
+    %negative
+    $Common.Sound.Unit
+
+$RelativeNumberValue:
+    $sys.num
+    %negative
+    $Common.Sound.Unit
+
+$PercentNumberValue:
+    $sys.num
+    %negative
+    $Common.Sound.Unit
+
+$NumberWithDegree:
+    [($AbsoluteNumberValue | $Common.Sound.CustomAbsoluteNumberValue) $Common.Sound.Unit*]
+
+$SetOrChange:
+    $Common.Commands.Set+ | $Common.Commands.Change+

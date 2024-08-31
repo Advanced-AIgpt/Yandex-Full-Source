@@ -1,0 +1,54 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" import timer, timeri, render_error, render_timer, render_timer_list, no_such_timer, suggest_show_timers, format_time %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% elif context.attentions.get('multiple_timers') %}
+    {{ render_timer_list(context.data.available_timers) }}\n{% vc %}-{% evc %}
+    {% if context.data.available_timers|length > 1 %}
+      Какой из них поставить на паузу?
+    {% else %}
+      Вы хотите поставить его на паузу?
+    {% endif %}
+  {% else %}
+    {% if context.nlg_short_timer_pause_exp %}
+      Поставила на паузу
+    {% else %}
+      Хорошо, поставила на паузу
+    {% endif %}
+    {% if context.data.timer_id == 'all' %}
+      все {{ timeri() }}.
+    {% else %}
+      {% if context.attentions.get('timer__abs_time') %}
+        {{ render_timer(context.data.time, True, context.data.specification) }}.
+      {% else %}
+        {% if context.nlg_short_timer_pause_exp %}
+          . Осталось {{ format_time(context.data.remaining) }}.
+        {% else %}
+          {{ render_timer(context.data.time, False, context.data.specification) }}.
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {% chooseitem %}
+      Нет, {{ timer() }} я пока не умею ставить на паузу. Но это временно.
+    {% or %}
+      Я пока не умею ставить на паузу {{ timeri() }} на этом устройстве, но когда-нибудь научусь.
+    {% endchooseitem %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    Не понимаю какой {{ timer() }} вы хотите остановить.
+  {% elif context.error.data.code == 'already_actioned' %}
+    {{ timer() | capitalize_first }} уже остановлен.
+  {% else %}
+    {% if context.data.time %}
+      {{ render_error(context.error.data.code, time=context.data.time) }}
+    {% else %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

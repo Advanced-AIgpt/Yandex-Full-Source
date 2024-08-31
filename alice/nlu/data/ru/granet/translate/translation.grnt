@@ -1,0 +1,432 @@
+import: translate/common.grnt
+
+import: translate/common.grnt
+
+form personal_assistant.scenarios.translate:
+    enable_granet_parser: false
+    enable_alice_tagger: false
+    slots:
+        text:
+            type:
+                string
+        input_lang_src:
+            type:
+                string
+        input_lang_dst:
+            type:
+                string
+
+
+form personal_assistant.scenarios.translate.translation:
+    slots:
+        phrase:
+            type:
+                string
+            source: $Phrase
+        from_language:
+            type:
+                string
+            source: $FromLanguage
+        to_language:
+            type:
+                string
+            source: $ToLanguage
+    root:
+        [как? $Translate (фото|по фото)? $Phrase? $StrictFromSpec? $ExtendedToSpec?]
+        [как $How? $FromSpec? $ToSpec $Phrase]
+        [как $How? $FromSpec $ToSpec? $Phrase]
+        [$How $Phrase? $ToSpec]
+        [$Phrase $ToSpec]
+        [$Phrase $FromSpec $ExtendedToSpec?]
+        [что $Means $ExtendedFromSpec $Phrase?]
+        [$FromToSpec $Translate]
+        %negative
+        $TurnOn
+        $Convert
+        $AlarmPlayerCommands
+        $TransferMoney
+        $SwitchLang
+        $SwitchPcToSleep
+        $GcForeignLang
+        $Serp
+        $Cooking
+        $TranslateSong
+
+    $How:
+        как? это? (будет|пишется|произносится|говорится|называется)
+        как это
+        (можешь|можете)? $Tell<g:inf>
+        как? это? $Tell
+
+    $Tell:
+        %lemma
+        написать
+        писать
+        назвать
+        называть
+        произнести
+        произносить
+        сказать
+
+    $Means:
+        %lemma
+        что? (значит|означает|обозначает|называется|такое)
+
+    $Translate:
+        %lemma
+        как? это? можно? $TranslateVerb
+        (можешь|можете)? $TranslateVerb
+        $TranslateVerb
+        перевод|переводчик
+        %weight 1000000
+        $OpenTranslator? .? переводчик
+        %negative
+        %lemma off
+        переводом
+        переводе
+        переводчиком
+
+    $OpenTranslator:
+        %lemma
+        (открыть|открывать|включить|показать|найти|запустить|давать)
+
+    $TranslateVerb:
+        %lemma
+        перевести
+        переводить
+        переводится
+
+    $Phrase:
+        .+
+        %negative
+        %weight 1000
+        переведи
+        перевод
+        переводчик
+        перевести
+        это
+        (алиса|а|и|ну|можешь) .*
+        .* (а|и|в|но|ну|на|по|что|не|с|можешь)
+        не надо
+        хватит
+        как будет
+        как было
+        %lemma
+        а? как .*
+        это? слово .*
+        этот? текст .*
+        это? будет
+        это? было
+        можно
+        .* имя .?
+        .* (перевести|переводить|перевод|переведи|переводчик|транскрипция|произношение) .*
+
+    $ExtendedFromSpec:
+        $FromSpec
+        по $FromLanguage
+
+    $ExtendedToSpec:
+        по $ToLanguage
+        на $ToLanguage
+        $ToLanguage
+
+    $FromSpec:
+        с $FromLanguage
+        %weight 0.1
+        на $FromLanguage
+
+    $StrictFromSpec:
+        с $FromLanguage
+        %weight 0.01
+        $FromLanguage
+
+    $FromToSpec:
+        $FromLanguage $ToLanguage
+
+    $FromLanguage:
+        $Lang
+
+    $TurnOn:
+        %lemma
+        включи $NotTranslateCommand+ $ExtendedToSpec $NotTranslateCommand*
+
+    $NotTranslateCommand:
+        .+
+        %negative
+        %lemma
+        перевести
+        переведи
+        перевод
+        переводчик
+
+    $Convert:
+        $Translate .* (в|на) ($Currency|$Measurement)
+        $Translate .* (в|на) . систему счисления?
+
+    $Currency:
+        %lemma
+        %include "translate/currency.txt"
+
+    $Measurement:
+        %lemma
+        %include "translate/measurements.txt"
+
+    $AlarmPlayerCommands:
+        .* $Alarm $NotToSpec
+        $Translate ($Time|$PlayerEntity) .* (вперед|назад|начало|конец|середина|середину) .*
+        [(вперед|назад)* $Translate (на .* $Time)]
+
+    $Time:
+        %lemma
+        час|секунда|минута|день|год|милисекунда|полчаса|полдня|сек|мин|лет
+
+    $PlayerEntity:
+        %lemma
+        песня
+        песенка
+        мелодия
+        композиция
+        трек
+        трэк
+        ролик
+        видео
+        видос
+        клип
+        видеоролик
+        эпизод
+        фильм
+        мультик
+        мультфильм
+        сериал
+        кино
+        киношка
+        книга
+        книжка
+        подкаст
+        сказка
+        сказочка
+
+    $Alarm:
+        %lemma
+        будильник
+
+    $NotToSpec:
+        .*
+        %negative
+        $ToSpec
+
+    $TransferMoney:
+        $Translate $Money $NotToSpec
+
+    $Money:
+        %lemma
+        деньги
+        валюта
+        сбербанк
+        киви
+        карта
+        карточка
+        счет
+        денежный
+        телефон
+        мобильный
+
+    $SwitchLang:
+        .* $Switch .* $Locale (.|язык)*
+        [.* $Locale .* $Switch (.|язык)*]
+
+    $Switch:
+        %lemma
+        переключи
+        смени
+        переставь
+        поменяй
+        дай
+        перейти
+        переключать
+        переставить
+        включить
+        выключить
+        поставить
+        сделать
+        вернуть
+
+    $Locale:
+        %lemma
+        клавиатура
+        язык
+        звуковая дорожка
+        компьютер
+        раскладка
+        телефон
+        айфон
+        самсунг
+        мобильный
+        планшет
+        айпад
+
+    $SwitchPcToSleep:
+        [переведи $Pc в $SleepMode]
+
+    $Pc:
+        %lemma
+        комп
+        компьютер
+        система
+        телефон
+        планшет
+        экран
+        колонка
+
+    $SleepMode:
+        %lemma
+        ожидание
+        сон
+        спящий режим
+        режим сна
+        ждущий режим
+        режим ожидания
+
+    $GcForeignLang:
+        [(я|ты|мы)? $Talk .* $ToSpec]
+        %force_negative
+        [$Translate .*]
+        .* $How .* $ExtendedToSpec .*
+
+
+    $Talk:
+        %lemma
+        говорить
+        поговорить
+        рассказывать
+        спеть
+        запускать
+        запустить
+        разговаривать
+        поболтать
+        болтать
+        общаться
+        попробовать
+        научить
+        научиться
+        учить
+        уметь
+        мочь
+
+    $Serp:
+        [$SerpEntity .* ($FromSpec|$ToSpec)?]
+        %force_negative
+        [($Translate|$How) $SerpEntity .* ($FromSpec|$ToSpec)?]
+
+    $SerpEntity:
+        %lemma
+        фильм
+        кино
+        субтитры
+        мультфильм
+        мультик
+        сериал
+        серия
+        порно
+        порнуха
+        эротика
+        секс
+        видео
+        клип
+        ролик
+        анекдот
+        книги
+        рассказы
+        передача
+        программа
+        сайт
+        госуслуги
+        скачать
+        закачать
+        песня
+        песенка
+        новости
+        скачать
+        гдз
+        домашнее задание
+        домашка
+        решебник
+        зачет
+        экзамен
+        сочинение
+        правило
+        эссе
+        тест
+        учебник
+        решебник
+        занятие
+        пара
+        урок
+        лекция
+        семинар
+        музыка
+        поздравление
+        сказка
+        сказочка
+
+    $Cooking:
+        [$CookingEntity .* ($FromSpec|$ToSpec)?]
+        %force_negative
+        [($Translate|$How) $CookingEntity .* ($FromSpec|$ToSpec)?]
+
+    $CookingEntity:
+        %lemma
+        рецепт
+        блюдо
+        десерт
+        мясо
+        картошка
+        салат
+        суп
+        приготовление
+
+    $TranslateSong:
+        [как? $Translate $Song $SongDescriptor? .*]
+        %force_negative
+        %lemma
+        .* (слово|фраза|предложение) .* $Song .*
+
+    $Song:
+        %lemma
+        песня
+        песенка
+        трек
+        композиция
+
+    $SongDescriptor:
+        %lemma
+        этот|эта|следующий|предыдущий|играющий
+
+    filler:
+        $nonsense
+        мне
+        тогда
+        имя
+        %lemma
+        переводится
+        звучит
+        пишется
+        произносится
+        это? слово
+        эта? фраза
+        этот? текст
+        это? предложение
+        скажи
+        скажите
+        пожалуйста
+        онлайн
+        а еще
+        нужен
+        с произношением
+        правильно
+        яндекс
+        гугл
+        можно
+        надо
+        найди
+        найти

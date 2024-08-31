@@ -1,0 +1,86 @@
+import:
+    common/commands.grnt
+    common/filler.grnt
+    common/adverbs.grnt
+    common/pronouns.grnt
+    common/prepositions.grnt
+    route_manager/common.grnt
+
+
+form alice.route_manager.stop:
+    root:
+        $RouteStop
+    filler:
+        $nonsense
+        $Common.WayToCallAlice
+        $Common.Filler
+        моего
+
+$RouteStop:
+    [($StopVerbs|найди? $StopNouns)+ ($Ride|$Car)+ $StopDescription* $IWantStop? $EndRide?]
+    [$StopRideVerbs+ ($Ride|$Car)* $StopDescription* $IWantStop? $EndRide?]
+    [$Common.Lets? $Common.ToMake? $StopNouns $StopDescription* $IWantStop?]
+
+    $StopRideVerbs
+    $IWantStop
+    $Common.Lets? $EndRide
+
+    $EndRide:
+        $StopVerbs $Ride
+
+    $IWantStop:
+        $Inner:
+            $ExitVerbs
+            $StopVerbs ($Ride|$Car)
+            $StopRideVerbs
+            $Common.ToMake? $StopNouns
+            выйти
+            стоп
+        $Need:
+            %lemma
+            нужна|нужно
+            необходима|необходимо
+        [(я|мы|меня) $Common.ToWant? $Inner $StopDescription*]
+        [($Common.ToWant|можно) $Inner $StopDescription*]
+        мне? $Need $Inner ($Ride|$Car)* $StopDescription*
+        %force_negative
+        %lemma
+        [выходи за меня]
+
+    $WeArrived:
+        $Inner:
+            %lemma
+            приехать
+        (я|мы) уже? $Inner
+        приехали
+    
+    $StopDescription:
+        %lemma
+        $WeArrived
+        $Common.Now
+        $Here
+        ненадолго
+        чуть? раньше
+        дальше не надо
+        потом поедем дальше
+        стоп
+        временно|временный
+        на время
+        на . минут
+        досрочно
+        $Common.At $StopNouns?
+        [$StopAdjectives* место]
+
+    $ExitVerbs:
+        %lemma
+        выйти
+    
+    $Here:
+        %lemma
+        [вот? $Common.Here (где нибудь)?]
+        (в|на) ($Common.PronounThis|данной|данном|$Any)? (точке|месте) маршрута?
+        $Any:
+            %lemma
+            где нибудь
+            как нибудь
+            какой нибудь

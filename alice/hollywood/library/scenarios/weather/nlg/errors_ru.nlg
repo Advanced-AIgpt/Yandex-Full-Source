@@ -1,0 +1,77 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ru.nlg" %}
+
+{% macro render_weather_error__nousergeo() %}
+  {% chooseline %}
+    Чтобы ответить на этот вопрос мне нужно знать ваше местоположение. Но мне не удалось его определить.
+    Мне не удалось определить где вы находитесь.
+    Чтобы дать ответ мне нужно знать ваше местоположение, но я не смогла его определить.
+    Не могу определить ваше местоположение.
+    Не могу определить, где вы находитесь.
+    Я не знаю, где вы сейчас находитесь, и поэтому не могу дать ответ.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_weather_error__nogeo(where) %}
+  {% chooseline %}
+    К сожалению,
+    Извините,
+    Простите,
+    Увы, но
+  {% endchooseline %}
+  {% chooseline %}
+    я не могу понять,
+    я не знаю,
+  {% endchooseline %}
+  где это "{{ where }}".
+{% endmacro %}
+
+{% phrase render_weather_error__system %}
+  Что-то пошло не так. Пока ничего не могу сказать про погоду.
+{% endphrase %}
+
+{% phrase render_weather_error__invalidparam %}
+  Что-то пошло не так. Пока ничего не могу сказать про погоду.
+{% endphrase %}
+
+{% phrase render_weather_error__nogeo %}
+  {% if not context.where %}
+    {{ render_weather_error__nousergeo() }}
+  {% else %}
+    {{ render_weather_error__nogeo(context.where) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_weather_error__noweather %}
+  Нет данных о погоде
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    в этом месте
+  {% endif %}
+  на это число.
+{% endphrase %}
+
+{% phrase render_weather_error__nopressure %}
+  Нет данных о давлении
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    в этом месте
+  {% endif %}
+  на это число.
+{% endphrase %}
+
+{% phrase render_weather_error__nowind %}
+  Нет данных о ветре
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    в этом месте
+  {% endif %}
+  на это число.
+{% endphrase %}
+
+{% phrase render_weather_error__weathererror %}
+  Что-то пошло не так. Пока ничего не могу сказать про погоду.
+{% endphrase %}

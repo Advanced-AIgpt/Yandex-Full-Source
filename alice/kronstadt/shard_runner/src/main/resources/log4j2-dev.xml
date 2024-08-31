@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${hostName} --- [%15.15t] %-40.40c{1.} : %m%n%ex
+        </Property>
+    </Properties>
+    <Appenders>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT" follow="true">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <RollingRandomAccessFile
+            name="Setrace"
+            fileName="setrace.protoseq"
+            filePattern="setrace.%i.protoseq"
+            immediateFlush="true"
+        >
+            <SetraceThreadContextFilter/>
+            <SetraceLayout printDebugToStderr="false" validateProto="true"/>
+
+            <DefaultRolloverStrategy max="1"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="200MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+    </Appenders>
+    <Loggers>
+        <Root level="info" additivity="false">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Root>
+
+        <AsyncLogger name="ACCESS_LOG" level="trace" additivity="false">
+            <AppenderRef ref="ConsoleAppender"/>
+        </AsyncLogger>
+
+        <AsyncLogger name="ru.yandex.alice" level="debug"/>
+        <AsyncLogger name="org.springframework.jdbc.datasource.DataSourceUtils" level="info"/>
+        <AsyncLogger name="org.springframework.jdbc.core.JdbcTemplate" level="info"/>
+        <AsyncLogger name="com.zaxxer.hikari.pool.HikariPool" level="info"/>
+        <AsyncLogger name="org.springframework.web.servlet.DispatcherServlet" level="info"/>
+        <AsyncLogger name="org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor"
+                level="info"/>
+        <AsyncLogger name="com.yandex.ydb.core.grpc.YdbNameResolver" level="warn"/>
+
+    </Loggers>
+</Configuration>

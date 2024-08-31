@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <Property name="JSON_LOG_PATTERN">{ "timestamp": "%date{yyyy-MM-dd'T'HH:mm:ss.SSSZ}", "thread": "%thread",
+            "level": "%level", "logger": "%logger", "requestId": "%replace{%X{request_id}}{^$}{NA}", "message":
+            "%enc{%message}{JSON}", "stacktrace": "%enc{%throwable}{JSON}"}%n
+        </Property>
+    </Properties>
+
+    <Appenders>
+        <RollingRandomAccessFile
+            name="OutFileAppender"
+            fileName="/logs/dialogovo.out"
+            filePattern="/logs/dialogovo.out.%i"
+            immediateFlush="true"
+        >
+            <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
+            <DefaultRolloverStrategy max="2"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="200MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+        <RollingRandomAccessFile name="AccessFileLogger" fileName="/logs/access.log"
+                                 filePattern="/logs/access.%i.log" immediateFlush="true">
+            <PatternLayout>
+                <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS ZZZZ}] %m%n</Pattern>
+            </PatternLayout>
+
+            <DefaultRolloverStrategy max="1"/>
+
+            <Policies>
+                <SizeBasedTriggeringPolicy size="500MB"/>
+            </Policies>
+
+        </RollingRandomAccessFile>
+
+        <RollingRandomAccessFile name="DiagnosticInfoFileLogger" fileName="/logs/diagnostic-info.log"
+                                 filePattern="/logs/diagnostic-info.%i.log" immediateFlush="true">
+            <PatternLayout>
+                <Pattern>%m%n</Pattern>
+            </PatternLayout>
+
+            <DefaultRolloverStrategy max="1"/>
+
+            <Policies>
+                <SizeBasedTriggeringPolicy size="200MB"/>
+            </Policies>
+
+        </RollingRandomAccessFile>
+
+        <RollingRandomAccessFile
+            name="Setrace"
+            fileName="/logs/setrace.protoseq"
+            filePattern="/logs/setrace.%i.protoseq"
+            immediateFlush="false"
+        >
+            <SetraceThreadContextFilter/>
+            <SetraceLayout printDebugToStderr="false" validateProto="true"/>
+
+            <DefaultRolloverStrategy max="1"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="200MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+    </Appenders>
+
+    <Loggers>
+        <AsyncLogger name="com.yandex.ydb.core.grpc.YdbNameResolver" level="warn"/>
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.service.penguinary" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.service.state" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.service.appmetrica.AppMetricaServiceImpl" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.service.ApiServiceImpl" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.webhook.client.WebhookClientImpl" level="debug"/>
+        <AsyncLogger name="WEBHOOK_REQUEST_LOGGER" level="debug"/>
+
+        <AsyncLogger name="ru.yandex.alice.paskill.dialogovo.megamind.AbstractProcessorBasedScenario" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.kronstadt.server.http.ScenarioController" level="debug"/>
+
+        <AsyncRoot level="info">
+            <AppenderRef ref="OutFileAppender"/>
+            <AppenderRef ref="Setrace"/>
+        </AsyncRoot>
+
+        <AsyncLogger name="ACCESS_LOG" level="trace" additivity="false">
+            <AppenderRef ref="AccessFileLogger"/>
+        </AsyncLogger>
+
+        <AsyncLogger name="DIAGNOSTIC_INFO_LOG" level="trace" additivity="false">
+            <AppenderRef ref="DiagnosticInfoFileLogger"/>
+        </AsyncLogger>
+
+    </Loggers>
+
+</Configuration>

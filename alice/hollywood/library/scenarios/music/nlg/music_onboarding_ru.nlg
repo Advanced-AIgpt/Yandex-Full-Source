@@ -1,0 +1,195 @@
+{% from "alice/hollywood/library/scenarios/music/nlg/music_tags__ru.nlg" import music_tags_data %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_tag_info %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_repeated_skip with context %}
+
+
+{% macro try_render_prephrase() %}
+    {% set prephrase = context.get('prephrase') %}
+    {% if prephrase == 'master__start' %}
+        Для начала давайте узнаем друг друга лучше.
+    {% endif %}
+{% endmacro %}
+
+
+{% macro try_render_subphrase(subphrase, capitalize=True) %}
+    {% if subphrase == 'artist__ask' %}
+        {% if capitalize %}
+            А
+        {% endif %}
+        кто ваш любимый исполнитель?
+    {% elif subphrase == 'genre__ask' %}
+        {% if capitalize %}
+            А
+        {% endif %}
+        музыку какого жанра вы слушаете чаще всего?
+    {% elif subphrase == 'track__game_ask' %}
+        {% set phrase =  'давайте поиграем? Я вам включу несколько песен, а вы скажете, нравятся они вам или нет.' %}
+        {% if capitalize %}
+            {{ phrase | capitalize_first }}
+        {% else %}
+            {{ phrase }}
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+
+{% phrase album__like %}
+    Хорошо, поставила лайк альбому!
+{% endphrase %}
+
+
+{% phrase artist__ask %}
+    {{ try_render_prephrase() }}
+    Кто ваш любимый исполнитель?
+{% endphrase %}
+
+{% phrase artist__like %}
+    {% if context.artist_name %}
+        {{ context.artist_name | capitalize }}, отличный выбор!
+    {% else %}
+        Хорошо, поставила лайк исполнителю!
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__dislike %}
+    {% if context.reask %}
+        Хорошо, поставила дизлайк. А какой исполнитель вам нравится?
+    {% else %}
+        Хорошо, поставила дизлайк исполнителю.
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__no_search_slot %}
+    Извините, я не смогла разобрать исполнителя. {% if context.reask %} Можете повторить? {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__not_found %}
+    Извините, я не смогла найти такого исполнителя. {% if context.reask %} Кто ещё вам нравится? {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+
+{% phrase track__like %}
+    Хорошо, поставила лайк треку!
+{% endphrase %}
+
+{% phrase track__dislike %}
+    Хорошо, поставила дизлайк треку.
+{% endphrase %}
+
+{% phrase track__game_start %}
+    Хорошо! Включаю первый трек, а вы говорите, нравится или нет.
+{% endphrase %}
+
+{% phrase track__game_start_master %}
+    Хорошо! Включаю первый трек.
+{% endphrase %}
+
+{% phrase track__game_start_decline %}
+    Хорошо.
+{% endphrase %}
+
+{% phrase track__reask %}
+    Мне только спросить. Вам нравится эта песня? Скажите лайк.
+{% endphrase %}
+
+{% phrase track__game_like %}
+    {% chooseline %}
+        Ура! Я старалась! Послушайте теперь этот.
+        Отлично! Послушайте ещё вот этот.
+        Очень рада! А как насчет этого?
+    {% endchooseline %}
+{% endphrase %}
+
+{% phrase track__game_dislike %}
+    {% chooseline %}
+        Поняла.
+        Запомнила!
+        Очень жаль.
+    {% endchooseline %}
+    {% set proposal = render_repeated_skip() | trim %}
+    {% if proposal %}
+        {{ proposal }}
+    {% else %}
+        {% chooseline %}
+            Послушайте теперь этот.
+            Попробуйте теперь вот этот.
+            А как насчет этого?
+        {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+{% phrase track__game_almost_over %}
+    Хорошо, попробуем последний.
+{% endphrase %}
+
+{% phrase track__game_end %}
+    Окей, запомнила. Теперь когда вы будете просить музыку я буду основываться на ваших предпочтениях. Давайте послушаем?
+{% endphrase %}
+
+{% phrase track__game_music_play_decline %}
+    Хорошо. Вы можете в любое время сказать мне "Алиса, включи музыку".
+{% endphrase %}
+
+{% phrase track__repeated_skip_decline %}
+    Хорошо, продолжаю ставить музыку, а вы говорите, нравится или нет.
+{% endphrase %}
+
+
+{% phrase genre__ask %}
+    {{ try_render_prephrase() }}
+    Музыку какого жанра вы слушаете чаще всего?
+{% endphrase %}
+
+{% phrase genre__like %}
+    {% set genre_info = music_tags_data.get('genre') %}
+    {% set genre = render_tag_info(genre_info, context.genre_id) if context.genre_id else '' %}
+    {% if genre %}
+        {{ genre | capitalize }}, мне нравится!
+    {% else %}
+        Хорошо, поставила лайк жанру!
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase genre__no_slot %}
+    Не могу найти такой жанр. {% if context.reask %} Можете повторить? {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+
+{% phrase asking__repeat %}
+    {% if context.reask %}
+        Давайте попробуем еще раз:
+        {{ try_render_subphrase(context.subphrase_repeat, False) }}
+    {% else %}
+        Хорошо, когда определитесь, скажите: Алиса, настрой мои музыкальные предпочтения.
+    {% endif %}
+{% endphrase %}
+
+
+{% phrase no_subscription__like_dislike %}
+    Чтобы ставить лайки и дизлайки музыки, вам нужна подписка на Музыку.
+{% endphrase %}
+
+{% phrase no_subscription__onboarding %}
+    Чтобы настраивать рекомендации музыки, вам нужна подписка на Музыку.
+{% endphrase %}
+
+{% phrase unsupported_found__like %}
+    Извините, я пока умею ставить лайки только песням, исполнителям, альбомам и жанрам.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase unsupported_found__dislike %}
+    Извините, я пока умею ставить дизлайки только песням и исполнителям.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase nothing_found %}
+    Извините, я не нашла ничего по вашему запросу.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}

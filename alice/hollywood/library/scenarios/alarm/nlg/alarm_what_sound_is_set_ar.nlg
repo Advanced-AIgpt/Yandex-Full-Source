@@ -1,0 +1,67 @@
+{% ext_nlgimport "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" %}
+{% ext_from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_music_answer, render_music_tags_default, render_music_tags with context %}
+{% ext_from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_radio_title %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ar.nlg" import alarm_stoit, set_sound_phrase %}
+{% macro repeat() -%}
+  {% if 'alarm_sound__repeat' in context.attentions %}
+    {% chooseline %}
+      على التكرار
+      على التكرار
+    {% endchooseline %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_filtered_success(combo_render=False) %}
+  {% set filters_count = context.data.music_result.filters | length %}
+  {% if filters_count > 1 %}
+    {{ render_music_tags_default() }}
+  {% elif filters_count == 1 %}
+    {# there can only be one key-value pair in this dict #}
+    {% for filter, tag in context.data.music_result.filters.items() %}
+      {% set tag = tag | replace('-', '_') %}
+      {{ render_music_tags(filter, tag) }}
+    {% endfor %}
+  {% else %}
+    لقد تحطم شيئ داخلي.
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if 'alarm_sound__supported' in context.attentions %}
+    {% if 'alarm_sound__default_is_set' in context.attentions %}
+      {% chooseline %}
+        المنبه الاعتيادي. هل تريد أن أضبط أغنية أو فرقة أو راديو أو موسيقى لمزاج معين؟ قل لي
+        لديك الآن نغمة اعتيادية أستطيع تغييرها إلى أغنية أو فرقة أو راديو. قل مثلاً.
+      {% endchooseline %}
+      {{ set_sound_phrase() }}.
+    {% elif context.data.alice_show_result %}
+      تم ضبط برنامج الصباح على منبهك.
+    {% elif context.data.radio_result %}
+      {% set radio_title = context.data.radio_result | get_item('title', 'راديو') %}
+      {{ alarm_stoit() }} {{ render_radio_title(radio_title) }}.
+    {% elif not context.data.music_result %}
+      يبدو أنني تعطلت. سأذهب لأنام قليلاً.
+    {% elif context.data.music_result.filters %}
+      {{ render_filtered_success() }}
+    {% else %}
+      {{ alarm_stoit() }}
+      {{ repeat() }}
+      {% vc %}
+        {{ render_music_answer(context.data.music_result, 'nom', render_album=False, shorten=True) | tts_domain('music') }}
+      {% evc %}
+      {% tx %}
+        {{ render_music_answer(context.data.music_result, 'nom') }}
+      {% etx %}
+      .
+    {% endif %}
+    {% if 'alarm_sound__no_alarms' in context.attentions %}
+      ليس لديك منبهات يمكنك أن تطلب مني تعيين واحد.
+    {% endif %}
+  {% else %}
+    لديك نغمة اعتيادية على المنبه.
+  {% endif %}
+{% endphrase %}
+
+{% phrase not_supported %}
+    أنا لا زلت لا أستطيع ذلك.
+{% endphrase %}

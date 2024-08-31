@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <Property name="JSON_LOG_PATTERN">{"timestamp": "%date{yyyy-MM-dd'T'HH:mm:ss.SSSZ}", "thread": "%thread", "level": "%level", "logger": "%logger", "requestId": "%replace{%X{request_id}}{^$}{NA}", "message": "%enc{%message}{JSON}", "stacktrace": "%enc{%throwable}{JSON}"}%n</Property>
+    </Properties>
+
+    <Appenders>
+
+        <RollingRandomAccessFile name="ServerLogFileLogger" fileName="/logs/memento.out"
+                                 filePattern="/logs/memento.out.%i" immediateFlush="true">
+            <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
+
+            <DefaultRolloverStrategy max="1"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="500MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+        <RollingRandomAccessFile name="AccessFileLogger" fileName="/logs/access.log"
+                                 filePattern="/logs/access.%i.log" immediateFlush="true">
+            <PatternLayout>
+                <Pattern>[%d{yyyy-MM-dd'T'HH:mm:ss.SSS ZZZZ}] %m%n</Pattern>
+            </PatternLayout>
+
+            <DefaultRolloverStrategy max="1"/>
+
+            <Policies>
+                <SizeBasedTriggeringPolicy size="500MB"/>
+            </Policies>
+        </RollingRandomAccessFile>
+
+        <!--UnifiedAgent name="ServerLogAppender" host="localhost" port="16400" messageMetaEnabled="true">
+                <AgentProperty name="MaxInflightBytes" value="10485760"/>
+                <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+        </UnifiedAgent-->
+        <!--UnifiedAgent name="AccessLogAppender" host="localhost" port="16400" messageMetaEnabled="true">
+                <AgentProperty name="MaxInflightBytes" value="10485760"/>
+                <PatternLayout pattern="[%d{yyyy-MM-dd'T'HH:mm:ss.SSS ZZZZ}] %m%n"/>
+        </UnifiedAgenti-->
+
+        <UnifiedAgent name="UNIFIED" host="localhost" port="16400" messageMetaEnabled="true">
+            <AgentProperty name="MaxInflightBytes" value="10485760"/>
+        </UnifiedAgent>
+        <Rewrite name="ServerLogAppender">
+            <AppenderRef ref="UNIFIED"/>
+            <LayoutRewritePolicy>
+                <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+            </LayoutRewritePolicy>
+        </Rewrite>
+
+        <Rewrite name="AccessLogAppender">
+            <AppenderRef ref="UNIFIED"/>
+            <LayoutRewritePolicy>
+                <PatternLayout pattern="[%d{yyyy-MM-dd'T'HH:mm:ss.SSS ZZZZ}] %m%n"/>
+            </LayoutRewritePolicy>
+        </Rewrite>
+
+        <UnifiedAgent name="Setrace" host="localhost" port="16402" messageMetaEnabled="true">
+            <AgentProperty name="MaxInflightBytes" value="10485760"/>
+            <SessionMetaItem name="is_proto" value="true"/>
+            <SetraceThreadContextFilter/>
+            <SetraceLayout printDebugToStderr="false" validateProto="true" addMagicAndLength="false"/>
+        </UnifiedAgent>
+
+    </Appenders>
+
+    <Loggers>
+        <AsyncLogger name="ACCESS_LOG" level="trace" additivity="false">
+            <AppenderRef ref="AccessLogAppender"/>
+            <AppenderRef ref="AccessFileLogger"/>
+        </AsyncLogger>
+        <AsyncLogger name="com.yandex.ydb.core.grpc.YdbNameResolver" level="warn"/>
+        <AsyncLogger name="ru.yandex.alice.memento" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskills" level="debug"/>
+        <AsyncLogger name="com.yandex.ydb.table.impl.pool" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskills.common.logging.protoseq.SetraceInterceptor" level="debug"/>
+        <AsyncLogger name="ru.yandex.alice.paskills.common.logging.protoseq.SetraceEventLogger" additivity="false">
+            <AppenderRef ref="Setrace"/>
+        </AsyncLogger>
+        <AsyncRoot level="info">
+            <AppenderRef ref="ServerLogFileLogger"/>
+            <AppenderRef ref="ServerLogAppender"/>
+            <AppenderRef ref="Setrace"/>
+        </AsyncRoot>
+
+
+    </Loggers>
+
+</Configuration>

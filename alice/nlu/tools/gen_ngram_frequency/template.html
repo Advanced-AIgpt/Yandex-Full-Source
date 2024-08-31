@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style media="only screen">
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        html {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 0;
+            overflow: auto;
+        }
+
+        body {
+            padding: 1rem;
+            overflow: auto;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main_grid {
+            flex-grow: 1;
+            height: 100%;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 2px 40px 2px;
+            height: 40px;
+            box-shadow: 0 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+
+        .tabs>* {
+            width: 100%;
+            color: dimgray;
+            height: 100%;
+            cursor: pointer;
+            display: grid;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            border: 0.5px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .tabs>*:hover:not(.active) {
+            background-color: rgb(220, 220, 220);
+        }
+
+        .tabs>.active {
+            color: white;
+            background-color: #6bac82;
+        }
+        .panel {
+            display: none;
+        }
+        .panel.active {
+            display: block;
+        }
+    </style>
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <script type="text/javascript">
+
+    function onTabClick(event) {
+        // deactivate existing active tabs and panel
+        for (let i = 0; i < tab.length; i++) {
+            tab[i].classList.remove("active");
+        }
+
+        for (let i = 0; i < panel.length; i++) {
+            panel[i].classList.remove("active");
+        }
+
+        // activate new tabs and panel
+        event.target.classList.add('active');
+        let classString = event.target.getAttribute('data-target');
+        document.getElementById(classString).classList.add("active");
+    }
+
+    function numberFormat(digits, addition) {
+        digits || (digits = 4);
+        addition || (addition = '');
+        return function (data) {
+            if (typeof(data.value) === 'undefined' || data.value === null) {
+                return '';
+            }
+            var shownValue = Number.isInteger(data.value)
+                ? data.value
+                : data.value.toFixed(digits);
+            return '<span title="' + data.value + '">' + String(shownValue) + addition + '</span>';
+        }
+    }
+
+    function getGridOptions(ngramData) {
+        return {
+            columnDefs: [
+                {headerName: '#', maxWidth: 50, cellRenderer: indexRenderer, sortable: false},
+                {field: 'ngram', headerName: 'n-gram', minWidth: 200},
+                {field: 'frequency', headerName: 'frequency', cellRenderer: numberFormat(5), minWidth: 200, sort: 'desc'},
+            ],
+            defaultColDef: {
+                flex: 1,
+                minWidth: 50,
+                filter: true,
+                sortable: true,
+                resizable: true,
+            },
+            onSortChanged: (rowNodes) => {
+                gridOptions.api.refreshCells();
+            },
+            rowData: ngramData
+        };
+    }
+
+    var indexRenderer = function (params) {
+        return parseInt(params.node.rowIndex) + 1;
+    };
+
+    // global params
+    var frequencyData = $FREQUENCY_DATA;
+    var gridOptions1 = getGridOptions(frequencyData["1-gram"]);
+    var gridOptions2 = getGridOptions(frequencyData["2-gram"]);
+    var gridOptions3 = getGridOptions(frequencyData["3-gram"]);
+    var tabs;
+    var tab;
+    var panel;
+
+    function initGrid() {
+        // init grid
+        new agGrid.Grid(document.querySelector('#first_grid'), gridOptions1);
+        new agGrid.Grid(document.querySelector('#second_grid'), gridOptions2);
+        new agGrid.Grid(document.querySelector('#third_grid'), gridOptions3);
+    }
+
+    // setup the grid after the page has finished loading
+    document.addEventListener('DOMContentLoaded', function () {
+        initGrid();
+        tabs = document.querySelectorAll(".tabs");
+        tab = document.querySelectorAll(".tab");
+        panel = document.querySelectorAll(".panel");
+        for (let i = 0; i < tab.length; i++) {
+            tab[i].addEventListener('click', onTabClick, false);
+        }
+    });
+    </script>
+</head>
+<body>
+    <div class="tabs ag-theme-material">
+        <div class="tab active" data-target="first_grid">1-gram</div>
+        <div class="tab" data-target="second_grid">2-gram</div>
+        <div class="tab" data-target="third_grid">3-gram</div>
+    </div>
+    <div class="main_grid ag-theme-balham">
+        <div class="main_grid ag-theme-balham panel active" id="first_grid"></div>
+        <div class="main_grid ag-theme-balham panel" id="second_grid"></div>
+        <div class="main_grid ag-theme-balham panel" id="third_grid"></div>
+    </div>
+</body>
+</html>

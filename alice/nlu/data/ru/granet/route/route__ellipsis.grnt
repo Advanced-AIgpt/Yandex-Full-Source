@@ -1,0 +1,74 @@
+import: route/route.grnt
+
+form personal_assistant.scenarios.show_route__ellipsis:
+    slots:
+        app:
+            source: $App
+            type:
+                custom.show_route_app
+                string
+        route_action_type:
+            source: $ActionTypeDistanceWeak|$ActionTypeDistanceStrong|$ActionTypeOther|$ActionShow|$RouteAction
+            type:
+                custom.route_action_type
+                string
+        route_type:
+            source: $ByType|$OnTypeCar|$OnTypeTaxi|$OnTypeOther|$ForType|$SimpleType|$SingleTypeRouteIntent|$SingleTypeRouteIntentClassic|$SingleTypeShowOnMap|$SingleTypeOther|$PartViaActions
+            type:
+                custom.route_type
+                string
+        what_from:
+            source: $WhatFromCity|$WhatFrom|$WeakWhatFrom|$Current
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        what_to:
+            source: $WhatToCity|$WhatTo|$WeakWhatTo|$WhatToSpecial|$WhatToFavorite|$CurrentIsHere
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        what_via:
+            source: $WhatViaCity|$WhatVia|$WeakWhatVia|$SlotByRoad
+            type:
+                custom.named_location
+                string
+            matching_type: exact
+        where_from:
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+        where_to:
+            source: $WhereTo|$SlotWhereNearTo|$WhereArea|$WhereRegion
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+        where_via:
+            type:
+                custom.special_location
+                custom.named_location
+                string
+            matching_type: exact
+    root:
+        [$RouteAddon* $Area? $RouteIntent* $ToStrongLocation]
+        [$RouteAddon* $Area? $RouteIntent* $WeakFromLocation? $ViaLocation* $WeakToLocationWithDetail]
+        [$RouteAddon* $Area? $RouteIntent* $WeakFromLocation? $ViaLocation* $WeakToLocation]
+        [$RouteAddon* $Area? $RouteIntent* $WeakFromLocation $ViaLocation* $WeakToLocation?]
+        [$ActionTypeDistance $ActionTypeOther+]
+        [$ActionTypeDistance $SingleType+]
+        [$ActionTypeOther+ $SingleType+]
+        [$RouteIntent+ $SingleType+]
+        $ActionType
+        $ActionTypeOther
+        $SingleTypeShowOnMap
+        $GoTypeCar
+        $GoTypeOther
+        $Current
+        $UseTypeCar
+    filler:
+        $Filler

@@ -1,0 +1,80 @@
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_authorization_from_music_play with context %}
+
+{# Старое винсовое NLG https://a.yandex-team.ru/arc/trunk/arcadia/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/intents/radio/radio_play.nlg #}
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("راديو" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    راديو "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_long_radio_intro(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    جاري تشغيل {{ rendered_radio_title }}.
+  {% or %}
+    حسناً! {{ rendered_radio_title | capitalize_first }}.
+  {% or %}
+    حسناً! {{ rendered_radio_title | capitalize_first }}.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_unconfigured_station() %}
+  {% chooseline %}
+    لم أضبط على هذه الموجة بعد.
+    لم ألتقط هذا التردد بعد.
+    لم يتم ضبطي بعد على هذه المحطة الإذاعية.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_launch_recommended(radio_title) %}
+  {% chooseline %}
+    أستطيع أن أقترح عليك
+    لكنني أستطيع أن أشغل لك
+    لكنني أستطيع تشغيل لك
+  {% endchooseline %}
+  {{ render_radio_title(radio_title) }}.
+{% endmacro %}
+
+{% macro render_unknown_station() %}
+    عذراً، لكنني لا أعرف هذه المحطة الإذاعية.
+{% endmacro %}
+
+{% macro render_unsupported_user_region() %}
+  للأسف، ليست هناك أية إذاعات راديو متوفرة في منطقتك.
+{% endmacro %}
+
+{% phrase render_result %}
+  {% set music_answer = form.answer or context.slots.answer or context.answer %}
+  {% set active = music_answer|get_item('active', False) and not context.attentions.get('fm_station_is_inactive') %}
+  {% set available = music_answer|get_item('available', False) and not context.attentions.get('fm_station_is_unavailable') %}
+  {% set recognized = not context.attentions.get('fm_station_is_unrecognized') %}
+  {% set radio_title = music_answer|get_item('title', 'راديو') %}
+  {% set launch_recommended = context.attentions.get('station_not_found_launch_recommended') %}
+
+  {% if context.attentions.get('suggest_authorization_from_music_play') %}
+    {% text %}
+      {{ render_authorization_from_music_play() }}
+      \n
+    {% endtext %}
+  {% endif %}
+
+  {% if not recognized %}
+    {{ render_unknown_station() }}
+  {% elif not active %}
+    {{ render_unconfigured_station() }}
+  {% elif not available %}
+    هذه الإذاعة غير متوفرة حالياً.
+    {% chooseline %}
+      هذه هي الأخبار.
+      حاول فيما بعد.
+    {% endchooseline %}
+  {% else %}
+    {{ render_long_radio_intro(radio_title) }}
+  {% endif %}
+  {% if launch_recommended and not (active and available and recognized) %}
+    {{ render_launch_recommended(radio_title) }}
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/guest";
+option java_package = "ru.yandex.alice.megamind.protos.guest";
+option java_outer_classname = "GuestOptions";
+
+import "alice/library/censor/protos/extension.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TGuestOptions {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    enum EGuestOrigin {
+        Unknown = 0;
+        RemoteControl = 1;
+        VoiceBiometry = 2;
+        VideoBiometry = 3;
+    }
+
+    enum EStatus {
+        NoMatch = 0;
+        Match = 1;
+    }
+
+    optional string OAuthToken = 1 [json_name = "oauth_token", (NYT.column_name) = "oauth_token", (FieldAccess) = A_PRIVATE_EVENTLOG];
+    optional string YandexUID = 2 [json_name = "yandex_uid", (NYT.column_name) = "yandex_uid"];
+    // PersId - Personalization ID; случайный уникальный идентификатор персонализации.
+    // https://wiki.yandex-team.ru/users/lyalchenko/round-trip-biometry/
+    optional string PersId = 3 [json_name = "pers_id", (NYT.column_name) = "pers_id"];
+    optional EGuestOrigin GuestOrigin = 4 [json_name = "guest_origin", (NYT.column_name) = "guest_origin"];
+    optional EStatus Status = 5 [json_name = "status", (NYT.column_name) = "status"];
+    // IsOwnerEnrolled is filled in Megamind
+    optional bool IsOwnerEnrolled = 6 [json_name = "is_owner_enrolled", (NYT.column_name) = "is_owner_enrolled"];
+}

@@ -1,0 +1,116 @@
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import font_color, open_uri_action with context %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ru.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/show_traffic_bass/nlg/cards/show_traffic_bass.nlg" %}
+
+{% macro render_traffic_level() %}
+  {{ form.resolved_where | city_prepcase | capitalize_first }}
+  в настоящее время
+  {{ form.traffic_info.level }}
+  {{ "балл" | pluralize(form.traffic_info.level | int) }},
+  {{ form.traffic_info.hint | lower }}
+  .
+{% endmacro %}
+{% macro render_traffic_level_with_card() %}
+  {% chooseitem 0.8 %}
+    {{ form.resolved_where | city_prepcase | capitalize_first }}
+     — {{ form.traffic_info.level }}
+    {{ "балл" | pluralize(form.traffic_info.level | int) }}
+    {% maybe 0.25 %}
+      по шкале {%vc%}Яндекс Пробок{%evc%}{%tx%}Яндекс.Пробок{%etx%}
+    {% endmaybe %}
+  {% or 0.2 %}
+    Загруженность
+    — {{ form.traffic_info.level }}
+    {{ "балл" | pluralize(form.traffic_info.level | int) }}
+  {% endchooseitem %}
+  ,
+  {{ form.traffic_info.hint | lower }}
+  .
+{% endmacro %}
+{% macro render_traffic_without_level() %}
+  {% set geo=form.resolved_where | city_prepcase %}
+  {% if context.is_elari_watch or context.is_smart_speaker %}
+    К сожалению, у меня нет информации о дорожной ситуации {{ geo }}
+  {% else %}
+    {% chooseline %}
+      Могу открыть пробки {{ geo }} на карте.
+      Могу открыть карту пробок {{ geo }}.
+      Пробки {{ geo }} можно открыть на карте.
+      Давайте посмотрим на карте.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+{% macro render_traffic_without_level_with_card() %}
+  {% set geo=form.resolved_where | city_prepcase %}
+  {% if context.is_elari_watch or context.is_smart_speaker %}
+    {% chooseline %}
+      Я не могу показать загруженность дорог на этом устройстве.
+      К сожалению, показать здесь карту пробок не получится.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Вот пробки {{ geo }} на карте.
+      Вот пробки {{ geo }}. Внимание на карту.
+      Загруженность дорог {{ geo }}. Вот как это выглядит.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+{% macro render_result_without_card() %}
+  {% if form.traffic_info.level %}
+    {{ render_traffic_level() }}
+  {% elif context.is_navigator or context.is_auto %}
+    Взгляните.
+  {% else %}
+    {{ render_traffic_without_level() }}
+  {% endif %}
+{% endmacro %}
+{% macro render_result_with_card() %}
+  {% if form.traffic_info.level %}
+    {{ render_traffic_level_with_card() }}
+  {% elif context.is_navigator or context.is_auto %}
+    Взгляните.
+  {% else %}
+    {{ render_traffic_without_level_with_card() }}
+  {% endif %}
+{% endmacro %}
+{% phrase render_result %}
+  {% if req_info.experiments['traffic_cards_with_text_bubble'] != None %}
+    {% if not context.attentions.get('traffic_cards') %}
+      {{ render_result_without_card() }}
+    {% endif %}
+  {% else %}
+    {% if req_info.experiments['traffic_cards'] != None %}
+      {{ render_result_with_card() }}
+    {% else %}
+      {{ render_result_without_card() }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+{% phrase render_result_with_card %}
+  {% if req_info.experiments['traffic_cards_with_text_bubble'] != None %}
+    {{ render_result_with_card() }}
+  {% endif %}
+{% endphrase %}
+{% phrase render_error__notraffic %}
+  К сожалению, я не могу ответить на вопрос о дорожной ситуации
+  {% if form.resolved_where and form.resolved_where.city %}
+    {{ form.resolved_where | city_prepcase }}
+  {% else %}
+    в этом месте
+  {% endif %}
+  .
+{% endphrase %}
+{% phrase render_suggest_caption__show_traffic__show_map %}
+  Пробки на карте
+{% endphrase %}
+{% phrase render_suggest_user_utterance__show_traffic__show_map %}
+  {% if context.is_navigator %}
+    Пробки на карте
+  {% endif %}
+{% endphrase %}
+{% phrase render_suggest_uri__show_traffic__show_map %}
+  {% if not context.is_navigator %}
+    {{ form.traffic_info.url }}
+  {% endif %}
+{% endphrase %}

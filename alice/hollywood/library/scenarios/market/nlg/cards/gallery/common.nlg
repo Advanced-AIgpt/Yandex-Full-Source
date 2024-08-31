@@ -1,0 +1,95 @@
+{% from "alice/hollywood/library/scenarios/market/nlg/cards/common.nlg" import
+  render_action,
+  get_log_id  with context %}
+{% from "alice/hollywood/library/scenarios/market/nlg/common.nlg" import market_short_name %}
+
+{% ext_from "alice/hollywood/library/common_nlg/cards/common_ru.nlg" import
+  logged_action_url with context %}
+
+{% set ACTION = namespace(
+    OPEN_SHOP = 'open_shop',
+    OPEN_MARKET = 'open_market',
+    OPEN_REVIEWS = 'open_reviews',
+    OPEN_PRODUCT_CARD = 'open_product_card') %}
+
+{% macro gallery_log_id(gallery_type, log_id) -%}
+  {{- get_log_id(gallery_type + '.' + log_id) -}}
+{%- endmacro %}
+
+{% macro gallery_item_log_id(gallery_type, log_id) -%}
+  {{- get_log_id(gallery_type + '.item.' + log_id) -}}
+{%- endmacro %}
+
+{% macro gallery_item_button_log_id(gallery_type, log_id) -%}
+  {{- get_log_id(gallery_type + '.item.button.' + log_id) -}}
+{%- endmacro %}
+
+{% macro gallery_item_label_log_id(gallery_type, log_id) -%}
+  {{- get_log_id(gallery_type + '.item.label.' + log_id) -}}
+{%- endmacro %}
+
+{% macro get_text_for_more_action(market_type, total_count) -%}
+  Посмотреть {{ total_count }} {{ 'вариант' | pluralize(total_count, 'acc') }} на {{ market_short_name(market_type) | inflect("abl") }}
+{%- endmacro %}
+
+{% macro product_details_action_url(doc, index) -%}
+  {{-
+    logged_action_url([
+      client_action_directive(
+        name="type_silent",
+        sub_name="gallery_type_silent",
+        payload={
+           "text": doc.title
+        }
+      ),
+      server_action_directive(
+        "update_form",
+        {
+            "form_update": doc.form_update,
+            "resubmit": true
+        }
+      )
+    ], dict(item_number=index))
+  -}}
+{%- endmacro %}
+
+{% macro render_gallery_base_block(gallery_type, items, total_info, total_count) %}
+{
+  "background": [
+    {
+    "color": "{{- '#FFFFFF' -}}",
+    "type": "div-solid-background"
+    }
+  ],
+  "states": [{
+    "state_id": 1,
+    "blocks": [{
+      "type": "div-gallery-block",
+      {% if total_info|get_item('url') %}
+        "tail": {
+          "text": "{{- get_text_for_more_action(total_info.market_type, total_count) -}}",
+          {{ render_action(total_info.url, gallery_log_id(gallery_type, ACTION.OPEN_MARKET)) }},
+          "icon": {
+            "image_url": "{{-
+              {
+                "GREEN": "https:\/\/avatars.mds.yandex.net\/get-marketpic\/330747\/market-logo\/100x100",
+                "BLUE": "https:\/\/avatars.mds.yandex.net\/get-marketpic\/247229\/beru-logo\/100x100"
+              }.get(total_info.get("market_type", "GREEN"))
+            -}}",
+            "border_color": "{{- '#8B0000' -}}",
+            "icon_color": "{{- '#FF1000' -}}"
+          }
+        },
+      {% endif %}
+      "items": [
+        {% for item in items %}
+          {% if loop.index0 %}
+            ,
+          {% endif %}
+          {{ caller(item, loop.index) }}
+        {% endfor %}
+      ]
+    }]
+  }]
+}
+{% endmacro %}

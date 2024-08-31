@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/notificator";
+
+import "alice/megamind/protos/speechkit/directives.proto";
+import "alice/megamind/protos/scenarios/push.proto";
+
+
+package NAlice.NNotificator;
+
+enum EDirectiveStatus {
+    ED_NOT_FOUND = 0; // not found or deleted by TTL (try to find in logs)
+    ED_NEW = 1;
+    ED_DELIVERED = 2;
+    ED_DELETED = 3;
+    ED_EXPIRED = 4; // not delivered and expired by TTL
+}
+
+// ------------------------------------------------------------------------
+message TChangeStatus {
+    string Puid = 1 [json_name = "puid"];
+    string DeviceId = 2 [json_name = "device_id"];
+    repeated string Ids = 3 [json_name = "ids"]; // list of push/notification id's
+    // could be only Delivered or Deleted
+    EDirectiveStatus Status = 4 [json_name = "status"];
+    // time in ms when notificator sends request (on_connect or online)
+    uint64 StartTime = 5 [json_name = "start_time"];
+}
+
+// ------------------------------------------------------------------------
+message TDirectiveStatus {
+    string Puid = 1 [json_name = "puid"];
+    string DeviceId = 2 [json_name = "device_id"];
+    string Id = 3 [json_name = "id"];
+}
+
+message TDirectiveStatusResponse {
+    EDirectiveStatus Status = 1 [json_name = "status"];
+}
+
+// ------------------------------------------------------------------------
+message TGetDevicesRequest {
+    string Puid = 1 [json_name = "puid"];
+
+    // Returns only those devices that have these supported features
+    // WARNING: Only supported features from whitelist are allowed (more info in ZION-284)
+    // Whitelist is:
+    //     1) audio_client
+    // If you need to add a new supported feature to the whitelist, contact us somehow: https://docs.yandex-team.ru/alice-matrix/pages/contacts
+    repeated string SupportedFeatures = 2 [json_name = "supported_features"];
+}
+
+message TGetDevicesResponse {
+    message TDevice {
+        string DeviceId = 1 [json_name = "device_id"];
+
+        // WARNING: Always empty
+        // More info in ZION-284
+        repeated string SupportedFeatures = 2 [json_name = "supported_features", deprecated = true];
+    }
+
+    repeated TDevice Devices = 1 [json_name = "devices"];
+}
+
+// ------------------------------------------------------------------------
+message TDeliverySupCardRequest {
+    string Puid = 1 [json_name = "puid"];
+    NAlice.NScenarios.TSendPushDirective Directive = 2 [json_name = "directive"];
+    string AppId = 3 [json_name = "app_id"];
+    string TestId = 4 [json_name = "test_id"];
+}
+
+message TDeliverySupCardResponse {
+    string Status = 1 [json_name = "status"];
+    string CardId = 2 [json_name = "card_id"];
+    string SupId  = 3 [json_name = "sup_id"];
+}
+
+// ------------------------------------------------------------------------
+message TDeletePersonalCards {
+    string Puid = 1 [json_name = "puid"];
+    NAlice.NScenarios.TDeletePushesDirective Directive = 2 [json_name = "directive"];
+}

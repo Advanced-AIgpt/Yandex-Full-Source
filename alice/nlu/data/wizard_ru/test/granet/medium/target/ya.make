@@ -1,0 +1,50 @@
+OWNER(
+    samoylovboris
+    g:alice_quality
+)
+
+UNION()
+
+FILES(
+    coronavirus_main_news.tsv
+    coronavirus_main_other.tsv
+    coronavirus_main_stats.tsv
+    coronavirus_mini_wizard_about.tsv
+    coronavirus_mini_wizard_antitela.tsv
+    coronavirus_mini_wizard_cure.tsv
+    coronavirus_mini_wizard_defense.tsv
+    coronavirus_mini_wizard_delivery.tsv
+    coronavirus_mini_wizard_elderly.tsv
+    coronavirus_mini_wizard_free_test.tsv
+    coronavirus_mini_wizard_howcan.tsv
+    coronavirus_mini_wizard_kids.tsv
+    coronavirus_mini_wizard_mask.tsv
+    coronavirus_mini_wizard_secondary.tsv
+    coronavirus_mini_wizard_support.tsv
+    coronavirus_mini_wizard_symptoms.tsv
+    coronavirus_mini_wizard_vanga.tsv
+    covid_about.tsv
+    covid_animals.tsv
+    covid_at_home.tsv
+    covid_border_communication.tsv
+    covid_countries.tsv
+    covid_cure.tsv
+    covid_delivery.tsv
+    covid_elderly.tsv
+    covid_infected.tsv
+    covid_kids_and_pregnancy.tsv
+    covid_mask.tsv
+    covid_prognosis.tsv
+    covid_protective_measures.tsv
+    covid_repeated.tsv
+    covid_self_isolation.tsv
+    covid_symptoms.tsv
+    covid_transmission.tsv
+    demo_hello_world.tsv
+    games_all.tsv
+    games_category.tsv
+    games_general.tsv
+    games_single.tsv
+)
+
+END()

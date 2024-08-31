@@ -1,0 +1,38 @@
+-- [BEGIN IncomingQueueSchema]
+CREATE TABLE incoming_queue (
+    shard_id Uint64,
+    created_at Timestamp,
+    action_id String,
+    action_guid String,
+    scheduled_at Timestamp,
+
+    PRIMARY KEY (shard_id, created_at, action_id, action_guid)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);
+-- [END IncomingQueueSchema]
+
+-- [BEGIN ScheduledActionsSchema]
+CREATE TABLE scheduled_actions (
+    -- Meta key fields
+    meta_action_id_hash Uint64,
+    meta_action_id String,
+
+    -- Meta fields
+    meta String,
+    meta_action_guid String,
+
+    -- Spec fields
+    spec String,
+
+    -- Status fields
+    status String,
+    status_scheduled_at Timestamp,
+
+    PRIMARY KEY (meta_action_id_hash, meta_action_id)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);
+-- [END ScheduledActionsSchema]

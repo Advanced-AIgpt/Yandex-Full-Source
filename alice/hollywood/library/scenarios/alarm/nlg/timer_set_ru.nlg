@@ -1,0 +1,94 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" import timer, timeri, render_error, format_time %}
+
+{% macro render_compact_confirmation() %}
+  {% chooseline %}
+    Хорошо
+    Окей
+    Поняла
+    Готово
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__need_confirmation') %}
+  {% elif context.attentions.get('timer__already_set') %}
+    {{ timer() | capitalize_first }} уже запущен, заменить его?
+  {% elif context.data.specification == "sleep" %}
+    {% if context.attentions.get('timer__abs_time') %}
+      {{ render_compact_confirmation() }}. Выключусь в {{ format_time(context.data.time, absolute=True) }}.
+    {% else %}
+      {{ render_compact_confirmation() }}. Выключусь через {{ format_time(context.data.time) }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      Хорошо. {{ format_time(context.data.time, case='nom') }}. Время пошло!
+    {# {% or %}
+      Сделано. Через {{ format_time(context.data.time) }} я вам посигналю. #}
+    {% or %}
+      Поставила {{ timer() }} на {{ format_time(context.data.time) }}.
+    {% or %}
+      Готово. {{ format_time(context.data.time, case='nom') }}. Начинаю отсчёт.
+    {% or %}
+      Хорошо. {{ format_time(context.data.time, case='nom') }}. Отсчёт пошёл.
+    {% endchooseitem %}
+  {% endif %}
+{% endphrase %}
+
+{% macro timer_hint() %}
+  {% set minutes = range(5,20) | random %}
+  {% set seconds = range(5,20) | random %}
+  {% chooseitem %}
+    Чтобы установить {{ timer() }} скажите, например, "Установи {{ timer() }} на {{ minutes }} минут {{ seconds }} секунд".
+  {% or %}
+    Чтобы запустить {{ timer() }} скажите, например, "Установи {{ timer() }} на {{ seconds }} секунд".
+  {% or %}
+    Чтобы засечь время скажите, например, "Засеки {{ minutes }} минут".
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase ask__time %}
+  {% if form.specification == "sleep" %}
+    На какое время поставить {{ timer() }} сна
+  {% else %}
+    На какое время поставить {{ timer() }}
+  {% endif %}?
+{% endphrase %}
+
+{% phrase ask__sleep_time %}
+  {% chooseline %}
+    Пожалуйста, повторите, через сколько мне нужно отключиться?
+    Что-то я отвлеклась. Повторите, через сколько мне нужно отключиться?
+    Ой, отвлеклась. Повторите, через сколько мне нужно отключиться?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'not_supported' %}
+    {% if context.is_elari_watch %}
+      Я скоро научусь это делать. Время пролетит незаметно.
+    {% else %}
+      {% chooseitem %}
+        Засекать время я пока не умею. Обязательно научусь.
+      {% or %}
+        Нет, {{ timer() }} я пока не умею устанавливать. Но это временно.
+      {% or %}
+        Я пока не умею устанавливать {{ timeri() }} на этом устройстве, но когда-нибудь научусь.
+      {% endchooseitem %}
+    {% endif %}
+  {% elif context.error.data.code == 'bad_arguments' or context.error.data.code == 'time_exceeds_limit' %}
+    {% if context.time %}
+      Я могу поставить {{ timer() }} длительностью до {% vc %}{{ '#gen' }}{% evc %} 24 часов.
+    {% else %}
+      {{ timer_hint() }}
+    {% endif %}
+  {% elif context.error.data.code == 'setting_failed' %}
+    У меня не получилось поставить {{ timer() }}, придется вам это сделать самостоятельно.
+  {% elif context.error.data.code == 'too_many_timers' %}
+    Сейчас уже установлено 25 таймеров, я больше не могу.
+  {% else %}
+    {% if not context.attentions.get('timer__need_confirmation') %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

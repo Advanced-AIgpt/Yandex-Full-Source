@@ -1,0 +1,267 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/verbs.grnt
+
+form alice.movie_suggest:
+    filler:
+        $Fillers
+    root:
+        $RecommendToWatch
+        $WantToWatch
+        $WhatToWatch
+        %negative
+        %lemma
+        .* не $Recommend .*
+        .* не хочу .*
+    slots:
+        content_type:
+            type: movie_suggest_content_type
+            source: $MovieSuggestContentType
+
+form alice.movie_suggest.decline:
+    filler:
+        $Fillers
+    root:
+        $Decline+
+
+form alice.movie_suggest.already_watched:
+    filler:
+        $Fillers
+    root:
+        [$Common.Decline? я? $Watched $This? $ContentType? $Already?]
+        [$Common.Decline? $Me? (не $Liked) $Watch? $This? $ContentType? $Already?]
+        %negative
+        [$Common.Decline? я? (не $Watched) $This? $ContentType? $Already?]
+
+$Fillers:
+    $Common.Filler
+    $Common.LeftFiller
+    $nonsense
+    %lemma
+    говорю
+    сказал
+    думаю
+    пожалуй
+    слушай
+    короче
+    определенно
+    вовсе
+    совсем
+
+$RecommendToWatch:
+    [$CanYouRecommend $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+    [$CanYouRecommend (что|$Something) $ShouldWatch $Good? $ContentProvider? $When? $Free?]
+
+$CanYouRecommend:
+    (вы|ты)? $Recommend<g:|imper|imper,pl|indic,2p|indic,2p,pl>
+    (вы|ты)? (помоги|помогите) выбрать
+    $CanYou $Recommend<g:|inf>
+    может быть? (вы|ты)? $Recommend<g:|indic,2p|indic,2p,pl>
+    $CanYou помочь выбрать
+    может быть? (вы|ты)? поможешь выбрать
+
+$Recommend:
+    порекомендуй
+    рекомендуй
+    посоветуй
+    советуй
+    подскажи
+    подбери
+    подыщи
+    выбери
+    предложи
+    предлагать
+
+$WantToWatch:
+    [я? $Common.ToWant $WatchLemma $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+    [я? бы $WatchLemma<g:|indic,1p,sg,praet> $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+    [мы? бы $WatchLemma<g:|indic,1p,pl,praet> $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+    [(мне|нам)? хочется $WatchLemma $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+    [мы? $Common.ToWant $WatchLemma $ShouldWatch? $Good? $Some? (из? $MovieSuggestContentType) $ContentProvider? $When? $Free?]
+
+$WhatToWatch:
+    [что $CanYouRecommend? $Good? $Some? (из? $MovieSuggestContentType)? (стоит|можно|нужно|лучше)? обязательно? посмотреть $ContentProvider? $When? $Free?]
+    %lemma
+    [какое $CanYouRecommend? $Good? $Some? (из? $MovieSuggestContentType) $ShouldWatch $ContentProvider? $When? $Free?]
+    [какое $CanYouRecommend? $Good $Some? (из? $MovieSuggestContentType) $ShouldWatch? $ContentProvider? $When? $Free?]
+
+$Some:
+    %lemma
+    любой
+    какой (нибудь|то)?
+
+$ShouldWatch:
+    [(стоит|можно|нужно|лучше)? обязательно? $WatchLemma]
+    для просмотра
+
+$WatchLemma:
+    смотреть|посмотреть
+
+$ContentProvider:
+    %lemma
+    (на|в|с|из) кинопоиск
+
+$Good:
+    (какие|которые) (тебе нравятся|ты? любишь)
+    %lemma
+    самый? ($custom.video_top|кассовый|интересный|нормальный)
+    бесплатный
+    душевный
+    новый
+    последний
+    новинки
+
+$When:
+    $Date? $Time?
+    на вечер
+    на ночь
+    теперь
+    дальше
+    потом
+    сейчас
+
+$Date:
+    сегодня
+    завтра
+    в выходные
+    на выходных
+
+$Time:
+    утром
+    днем
+    вечером
+    ночью
+
+$Free:
+    бесплатно
+    на халяву
+
+$MovieSuggestContentType:
+    %type "movie_suggest_content_type"
+
+    %value "movie"
+    $Movie
+
+    %value "cartoon"
+    $Cartoon
+
+$Decline:
+    [$CanYou? $Common.ToWant? $Show? $Something? $Common.Decline $This? $ContentType?]
+    [$CanYou? $Common.ToWant? $Show? $Watch? $Something? $Other $ContentType?]
+    [я? $Common.Decline $Watch? $This?]
+    [$Common.Decline? (не $Like)]
+    [$Common.Decline? $Me? $Forbidden $Watch? $Something? $ContentType?]
+    [$Common.Decline? но? $Me? $Like $Other $ContentType?]
+
+$Me:
+    (я|мне)
+
+$CanYou:
+    %lemma
+    [ты? (можешь|могла бы)]
+
+$Show:
+    %lemma
+    давай
+    найди
+    поищи
+    покажи
+    порекомендуй
+    посоветуй
+    рекомендуй
+    советуй
+    подскажи
+    подбери
+    подыщи
+    выбери
+    предложи
+    предлагай
+
+$Watch:
+    %lemma
+    смотреть
+    посмотреть
+
+$Forbidden:
+    %lemma
+    нельзя
+    запрещено
+    не могу
+
+$Like:
+    %lemma
+    люблю
+    нравится
+    понравится
+
+$Liked:
+    понравилось
+    понравилась
+    понравился
+
+$Other:
+    %lemma
+    другой
+    вариант
+    не этот
+    следующий
+
+$Something:
+    %lemma
+    еще
+    что-то
+    какой-то
+    какой-нибудь
+    что то
+    какой то
+    какой нибудь
+    что-нибудь
+    что нибудь
+
+$ContentType:
+    $Movie|$Cartoon
+
+$Movie:
+    %lemma
+    фильм
+    кино
+    кинофильм
+    киношка
+    кинцо
+    кинчик
+    полнометражка
+    полнометражный фильм
+
+$Cartoon:
+    %lemma
+    мульт
+    мультик
+    мультфильм
+    мультипликационный фильм
+    анимация
+    анимационный фильм
+
+$This:
+    %lemma
+    этот
+    это
+    его
+    такой
+
+$Watched:
+    смотрел
+    смотрела
+    посмотрел
+    посмотрела
+    видел
+    видела
+    насмотрелся
+    насмотрелась
+    пересматривать
+    [смотреть снова]
+
+$Already:
+    %lemma
+    уже
+    когда-то
+    когда то

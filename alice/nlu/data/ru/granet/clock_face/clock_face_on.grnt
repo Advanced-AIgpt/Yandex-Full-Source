@@ -1,0 +1,100 @@
+import: clock_face/common.grnt
+import: common/commands.grnt
+import: common/verbs.grnt
+
+form alice.clock_face_control.turn_on.ifexp.bg_exp_enable_clock_face_turn_on_granet:
+    lemma: true
+    is_fixlist: true
+    freshness: 2
+
+    slots:
+        time_preposition:
+            source: $ClockFace.TimePreposition
+            type: clock_face.time_preposition
+            matching_type: exact
+        time:
+            source:
+                $ClockFace.SlotTime
+                $ClockFace.UncertainTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+                clock_face.custom_time
+            matching_type: exact
+        date:
+            source: $sys.date; $sys.weekdays
+            type:
+                sys.weekdays
+                sys.date
+        day_part:
+            source: $ClockFace.DayPart
+            type: clock_face.day_part
+            matching_type: exact
+
+    root:
+        [$Common.Lets* $Set+ $ClockFace.ClockComplex+ $NoTimeDelay* $OptionalPart*]
+        [$Common.Lets* $TurnOn+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [$Common.ToWant* $DesireToSee+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [($Common.ToWant|$ClockFace.Do)+ (чтоб|чтобы) $TurnOnReflex+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [$Common.ToWant* $DesireToSee* $ClockFace.Clock+ (на|у) $ClockFace.ClockPlacement+ $ClockFace.Delay* $OptionalPart*]
+
+    filler: $Filler
+
+    $TurnOn:
+        %lemma
+        $Common.Display
+        $Common.TurnOn
+        $ClockFace.Do
+        активируй
+        верни
+        зажги
+        включишь
+
+        %negative
+        установи
+        поставь
+        настрой
+
+    $Set:
+        %lemma
+        установи
+        поставь
+        настрой
+
+    $Filler:
+        $ClockFace.CustomFiller
+        почему
+
+    $DesireToSee:
+        %lemma off
+        видеть
+        посмотреть
+        увидеть
+
+    $TurnOnReflex:
+        %lemma
+        %enable_synonyms all
+        отображалось
+        показывалось
+        включилось
+        отражалось
+        [было видно?]
+
+    $AdditionalIntent:
+        $Common.ToWant $ClockFace.ClockComplex? ($DesireToSee|знать|узнать)
+        (чтоб|чтобы) [$ClockFace.ClockComplex? $TurnOnReflex $ClockFace.ClockPlacement?]
+
+    $NoTimeDelay:
+        $ClockFace.TimePreposition? $ClockFace.UncertainTime
+        $ClockFace.DayPart
+        $ClockFace.TimePreposition? $sys.date
+        $ClockFace.TimePreposition? $sys.weekdays
+        %negative
+        сейчас
+
+    $OptionalPart:
+        $ClockFace.OptionalPart
+        $AdditionalIntent
+        %exact
+        не (отображается|показывается|вижу)

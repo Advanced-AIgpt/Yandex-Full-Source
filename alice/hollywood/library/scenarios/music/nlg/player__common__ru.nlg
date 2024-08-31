@@ -1,0 +1,29 @@
+# TODO(vitvlkv): Take fragments (if needed) from https://a.yandex-team.ru/arc/trunk/arcadia/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/intents/player/player__common__ru.nlg?rev=4745520
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("радио" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    радио "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_supported_on_radio(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    Не выйдет, извините. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Ничего не получится, увы. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Не могу. Это же прямой эфир.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_supported_only_on_music() %}
+  {% text %} Пока я умею такое только в Яндекс.Музыке. {% endtext %}
+  {% voice %} Пока я умею такое только в Яндекс Музыке. {% endvoice %}
+{% endmacro %}
+
+{% macro alicesdk_player_response(text) %}
+  {{ text | only_text }}
+{% endmacro %}

@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/layered_div_ui;layereddivuipb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "LayeredDivUIProto";
+
+import "google/protobuf/descriptor.proto";
+
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "alice/protos/data/layer.proto";
+import "alice/protos/div/div2card.proto";
+import "alice/protos/div/div2id.proto";
+import "alice/protos/div/div2patch.proto";
+import "alice/protos/div/div2size.proto";
+
+message TLayeredDivUICapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = LayeredDivUICapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        bool SupportsCardStashing = 1 [json_name = "supports_card_stashing", (NYT.column_name) = "supports_card_stashing"];
+    }    
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TDiv2Size availableSize = 1 [json_name = "available_size", (NYT.column_name) = "available_size"];
+
+        // ordered set of stashed cards ids
+        repeated TDiv2Id StashedCards = 2 [json_name = "stashed_cards", (NYT.column_name) = "stashed_cards"];
+    }
+
+    message TDivUIShowViewDirective {
+        // Directive to set device screen on certain view layer
+        // New devices with screen should consider this directive to show view layer
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "divui_show_view";
+        option (DirectiveType) = DivUIShowViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        TDiv2Card Div2Card = 2 [json_name = "div2_card", (NYT.column_name) = "div2_card"];
+
+        NData.TLayer Layer = 3 [json_name = "layer", (NYT.column_name) = "layer"];
+
+        // time of on-screen inactivity after which view dies
+        enum EInactivityTimeout {
+            Short = 0;
+            Medium = 1;
+            Long = 2;
+            Infinity = 3;
+        }
+        EInactivityTimeout InactivityTimeout = 4 [json_name = "inactivity_timeout", (NYT.column_name) = "inactivity_timeout"];
+        string ActionSpaceId = 5 [json_name = "action_space_id", (NYT.column_name) = "action_space_id"];
+
+        enum EStashInteraction {
+            ShowUnstashed = 0; // ignore any such views kept in stash, and remove it if any
+            KeepStashedIfPossible = 1; // if any such view kept in stash, update it only in stash and no visible cards in screen
+        }
+        // special field to interact with Мешок i.e. Stash, when true and card exists in stash, keep new version in stash
+        EStashInteraction StashInteraction = 6 [json_name = "stash_interaction", (NYT.column_name) = "stash_interaction"];
+    }
+
+    message TDivUIPatchViewDirective {
+        // Directive to patch already existed card somewhere on the screen by server intent
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "divui_patch_view";
+        option (DirectiveType) = DivUIPatchViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        // actual div2 patch
+        TDiv2Patch Div2Patch = 2 [json_name = "div2_patch", (NYT.column_name) = "div2_patch"];
+
+        // predicate to search already existing div cards to apply this patch
+        TDiv2Id ApplyTo = 3 [json_name = "apply_to", (NYT.column_name) = "apply_to"];
+    }
+
+    message TDivUIHideViewDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "divui_hide_view";
+        option (DirectiveType) = DivUIHideViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        NData.TLayer Layer = 2 [json_name = "layer", (NYT.column_name) = "layer"];
+    }
+
+    message TDivUIStashViewDirective {
+        // Directive to put already shown card into special hidden place called Мешок i.e. Stash
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "divui_stash_view";
+        option (DirectiveType) = DivUIStashViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        // predicate to search div cards to stash, according to identity logic of div2id
+        TDiv2Id CardSearchCriteria = 2 [json_name = "card_search_criteria", (NYT.column_name) = "card_search_criteria"];
+    }
+
+    message TDivUIUnstashViewDirective {
+        // Directive to revive cards, stored in special hidden place called Мешок i.e. Stash 
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "divui_unstash_view";
+        option (DirectiveType) = DivUIUnstashViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        // predicate to search div cards to unstash, according to identity logic of div2id
+        TDiv2Id CardSearchCriteria = 2 [json_name = "card_search_criteria", (NYT.column_name) = "card_search_criteria"];
+    }
+}

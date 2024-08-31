@@ -1,0 +1,47 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" import get_search_info %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ar.nlg" import showing_search_results_not_supported %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not context.is_smart_speaker and not context.is_legatus and info.map_search_url.url %}
+    {{ info.map_search_url.url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if context.is_smart_speaker or context.is_legatus %}
+    {{ showing_search_results_not_supported() }}
+  {% elif not info.map_search_url.url %}
+    لسوء الحظ،
+    {% chooseline %}
+      لا أستطيع
+      لا يعمل
+    {% endchooseline %}
+    {% chooseline %}
+      فتح
+      عرض
+    {% endchooseline %}
+    خريطة
+    {% chooseline %}
+      لهذا الطلب
+      لهذا الطلب
+    {% endchooseline %}
+    .
+  {% else %}
+    {% chooseline %}
+      سأقوم بفتح
+      سأفتح الآن
+    {% endchooseline %}
+    {% chooseline %}
+      البحث
+      نتائج البحث
+    {% endchooseline %}
+    على الخريطة.
+  {% endif %}
+{% endphrase %}

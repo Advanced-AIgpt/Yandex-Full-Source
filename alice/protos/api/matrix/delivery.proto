@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+import "alice/megamind/protos/common/frame.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+message TDelivery {
+    reserved "Directive"; reserved 4;
+    reserved "TypedSemanticFrameRequestDirective"; reserved 5;
+
+    message TRequestInfo {
+        string RequestId = 1 [json_name = "request_id", (NYT.column_name) = "request_id"];
+        uint64 RetryId = 2 [json_name = "retry_id", (NYT.column_name) = "retry_id"];
+    }
+
+    TRequestInfo RequestInfo = 8 [json_name = "request_info", (NYT.column_name) = "request_info"];
+
+    string Puid = 1 [json_name = "puid"];
+    string DeviceId = 2 [json_name = "device_id"];
+    // How long try to send to client. in seconds. No more than 24*60*60
+    uint32 Ttl = 3 [json_name = "ttl"];
+    // If this field is empty, a random id will be generated
+    string PushId = 7 [json_name = "push_id", (NYT.column_name) = "push_id"];
+
+    oneof TRequestDirective {
+        NAlice.TSemanticFrameRequestData SemanticFrameRequestData = 6 [json_name = "semantic_frame_request_data"];
+
+        // In 99.99% of cases you can do whatever you want only with semantic frames
+        // If you really know why you can't just use semantic frames and you need to use pure speech kit directives
+        // first ask chegoryu@, elshiko@ and g-kostin@ and only then use it
+        // Content is serialized NAlice.NSpeechKit.TDirective from alice/megamind/protos/speechkit/directives.proto
+        bytes SpeechKitDirective = 9 [json_name = "speech_kit_directive", (NYT.column_name) = "speech_kit_directive"];
+    }
+}
+
+message TDeliveryResponse {
+    enum EResponseCode {
+        Unknown = 0;
+        // All is ok
+        OK = 1;
+        // Push queued, but client is offline
+        NoLocations = 2;
+    }
+    EResponseCode Code = 1 [json_name = "code", deprecated = true];
+    // Id of push
+    string Id = 2 [json_name = "id", deprecated = true];
+
+    message TAddPushToDatabaseStatus {
+        enum EStatus {
+            UNKNOWN = 0;
+            OK = 1;
+            ERROR = 2;
+        }
+
+        EStatus Status = 1 [json_name = "status", (NYT.column_name) = "status"];
+        string ErrorMessage = 2 [json_name = "error_message", (NYT.column_name) = "error_message"];
+    }
+
+    message TSubwayRequestStatus {
+        enum EStatus {
+            UNKNOWN = 0;
+            OK = 1;
+            LOCATION_DISCOVERY_ERROR = 2;
+            LOCATION_NOT_FOUND = 3;
+            // Location present in database, but device not connected to it
+            OUTDATED_LOCATION = 4;
+            REQUEST_ERROR = 5;
+        }
+
+        EStatus Status = 1 [json_name = "status", (NYT.column_name) = "status"];
+        string ErrorMessage = 2 [json_name = "error_message", (NYT.column_name) = "error_message"];
+    }
+
+    TAddPushToDatabaseStatus AddPushToDatabaseStatus = 3 [json_name = "add_push_to_database_status", (NYT.column_name) = "add_push_to_database_status"];
+    string PushId = 4 [json_name = "push_id", (NYT.column_name) = "push_id"];
+    TSubwayRequestStatus SubwayRequestStatus = 5 [json_name = "subway_request_status", (NYT.column_name) = "subway_request_status"];
+
+}

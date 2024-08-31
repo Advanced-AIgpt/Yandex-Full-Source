@@ -1,0 +1,2296 @@
+syntax = "proto3";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/megamind/protos/common/atm.proto";
+import "alice/megamind/protos/common/frame_request_params.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/common/origin.proto";
+import "alice/megamind/protos/common/request_params.proto";
+import "alice/protos/data/entity_meta/video_nlu_meta.proto";
+import "alice/protos/data/language/language.proto";
+import "alice/protos/data/fm_radio_info.proto";
+import "alice/protos/data/lat_lon.proto";
+import "alice/protos/data/contacts.proto";
+import "alice/protos/data/news_provider.proto";
+import "alice/protos/data/scenario/centaur/my_screen/widgets.proto";
+import "alice/protos/data/scenario/centaur/teasers/teaser_settings.proto";
+import "alice/protos/data/scenario/iot/enrollment_status.proto";
+import "alice/protos/data/scenario/music/content_id.proto";
+import "alice/protos/data/scenario/music/topic.proto";
+import "alice/protos/data/scenario/order/order.proto";
+import "alice/protos/data/scenario/alice_show/selectors.proto";
+import "alice/protos/data/scenario/video_call/video_call.proto";
+import "alice/protos/data/tv/tags/catalog_tag.proto";
+import "alice/protos/data/tv_feature_boarding/template.proto";
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/endpoint/events/events.proto";
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/descriptor.proto";
+
+// todo: move to new namespace
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/common";
+option java_package = "ru.yandex.alice.megamind.protos.common";
+option java_outer_classname = "FrameProto";
+
+
+message TNluPhrase {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    ELang Language = 1 [json_name = "language", (NYT.column_name) = "language"];
+    string Phrase = 2 [json_name = "phrase", (NYT.column_name) = "phrase"];
+}
+
+message TNluHint {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    repeated TNluPhrase Instances = 2 [json_name = "instances", (NYT.column_name) = "instances"];
+    oneof Meta {
+        TVideoGalleryItemMeta Video = 3 [(NYT.column_name) = "video"];
+    }
+    // We try to not trigger the item when one of the phrases in Negatives
+    // is a better match for the request than any phrase in Instances.
+    // The item should not be triggered if request matches some phrase from Negatives exactly
+    repeated TNluPhrase Negatives = 4 [json_name = "negatives", (NYT.column_name) = "negatives"];
+}
+
+message TFrameNluHint {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Name of the existing frame to be matched, or a stub.
+    string FrameName = 1 [json_name = "frame_name", (NYT.column_name) = "frame_name"];
+
+    // Phrases in particular languages that correspond to the button.
+    repeated TNluPhrase Instances = 2 [json_name = "instances", (NYT.column_name) = "instances"];
+
+    // Phrases that do NOT correspond to the button, and shouldn't be
+    // recognized as activating it.
+    //
+    // TODO: clarify with the0@
+    repeated TNluPhrase Negatives = 4 [json_name = "negatives", (NYT.column_name) = "negatives"];
+}
+
+message TClientEntity {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    // Map entity value to matching phrases/grammars.
+    map<string, TNluHint> Items = 2 [json_name = "items", (NYT.column_name) = "items", (NYT.flags) = MAP_AS_DICT];
+}
+
+message TClientEntityList {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TClientEntity Entities = 1 [json_name = "entities", (NYT.column_name) = "entities"];
+}
+
+message TSlotValue {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+    oneof Value {
+        string String = 2 [json_name = "string", (NYT.column_name) = "string"];
+        // todo: add other types
+    }
+}
+
+message TStringSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string StringValue = 1 [json_name = "string_value", (NYT.column_name) = "string_value", (SlotType) = "string"];
+        string SpecialPlaylistValue = 2 [json_name = "special_playlist_value", (NYT.column_name) = "special_playlist_value", (SlotType) = "special_playlist"];
+        string NewsTopicValue = 3 [json_name = "news_topic_value", (NYT.column_name) = "news_topic_value", (SlotType) = "custom.news_topic"];
+        string SpecialAnswerInfoValue = 4 [json_name = "special_answer_info", (NYT.column_name) = "special_answer_info", (SlotType) = "special_answer_info"];
+        string VideoContentTypeValue = 5 [json_name = "video_content_type_value", (NYT.column_name) = "video_content_type_value", (SlotType) = "video_content_type"];
+        string VideoActionValue = 6 [json_name = "video_action_value", (NYT.column_name) = "video_action_value", (SlotType) = "video_action"];
+        // reserved 7;
+        // legacy value, use TActionRequestSlot for new frames
+        string ActionRequestValue = 8 [json_name = "action_request_value", (NYT.column_name) = "action_request_value", (SlotType) = "action_request", deprecated = true];
+        string EpochValue = 9 [json_name = "epoch_value", (NYT.column_name) = "epoch_value", (SlotType) = "epoch"];
+        string VideoSelectionActionValue = 10 [json_name = "video_selection_action_value", (NYT.column_name) = "video_selection_action_value", (SlotType) = "custom.video_selection_action"];
+
+        // Do not add fields here. Please create a new slot type for new types or try to reuse already existing.
+    }
+}
+
+message TUInt32Slot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        uint32 UInt32Value = 1 [json_name = "uint32_value", (NYT.column_name) = "uint32_value", (SlotType) = "uint32"];
+    }
+}
+
+message TNumSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        uint32 NumValue = 1 [json_name = "num_value", (NYT.column_name) = "num_value", (SlotType) = "num"];
+    }
+}
+
+message TSysNumSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        uint32 NumValue = 1 [json_name = "num_value", (NYT.column_name) = "num_value", (SlotType) = "sys.num"];
+    }
+}
+
+message TDoubleSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        double DoubleValue = 1 [json_name = "double_value", (NYT.column_name) = "double_value", (SlotType) = "double"];
+    }
+}
+
+message TBoolSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        bool BoolValue = 1 [json_name = "bool_value", (NYT.column_name) = "bool_value", (SlotType) = "bool"];
+    }
+}
+
+message TNotificationSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string SubscriptionValue = 1 [json_name = "subscription_value", (NYT.column_name) = "subscription_value", (SlotType) = "custom.notification_subscription"];
+    }
+}
+
+// SpecialPlaylist, SpecialAnswerInfo and ActionRequest are left in TStringSlot for compatibility
+message TMusicSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string GenreValue = 1 [json_name = "genre_value", (NYT.column_name) = "genre_value", (SlotType) = "genre"];
+        string MoodValue = 2 [json_name = "mood_value", (NYT.column_name) = "mood_value", (SlotType) = "mood"];
+        string ActivityValue = 3 [json_name = "activity_value", (NYT.column_name) = "activity_value", (SlotType) = "activity"];
+        string VocalValue = 4 [json_name = "vocal_value", (NYT.column_name) = "vocal_value", (SlotType) = "vocal"];
+        string NoveltyValue = 5 [json_name = "novelty_value", (NYT.column_name) = "novelty_value", (SlotType) = "novelty"];
+        string PersonalityValue = 6 [json_name = "personality_value", (NYT.column_name) = "personality_value", (SlotType) = "personality"];
+        // legacy value, use TOrderSlot for new frames
+        string OrderValue = 7 [json_name = "order_value", (NYT.column_name) = "order_value", (SlotType) = "order", deprecated = true];
+        // legacy value, use TRepeatSlot for new frames
+        string RepeatValue = 8 [json_name = "repeat_value", (NYT.column_name) = "repeat_value", (SlotType) = "repeat", deprecated = true];
+        string RoomValue = 9 [json_name = "room_value", (NYT.column_name) = "room_value", (SlotType) = "room"];
+        string StreamValue = 10 [json_name = "stream_value", (NYT.column_name) = "stream_value", (SlotType) = "stream"];
+        string GenerativeStationValue = 11 [json_name = "generative_station_value", (NYT.column_name) = "generative_station_value", (SlotType) = "generative_station"];
+        // legacy value, use TNeedSimilarSlot for new frames
+        string NeedSimilarValue = 12 [json_name = "need_similar_value", (NYT.column_name) = "need_similar_value", (SlotType) = "need_similar", deprecated = true];
+        string OffsetValue = 13 [json_name = "offset_value", (NYT.column_name) = "offset_value", (SlotType) = "offset_value"];
+    }
+}
+
+message TMusicContentTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        Unknown = 0;
+        Podcast = 1;
+        Audiobook = 2;
+        FairyTale = 3;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TVideoSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string NewValue = 1 [json_name = "new_value", (NYT.column_name) = "new_value", (SlotType) = "video_new"];
+    }
+}
+
+message TLanguageSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string LanguageValue = 1 [json_name = "language_value", (NYT.column_name) = "language_value", (SlotType) = "language"];
+    }
+}
+
+message TDateTimeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Value {
+        string DateTimeValue = 1 [json_name = "datetime_value", (NYT.column_name) = "datetime_value", (SlotType) = "datetime"];
+    }
+}
+
+message TUnitsTimeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        string StringValue = 1 [json_name = "string_value", (NYT.column_name) = "string_value", (SlotType) = "string"];
+        string UnitsTimeValue = 2 [json_name = "units_time_value", (NYT.column_name) = "units_time_value", (SlotType) = "sys.units_time"];
+    }
+}
+
+message TNewsProviderSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        NData.TNewsProvider NewsProviderValue = 1 [json_name = "news_provider_value", (NYT.column_name) = "news_provider_value", (SlotType) = "news_provider"];
+    }
+}
+
+message TTopicSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.NMusic.TTopic TopicValue = 1 [json_name = "topic_value", (NYT.column_name) = "topic_value", (SlotType) = "topic"];
+    }
+}
+
+message TDayPartSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.NAliceShow.TDayPart.EValue DayPartValue = 1 [json_name = "day_part_value", (NYT.column_name) = "day_part_value", (SlotType) = "custom.day_part"];
+    }
+}
+
+message TAgeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.NAliceShow.TAge.EValue AgeValue = 1 [json_name = "age_value", (NYT.column_name) = "age_value", (SlotType) = "custom.age"];
+    }
+}
+
+message TOrderNotificationTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NOrder.ENotificationType OrderNotificationTypeValue = 1 [json_name = "order_notification_type_value", (NYT.column_name) = "order_notification_type_value", (SlotType) = "order_notification_type_value"];
+    }
+}
+
+message TAppData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string AppDataValue = 1 [json_name = "app_data_value", (NYT.column_name) = "app_data_value", (SlotType) = "custom.app_data"];
+    }
+}
+
+message THardcodedResponseName {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string HardcodedResponseNameValue = 1 [json_name = "hardcoded_response_value", (NYT.column_name) = "hardcoded_response_value", (SlotType) = "custom.response_name"];
+    }
+}
+
+message TIotNetworksSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TIotDiscoveryCapability.TNetworks NetworksValue = 1 [json_name = "networks_value", (NYT.column_name) = "networks_value", (SlotType) = "custom.iot.networks"];
+    }
+}
+
+message TWhereSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        string WhereValue = 1 [json_name = "where_value", (NYT.column_name) = "where_value", (SlotType) = "custom.where"];
+        string SpecialLocationValue = 2 [json_name = "special_location_value", (NYT.column_name) = "special_location_value", (SlotType) = "special_location"];
+        NData.TLatLon LatLonValue = 3 [json_name = "lat_lon_value", (NYT.column_name) = "lat_lon_value", (SlotType) = "lat_lon"];
+    }
+}
+
+message TLocationSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string UserIotRoomValue = 1 [json_name = "user_iot_room_value", (NYT.column_name) = "user_iot_room_value", (SlotType) = "user.iot.room"];
+        string DeviceIotRoomValue = 2 [json_name = "device_iot_room_value", (NYT.column_name) = "device_iot_room_value", (SlotType) = "device.iot.room"];
+        string UserIotGroupValue = 3 [json_name = "user_iot_group_value", (NYT.column_name) = "user_iot_group_value", (SlotType) = "user.iot.group"];
+        string DeviceIotGroupValue = 4 [json_name = "device_iot_group_value", (NYT.column_name) = "device_iot_group_value", (SlotType) = "device.iot.group"];
+        string UserIotDeviceValue = 5 [json_name = "user_iot_device_value", (NYT.column_name) = "user_iot_device_value", (SlotType) = "user.iot.device"];
+        string DeviceIotDeviceValue = 6 [json_name = "device_iot_device_value", (NYT.column_name) = "device_iot_device_value", (SlotType) = "device.iot.device"];
+        string UserIotMultiroomAllDevicesValue = 7 [json_name = "user_iot_multiroom_all_devices_value", (NYT.column_name) = "user_iot_multiroom_all_devices_value", (SlotType) = "user.iot.multiroom_all_devices"];
+        string DeviceIotMultiroomAllDevicesValue = 8 [json_name = "device_iot_multiroom_all_devices_value", (NYT.column_name) = "device_iot_multiroom_all_devices_value", (SlotType) = "device.iot.multiroom_all_devices"];
+    }
+}
+
+message TStartIotDiscoveryRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TStartIotDiscoveryRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.iot.discovery.start_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TFinishIotDiscoveryRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TFinishIotDiscoveryRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.iot.discovery.finish_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TForgetIotEndpointsRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TForgetIotEndpointsRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.iot.unlink.forget_endpoints_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TEndpointStateUpdatesRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TEndpointStateUpdatesRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.endpoint.state.updates", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+// deprecated
+message TEndpointCapabilityEventsSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TEndpointCapabilityEvents EventsValue = 1 [json_name = "events_value", (NYT.column_name) = "events_value", (SlotType) = "custom.endpoint.capability.events", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TEndpointEventsBatchSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TEndpointEventsBatch BatchValue = 1 [json_name = "batch_value", (NYT.column_name) = "batch_value", (SlotType) = "custom.endpoint.events.batch", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+// this is only relevant while https://st.yandex-team.ru/ZION-93 is not available and should be removed later
+message TIotYandexIOActionRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TIoTYandexIOActionRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.iot.yandex_io.action_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TTvChosenTemplateSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+
+        NAlice.NSmartTv.TTandemTemplate TandemTemplate = 1 [json_name = "tandem_promo_template", (NYT.column_name) = "tandem_promo_template", (SlotType) = "custom.smarttv.feature_boarding.tandem", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TIoTDeviceActionsBatchSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TIoTDeviceActionsBatch BatchValue = 1 [json_name = "batch_value", (NYT.column_name) = "batch_value", (SlotType) = "custom.iot.device_actions_batch", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TContentIdSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.NMusic.TContentId ContentIdValue = 1 [json_name = "content_id_value", (NYT.column_name) = "content_id_value", (SlotType) = "content_id", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TFixlistInfoSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string FixlistInfoValue = 1 [json_name = "fixlist_info_value", (NYT.column_name) = "fixlist_info_value", (SlotType) = "custom.music.fixlist.info", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TTargetTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        track = 1;
+        album = 2;
+        artist = 3;
+        playlist = 4;
+        radio = 5;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue TargetTypeValue = 1 [json_name = "target_type_value", (NYT.column_name) = "target_type_value", (SlotType) = "custom.target_type", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TActionRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        autoplay = 1;
+        like = 2;
+        dislike = 3;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue ActionRequestValue = 1 [json_name = "action_request_value", (NYT.column_name) = "action_request_value", (SlotType) = "custom.action_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TNeedSimilarSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        need_similar = 1;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue NeedSimilarValue = 1 [json_name = "need_similar_value", (NYT.column_name) = "need_similar_value", (SlotType) = "custom.need_similar", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TRepeatSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        repeat = 1;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue RepeatValue = 1 [json_name = "repeat_value", (NYT.column_name) = "repeat_value", (SlotType) = "custom.repeat", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TOrderSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        shuffle = 1;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue OrderValue = 1 [json_name = "order_value", (NYT.column_name) = "order_value", (SlotType) = "custom.order", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TFairytaleThemeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        unknown = 0;
+        bedtime = 1;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue FairytaleThemeValue = 1 [json_name = "fairytale_theme_value", (NYT.column_name) = "fairytale_theme_value", (SlotType) = "custom.fairytale_theme", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TSelectVideoFromGallerySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.select_video_from_gallery_by_remote_control";
+
+    TStringSlot Action = 1 [json_name = "action", (NYT.column_name) = "action", (SlotName) = "action"];
+    TNumSlot VideoIndex = 2 [json_name = "video_index", (NYT.column_name) = "video_index", (SlotName) = "video_index"];
+    TBoolSlot SilentResponse = 3 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TOpenCurrentVideoSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.open_current_video";
+
+    TStringSlot Action = 1 [json_name = "action", (NYT.column_name) = "action", (SlotName) = "action"];
+    TBoolSlot SilentResponse = 2 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TOpenCurrentTrailerSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video.open_current_trailer";
+
+    TBoolSlot SilentResponse = 1 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TOrderNotificationSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.order.notification";
+
+    TStringSlot ProviderName = 1 [json_name = "provider_name", (NYT.column_name) = "provider_name", (SlotName) = "provider_name"];
+    TStringSlot OrderId = 2 [json_name = "order_id", (NYT.column_name) = "order_id", (SlotName) = "order_id"];
+
+    TOrderNotificationTypeSlot OrderNotificationType = 3 [json_name= "order_notification_type", (NYT.column_name) = "order_notification_type", (SlotName) = "order_notification_type"];
+}
+
+
+message TVideoPlayerFinishedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.quasar.video_player.finished";
+
+    TBoolSlot SilentResponse = 1 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TVideoPaymentConfirmedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.payment_confirmed";
+
+    TBoolSlot SilentResponse = 1 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TSearchSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.search";
+
+    TStringSlot Query = 1 [json_name = "query", (NYT.column_name) = "query", (SlotName) = "query"];
+}
+
+// Deprecated
+message TIoTBroadcastStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.start";
+
+    TStringSlot PairingToken = 1 [json_name = "pairing_token", (NYT.column_name) = "pairing_token", (SlotName) = "pairing_token"];
+    TUInt32Slot TimeoutMs = 2 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms", (SlotName) = "timeout_ms"];
+}
+
+// Deprecated
+message TIoTBroadcastSuccessSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.success";
+
+    TStringSlot DevicesID = 1 [json_name = "devices_id", (NYT.column_name) = "devices_id", (SlotName) = "devices_id"];
+    TStringSlot ProductIDs = 2 [json_name = "product_ids", (NYT.column_name) = "product_ids", (SlotName) = "product_ids"];
+}
+
+// Deprecated
+message TIoTBroadcastFailureSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.failure";
+
+    TUInt32Slot TimeoutMs = 2 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms", (SlotName) = "timeout_ms"];
+    TStringSlot Reason = 3 [json_name = "reason", (NYT.column_name) = "reason", (SlotName) = "reason"];
+}
+
+message TIoTDiscoveryStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.start.v2";
+    TStringSlot SSID = 1 [json_name = "ssid", (NYT.column_name) = "ssid", (SlotName) = "ssid"];
+    TStringSlot Password = 2 [json_name = "password", (NYT.column_name) = "password", (SlotName) = "password"];
+    TStringSlot DeviceType = 3 [json_name = "device_type", (NYT.column_name) = "device_type", (SlotName) = "device_type"];
+    TUInt32Slot TimeoutMs = 4 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms", (SlotName) = "timeout_ms"];
+}
+
+message TIoTDiscoveryFailureSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.failure.v2";
+
+    TUInt32Slot TimeoutMs = 1 [json_name = "timeout_ms", (NYT.column_name) = "timeout_ms", (SlotName) = "timeout_ms"];
+    TStringSlot Reason = 2 [json_name = "reason", (NYT.column_name) = "reason", (SlotName) = "reason"];
+    TStringSlot DeviceType = 3 [json_name = "device_type", (NYT.column_name) = "device_type", (SlotName) = "device_type"];
+}
+
+message TIoTDiscoverySuccessSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.voice_discovery.success.v2";
+    TStringSlot DeviceIDs = 1 [json_name = "device_ids", (NYT.column_name) = "device_ids", (SlotName) = "device_ids"];
+    TStringSlot ProductIDs = 2 [json_name = "product_ids", (NYT.column_name) = "product_ids", (SlotName) = "product_ids"];
+    TStringSlot DeviceType = 3 [json_name = "device_type", (NYT.column_name) = "device_type", (SlotName) = "device_type"];
+}
+
+message TStartIotDiscoverySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.start";
+
+    TStartIotDiscoveryRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+    TStringSlot SessionID = 2 [json_name = "session_id", (NYT.column_name) = "session_id", (SlotName) = "session_id"];
+}
+
+message TFinishIotDiscoverySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.finish";
+
+    TFinishIotDiscoveryRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+message TFinishIotSystemDiscoverySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.system_discovery.finish";
+
+    TFinishIotDiscoveryRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+message TPutMoneyOnPhoneSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.put_money_on_phone";
+
+    TSysNumSlot Amount = 1 [json_name = "amount", (NYT.column_name) = "amount", (SlotName) = "amount"];
+    TStringSlot PhoneNumber = 2 [json_name = "phone_number", (NYT.column_name) = "phone_number", (SlotName) = "phone_number"];
+}
+
+message TStartIotTuyaBroadcastSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.start_tuya_broadcast";
+
+    TStringSlot SSID = 1 [json_name = "ssid", (NYT.column_name) = "ssid", (SlotName) = "ssid"];
+    TStringSlot Password = 2 [json_name = "password", (NYT.column_name) = "password", (SlotName) = "password"];
+}
+
+message TRestoreIotNetworksSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.restore_networks";
+}
+
+message TDeleteIotNetworksSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.delete_networks";
+}
+
+message TSaveIotNetworksSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.discovery.save_networks";
+
+    TIotNetworksSlot Networks = 1 [json_name = "networks", (NYT.column_name) = "networks", (SlotName) = "networks"];
+}
+
+message TForgetIotEndpointsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.unlink.forget_endpoints";
+
+    TForgetIotEndpointsRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+message TIotYandexIOActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.yandex_io.action";
+
+    TIotYandexIOActionRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+message TIotScenarioStepActionsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.scenario.step.actions";
+
+    TStringSlot LaunchID = 1 [json_name = "launch_id", (NYT.column_name) = "launch_id", (SlotName) = "launch_id"];
+    TUInt32Slot StepIndex = 2 [json_name = "step_index", (NYT.column_name) = "step_index", (SlotName) = "step_index"];
+    TIoTDeviceActionsBatchSlot DeviceActionsBatch = 3 [json_name = "device_actions_batch", (NYT.column_name) = "device_actions_batch", (SlotName) = "device_actions_batch"];
+}
+
+// deprecated, use TEndpointEventsBatchSemanticFrame instead
+message TEndpointStateUpdatesSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.endpoint.state.updates";
+
+    TEndpointStateUpdatesRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+// deprecated, use TEndpointEventsBatchSemanticFrame instead
+message TCapabilityEventSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.endpoint.capability.event";
+
+    reserved "Event"; reserved 1;
+}
+
+// deprecated, use TEndpointEventsBatchSemanticFrame instead
+message TEndpointCapabilityEventsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.endpoint.capability.events";
+
+    TEndpointCapabilityEventsSlot Events = 1 [json_name = "events", (NYT.column_name) = "events", (SlotName) = "events"];
+}
+
+message TEndpointEventsBatchSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.endpoint.events.batch";
+
+    TEndpointEventsBatchSlot Batch = 1 [json_name = "batch", (NYT.column_name) = "batch", (SlotName) = "batch"];
+}
+
+message TMordoviaHomeScreenSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "quasar.mordovia.home_screen";
+
+    TStringSlot DeviceID = 1 [json_name = "device_id", (NYT.column_name) = "device_id", (SlotName) = "device_id"];
+}
+
+message TNewsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.get_news";
+
+    TStringSlot Topic = 1 [json_name = "topic", (NYT.column_name) = "topic", (SlotName) = "topic"];
+    TNumSlot MaxCount = 2 [json_name = "max_count", (NYT.column_name) = "max_count", (SlotName) = "max_count"];
+    TBoolSlot SkipIntroAndEnding = 3 [json_name = "skip_intro_and_ending", (NYT.column_name) = "skip_intro_and_ending", (SlotName) = "skip_intro_and_ending"];
+    TNewsProviderSlot Provider = 4 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+    TWhereSlot Where = 5 [json_name = "where", (NYT.column_name) = "where", (SlotName) = "where"];
+    TBoolSlot DisableVoiceButtons = 6 [json_name = "disable_voice_buttons", (NYT.column_name) = "disable_voice_buttons", (SlotName) = "disable_voice_buttons"];
+    TBoolSlot GoBack = 7 [json_name = "go_back", (NYT.column_name) = "go_back", (SlotName) = "go_back"];
+    TNumSlot NewsIdx = 8 [json_name = "news_idx", (NYT.column_name) = "news_idx", (SlotName) = "news_idx"];
+    TBoolSlot SingleNews = 9 [json_name = "single_news", (NYT.column_name) = "single_news", (SlotName) = "single_news"];
+}
+
+message TGetCallerNameSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.messenger_call.get_caller_name";
+
+    TStringSlot CallerDeviceID = 1 [json_name = "caller_device_id", (NYT.column_name) = "caller_device_id", (SlotName) = "caller_device_id"];
+    TStringSlot CallerPayload = 2 [json_name = "caller_payload", (NYT.column_name) = "caller_payload", (SlotName) = "caller_payload"];
+}
+
+message TTokenTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue  {
+        Unknown = 0;
+        XToken = 1;
+        OAuthToken = 2;
+    }
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TAddAccountSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.multiaccount.add_account";
+
+    TStringSlot JwtToken = 1 [json_name = "jwt_token", (NYT.column_name) = "jwt_token", (SlotName) = "jwt_token", (FieldAccess) = A_PRIVATE_RESPONSE, deprecated = true];
+    TTokenTypeSlot TokenType = 2 [json_name = "token_type", (NYT.column_name) = "token_type", (SlotName) = "token_type"];
+    TBoolSlot Encrypted = 3 [json_name = "encrypted", (NYT.column_name) = "encrypted", (SlotName) = "encrypted", deprecated = true];
+
+    TStringSlot EncryptedCode = 4 [json_name = "encrypted_code", (NYT.column_name) = "encrypted_code", (SlotName) = "encrypted_code", (FieldAccess) = A_PRIVATE_RESPONSE];
+    TStringSlot Signature = 5 [json_name = "signature", (NYT.column_name) = "signature", (SlotName) = "signature", (FieldAccess) = A_PRIVATE_RESPONSE];
+    TStringSlot EncryptedSessionKey = 6 [json_name = "encrypted_session_key", (NYT.column_name) = "encrypted_session_key", (SlotName) = "encrypted_session_key", (FieldAccess) = A_PRIVATE_RESPONSE];
+}
+
+message TRemoveAccountSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.multiaccount.remove_account";
+
+    TStringSlot Puid = 1 [json_name = "puid", (NYT.column_name) = "puid", (SlotName) = "puid", (FieldAccess) = A_PRIVATE_RESPONSE];
+}
+
+message TEnrollmentStatusTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.NIoT.TEnrollmentStatus EnrollmentStatus = 1 [json_name = "enrollment_status", (NYT.column_name) = "enrollment_status", (SlotType) = "enrollment_status"];
+    }
+}
+
+message TEnrollmentStatusSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.multiaccount.enrollment_status";
+
+    // In multiaccount feature it is possible to have multiple users enrolled
+    // Puid must explicitly identify user for whom enrollment has been completed or failed
+    TStringSlot Puid = 1 [json_name = "puid", (NYT.column_name) = "puid", (SlotName) = "puid", (FieldAccess) = A_PRIVATE_RESPONSE];
+    TEnrollmentStatusTypeSlot Status = 2 [json_name = "status", (NYT.column_name) = "status", (SlotName) = "status"];
+}
+
+message TCentaurCollectCardsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.collect_cards";
+
+    TStringSlot CarouselId = 1 [json_name = "carousel_id", (NYT.column_name) = "carousel_id", (SlotName) = "carousel_id"];
+    TBoolSlot IsScheduledUpdate = 2 [json_name = "is_scheduled_update", (NYT.column_name) = "is_scheduled_update", (SlotName) = "is_scheduled_update"];
+    TBoolSlot IsGetSettingsRequest = 3 [json_name = "is_get_settings_request", (NYT.column_name) = "is_get_settings_request", (SlotName) = "is_get_settings_request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TWidgetPositionSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NData.TWidgetPosition WidgetPositionValue = 1 [json_name = "widget_position_value", (NYT.column_name) = "widget_position_value", (SlotType) = "WidgetPositionValue"];
+    }
+}
+
+message TCentaurCollectMainScreenSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.collect_main_screen";
+
+    TWidgetPositionSlot WidgetGalleryPosition = 1 [json_name = "widget_gallery_position", (NYT.column_name) = "widget_gallery_position", (SlotName) = "widget_gallery_position"];
+    TWidgetConfigDataSlot WidgetConfigDataSlot = 2 [json_name = "widget_config_data_slot", (NYT.column_name) = "widget_config_data_slot", (SlotName) = "widget_config_data_slot", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    TWidgetPositionSlot WidgetMainScreenPosition = 3 [json_name = "widget_main_screen_position", (NYT.column_name) = "widget_main_screen_position", (SlotName) = "widget_main_screen_position", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TCentaurCollectUpperShutterSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.collect_upper_shutter";
+}
+
+message TCentaurGetCardSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.get_card";
+
+    TStringSlot CarouselId = 1 [json_name = "carousel_id", (NYT.column_name) = "carousel_id", (SlotName) = "carousel_id"];
+}
+
+message TCentaurCollectWidgetGallerySemanticFrame {
+    option deprecated = true;
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.collect_widget_gallery";
+
+    TNumSlot Column = 1 [json_name = "column", (NYT.column_name) = "column", (SlotName) = "column"];
+    TNumSlot Row = 2 [json_name = "row", (NYT.column_name) = "row", (SlotName) = "row"];
+}
+
+message TWidgetDataSlot {
+    option deprecated = true;
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TCentaurWidgetData WidgetDataValue = 1 [json_name = "widget_data_value", (NYT.column_name) = "widget_data_value", (SlotType) = "WidgetDataValue"];
+    }
+}
+
+message TWidgetConfigDataSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TCentaurWidgetConfigData WidgetConfigDataValue = 1 [json_name = "widget_config_data_value", (NYT.column_name) = "widget_config_data_value", (SlotType) = "WidgetConfigDataValue"];
+    }
+}
+
+message TCatalogTagSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NTv.TCatalogTags CatalogTags = 1 [json_name = "catalog_tags", (NYT.column_name) = "catalog_tags", (SlotType) = "CatalogTags", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TCentaurAddWidgetFromGallerySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.add_widget_from_gallery";
+
+    TNumSlot Column = 1 [json_name = "column", (NYT.column_name) = "column", (SlotName) = "column"];
+    TNumSlot Row = 2 [json_name = "row", (NYT.column_name) = "row", (SlotName) = "row"];
+    TWidgetDataSlot WidgetDataSlot = 3 [json_name = "widget_data_slot", (NYT.column_name) = "widget_data_slot", (SlotName) = "widget_data_slot", deprecated = true];
+    TWidgetConfigDataSlot WidgetConfigDataSlot = 4 [json_name = "widget_config_data_slot", (NYT.column_name) = "widget_config_data_slot", (SlotName) = "widget_config_data_slot"];
+}
+
+message TScenariosForTeasersSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TTeaserSettingsData TeaserSettingsData = 1 [json_name = "teaser_settings_data", (NYT.column_name) = "teaser_settings_data", (SlotType) = "TeaserSettingsData"];
+    }
+}
+
+message TCentaurSetTeaserConfigurationSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.set_teaser_configuration";
+
+    TScenariosForTeasersSlot ScenariosForTeasersSlot = 1 [json_name = "scenarios_for_teasers_slot", (NYT.column_name) = "scenarios_for_teasers_slot", (SlotName) = "scenarios_for_teasers_slot"];
+}
+
+message TCentaurCollectTeasersPreviewSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.centaur.collect_teasers_preview";
+}
+
+message TGetPhotoFrameSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.scenarios.get_photo_frame";
+
+    // Need for pre combinator stage
+    TStringSlot CarouselId = 1 [json_name = "carousel_id", (NYT.column_name) = "carousel_id", (SlotName) = "carousel_id", deprecated = true];
+    // Need for pre combinator stage
+    TNumSlot PhotoId = 2 [json_name = "photo_id", (NYT.column_name) = "photo_id", (SlotName) = "photo_id", deprecated = true];
+}
+
+message TExternalAppSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string ExternalAppValue = 1 [json_name = "external_app_value", (NYT.column_name) = "external_app_value", (SlotType) = "external.app"];
+    }
+}
+
+message TOpenSmartDeviceExternalAppFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.open_smart_device_external_app";
+
+    TExternalAppSlot Application = 1 [json_name = "application", (NYT.column_name) = "application", (SlotName) = "application"];
+}
+
+message TMusicPlayObjectTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        Track = 0;
+        Album = 1;
+        Artist = 2;
+        Playlist = 3;
+        Radio = 4;
+        Generative = 5;
+        FmRadio = 6;
+    }
+    oneof Value {
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TMusicPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.music_play";
+
+    reserved 2;
+    reserved "ShowPodcast";
+
+    TStringSlot SpecialPlaylist = 1 [json_name = "special_playlist", (NYT.column_name) = "special_playlist", (SlotName) = "special_playlist"];
+    TStringSlot SpecialAnswerInfo = 3 [json_name = "special_answer_info", (NYT.column_name) = "special_answer_info", (SlotName) = "special_answer_info"];
+    TStringSlot ActionRequest = 4 [json_name = "action_request", (NYT.column_name) = "action_request", (SlotName) = "action_request"];
+    TStringSlot Epoch = 5 [json_name = "epoch", (NYT.column_name) = "epoch", (SlotName) = "epoch"];
+    TStringSlot SearchText = 6 [json_name = "search_text", (NYT.column_name) = "search_text", (SlotName) = "search_text"];
+    TMusicSlot Genre = 7 [json_name = "genre", (NYT.column_name) = "genre", (SlotName) = "genre"];
+    TMusicSlot Mood = 8 [json_name = "mood", (NYT.column_name) = "mood", (SlotName) = "mood"];
+    TMusicSlot Activity = 9 [json_name = "activity", (NYT.column_name) = "activity", (SlotName) = "activity"];
+    TLanguageSlot Language = 10 [json_name = "language", (NYT.column_name) = "language", (SlotName) = "language"];
+    TMusicSlot Vocal = 11 [json_name = "vocal", (NYT.column_name) = "vocal", (SlotName) = "vocal"];
+    TMusicSlot Novelty = 12 [json_name = "novelty", (NYT.column_name) = "novelty", (SlotName) = "novelty"];
+    TMusicSlot Personality = 13 [json_name = "personality", (NYT.column_name) = "personality", (SlotName) = "personality"];
+    TMusicSlot Order = 14 [json_name = "order", (NYT.column_name) = "order", (SlotName) = "order"];
+    // Repeate mode in accordance with https://a.yandex-team.ru/arc/trunk/arcadia/alice/megamind/protos/scenarios/directives.proto?rev=r8999692#L579
+    TMusicSlot Repeat = 15 [json_name = "repeat", (NYT.column_name) = "repeat", (SlotName) = "repeat"];
+    TBoolSlot DisableAutoflow = 16 [json_name = "disable_autoflow", (NYT.column_name) = "disable_autoflow", (SlotName) = "disable_autoflow"];
+    TBoolSlot DisableNlg = 17 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+    TBoolSlot PlaySingleTrack = 18 [json_name = "play_single_track", (NYT.column_name) = "play_single_track", (SlotName) = "play_single_track"];
+    TNumSlot TrackOffsetIndex = 19 [json_name = "track_offset_index", (NYT.column_name) = "track_offset_index", (SlotName) = "track_offset_index"];
+    TStringSlot Playlist = 20 [json_name = "playlist", (NYT.column_name) = "playlist", (SlotName) = "playlist"];
+
+    // Fields for launching music similarly to music_play_object bass action
+    // id from music catalog, for example ("38646012", "Track"), ("263065:3033", "Playlist")
+    TStringSlot ObjectId = 21 [json_name = "object_id", (NYT.column_name) = "object_id", (SlotName) = "object_id"];
+    TMusicPlayObjectTypeSlot ObjectType = 22 [json_name = "object_type", (NYT.column_name) = "object_type", (SlotName) = "object_type"];
+    // Start album/playlist from track with id
+    TStringSlot StartFromTrackId = 23 [json_name = "start_from_track_id", (NYT.column_name) = "start_from_track_id", (SlotName) = "start_from_track_id"];
+    TDoubleSlot OffsetSec = 24 [json_name = "offset_sec", (NYT.column_name) = "offset_sec", (SlotName) = "offset_sec"];
+    TStringSlot AlarmId = 25 [json_name = "alarm_id", (NYT.column_name) = "alarm_id", (SlotName) = "alarm_id"];
+    TStringSlot From = 26 [json_name = "from", (NYT.column_name) = "from", (SlotName) = "from"];
+
+    // When true, navigating back to tracks played before this frame returns Irrelevant
+    TBoolSlot DisableHistory = 27 [json_name = "disable_history", (NYT.column_name) = "disable_history", (SlotName) = "disable_history"];
+
+    TMusicSlot Room = 28 [json_name = "room", (NYT.column_name) = "room", (SlotName) = "room"];
+
+    TMusicSlot Stream = 29 [json_name = "stream", (NYT.column_name) = "stream", (SlotName) = "stream"];
+    TMusicSlot GenerativeStation = 30 [json_name = "generative_station", (NYT.column_name) = "generative_station", (SlotName) = "generative_station"];
+    TMusicSlot NeedSimilar = 31 [json_name = "need_similar", (NYT.column_name) = "need_similar", (SlotName) = "need_similar"];
+    TLocationSlot Location = 32 [json_name = "location", (NYT.column_name) = "location", (SlotName) = "location"];
+
+    // Offset of the whole album/playlist: beginning, saved_progress
+    TMusicSlot Offset = 33 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+
+    // Temporary hack to disable multiroom, until thin client multiroom is fully supported
+    TBoolSlot DisableMultiroom = 34 [json_name = "disable_multiroom", (NYT.column_name) = "disable_multiroom", (SlotName) = "disable_multiroom"];
+
+    TMusicContentTypeSlot ContentType = 35 [json_name = "content_type", (NYT.column_name) = "content_type", (SlotName) = "content_type"];
+}
+
+message TMusicOnboardingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music_onboarding";
+}
+
+message TMusicOnboardingArtistsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music_onboarding.artists";
+}
+
+message TMusicOnboardingGenresSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music_onboarding.genres";
+}
+
+message TMusicOnboardingTracksSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music_onboarding.tracks";
+}
+
+message TMusicOnboardingTracksReaskSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music_onboarding.tracks_reask";
+
+    TNumSlot TrackIndex = 1 [json_name = "track_index", (NYT.column_name) = "track_index", (SlotName) = "track_index", deprecated = true];
+    TStringSlot TrackId = 2 [json_name = "track_id", (NYT.column_name) = "track_id", (SlotName) = "track_id"];
+}
+
+message TMusicAnnounceDisableSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.announce.disable";
+}
+
+message TMusicAnnounceEnableSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.announce.enable";
+}
+
+message TOpenTandemSettingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.setting.tandem.open";
+}
+
+message TOpenSmartSpeakerSettingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.setting.smart_speaker.open";
+}
+
+message TExternalSkillActivateSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.external_skill_activate";
+
+    TStringSlot ActivationPhrase = 1 [json_name = "activation_phrase", (NYT.column_name) = "activation_phrase", (SlotName) = "activation_phrase"];
+}
+
+message TExternalSkillEpisodeForShowRequestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.external_skill_episode_for_show_request";
+
+    TStringSlot SkillId = 1 [json_name = "skill_id", (NYT.column_name) = "skill_id", (SlotName) = "skill_id"];
+}
+
+message TMusicPlayFixlistSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.music_play_fixlist";
+
+    TFixlistInfoSlot SpecialAnswerInfo = 1 [json_name = "special_answer_info", (NYT.column_name) = "special_answer_info", (SlotName) = "special_answer_info"];
+}
+
+message TMusicPlayAnaphoraSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.music_play_anaphora";
+
+    TActionRequestSlot ActionRequest = 1 [json_name = "action_request", (NYT.column_name) = "action_request", (SlotName) = "action_request"];
+    TRepeatSlot Repeat = 2 [json_name = "repeat", (NYT.column_name) = "repeat", (SlotName) = "repeat"];
+    TTargetTypeSlot TargetType = 3 [json_name = "target_type", (NYT.column_name) = "target_type", (SlotName) = "target_type"];
+    TNeedSimilarSlot NeedSimilar = 4 [json_name = "need_similar", (NYT.column_name) = "need_similar", (SlotName) = "need_similar"];
+    TOrderSlot Order = 5 [json_name = "order", (NYT.column_name) = "order", (SlotName) = "order"];
+}
+
+message TMusicPlayFairytaleSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.music_play_fairytale";
+
+    TFairytaleThemeSlot FairytaleTheme = 1 [json_name = "fairytale_theme", (NYT.column_name) = "fairytale_theme", (SlotName) = "fairytale_theme"];
+}
+
+message TStartMultiroomSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.multiroom.start_multiroom";
+
+    repeated TLocationSlot LocationRoom = 1 [json_name = "location_room", (NYT.column_name) = "location_room", (SlotName) = "location_room"];
+    repeated TLocationSlot LocationGroup = 2 [json_name = "location_group", (NYT.column_name) = "location_group", (SlotName) = "location_group"];
+    repeated TLocationSlot LocationDevice = 3 [json_name = "location_device", (NYT.column_name) = "location_device", (SlotName) = "location_device"];
+    TLocationSlot LocationEverywhere = 4 [json_name = "location_everywhere", (NYT.column_name) = "location_everywhere", (SlotName) = "location_everywhere"];
+}
+
+message TActivationTypedSemanticFrameSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TPutMoneyOnPhoneSemanticFrame PutMoneyOnPhoneSemanticFrame = 1 [json_name = "put_money_on_phone_value", (SlotType) = "alice.put_money_on_phone", (NYT.column_name) = "put_money_on_phone_value", (SlotName) = "put_money_on_phone", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TExternalSkillFixedActivateSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.external_skill_fixed_activate";
+
+    TStringSlot FixedSkillId = 1 [json_name = "fixed_skill_id", (NYT.column_name) = "fixed_skill_id", (SlotName) = "fixed_skill_id"];
+    TStringSlot ActivationCommand = 2 [json_name = "activation_command", (NYT.column_name) = "activation_command", (SlotName) = "activation_command"];
+    // valid JSON that will be sent to skill
+    TStringSlot Payload = 3 [json_name = "payload", (NYT.column_name) = "payload", (SlotName) = "payload"];
+    TActivationSourceTypeSlot ActivationSourceType = 4 [json_name = "activation_source_type", (NYT.column_name) = "activation_source_type", (SlotName) = "activation_source_type"];
+
+    TActivationTypedSemanticFrameSlot ActivationTypedSemanticFrame = 5 [json_name = "activation_typed_semantic_frame", (NYT.column_name) = "activation_typed_semantic_frame", (SlotName) = "activation_typed_semantic_frame"];
+}
+
+message TActivationSourceTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+
+        string ActivationSourceType = 1 [json_name = "activation_source_type", (NYT.column_name) = "activation_source_type", (SlotType) = "ActivationSourceType"];
+    }
+}
+
+message TVideoPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.video_play";
+
+    TStringSlot ContentType = 1 [json_name = "content_type", (NYT.column_name) = "content_type", (SlotName) = "content_type"];
+    TStringSlot Action = 2 [json_name = "action", (NYT.column_name) = "action", (SlotName) = "action"];
+    TStringSlot SearchText = 3 [json_name = "search_text", (NYT.column_name) = "search_text", (SlotName) = "search_text"];
+    TNumSlot Season = 4 [json_name = "season", (NYT.column_name) = "season", (SlotName) = "season"];
+    TNumSlot Episode = 5 [json_name = "episode", (NYT.column_name) = "episode", (SlotName) = "episode"];
+    TVideoSlot New = 6 [json_name = "new", (NYT.column_name) = "new", (SlotName) = "new"];
+}
+
+message TWeatherSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.get_weather";
+
+    TDateTimeSlot When = 1 [json_name = "when", (NYT.column_name) = "when", (SlotName) = "when"];
+    TStringSlot CarouselId = 2 [json_name = "carousel_id", (NYT.column_name) = "carousel_id", (SlotName) = "carousel_id"];
+    TWhereSlot Where = 3 [json_name = "where", (NYT.column_name) = "where", (SlotName) = "where"];
+}
+
+message THardcodedMorningShowSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.morning_show";
+    TNumSlot Offset = 1 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+    TStringSlot ShowType = 2 [json_name = "show_type", (SlotName) = "show_type"];
+    THardcodedShowSerializedSettingsSlot NewsProvider = 3 [json_name = "news_provider", (SlotName) = "news_provider"];
+    THardcodedShowSerializedSettingsSlot Topic = 4 [json_name = "topic", (SlotName) = "topic"];
+    TNumSlot NextTrackIndex = 5 [json_name = "next_track_index", (SlotName) = "next_track_index"];
+}
+
+message THardcodedShowSerializedSettingsSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        string SerializedData = 1 [json_name = "data_value", (NYT.column_name) = "data_value", (SlotType) = "data"];
+    }
+}
+
+message TAliceShowActivateSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.alice_show.activate";
+    TNewsProviderSlot NewsProvider = 1 [json_name = "news_provider", (NYT.column_name) = "news_provider", (SlotName) = "news_provider"];
+    TTopicSlot Topic = 2 [json_name = "topic", (NYT.column_name) = "topic", (SlotName) = "topic"];
+    TDayPartSlot DayPart = 3 [json_name = "day_part", (NYT.column_name) = "day_part", (SlotName) = "day_part"];
+    TAgeSlot Age = 4 [json_name = "age", (NYT.column_name) = "age", (SlotName) = "age"];
+}
+
+message TAppsFixlistSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.apps_fixlist";
+    TAppData AppData = 1 [json_name = "app_data", (NYT.column_name) = "app_data", (SlotName) = "app_data"];
+}
+
+message TPlayerNextTrackSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.next_track";
+    TBoolSlot SetPause = 1 [json_name = "set_pause", (NYT.column_name) = "set_pause", (SlotName) = "set_pause"];
+}
+
+message TPlayerPrevTrackSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.previous_track";
+    TBoolSlot SetPause = 1 [json_name = "set_pause", (NYT.column_name) = "set_pause", (SlotName) = "set_pause"];
+}
+
+message TPlayerLikeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.like";
+
+    TContentIdSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+}
+
+message TPlayerRemoveLikeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.remove_like";
+
+    TContentIdSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+}
+
+message TPlayerDislikeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.dislike";
+
+    TContentIdSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+}
+
+message TPlayerRemoveDislikeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.remove_dislike";
+
+    TContentIdSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+}
+
+message TPlayerContinueSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.continue";
+
+    TBoolSlot DisableNlg = 1 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+}
+
+message TPlayerSongsByThisArtistSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.songs_by_this_artist";
+}
+
+message TPlayerWhatIsPlayingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.what_is_playing";
+}
+
+message TPlayerWhatIsThisSongAboutSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.what_is_this_song_about";
+}
+
+message TPlayerShuffleSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.shuffle";
+
+    TBoolSlot DisableNlg = 1 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+}
+
+message TPlayerUnshuffleSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.unshuffle";
+
+    TBoolSlot DisableNlg = 1 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+}
+
+message TPlayerReplaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.replay";
+}
+
+message TPlayerPauseSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.pause";
+}
+
+message TRemindersCancelSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.reminders.cancel";
+
+    // A string of reminder guids divided by comma.
+    TStringSlot Ids = 1 [json_name = "ids", (NYT.column_name) = "ids", (SlotName) = "ids"];
+}
+
+message TRemindersListSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.reminders.list";
+
+    // This counter needs to prevent infinite ReRequest of reminders list. This can happened when we ask list of reminders
+    // in SearchApp and the the device state has not been contains reminders state.
+    TUInt32Slot Countdown = 1 [json_name = "countdown", (NYT.column_name) = "countdown", (SlotName) = "countdown"];
+}
+
+message TRemindersOnShootSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.reminders.on_shoot";
+
+    // Reminder id is a guid.
+    TStringSlot Id = 1 [json_name = "id", (NYT.column_name) = "id", (SlotName) = "id"];
+    // Reminder text which will be shown/told to user.
+    TStringSlot Text = 2 [json_name = "text", (NYT.column_name) = "text", (SlotName) = "text"];
+    // Timestamp when reminder has been set.
+    TStringSlot Epoch = 3 [json_name = "epoch", (NYT.column_name) = "epoch", (SlotName) = "epoch"];
+    // Original TimeZone in which reminder has been set.
+    TStringSlot TimeZone = 4 [json_name = "timezone", (NYT.column_name) = "timezone", (SlotName) = "timezone"];
+    // Device Id on which reminder is set.
+    TStringSlot OriginDeviceId = 5 [json_name = "origin_device_id", (NYT.column_name) = "origin_device_id", (SlotName) = "origin_device_id", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TRewindTypeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        string StringValue = 1 [json_name = "string_value", (NYT.column_name) = "string_value", (SlotType) = "string"];
+        string RewindTypeValue = 2 [json_name = "rewind_type_value", (NYT.column_name) = "rewind_type_value", (SlotType) = "custom.rewind_type"];
+    }
+}
+
+message TPlayerRewindSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.rewind";
+
+    TUnitsTimeSlot Time = 1 [json_name = "time", (NYT.column_name) = "time", (SlotName) = "time"];
+    TRewindTypeSlot RewindType = 2 [json_name = "rewind_type", (NYT.column_name) = "rewind_type", (SlotName) = "rewind_type"];
+}
+
+message TRepeatModeSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        Unknown = 0;
+        None = 1;
+        One = 2;
+        All = 3;
+    }
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TPlayerRepeatSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.player.repeat";
+
+    TBoolSlot DisableNlg = 1 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+    TRepeatModeSlot Mode = 2 [json_name = "mode", (NYT.column_name) = "mode", (SlotName) = "mode"];
+}
+
+message TDoNothingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.do_nothing";
+}
+
+message TNotificationsSubscribeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.notifications_subscribe";
+    TStringSlot Accept = 1 [json_name = "accept", (NYT.column_name) = "accept", (SlotName) = "accept"];
+    TNotificationSlot NotificationSubscription = 2 [json_name = "notification_subscription", (NYT.column_name) = "notification_subscription", (SlotName) = "notification_subscription"];
+}
+
+message TVideoRaterSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_rater.init";
+}
+
+message TSetupRcuStatusSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu.status";
+    TSetupRcuStatusSlot Status = 1 [json_name = "status", (NYT.column_name) = "status", (SlotName) = "status"];
+}
+
+message TSetupRcuAutoStatusSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu_auto.status";
+    TSetupRcuStatusSlot Status = 1 [json_name = "status", (NYT.column_name) = "status", (SlotName) = "status"];
+}
+
+message TSetupRcuCheckStatusSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu_check.status";
+    TSetupRcuStatusSlot Status = 1 [json_name = "status", (NYT.column_name) = "status", (SlotName) = "status"];
+}
+
+message TSetupRcuAdvancedStatusSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu_advanced.status";
+    TSetupRcuStatusSlot Status = 1 [json_name = "status", (NYT.column_name) = "status", (SlotName) = "status"];
+}
+
+message TSetupRcuManualStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu_manual.start";
+}
+
+message TSetupRcuAutoStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.setup_rcu_auto.start";
+    TStringSlot TvModel = 1 [json_name = "tv_model", (NYT.column_name) = "tv_model", (SlotName) = "tv_model"];
+}
+
+message TSetupRcuStatusSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    enum EValue {
+        Success = 0;
+        Error = 1;
+        InactiveTimeout = 2;
+    }
+    oneof Value {
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TLinkARemoteSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.quasar.link_a_remote";
+    TStringSlot LinkType = 1 [json_name = "link_type", (NYT.column_name) = "link_type", (SlotName) = "link_type"];
+}
+
+message TRequestTechnicalSupportSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.request_technical_support";
+}
+
+message TOnboardingStartingCriticalUpdateSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.onboarding.starting_critical_update";
+    TBoolSlot IsFirstSetup = 1 [json_name = "is_first_setup", (NYT.column_name) = "is_first_setup", (SlotName) = "is_first_setup"];
+}
+
+message TOnboardingStartingConfigureSuccessSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.onboarding.starting_configure_success";
+}
+
+message TFmRadioStationSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        string FmRadioValue = 1 [json_name = "fm_radio_value", (NYT.column_name) = "fm_radio_value", (SlotType) = "fm_radio_station"];
+    }
+}
+
+message TFmRadioFreqSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        string FmRadioFreqValue = 1 [json_name = "fm_radio_freq_value", (NYT.column_name) = "fm_radio_freq_value", (SlotType) = "fm_radio_freq"];
+    }
+}
+
+message TFmRadioInfoSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    oneof Value {
+        NData.TFmRadioInfo FmRadioInfoValue = 1 [json_name = "fm_radio_info_value", (NYT.column_name) = "fm_radio_info_value", (SlotType) = "fm_radio_info"];
+    }
+}
+
+message TRadioPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.radio_play";
+
+    TFmRadioStationSlot FmRadioStation = 1 [json_name = "fm_radio", (NYT.column_name) = "fm_radio", (SlotName) = "fm_radio"];
+    TFmRadioFreqSlot FmRadioFreq = 2 [json_name = "fm_radio_freq", (NYT.column_name) = "fm_radio_freq", (SlotName) = "fm_radio_freq"];
+    TFmRadioInfoSlot FmRadioInfo = 3 [json_name = "fm_radio_info", (NYT.column_name) = "fm_radio_info", (SlotName) = "fm_radio_info"];
+    TBoolSlot DisableNlg = 4 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+}
+
+message TFmRadioPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.music.fm_radio_play";
+
+    TFmRadioStationSlot FmRadioStation = 1 [json_name = "fm_radio", (NYT.column_name) = "fm_radio", (SlotName) = "fm_radio"];
+    TFmRadioFreqSlot FmRadioFreq = 2 [json_name = "fm_radio_freq", (NYT.column_name) = "fm_radio_freq", (SlotName) = "fm_radio_freq"];
+    TBoolSlot DisableNlg = 3 [json_name = "disable_nlg", (NYT.column_name) = "disable_nlg", (SlotName) = "disable_nlg"];
+}
+
+message TSoundLouderSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.sound.louder";
+}
+
+message TSoundQuiterSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.sound.quiter";
+}
+
+message TSoundLevelSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        int32 NumLevelValue = 1 [json_name = "num_level_value", (NYT.column_name) = "num_level_value", (SlotType) = "sys.num"];
+        float FloatLevelValue = 2 [json_name = "float_level_value", (NYT.column_name) = "float_level_value", (SlotType) = "sys.float"];
+        string CustomLevelValue = 3 [json_name = "custom_level_value", (NYT.column_name) = "custom_level_value", (SlotType) = "custom.number"];
+    }
+}
+
+message TSoundSetLevelSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.sound.set_level";
+    TSoundLevelSlot Level = 1 [json_name = "level", (NYT.column_name) = "level", (SlotName) = "level"];
+}
+
+message TGetTimeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.get_time";
+
+    TWhereSlot Where = 5 [json_name = "where", (NYT.column_name) = "where", (SlotName) = "where"];
+}
+
+message THowToSubscribeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.subscriptions.how_to_subscribe";
+}
+
+message TGetSmartTvCategoriesSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.smarttv.get_categories";
+}
+
+message TGetSmartTvCarouselSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.smarttv.get_carousel";
+
+    TStringSlot CarouselId = 1 [json_name = "carousel_id", (NYT.column_name) = "carousel_id", (SlotName) = "carousel_id"];
+    TStringSlot DocCacheHash = 2 [json_name = "docs_cache_hash", (NYT.column_name) = "docs_cache_hash", (SlotName) = "docs_cache_hash"];
+    TStringSlot CarouselType = 3 [json_name = "carousel_type", (NYT.column_name) = "carousel_type", (SlotName) = "carousel_type"];
+    TStringSlot Filter = 4 [json_name = "filter", (NYT.column_name) = "filter", (SlotName) = "filter"];
+    TStringSlot Tag = 5 [json_name = "tag", (NYT.column_name) = "tag", (SlotName) = "tag"];
+    TBoolSlot AvailableOnly = 6 [json_name = "available_only", (NYT.column_name) = "available_only", (SlotName) = "available_only"];
+    TNumSlot MoreUrlLimit = 7 [json_name = "more_url_limit", (NYT.column_name) = "more_url_limit", (SlotName) = "more_url_limit"];
+    TNumSlot Limit = 8 [json_name = "limit", (NYT.column_name) = "limit", (SlotName) = "limit"];
+    TNumSlot Offset = 9 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+    TBoolSlot KidMode = 10 [json_name = "kid_mode", (NYT.column_name) = "kid_mode", (SlotName) = "kid_mode"];
+    TNumSlot RestrictionAge = 11 [json_name = "restriction_age", (NYT.column_name) = "restriction_age", (SlotName) = "restriction_age"];
+}
+
+message TGetSmartTvCarouselsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.smarttv.get_carousels";
+
+    TStringSlot CategoryId = 1 [json_name = "category_id", (NYT.column_name) = "category_id", (SlotName) = "category_id"];
+    TNumSlot MaxItemsCount = 2 [json_name = "max_items_count", (NYT.column_name) = "max_items_count", (SlotName) = "max_items_count"];
+    TStringSlot CacheHash = 3 [json_name = "cache_hash", (NYT.column_name) = "cache_hash", (SlotName) = "cache_hash"];
+    TStringSlot PurchasesAvailableOnly = 4 [json_name = "purchases_available_only", (NYT.column_name) = "purchases_available_only", (SlotName) = "purchases_available_only"];
+    TNumSlot Limit = 5 [json_name = "limit", (NYT.column_name) = "limit", (SlotName) = "limit"];
+    TNumSlot Offset = 6 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+    TBoolSlot KidMode = 7 [json_name = "kid_mode", (NYT.column_name) = "kid_mode", (SlotName) = "kid_mode"];
+    TNumSlot RestrictionAge = 8 [json_name = "restriction_age", (NYT.column_name) = "restriction_age", (SlotName) = "restriction_age"];
+    TNumSlot ExternalCarouselOffset = 9 [json_name = "external_carousel_offset", (NYT.column_name) = "external_carousel_offset", (SlotName) = "external_carousel_offset"];
+}
+
+message TIoTScenariosPhraseActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.scenarios.phrase_action";
+    TStringSlot Phrase = 1 [json_name = "phrase", (NYT.column_name) = "phrase", (SlotName) = "phrase"];
+}
+
+message TIoTScenariosTextActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.scenarios.text_action";
+    TStringSlot Text = 1 [json_name = "text", (NYT.column_name) = "text", (SlotName) = "text"];
+}
+
+message TIoTScenariosLaunchActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.scenarios.launch_action";
+    TStringSlot LaunchID = 1 [json_name = "launch_id", (NYT.column_name) = "launch_id", (SlotName) = "launch_id"];
+    TUInt32Slot StepIndex = 2 [json_name = "step_index", (NYT.column_name) = "step_index", (SlotName) = "step_index"];
+    TStringSlot Instance = 3 [json_name = "instance", (NYT.column_name) = "instance", (SlotName) = "instance"];
+    TStringSlot Value = 4 [json_name = "value", (NYT.column_name) = "value", (SlotName) = "value"];
+}
+
+message TIoTCapabilityActionSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TIoTCapabilityAction CapabilityActionValue = 1 [json_name = "capability_action_value", (NYT.column_name) = "capability_action_value", (SlotType) = "custom.iot.capability.action", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TIoTScenarioSpeakerActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.scenario.speaker.action";
+
+    TStringSlot LaunchID = 1 [json_name = "launch_id", (NYT.column_name) = "launch_id", (SlotName) = "launch_id"];
+    TUInt32Slot StepIndex = 2 [json_name = "step_index", (NYT.column_name) = "step_index", (SlotName) = "step_index"];
+    TIoTCapabilityActionSlot CapabilityAction = 3 [json_name = "capability_action", (NYT.column_name) = "capability_action", (SlotName) = "capability_action"];
+}
+
+message TAlarmSetAliceShowSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.alarm_set_alice_show";
+}
+
+message TRepeatAfterMeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.repeat_after_me";
+    TStringSlot Text = 1 [json_name = "text", (NYT.column_name) = "text", (SlotName) = "text"];
+    TStringSlot Voice = 2 [json_name = "voice", (NYT.column_name) = "voice", (SlotName) = "voice"];
+}
+
+message TMediaPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.media_play";
+    TStringSlot TuneId = 1 [json_name = "tune_id", (NYT.column_name) = "tune_id", (SlotName) = "tune_id"];
+    TStringSlot LocationId = 2 [json_name = "location_id", (NYT.column_name) = "location_id", (SlotName) = "location_id"];
+}
+
+message TZenContextSearchStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.zen_context_search_start";
+}
+
+message TTurnClockFaceOnSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.clock_face_control.turn_on";
+}
+
+message TTurnClockFaceOffSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.clock_face_control.turn_off";
+}
+
+message TIoTDeviceActionRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        TIoTDeviceActionRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "custom.iot.action.device.request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TIoTDeviceActionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.iot.action.device";
+
+    TIoTDeviceActionRequestSlot Request = 1 [json_name = "request", (NYT.column_name) = "request", (SlotName) = "request"];
+}
+
+message TWhisperSaySomethingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.voice.whisper.say_something";
+}
+
+message TWhisperTurnOffSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.voice.whisper.turn_off";
+}
+
+message TWhisperTurnOnSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.voice.whisper.turn_on";
+}
+
+message TWhisperWhatIsItSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.voice.whisper.what_is_it";
+}
+
+message TTimeCapsuleNextStepSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.time_capsule.next_step";
+}
+
+message TTimeCapsuleStopSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.time_capsule.stop";
+}
+
+message TTimeCapsuleStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.time_capsule.start";
+}
+
+message TTimeCapsuleResumeSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.time_capsule.resume";
+}
+
+message TTimeCapsuleSkipQuestionSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.time_capsule.skip_question";
+}
+
+message TActivateGenerativeTaleSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.generative_tale.activate";
+
+    TStringSlot Character = 1 [json_name = "generative_tale_character", (NYT.column_name) = "generative_tale_character", (SlotName) = "character"];
+}
+
+message THardcodedResponseSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.hardcoded_response";
+
+    THardcodedResponseName HardcodedResponseName = 1 [json_name = "hardcoded_response_name", (NYT.column_name) = "hardcoded_response_name", (SlotName) = "hardcoded_response_name"];
+}
+
+message TSkillSessionRequestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.external_skill_session_request";
+}
+
+message TUpdateContactsRequestSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TUpdateContactsRequest RequestValue = 1 [json_name = "request_value", (NYT.column_name) = "request_value", (SlotType) = "alice.upload_contact_request.request", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TUploadContactsRequestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.upload_contact_request";
+
+    TUpdateContactsRequestSlot UploadRequest = 2 [json_name = "upload_request", (NYT.column_name) = "upload_request", (SlotName) = "upload_request"];
+
+    reserved 1; reserved "Request";
+}
+
+message TUpdateContactsRequestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.update_contact_request";
+
+    TUpdateContactsRequestSlot UpdateRequest = 1 [json_name = "update_request", (NYT.column_name) = "update_request", (SlotName) = "update_request"];
+}
+
+message TExternalSkillForceDeactivateSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.external_skill_force_deactivate";
+
+    TStringSlot DialogId = 1 [json_name = "dialog_id", (NYT.column_name) = "dialog_id", (SlotName) = "dialog_id"];
+    TBoolSlot SilentResponse = 2 [json_name = "silent_response", (NYT.column_name) = "silent_response", (SlotName) = "silent_response"];
+}
+
+message TVideoCallProviderSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EValue {
+        Unknown = 0;
+        Telegram = 1;
+    }
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        EValue EnumValue = 1 [json_name = "enum_value", (NYT.column_name) = "enum_value", (SlotType) = "enum_value"];
+    }
+}
+
+message TVideoCallLoginFailedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_login_failed";
+
+    TVideoCallProviderSlot Provider = 1 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+}
+
+message TVideoCallOutgoingAcceptedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_outgoing_accepted";
+
+    TVideoCallProviderSlot Provider = 1 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+    TStringSlot CallId = 2 [json_name = "call_id", (NYT.column_name) = "call_id", (SlotName) = "call_id"];
+    TStringSlot UserId = 3 [json_name = "user_id", (NYT.column_name) = "user_id", (SlotName) = "user_id"];
+    TProviderContactSlot Contact = 4 [json_name = "contact", (NYT.column_name) = "contact", (SlotName) = "contact"];
+}
+
+message TVideoCallOutgoingFailedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_outgoing_failed";
+
+    TVideoCallProviderSlot Provider = 1 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+}
+
+message TVideoCallIncomingAcceptFailedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_incoming_accept_failed";
+
+    TVideoCallProviderSlot Provider = 1 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+    TStringSlot CallId = 2 [json_name = "call_id", (NYT.column_name) = "call_id", (SlotName) = "call_id"];
+}
+
+message TVideoCallItemNameSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string ItemName = 1 [json_name = "item_name_value", (NYT.column_name) = "item_name_value", (SlotType) = "device.address_book.item_name"];
+    }
+}
+
+message TPhoneCallSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.phone_call";
+
+    TVideoCallItemNameSlot ItemName = 1 [json_name = "item_name", (NYT.column_name) = "item_name", (SlotName) = "item_name"];
+}
+
+message TProviderContactSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TProviderContactData ContactData = 1 [json_name = "contact_data", (NYT.column_name) = "contact_data", (SlotType) = "contact_data", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TVideoCallToSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_to";
+
+    TProviderContactSlot FixedContact = 1 [json_name = "fixed_contact", (NYT.column_name) = "fixed_contact", (SlotName) = "fixed_contact"];
+    TBoolSlot VideoEnabled = 2 [json_name = "video_enabled", (NYT.column_name) = "video_enabled", (SlotName) = "video_enabled"];
+}
+
+message TOpenAddressBookSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.phone_call.open_address_book";
+}
+
+message TGetEqualizerSettingsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.get_equalizer_settings";
+}
+
+message TProviderContactListSlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        NAlice.NData.TProviderContactList ContactList = 1 [json_name = "contact_list", (NYT.column_name) = "contact_list", (SlotType) = "contact_list", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    }
+}
+
+message TVideoCallSetFavoritesSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_set_favorites";
+
+    TStringSlot UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id", (SlotName) = "user_id"];
+    TProviderContactListSlot Favorites = 2 [json_name = "favorites", (NYT.column_name) = "favorites", (SlotName) = "favorites"];
+}
+
+message TVideoCallIncomingSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video_call_incoming";
+
+    TVideoCallProviderSlot Provider = 1 [json_name = "provider", (NYT.column_name) = "provider", (SlotName) = "provider"];
+    TStringSlot CallId = 2 [json_name = "call_id", (NYT.column_name) = "call_id", (SlotName) = "call_id"];
+    TStringSlot UserId = 3 [json_name = "user_id", (NYT.column_name) = "user_id", (SlotName) = "user_id"];
+    TProviderContactSlot Caller = 4 [json_name = "caller", (NYT.column_name) = "caller", (SlotName) = "caller"];
+}
+
+message TMessengerCallAcceptSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.messenger_call.accept_incoming_call";
+}
+
+message TMessengerCallDiscardSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.messenger_call.stop_incoming_call";
+}
+
+message TMessengerCallHangupSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.messenger_call.stop_current_call";
+}
+
+message TTypedSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    oneof Type {
+        TSearchSemanticFrame SearchSemanticFrame = 1 [json_name = "search_semantic_frame", (NYT.column_name) = "search_semantic_frame"];
+        TIoTBroadcastStartSemanticFrame IoTBroadcastStartSemanticFrame = 2 [json_name = "iot_broadcast_start", (NYT.column_name) = "iot_broadcast_start"];
+        TIoTBroadcastSuccessSemanticFrame IoTBroadcastSuccessSemanticFrame = 3 [json_name = "iot_broadcast_success", (NYT.column_name) = "iot_broadcast_success"];
+        TIoTBroadcastFailureSemanticFrame IoTBroadcastFailureSemanticFrame = 4 [json_name = "iot_broadcast_failure", (NYT.column_name) = "iot_broadcast_failure"];
+        TMordoviaHomeScreenSemanticFrame MordoviaHomeScreenSemanticFrame = 5 [json_name = "mordovia_home_screen", (NYT.column_name) = "mordovia_home_screen"];
+        TNewsSemanticFrame NewsSemanticFrame = 6 [json_name = "news_semantic_frame", (NYT.column_name) = "news_semantic_frame"];
+        TGetCallerNameSemanticFrame GetCallerNameSemanticFrame = 7 [json_name = "get_caller_name", (NYT.column_name) = "get_caller_name"];
+        TMusicPlaySemanticFrame MusicPlaySemanticFrame = 8 [json_name = "music_play_semantic_frame", (NYT.column_name) = "music_play_semantic_frame"];
+        TExternalSkillActivateSemanticFrame ExternalSkillActivateSemanticFrame = 9 [json_name = "external_skill_activate_semantic_frame", (NYT.column_name) = "external_skill_activate_semantic_frame"];
+        TVideoPlaySemanticFrame VideoPlaySemanticFrame = 10 [json_name = "video_play_semantic_frame", (NYT.column_name) = "video_play_semantic_frame"];
+        TWeatherSemanticFrame WeatherSemanticFrame = 11 [json_name = "weather_semantic_frame", (NYT.column_name) = "weather_semantic_frame"];
+        THardcodedMorningShowSemanticFrame HardcodedMorningShowSemanticFrame = 12 [json_name = "morning_show_semantic_frame", (NYT.column_name) = "morning_show_semantic_frame"];
+        TSelectVideoFromGallerySemanticFrame SelectVideoFromGallerySemanticFrame = 13 [json_name = "select_video", (NYT.column_name) = "select_video"];
+        TOpenCurrentVideoSemanticFrame OpenCurrentVideoSemanticFrame = 14 [json_name = "open_current_video", (NYT.column_name) = "open_current_video"];
+        TVideoPaymentConfirmedSemanticFrame VideoPaymentConfirmedSemanticFrame = 15 [json_name = "video_payment_confirmed", (NYT.column_name) = "video_payment_confirmed"];
+        TPlayerNextTrackSemanticFrame PlayerNextTrackSemanticFrame = 16 [json_name = "player_next_track_semantic_frame", (NYT.column_name) = "player_next_track_semantic_frame"];
+        TPlayerPrevTrackSemanticFrame PlayerPrevTrackSemanticFrame = 17 [json_name = "player_prev_track_semantic_frame", (NYT.column_name) = "player_prev_track_semantic_frame"];
+        TPlayerLikeSemanticFrame PlayerLikeSemanticFrame = 18 [json_name = "player_like_semantic_frame", (NYT.column_name) = "player_like_semantic_frame"];
+        TPlayerDislikeSemanticFrame PlayerDislikeSemanticFrame = 19 [json_name = "player_dislike_semantic_frame", (NYT.column_name) = "player_dislike_semantic_frame"];
+        TDoNothingSemanticFrame DoNothingSemanticFrame = 20 [json_name = "do_nothing_semantic_frame", (NYT.column_name) = "do_nothing_semantic_frame"];
+        TNotificationsSubscribeSemanticFrame NotificationsSubscribeSemanticFrame = 21 [json_name = "notifications_subscribe_semantic_frame", (NYT.column_name) = "notifications_subscribe_semantic_frame"];
+        TVideoRaterSemanticFrame VideoRaterSemanticFrame = 22 [json_name = "video_rater_semantic_frame", (NYT.column_name) = "video_rater_semantic_frame"];
+        TSetupRcuStatusSemanticFrame SetupRcuStatusSemanticFrame = 23 [json_name = "setup_rcu.status", (NYT.column_name) = "setup_rcu_status"];
+        TSetupRcuAutoStatusSemanticFrame SetupRcuAutoStatusSemanticFrame = 24 [json_name = "setup_rcu_auto.status", (NYT.column_name) = "setup_rcu_auto_status"];
+        TSetupRcuCheckStatusSemanticFrame SetupRcuCheckStatusSemanticFrame = 25 [json_name = "setup_rcu_check.status", (NYT.column_name) = "setup_rcu_check_status"];
+        TSetupRcuAdvancedStatusSemanticFrame SetupRcuAdvancedStatusSemanticFrame = 26 [json_name = "setup_rcu_advanced.status", (NYT.column_name) = "setup_rcu_advanced_status"];
+        TSetupRcuManualStartSemanticFrame SetupRcuManualStartSemanticFrame = 27 [json_name = "setup_rcu_manual.start", (NYT.column_name) = "setup_rcu_manual_start"];
+        TSetupRcuAutoStartSemanticFrame SetupRcuAutoStartSemanticFrame = 28 [json_name = "setup_rcu_auto.start", (NYT.column_name) = "setup_rcu_auto_start"];
+        TLinkARemoteSemanticFrame LinkARemoteSemanticFrame = 29 [json_name = "link_a_remote", (NYT.column_name) = "link_a_remote"];
+        TRequestTechnicalSupportSemanticFrame RequestTechnicalSupportSemanticFrame = 30 [json_name = "request_technical_support", (NYT.column_name) = "request_technical_support"];
+        TIoTDiscoveryStartSemanticFrame IoTDiscoveryStartSemanticFrame = 31 [json_name = "iot_discovery_start", (NYT.column_name) = "iot_discovery_start"];
+        TIoTDiscoverySuccessSemanticFrame IoTDiscoverySuccessSemanticFrame = 32 [json_name = "iot_discovery_success", (NYT.column_name) = "iot_discovery_success"];
+        TIoTDiscoveryFailureSemanticFrame IoTDiscoveryFailureSemanticFrame = 33 [json_name = "iot_discovery_failure", (NYT.column_name) = "iot_discovery_failure"];
+        TExternalSkillFixedActivateSemanticFrame ExternalSkillFixedActivateSemanticFrame = 34 [json_name = "external_skill_fixed_activate_semantic_frame", (NYT.column_name) = "external_skill_fixed_activate_semantic_frame"];
+        TOpenCurrentTrailerSemanticFrame OpenCurrentTrailerSemanticFrame = 35 [json_name = "open_current_trailer", (NYT.column_name) = "open_current_vtrailer"];
+        TOnboardingStartingCriticalUpdateSemanticFrame OnboardingStartingCriticalUpdateSemanticFrame = 36 [json_name = "onboarding_starting_critical_update", (NYT.column_name) = "onboarding_starting_critical_update"];
+        TOnboardingStartingConfigureSuccessSemanticFrame OnboardingStartingConfigureSuccessSemanticFrame = 37 [json_name = "onboarding_starting_configure_success", (NYT.column_name) = "onboarding_starting_configure_success"];
+        TRadioPlaySemanticFrame RadioPlaySemanticFrame = 38 [json_name = "radio_play_semantic_frame", (NYT.column_name) = "radio_play_semantic_frame"];
+        TCentaurCollectCardsSemanticFrame CentaurCollectCardsSemanticFrame = 39 [json_name = "centaur_collect_cards", (NYT.column_name) = "centaur_collect_cards"];
+        TCentaurGetCardSemanticFrame CentaurGetCardSemanticFrame = 40 [json_name = "centaur_get_card", (NYT.column_name) = "centaur_get_card"];
+        TVideoPlayerFinishedSemanticFrame VideoPlayerFinishedSemanticFrame = 41 [json_name = "quasar.video_player.finished", (NYT.column_name) = "quasar_video_player_finished"];
+        TSoundLouderSemanticFrame SoundLouderSemanticFrame = 42 [json_name = "sound_louder_semantic_frame", (NYT.column_name) = "sound_louder_semantic_frame"];
+        TSoundQuiterSemanticFrame SoundQuiterSemanticFrame = 43 [json_name = "sound_quiter_semantic_frame", (NYT.column_name) = "sound_quiter_semantic_frame"];
+        TSoundSetLevelSemanticFrame SoundSetLevelSemanticFrame = 44 [json_name = "sound_set_level_semantic_frame", (NYT.column_name) = "sound_set_level_semantic_frame"];
+        TGetPhotoFrameSemanticFrame GetPhotoFrameSemanticFrame = 45 [json_name = "get_photo_frame", (NYT.column_name) = "get_photo_frame"];
+        TCentaurCollectMainScreenSemanticFrame CentaurCollectMainScreenSemanticFrame = 46 [json_name = "centaur_collect_main_screen", (NYT.column_name) = "centaur_collect_main_screen"];
+        TGetTimeSemanticFrame GetTimeSemanticFrame = 47 [json_name = "get_time_semantic_frame", (NYT.column_name) = "get_time_semantic_frame"];
+        THowToSubscribeSemanticFrame HowToSubscribeSemanticFrame = 48 [json_name = "how_to_subscribe_semantic_frame", (NYT.column_name) = "how_to_subscribe_semantic_frame"];
+        TMusicOnboardingSemanticFrame MusicOnboardingSemanticFrame = 49 [json_name = "music_onboarding_semantic_frame", (NYT.column_name) = "music_onboarding_semantic_frame"];
+        TMusicOnboardingArtistsSemanticFrame MusicOnboardingArtistsSemanticFrame = 50 [json_name = "music_onboarding_artists_semantic_frame", (NYT.column_name) = "music_onboarding_artists_semantic_frame"];
+        TMusicOnboardingGenresSemanticFrame MusicOnboardingGenresSemanticFrame = 51 [json_name = "music_onboarding_genres_semantic_frame", (NYT.column_name) = "music_onboarding_genres_semantic_frame"];
+        TMusicOnboardingTracksSemanticFrame MusicOnboardingTracksSemanticFrame = 52 [json_name = "music_onboarding_tracks_semantic_frame", (NYT.column_name) = "music_onboarding_tracks_semantic_frame"];
+        TPlayerContinueSemanticFrame PlayerContinueSemanticFrame = 53 [json_name = "player_continue_semantic_frame", (NYT.column_name) = "player_continue_semantic_frame"];
+        TPlayerWhatIsPlayingSemanticFrame PlayerWhatIsPlayingSemanticFrame = 54 [json_name = "player_what_is_playing_semantic_frame", (NYT.column_name) = "player_what_is_playing_semantic_frame"];
+        TPlayerShuffleSemanticFrame PlayerShuffleSemanticFrame = 55 [json_name = "player_shuffle_semantic_frame", (NYT.column_name) = "player_shuffle_semantic_frame"];
+        TPlayerReplaySemanticFrame PlayerReplaySemanticFrame = 56 [json_name = "player_replay_semantic_frame", (NYT.column_name) = "player_replay_semantic_frame"];
+        TPlayerRewindSemanticFrame PlayerRewindSemanticFrame = 57 [json_name = "player_rewind_semantic_frame", (NYT.column_name) = "player_rewind_semantic_frame"];
+        TPlayerRepeatSemanticFrame PlayerRepeatSemanticFrame = 58 [json_name = "player_repeat_semantic_frame", (NYT.column_name) = "player_repeat_semantic_frame"];
+        TGetSmartTvCategoriesSemanticFrame GetSmartTvCategoriesSemanticFrame = 59 [json_name = "get_smart_tv_categories_semantic_frame", (NYT.column_name) = "get_smart_tv_categories_semantic_frame"];
+        TIoTScenariosPhraseActionSemanticFrame IoTScenariosPhraseActionSemanticFrame = 60 [json_name = "iot_scenarios_phrase_action_semantic_frame", (NYT.column_name) = "iot_scenarios_phrase_action_semantic_frame"];
+        TIoTScenariosTextActionSemanticFrame IoTScenariosTextActionSemanticFrame = 61 [json_name = "iot_scenarios_text_action_semantic_frame", (NYT.column_name) = "iot_scenarios_text_action_semantic_frame"];
+        TIoTScenariosLaunchActionSemanticFrame IoTScenariosLaunchActionSemanticFrame = 62 [json_name = "iot_scenarios_launch_action_semantic_frame", (NYT.column_name) = "iot_scenarios_launch_action_semantic_frame"];
+        TAlarmSetAliceShowSemanticFrame AlarmSetAliceShowSemanticFrame = 63 [json_name = "alarm_set_alice_show_semantic_frame", (NYT.column_name) = "alarm_set_alice_show_semantic_frame"];
+        TPlayerUnshuffleSemanticFrame PlayerUnshuffleSemanticFrame = 64 [json_name = "player_unshuffle_semantic_frame", (NYT.column_name) = "player_unshuffle_semantic_frame"];
+        TRemindersOnShootSemanticFrame RemindersOnShootSemanticFrame = 66 [json_name = "reminders_on_shoot_semantic_frame", (NYT.column_name) = "reminders_on_shoot_semantic_frame"];
+        TRepeatAfterMeSemanticFrame RepeatAfterMeSemanticFrame = 67 [json_name = "repeat_after_me_semantic_frame", (NYT.column_name) = "repeat_after_me_semantic_frame"];
+        TMediaPlaySemanticFrame MediaPlaySemanticFrame = 68 [json_name = "media_play_semantic_frame", (NYT.column_name) = "media_play_semantic_frame"];
+        TAliceShowActivateSemanticFrame AliceShowActivateSemanticFrame = 69 [json_name = "alice_show_activate_semantic_frame", (NYT.column_name) = "alice_show_activate_semantic_frame"];
+        TZenContextSearchStartSemanticFrame ZenContextSearchStartSemanticFrame = 70 [json_name = "zen_context_search_start_semantic_frame", (NYT.column_name) = "zen_context_search_start_semantic_frame"];
+        TGetSmartTvCarouselSemanticFrame GetSmartTvCarouselSemanticFrame = 71 [json_name = "get_smart_tv_carousel_semantic_frame", (NYT.column_name) = "get_smart_tv_carousel_semantic_frame"];
+        TGetSmartTvCarouselsSemanticFrame GetSmartTvCarouselsSemanticFrame = 72 [json_name = "get_smart_tv_carousels_semantic_frame", (NYT.column_name) = "get_smart_tv_carousels_semantic_frame"];
+        TAppsFixlistSemanticFrame AppsFixlistSemanticFrame = 73 [json_name = "apps_fixlist_semantic_frame", (NYT.column_name) = "apps_fixlist_semantic_frame"];
+        TPlayerPauseSemanticFrame PlayerPauseSemanticFrame = 74 [json_name = "player_pause_semantic_frame", (NYT.column_name) = "player_pause_semantic_frame"];
+        TIoTScenarioSpeakerActionSemanticFrame IoTScenarioSpeakerActionSemanticFrame = 75 [json_name = "iot_scenario_speaker_action_semantic_frame", (NYT.column_name) = "iot_scenario_speaker_action_semantic_frame"];
+        TVideoCardDetailSemanticFrame VideoCardDetailSemanticFrame = 76 [json_name = "get_video_card_detail_semantic_frame", (NYT.column_name) = "get_video_card_detail_semantic_frame"];
+        TTurnClockFaceOnSemanticFrame TurnClockFaceOnSemanticFrame = 77 [json_name = "turn_clock_face_on_semantic_frame", (NYT.column_name) = "turn_clock_face_on_semantic_frame"];
+        TTurnClockFaceOffSemanticFrame TurnClockFaceOffSemanticFrame = 78 [json_name = "turn_clock_face_off_semantic_frame", (NYT.column_name) = "turn_clock_face_off_semantic_frame"];
+        TRemindersCancelSemanticFrame RemindersOnCancelSemanticFrame = 79 [json_name = "reminders_on_cancel_semantic_frame", (NYT.column_name) = "reminders_on_cancel_semantic_frame"];
+        TIoTDeviceActionSemanticFrame IoTDeviceActionSemanticFrame = 80 [json_name = "iot_device_action_semantic_frame", (NYT.column_name) = "iot_device_action_semantic_frame"];
+        TVideoThinCardDetailSemanticFrame VideoThinCardDetailSmanticFrame = 81 [json_name = "get_video_thin_card_detail_semantic_frame", (NYT.column_name) = "get_video_thin_card_detail_semantic_frame"];
+        TWhisperSaySomethingSemanticFrame WhisperSaySomethingSemanticFrame = 82 [json_name = "whisper_say_something_semantic_frame", (NYT.column_name) = "whisper_say_something_semantic_frame"];
+        TWhisperTurnOffSemanticFrame WhisperTurnOffSemanticFrame = 83 [json_name = "whisper_turn_off_semantic_frame", (NYT.column_name) = "whisper_turn_off_semantic_frame"];
+        TWhisperTurnOnSemanticFrame WhisperTurnOnSemanticFrame = 84 [json_name = "whisper_turn_on_semantic_frame", (NYT.column_name) = "whisper_turn_on_semantic_frame"];
+        TWhisperWhatIsItSemanticFrame WhisperWhatIsItSemanticFrame = 85 [json_name = "whisper_what_is_it_semantic_frame", (NYT.column_name) = "whisper_what_is_it_semantic_frame"];
+        TTimeCapsuleNextStepSemanticFrame TimeCapsuleNextStepSemanticFrame = 86 [json_name = "time_capsule_next_step_semantic_frame", (NYT.column_name) = "time_capsule_next_step_semantic_frame"];
+        TTimeCapsuleStopSemanticFrame TimeCapsuleStopSemanticFrame = 87 [json_name = "time_capsule_stop_semantic_frame", (NYT.column_name) = "time_capsule_stop_semantic_frame"];
+        TActivateGenerativeTaleSemanticFrame ActivateGenerativeTaleSemanticFrame = 88 [json_name = "activate_generative_tale_semantic_frame", (NYT.column_name) = "activate_generative_tale_semantic_frame"];
+        TStartIotDiscoverySemanticFrame StartIotDiscoverySemanticFrame = 89 [json_name = "start_iot_discovery_semantic_frame", (NYT.column_name) = "start_iot_discovery_semantic_frame"];
+        TFinishIotDiscoverySemanticFrame FinishIotDiscoverySemanticFrame = 90 [json_name = "finish_iot_discovery_semantic_frame", (NYT.column_name) = "finish_iot_discovery_semantic_frame"];
+        TForgetIotEndpointsSemanticFrame ForgetIotEndpointsSemanticFrame = 91 [json_name = "forget_iot_endpoints_semantic_frame", (NYT.column_name) = "forget_iot_endpoints_semantic_frame"];
+        THardcodedResponseSemanticFrame HardcodedResponseSemanticFrame = 92 [json_name = "hardcoded_response_semantic_frame", (NYT.column_name) = "hardcoded_response_semantic_frame"];
+        TIotYandexIOActionSemanticFrame IotYandexIOActionSemanticFrame = 93 [json_name = "iot_yandex_io_action_semantic_frame", (NYT.column_name) = "iot_yandex_io_action_semantic_frame"];
+        TTimeCapsuleStartSemanticFrame TimeCapsuleStartSemanticFrame = 94 [json_name = "time_capsule_start_semantic_frame", (NYT.column_name) = "time_capsule_start_semantic_frame"];
+        TTimeCapsuleResumeSemanticFrame TimeCapsuleResumeSemanticFrame = 95 [json_name = "time_capsule_resume_semantic_frame", (NYT.column_name) = "time_capsule_resume_semantic_frame"];
+        TAddAccountSemanticFrame AddAccountSemanticFrame = 96 [json_name = "multiaccount_add_account_semantic_frame", (NYT.column_name) = "multiaccount_add_account_semantic_frame"];
+        TRemoveAccountSemanticFrame RemoveAccountSemanticFrame = 97 [json_name = "multiaccount_remove_account_semantic_frame", (NYT.column_name) = "multiaccount_remove_account_semantic_frame"];
+        TEndpointStateUpdatesSemanticFrame EndpointStateUpdatesSemanticFrame = 98 [json_name = "endpoint_state_updates_semantic_frame", (NYT.column_name) = "endpoint_state_updates_semantic_frame"];
+        TTimeCapsuleSkipQuestionSemanticFrame TimeCapsuleSkipQuestionSemanticFrame = 100 [json_name = "time_capsule_skip_question_semantic_frame", (NYT.column_name) = "time_capsule_skip_question_semantic_frame"];
+        TSkillSessionRequestSemanticFrame SkillSessionRequestSemanticFrame = 101 [json_name = "skill_session_request_semantic_frame", (NYT.column_name) = "skill_session_request_semantic_frame"];
+        TStartIotTuyaBroadcastSemanticFrame StartIotTuyaBroadcastSemanticFrame = 102 [json_name = "start_iot_tuya_broadcast_semantic_frame", (NYT.column_name) = "start_iot_tuya_broadcast_semantic_frame"];
+        TOpenSmartDeviceExternalAppFrame OpenSmartDeviceExternalAppFrame = 103 [json_name = "open_smart_device_external_app_frame", (NYT.column_name) = "open_smart_device_external_app_frame"];
+        TRestoreIotNetworksSemanticFrame RestoreIotNetworksSemanticFrame = 104 [json_name = "restore_iot_networks_semantic_frame", (NYT.column_name) = "restore_iot_networks_semantic_frame"];
+        TSaveIotNetworksSemanticFrame SaveIotNetworksSemanticFrame = 105 [json_name = "save_iot_networks_semantic_frame", (NYT.column_name) = "save_iot_networks_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TGuestEnrollmentStartSemanticFrame GuestEnrollmentStartSemanticFrame = 106 [json_name = "guest_enrollment_start_semantic_frame", (NYT.column_name) = "guest_enrollment_start_semantic_frame"];
+        TTvPromoTemplateRequestSemanticFrame TvPromoTemplateRequestSemanticFrame = 107 [json_name = "tv_promo_request_semantic_frame", (NYT.column_name) = "tv_promo_request_semantic_frame"];
+        TTvPromoTemplateShownReportSemanticFrame TvPromoTemplateShownReportSemanticFrame = 108 [json_name = "tv_promo_template_shown_report_semantic_frame", (NYT.column_name) = "tv_promo_template_shown_report_semantic_frame"];
+        TUploadContactsRequestSemanticFrame UploadContactsRequestSemanticFrame = 109 [json_name = "upload_contacts_request_semantic_frame", (NYT.column_name) = "upload_contacts_request_semantic_frame"];
+        TDeleteIotNetworksSemanticFrame DeleteIotNetworksSemanticFrame = 110 [json_name = "delete_iot_networks_semantic_frame", (NYT.column_name) = "delete_iot_networks_semantic_frame"];
+        TCentaurCollectWidgetGallerySemanticFrame CentaurCollectWidgetGallerySemanticFrame = 111 [json_name = "centaur_collect_widget_gallery_semantic_frame", (NYT.column_name) = "centaur_collect_widget_gallery_semantic_frame"];
+        TCentaurAddWidgetFromGallerySemanticFrame CentaurAddWidgetFromGallerySemanticFrame = 112 [json_name = "centaur_add_widget_from_gallery_semantic_frame", (NYT.column_name) = "centaur_add_widget_from_gallery_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TUpdateContactsRequestSemanticFrame UpdateContactsRequestSemanticFrame = 113 [json_name = "update_contacts_request_semantic_frame", (NYT.column_name) = "update_contacts_request_semantic_frame"];
+        TRemindersListSemanticFrame RemindersListSemanticFrame = 114 [json_name = "reminders_list_semantic_frame", (NYT.column_name) = "reminders_list_semantic_frame"];
+        TCapabilityEventSemanticFrame CapabilityEventSemanticFrame = 115 [json_name = "capability_event_semantic_frame", (NYT.column_name) = "capability_event_semantic_frame"];
+        TExternalSkillForceDeactivateSemanticFrame ExternalSkillForceDeactivateSemanticFrame = 116 [json_name = "external_skill_force_deactivate_semantic_frame", (NYT.column_name) = "external_skill_force_deactivate_semantic_frame"];
+        TGetVideoGalleriesSemanticFrame GetVideoGalleries = 117 [json_name = "get_video_galleries_semantic_frame", (NYT.column_name) = "get_video_galleries_semantic_frame"];
+        TEndpointCapabilityEventsSemanticFrame EndpointCapabilityEventsSemanticFrame = 118 [json_name = "endpoint_capability_events_semantic_frame", (NYT.column_name) = "endpoint_capability_events_semantic_frame"];
+        TMusicAnnounceDisableSemanticFrame MusicAnnounceDisableSemanticFrame = 119 [json_name = "music_announce_disable_semantic_frame", (NYT.column_name) = "music_announce_disable_semantic_frame"];
+        TMusicAnnounceEnableSemanticFrame MusicAnnounceEnableSemanticFrame = 120 [json_name = "music_announce_enable_semantic_frame", (NYT.column_name) = "music_announce_enable_semantic_frame"];
+        TGetTvSearchResultSemanticFrame GetTvSearchResult = 121 [json_name = "get_tv_search_result", (NYT.column_name) = "get_tv_search_result"];
+        TSwitchTvChannelSemanticFrame SwitchTvChannelSemanticFrame = 122 [json_name = "switch_tv_channel_semantic_frame", (NYT.column_name) = "switch_tv_channel_semantic_frame"];
+        TConvertSemanticFrame ConvertSemanticFrame = 123 [json_name = "convert_semantic_frame", (NYT.column_name) = "convert_semantic_frame"];
+        TGetVideoGallerySemanticFrame GetVideoGallerySemanticFrame = 124 [json_name = "get_video_gallery_semantic_frame", (NYT.column_name) = "get_video_gallery_semantic_frame"];
+        TMusicOnboardingTracksReaskSemanticFrame MusicOnboardingTracksReaskSemanticFrame = 125 [json_name = "music_onboarding_tracks_reask_semantic_frame", (NYT.column_name) = "music_onboarding_tracks_reask_semantic_frame"];
+        TTestSemanticFrame TestSemanticFrame = 126 [json_name = "test_semantic_frame", (NYT.column_name) = "test_semantic_frame"];
+        TEndpointEventsBatchSemanticFrame EndpointEventsBatchSemanticFrame = 127 [json_name = "endpoint_events_batch_semantic_frame", (NYT.column_name) = "endpoint_events_batch_semantic_frame"];
+        TMediaSessionPlaySemanticFrame MediaSessionPlaySemanticFrame = 128 [json_name = "media_session_play_semantic_frame", (NYT.column_name) = "media_session_play_semantic_frame"];
+        TMediaSessionPauseSemanticFrame MediaSessionPauseSemanticFrame = 129 [json_name = "media_session_pause_semantic_frame", (NYT.column_name) = "media_session_pause_semantic_frame"];
+        TFmRadioPlaySemanticFrame FmRadioPlaySemanticFrame = 130 [json_name = "fm_radio_play_semantic_frame", (NYT.column_name) = "fm_radio_play_semantic_frame"];
+        TVideoCallLoginFailedSemanticFrame VideoCallLoginFailedSemanticFrame = 131 [json_name = "video_call_login_failed_semantic_frame", (NYT.column_name) = "video_call_login_failed_semantic_frame"];
+        TVideoCallOutgoingAcceptedSemanticFrame VideoCallOutgoingAcceptedSemanticFrame = 132 [json_name = "video_call_outgoing_accepted_semantic_frame", (NYT.column_name) = "video_call_outgoing_accepted_semantic_frame"];
+        TVideoCallOutgoingFailedSemanticFrame VideoCallOutgoingFailedSemanticFrame = 133 [json_name = "video_call_outgoing_failed_semantic_frame", (NYT.column_name) = "video_call_login_fail_semantic_frame"];
+        TVideoCallIncomingAcceptFailedSemanticFrame VideoCallIncomingAcceptFailedSemanticFrame = 134 [json_name = "video_call_incoming_accept_failed_semantic_frame", (NYT.column_name) = "video_call_incoming_accept_failed_semantic_frame"];
+        TIotScenarioStepActionsSemanticFrame IotScenarioStepActionsSemanticFrame = 135 [json_name = "iot_scenario_step_actions_semantic_frame", (NYT.column_name) = "iot_scenario_step_actions_semantic_frame"];
+        TPhoneCallSemanticFrame PhoneCallSemanticFrame = 136 [json_name = "phone_call_semantic_frame", (NYT.column_name) = "phone_call_semantic_frame"];
+        TOpenAddressBookSemanticFrame OpenAddressBookSemanticFrame = 137 [json_name = "open_address_book_semantic_frame", (NYT.column_name) = "open_address_book_semantic_frame"];
+        TGetEqualizerSettingsSemanticFrame GetEqualizerSettingsSemanticFrame = 138 [json_name = "get_equalizer_settings_semantic_frame", (NYT.column_name) = "get_equalizer_settings_semantic_frame"];
+        TVideoCallToSemanticFrame VideoCallToSemanticFrame = 139 [json_name = "video_call_to_semantic_frame", (NYT.column_name) = "video_call_to_semantic_frame"];
+        TOnboardingGetGreetingsSemanticFrame OnboardingGetGreetingsSemanticFrame = 140 [json_name = "onboarding_get_greetings_semantic_frame", (NYT.column_name) = "onboarding_get_greetings_semantic_frame"];
+        TOpenTandemSettingSemanticFrame OpenTandemSettingSemanticFrame = 141 [json_name = "open_tandem_setting_semantic_frame", (NYT.column_name) = "open_tandem_setting_semantic_frame"];
+        TOpenSmartSpeakerSettingSemanticFrame OpenSmartSpeakerSettingSemanticFrame = 142 [json_name = "open_smart_speaker_setting_semantic_frame", (NYT.column_name) = "open_smart_speaker_setting_semantic_frame"];
+        TFinishIotSystemDiscoverySemanticFrame FinishIotSystemDiscoverySemanticFrame = 143 [json_name = "finish_iot_system_discovery_semantic_frame", (NYT.column_name) = "finish_iot_system_discovery_semantic_frame"];
+        TVideoCallSetFavoritesSemanticFrame VideoCallSetFavoritesSemanticFrame = 144 [json_name = "video_call_set_favorites_semantic_frame", (NYT.column_name) = "video_call_set_favorites_semantic_frame"];
+        TVideoCallIncomingSemanticFrame VideoCallIncomingSemanticFrame = 145 [json_name = "video_call_incoming_semantic_frame", (NYT.column_name) = "video_call_incoming_semantic_frame"];
+        TMessengerCallAcceptSemanticFrame MessengerCallAcceptSemanticFrame = 146 [json_name = "messenger_call_accept_semantic_frame", (NYT.column_name) = "messenger_call_accept_semantic_frame"];
+        TMessengerCallDiscardSemanticFrame MessengerCallDiscardSemanticFrame = 147 [json_name = "messenger_call_discard_semantic_frame", (NYT.column_name) = "messenger_call_discard_semantic_frame"];
+        TTvLongTapTutorialSemanticFrame TvLongTapTutorialSemanticFrame = 148 [json_name = "tv_long_tap_tutorial_semantic_frame", (NYT.column_name) = "tv_long_tap_tutorial_semantic_frame"];
+        TOnboardingWhatCanYouDoSemanticFrame OnboardingWhatCanYouDoSemanticFrame = 149 [json_name = "onboarding_what_can_you_do_semantic_frame", (NYT.column_name) = "onboarding_what_can_you_do_semantic_frame"];
+        TMessengerCallHangupSemanticFrame MessengerCallHangupSemanticFrame = 150 [json_name = "messenger_call_hangup_semantic_frame", (NYT.column_name) = "messenger_call_hangup_semantic_frame"];
+        TPutMoneyOnPhoneSemanticFrame PutMoneyOnPhoneSemanticFrame = 151 [json_name = "put_money_on_phone_semantic_frame", (NYT.column_name) = "put_money_on_phone_semantic_frame"];
+        TOrderNotificationSemanticFrame OrderNotificationSemanticFrame = 152 [json_name = "order_notification_semantic_frame", (NYT.column_name) = "order_notification_semantic_frame"];
+        TPlayerRemoveLikeSemanticFrame PlayerRemoveLikeSemanticFrame = 153 [json_name = "player_remove_like_semantic_frame", (NYT.column_name) = "player_remove_like_semantic_frame"];
+        TPlayerRemoveDislikeSemanticFrame PlayerRemoveDislikeSemanticFrame = 154 [json_name = "player_remove_dislike_semantic_frame", (NYT.column_name) = "player_remove_dislike_semantic_frame"];
+        TCentaurCollectUpperShutterSemanticFrame CentaurCollectUpperShutterSemanticFrame = 155 [json_name = "centaur_collect_upper_shutter", (NYT.column_name) = "centaur_collect_upper_shutter"];
+        TEnrollmentStatusSemanticFrame EnrollmentStatusSemanticFrame = 156 [json_name = "multiaccount_enrollment_status_semantic_frame", (NYT.column_name) = "multiaccount_enrollment_status_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TGalleryVideoSelectSemanticFrame GalleryVideoSelectSemanticFrame = 157 [json_name = "gallery_video_select_semantic_frame", (NYT.column_name) = "gallery_video_select_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TPlayerSongsByThisArtistSemanticFrame PlayerSongsByThisArtistSemanticFrame = 158 [json_name = "player_songs_by_this_artist_semantic_frame", (NYT.column_name) = "player_songs_by_this_artist_semantic_frame"];
+        TExternalSkillEpisodeForShowRequestSemanticFrame ExternalSkillEpisodeForShowRequestSemanticFrame = 159 [json_name = "external_skill_episode_for_show_request_semantic_frame", (NYT.column_name) = "external_skill_episode_for_show_request_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TMusicPlayFixlistSemanticFrame MusicPlayFixlistSemanticFrame = 160 [json_name = "music_play_fixlist_semantic_frame", (NYT.column_name) = "music_play_fixlist_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TMusicPlayAnaphoraSemanticFrame MusicPlayAnaphoraSemanticFrame = 161 [json_name = "music_play_anaphora_semantic_frame", (NYT.column_name) = "music_play_anaphora_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TMusicPlayFairytaleSemanticFrame MusicPlayFairytaleSemanticFrame = 162 [json_name = "music_play_fairytale_semantic_frame", (NYT.column_name) = "music_play_fairytale_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TStartMultiroomSemanticFrame StartMultiroomSemanticFrame = 163 [json_name = "start_multiroom_semantic_frame", (NYT.column_name) = "start_multiroom_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TPlayerWhatIsThisSongAboutSemanticFrame PlayerWhatIsThisSongAboutSemanticFrame = 164 [json_name = "player_what_is_this_song_about_semantic_frame", (NYT.column_name) = "player_what_is_this_song_about_semantic_frame"];
+        TGuestEnrollmentFinishSemanticFrame GuestEnrollmentFinishSemanticFrame = 165 [json_name = "guest_enrollment_finish_semantic_frame", (NYT.column_name) = "guest_enrollment_finish_semantic_frame", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TCentaurSetTeaserConfigurationSemanticFrame CentaurSetTeaserConfigurationSemanticFrame = 166 [json_name = "centaur_set_teaser_configuration", (NYT.column_name) = "centaur_set_teaser_configuration", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        TCentaurCollectTeasersPreviewSemanticFrame CentaurCollectTeasersPreviewSemanticFrame = 167 [json_name = "centaur_collect_teasers_preview", (NYT.column_name) = "centaur_collect_teasers_preview", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        // WARN: Don't forget to add some tests to "alice/library/typed_frame/typed_semantic_request_ut.cpp" when adding new frame.
+    }
+
+    reserved 65; reserved "MockResponseSemanticFrame";
+    reserved 99; reserved "GuestEnrollmentStrartSemanticFrame";
+}
+
+message TSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TSlot {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        string Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+        string Value = 3 [json_name = "value", (NYT.column_name) = "value", (FieldAccess) = A_PRIVATE_RESPONSE];
+
+        repeated string AcceptedTypes = 4 [json_name = "accepted_types", (NYT.column_name) = "accepted_types"];
+        // On request to scenario should be false.
+        bool IsRequested = 5 [json_name = "is_requested", (NYT.column_name) = "is_requested"];
+        // todo: rename after migration to Value
+        // Please use Type and Value
+        TSlotValue TypedValue = 6 [json_name = "typed_value", (NYT.column_name) = "typed_value", deprecated = true];
+        // Shows whether the slot was filled on this request or not.
+        bool IsFilled = 7 [json_name = "is_filled", (NYT.column_name) = "is_filled"];
+    }
+
+    string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    repeated TSlot Slots = 2 [json_name = "slots", (NYT.column_name) = "slots"];
+    reserved 4;
+    reserved "Entities";
+    // repeated TClientEntity Entities = 4 [json_name = "entities", (NYT.column_name) = "entities", deprecated=true];
+    TTypedSemanticFrame TypedSemanticFrame = 5 [json_name = "typed_semantic_frame", (NYT.column_name) = "typed_semantic_frame"];
+}
+
+// Using as structure for @@mm_semantic_frame request
+message TSemanticFrameRequestData {
+    TTypedSemanticFrame TypedSemanticFrame = 1 [json_name = "typed_semantic_frame", (NYT.column_name) = "typed_semantic_frame"];
+    TAnalyticsTrackingModule Analytics = 2 [json_name = "analytics", (NYT.column_name) = "analytics"];
+    // sender identificators
+    TOrigin Origin = 3 [json_name = "origin", (NYT.column_name) = "origin"];
+    // TFrameRequestParams is deprecated. Use TRequestParams instead.
+    TFrameRequestParams Params = 4 [json_name = "params", (NYT.column_name) = "params", deprecated = true];
+    TRequestParams RequestParams = 5 [json_name = "request_params", (NYT.column_name) = "request_params"];
+}
+
+message TVideoCardDetailSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video.get_full_card_detail";
+
+    TStringSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+    TStringSlot ContentType = 2 [json_name = "content_type", (NYT.column_name) = "content_type", (SlotName) = "content_type"];
+    TStringSlot ContentOntoId = 3 [json_name = "onto_id", (NYT.column_name) = "onto_id", (SlotName) = "onto_id"];
+}
+
+message TVideoThinCardDetailSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video.get_thin_card_detail";
+
+    TStringSlot ContentId = 1 [json_name = "content_id", (NYT.column_name) = "content_id", (SlotName) = "content_id"];
+}
+
+message TGuestEnrollmentStartSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.guest.enrollment.start";
+
+    TStringSlot Puid = 1 [json_name = "puid", (NYT.column_name) = "puid", (SlotName) = "puid"];
+}
+
+message TGuestEnrollmentFinishSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.guest.enrollment.finish";
+}
+
+message TTvPromoTemplateRequestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.tv.get_promo_template";
+
+    TTvChosenTemplateSlot ChosenTemplate = 1 [json_name = "chosen_template", (NYT.column_name) = "chosen_template", (SlotName) = "chosen_template"];
+}
+
+message TTvPromoTemplateShownReportSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.tv.report_promo_template_shown";
+
+    reserved 1;
+    reserved "ShowTemplateTimestampMillis";
+    TTvChosenTemplateSlot ChosenTemplate = 2 [json_name = "chosen_template", (NYT.column_name) = "chosen_template", (SlotName) = "chosen_template"];
+}
+
+message TGetVideoGalleriesSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video.get_galleries";
+
+    TStringSlot CategoryId = 1 [json_name = "category_id", (NYT.column_name) = "category_id", (SlotName) = "category_id"];
+    TNumSlot MaxItemsPerGallery = 2 [json_name = "max_items_per_gallery", (NYT.column_name) = "max_items_per_gallery", (SlotName) = "max_items_per_gallery"];
+    TNumSlot Offset = 3 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+    TNumSlot Limit = 4 [json_name = "limit", (NYT.column_name) = "limit", (SlotName) = "limit"];
+    TStringSlot CacheHash = 5 [json_name = "cache_hash", (NYT.column_name) = "cache_hash", (SlotName) = "cache_hash"];
+    TStringSlot FromScreenId = 6 [json_name = "from_screen_id", (NYT.column_name) = "from_screen_id", (SlotName) = "from_screen_id"];
+    TStringSlot ParentFromScreenId = 7 [json_name = "parent_from_screen_id", (NYT.column_name) = "parent_from_screen_id", (SlotName) = "parent_from_screen_id"];
+    TBoolSlot KidModeEnabled = 8 [json_name = "kid_mode_enabled", (NYT.column_name) = "kid_mode_enabled", (SlotName) = "kid_mode_enabled"];
+    TStringSlot RestrictionAge = 9  [json_name = "restriction_age", (NYT.column_name) = "restriction_age", (SlotName) = "restriction_age"];
+}
+
+message TGetVideoGallerySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.video.get_gallery";
+
+    TStringSlot Id = 1 [json_name = "id", (NYT.column_name) = "id", (SlotName) = "id"];
+    TNumSlot Offset = 2 [json_name = "offset", (NYT.column_name) = "offset", (SlotName) = "offset"];
+    TNumSlot Limit = 3 [json_name = "limit", (NYT.column_name) = "limit", (SlotName) = "limit"];
+    TStringSlot CacheHash = 4 [json_name = "cache_hash", (NYT.column_name) = "cache_hash", (SlotName) = "cache_hash"];
+    TStringSlot FromScreenId = 5 [json_name = "from_screen_id", (NYT.column_name) = "from_screen_id", (SlotName) = "from_screen_id"];
+    TStringSlot ParentFromScreenId = 6 [json_name = "parent_from_screen_id", (NYT.column_name) = "parent_from_screen_id", (SlotName) = "parent_from_screen_id"];
+    TNumSlot CarouselPosition = 7 [json_name = "carousel_position", (NYT.column_name) = "carousel_position", (SlotName) = "carousel_position"];
+    TStringSlot CarouselTitle = 8 [json_name = "carousel_title", (NYT.column_name) = "carousel_title", (SlotName) = "carousel_title"];
+    TBoolSlot KidModeEnabled = 9 [json_name = "kid_mode_enabled", (NYT.column_name) = "kid_mode_enabled", (SlotName) = "kid_mode_enabled"];
+    TStringSlot RestrictionAge = 10  [json_name = "restriction_age", (NYT.column_name) = "restriction_age", (SlotName) = "restriction_age"];
+    TCatalogTagSlot SelectedTags = 11 [json_name = "selected_tags", (NYT.column_name) = "selected_tags", (SlotName) = "selected_tags"];
+}
+
+message TTestSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.test_semantic_frame";
+
+    TStringSlot Dummy = 1 [json_name = "dummy", (NYT.column_name) = "dummy", (SlotName) = "dummy"];
+}
+
+message TGetTvSearchResultSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.tv.get_search_result";
+
+    TStringSlot SearchText = 1 [json_name = "search_text", (NYT.column_name) = "search_text", (SlotName) = "search_text"];
+    TStringSlot RestrictionMode = 2 [json_name = "restriction_mode", (NYT.column_name) = "restriction_mode", (SlotName) = "restriction_mode"];
+    TStringSlot RestrictionAge = 3 [json_name = "restriction_age", (NYT.column_name) = "restriction_age", (SlotName) = "restriction_age"];
+    TStringSlot SearchEntref = 4 [json_name = "search_entref", (NYT.column_name) = "search_entref", (SlotName) = "search_entref"];
+}
+
+message TSwitchTvChannelSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.switch_tv_channel_sf";
+
+    TStringSlot Uri = 1 [json_name = "uri", (NYT.column_name) = "uri", (SlotName) = "uri"];
+}
+
+message TCurrencySlot {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    oneof Value {
+        option (NYT.variant_field_name) = "value";
+        string CurrencyValue = 1 [json_name = "currency_value", (NYT.column_name) = "currency_value", (SlotType) = "currency"];
+    }
+}
+
+message TConvertSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "personal_assistant.scenarios.convert";
+
+    TCurrencySlot TypeFrom = 1 [json_name = "type_from", (NYT.column_name) = "type_from", (SlotName) = "type_from"];
+    TCurrencySlot TypeTo = 2 [json_name = "type_to", (NYT.column_name) = "type_to", (SlotName) = "type_to"];
+    TNumSlot AmountFrom = 3 [json_name = "amount_from", (NYT.column_name) = "amount_from", (SlotName) = "amount_from"];
+}
+
+message TMediaSessionPlaySemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.media_session.play";
+
+    TStringSlot MediaSessionId = 1 [json_name = "media_session_id", (NYT.column_name) = "media_session_id", (SlotName) = "media_session_id"];
+}
+
+message TMediaSessionPauseSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.media_session.pause";
+
+    TStringSlot MediaSessionId = 1 [json_name = "media_session_id", (NYT.column_name) = "media_session_id", (SlotName) = "media_session_id"];
+}
+
+message TOnboardingGetGreetingsSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.onboarding.get_greetings";
+}
+
+message TOnboardingWhatCanYouDoSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.onboarding.what_can_you_do";
+
+    TUInt32Slot PhraseIndex = 1 [json_name = "phrase_index", (NYT.column_name) = "phrase_index", (SlotName) = "phrase_index"];
+}
+
+message TTvLongTapTutorialSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.tv.long_tap_tutorial";
+}
+
+message TGalleryVideoSelectSemanticFrame {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    option (SemanticFrameName) = "alice.tv.gallery_video_select";
+
+    TStringSlot Action = 1 [json_name = "action", (NYT.column_name) = "action", (SlotName) = "action"];
+    TStringSlot ProviderItemId = 2 [json_name = "provider_item_id", (NYT.column_name) = "provider_item_id", (SlotName) = "provider_item_id"];
+    TStringSlot EmbedUri = 3 [json_name = "embed_uri", (NYT.column_name) = "embed_uri", (SlotName) = "embed_uri"];
+}

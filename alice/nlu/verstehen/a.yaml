@@ -1,0 +1,61 @@
+service: megabegemot
+title: Verstehen
+
+ci:
+  release-title-source: flow
+  secret: sec-01g44v6fp7gbq9s1tye6x44w2m
+  runtime:
+    sandbox-owner: BASS
+
+  releases:
+    release-verstehen:
+      title: Release Verstehen
+      flow: verstehen-release-flow
+      auto:
+        conditions:
+          - since-last-release: 6h
+            min-commits: 1
+      filters:  # see alice/nlu/verstehen/packages/verstehen.json
+        - discovery: graph
+          abs-paths:
+            - alice/nlu/verstehen/app/**
+        - discovery: dir
+          abs-paths:
+            - alice/nlu/data/ru/granet/**
+      stages:
+        build:
+          title: Build
+        deploy:
+          title: Deploy
+
+  flows:
+    verstehen-release-flow:
+      title: Verstehen release flow
+      jobs:
+        build:
+          title: Build Verstehen
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/nlu/verstehen/packages/verstehen.json
+            package_type: tarball
+            strip_binaries: true
+            package_ttl: 365
+            binary_executor_release_type: stable
+            publish_package: false
+            save_build_output: false
+        deploy:
+          title: Deploy Verstehen
+          task: common/nanny/update_service
+          stage: deploy
+          needs: build
+          input:
+            config:
+              service_id: verstehen
+              release_title: "Verstehen release ${context.version_info.full}"
+              target_status: ACTIVE
+              patches:
+                - sandbox:
+                    resource_type: YA_PACKAGE
+                    resource:
+                      local_path: verstehen_package.tar.gz

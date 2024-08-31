@@ -1,0 +1,214 @@
+// See https://wiki.yandex-team.ru/Alice/VINS/speechkitapi/
+
+package NAlice;
+
+import "alice/library/censor/protos/extension.proto";
+
+import "alice/megamind/protos/analytics/megamind_analytics_info.proto";
+import "alice/megamind/protos/common/content_properties.proto";
+import "alice/megamind/protos/common/directives_execution_policy.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/response_error_message.proto";
+import "alice/megamind/protos/div/div2_cards.proto";
+import "alice/megamind/protos/nlg/nlg.proto";
+import "alice/megamind/protos/proactivity/proactivity.proto";
+import "alice/megamind/protos/quality_storage/storage.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+import "alice/megamind/protos/speechkit/directives.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+option java_package = "ru.yandex.alice.megamind.protos.speechkit";
+option go_package = "a.yandex-team.ru/alice/megamind/protos/speechkit";
+
+message TSpeechKitResponseProto {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message THeader {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string RequestId = 1 [json_name = "request_id", (NYT.column_name) = "request_id"];
+        optional string ResponseId = 2 [json_name = "response_id", (NYT.column_name) = "response_id"];
+        optional uint32 SequenceNumber = 3 [json_name = "sequence_number", (NYT.column_name) = "sequence_number"];
+        optional string DialogId = 4 [json_name = "dialog_id", (NYT.column_name) = "dialog_id"];
+        optional string RefMessageId = 5 [json_name = "ref_message_id", (NYT.column_name) = "ref_message_id"];
+        optional string SessionId = 6 [json_name = "session_id", (NYT.column_name) = "session_id"];
+        optional string ParentRequestId = 7 [json_name = "parent_request_id", (NYT.column_name) = "parent_request_id"];
+    }
+
+    message TMeta {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EOrigin {
+            Exception = 0;
+            Http = 1;
+            Status = 2;
+        }
+
+        message TMetaForm {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Form = 1 [json_name = "form", (NYT.column_name) = "form"];
+            repeated string Slots = 2 [json_name = "slots", (NYT.column_name) = "slots"]; // it is supposed to be repeated json Slots
+        }
+
+        message TNestedError {
+            optional string Message = 1 [json_name = "message", (NYT.column_name) = "message"];
+            optional string Type = 2 [json_name = "error_type", (NYT.column_name) = "error_type"];
+            optional string NetLocation = 3 [json_name = "net_location", (NYT.column_name) = "net_location"];
+            optional EOrigin Origin = 4 [json_name = "origin", (NYT.column_name) = "origin"];
+        }
+
+        optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        optional string ErrorType = 2 [json_name = "error_type", (NYT.column_name) = "error_type"];
+        optional string AttentionType = 3 [json_name = "attention_type", (NYT.column_name) = "attention_type"];
+        optional string Intent = 4 [json_name = "intent", (NYT.column_name) = "intent", deprecated = true];
+        optional TMetaForm Form = 5 [json_name = "form", (NYT.column_name) = "form", deprecated = true, (FieldAccess) = A_PRIVATE_RESPONSE];
+        optional string Message = 6 [json_name = "message", (NYT.column_name) = "message"];
+        optional google.protobuf.Struct Payload = 7 [json_name = "payload", (NYT.column_name) = "payload", deprecated = true, (NYT.flags) = SERIALIZATION_PROTOBUF, (FieldAccess) = A_PRIVATE_RESPONSE];
+        optional string OverridenForm = 8 [json_name = "overriden_form", (NYT.column_name) = "overriden_form", deprecated = true, (FieldAccess) = A_PRIVATE_RESPONSE];
+        optional int32 HttpCode = 9 [json_name = "http_code", (NYT.column_name) = "http_code"];
+        optional string NetLocation = 10 [json_name = "net_location", (NYT.column_name) = "net_location"];
+        optional EOrigin Origin = 11 [json_name = "origin", (NYT.column_name) = "origin"];
+        repeated TNestedError NestedErrors = 12 [json_name = "nested", (NYT.column_name) = "nested"];
+    }
+
+    message TVoiceResponse {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TOutputSpeech {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            optional string Text = 2 [json_name = "text", (NYT.column_name) = "text", (FieldAccess) = A_PRIVATE_RESPONSE];
+        }
+
+        optional TOutputSpeech OutputSpeech = 1 [json_name = "output_speech", (NYT.column_name) = "output_speech"];
+        optional bool ShouldListen = 2 [json_name = "should_listen", (NYT.column_name) = "should_listen", default = false];
+        reserved 3;
+        repeated NAlice.NSpeechKit.TDirective Directives = 4 [json_name = "directives", (NYT.column_name) = "directives"];
+        optional bool IsTrashPartial = 5 [json_name = "is_trash_partial", (NYT.column_name) = "is_trash_partial", default = false];
+        optional string OutputEmotion = 6 [json_name = "output_emotion", (NYT.column_name) = "output_emotion"];
+        repeated NAlice.NSpeechKit.TProtobufUniproxyDirective UniproxyDirectives = 7 [json_name = "uniproxy_directives", (NYT.column_name) = "uniproxy_directives"];
+    }
+
+    message TResponse {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TButton {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TTheme {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional string ImageUrl = 1 [json_name = "image_url", (NYT.column_name) = "image_url"];
+            }
+
+            optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+            optional string Title = 2 [json_name = "title", (NYT.column_name) = "title", (FieldAccess) = A_PRIVATE_RESPONSE];
+            repeated NAlice.NSpeechKit.TDirective Directives = 3 [json_name = "directives", (NYT.column_name) = "directives"];
+            optional string Text = 4 [json_name = "text", (NYT.column_name) = "text", (FieldAccess) = A_PRIVATE_RESPONSE];
+            optional TTheme Theme = 5 [json_name = "theme", (NYT.column_name) = "theme"];
+        }
+
+        message TCard {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+
+            // simple_text, text_with_button, div_card
+            optional string Text = 2 [json_name = "text", (NYT.column_name) = "text", (FieldAccess) = A_PRIVATE_RESPONSE];
+
+            // div_card, div2_card
+            optional google.protobuf.Struct Body = 3 [json_name = "body", (NYT.column_name) = "body", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            repeated TButton Buttons = 4 [json_name = "buttons", (NYT.column_name) = "buttons", (FieldAccess) = A_PRIVATE_RESPONSE];
+
+            // div2_card, true by default
+            optional google.protobuf.BoolValue HasBorders = 5 [json_name = "has_borders", (NYT.column_name) = "has_borders"];
+        }
+
+        message TSuggest {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+            option (MessageAccess) = A_PRIVATE_RESPONSE;
+
+            repeated TButton Items = 1 [json_name = "items", (NYT.column_name) = "items"];
+        }
+
+        repeated TCard Cards = 1 [json_name = "cards", (NYT.column_name) = "cards"];
+        repeated NAlice.NSpeechKit.TDirective Directives = 2 [json_name = "directives", (NYT.column_name) = "directives"];
+        repeated TMeta Meta = 3 [json_name = "meta", (NYT.column_name) = "meta"];
+        optional TQualityStorage QualityStorage = 4 [json_name = "quality_storage", (NYT.column_name) = "quality_storage"];
+
+        optional google.protobuf.Struct Experiments = 5 [json_name = "experiments", (NYT.column_name) = "experiments", (NYT.flags) = SERIALIZATION_PROTOBUF];
+
+        optional TSuggest Suggest = 6 [json_name = "suggest", (NYT.column_name) = "suggest"];
+        // Div 2.0 templates
+        optional google.protobuf.Struct Templates = 7 [json_name = "templates", (NYT.column_name) = "templates", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        optional EDirectivesExecutionPolicy DirectivesExecutionPolicy = 8 [json_name = "directives_execution_policy", (NYT.column_name) = "directives_execution_policy"];
+        optional TResponseErrorMessage ResponseErrorMessage = 9 [json_name = "response_error_message", (NYT.column_name) = "response_error_message"];
+    }
+
+    reserved 4, 5;
+    reserved "analytics_info", "OldAnalyticsInfo";
+
+    optional THeader Header = 1 [json_name = "header", (NYT.column_name) = "header"];
+    optional TVoiceResponse VoiceResponse = 2 [json_name = "voice_response", (NYT.column_name) = "voice_response"];
+    optional TResponse Response = 3 [json_name = "response", (NYT.column_name) = "response"];
+
+    map<string, string> Sessions = 6 [json_name = "sessions", (NYT.column_name) = "sessions", (NYT.flags) = MAP_AS_DICT];
+    optional bool ContainsSensitiveData = 7 [json_name = "contains_sensitive_data", (NYT.column_name) = "contains_sensitive_data", deprecated = true];
+    optional string Version = 8 [json_name = "version", (NYT.column_name) = "version"];
+    optional TContentProperties ContentProperties = 9 [json_name = "content_properties", (NYT.column_name) = "content_properties"];
+    optional NMegamind.TMegamindAnalyticsInfo MegamindAnalyticsInfo = 10 [json_name = "megamind_analytics_info", (NYT.column_name) = "megamind_analytics_info"];
+
+    message TError {
+        optional uint32 Code = 1 [json_name = "code", (NYT.column_name) = "code"];
+        optional string Reason = 2 [json_name = "reason", (NYT.column_name) = "reason"];
+    }
+
+    optional TError Error = 11 [json_name = "error", (NYT.column_name) = "error"];
+
+    optional NMegamind.TProactivityLogStorage ProactivityLogStorage = 12 [json_name = "proactivity_log_storage", (NYT.column_name) = "proactivity_log_storage", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TSpeechKitResponseErrorProto {
+    repeated TSpeechKitResponseProto.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+}
+
+message TSpeechKitMultiResponseProto {
+    message TItem {
+        optional TSpeechKitResponseProto Response = 1 [json_name = "response", (NYT.column_name) = "response"];
+    }
+    repeated TItem Items = 1 [json_name = "items", (NYT.column_name) = "items"];
+}
+
+message TResponseBuilderProto {
+    message TMetaProto {
+        optional string Type = 1;
+        optional string Payload = 2;
+    }
+
+    optional TSpeechKitResponseProto Response = 1;
+    reserved 2;
+    reserved "Directives";
+    reserved 3;
+    reserved "RawDirectives";
+    repeated TNlgEntityProto Phrases = 4;
+    repeated TNlgEntityProto Cards = 5;
+    reserved 6;
+    reserved "Meta";
+    reserved 7;
+    reserved 9;
+    reserved "Div2Cards";
+    optional bool ShouldAddOutputSpeech = 10;
+    optional string ScenarioName = 11;
+    optional TSemanticFrame SemanticFrame = 12;
+    reserved 14;
+    map<string, NAlice.NScenarios.TFrameAction> Actions = 15;
+    repeated TClientEntity Entities = 16;
+    optional string ProductScenarioName = 17;
+    optional bool ForceDisableShouldListen = 18;
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package NAlice.NData.NIoT;
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/iot";
+option java_package = "ru.yandex.alice.protos.data.scenario.iot";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TEnrollmentStatus {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EFailureReason   {
+        Unknown = 0;
+        ClientTimeout = 1; // Elapsed enrollment TTL
+        ScenarioError = 2; // Got error in Voiceprint scenario
+        PassportError = 3; // Got error, resolving token in passport
+        RequestedByUser = 4 [deprecated = true]; // Received multiaccount_remove_account_directive
+    }
+
+    enum ESource {
+        UnknownSource = 0;
+        AddAccountDirective = 1;
+        RemoveAccountDirective = 2;
+        UpdateVoicePrintsDirective = 3;
+    }
+
+    bool Success = 1 [json_name = "success", (NYT.column_name) = "success"];
+    EFailureReason FailureReason = 2 [json_name = "failure_reason", (NYT.column_name) = "failure_reason"];
+    string FailureReasonDetails = 3 [json_name = "failure_reason_details", (NYT.column_name) = "failure_reason_details"];
+    ESource Source = 4 [json_name = "source", (NYT.column_name) = "source"];
+}

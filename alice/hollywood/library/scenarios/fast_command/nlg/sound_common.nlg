@@ -1,0 +1,60 @@
+{% ext_from "alice/hollywood/library/common_nlg_localized/error.nlg" import render_error %}
+{% ext_from "alice/hollywood/library/common_nlg_localized/common.nlg" import inability %}
+
+{% macro sound_done() %}
+  {% chooseline %}
+      Сделала.
+      Готово.
+      Как скажете.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase common_error %}
+    {{ render_error() }}
+{% endphrase %}
+
+{% phrase render_error__sounderror %}
+  {% if context.error.data.code == 'already_max' %}
+    {% chooseline %}
+      Уже максимум.
+      Громче уже некуда.
+      Куда уж громче.
+      Громче уже нельзя.
+      Соседи говорят что и так всё хорошо слышат.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'already_min' %}
+    {% chooseline %}
+      Уже минимум.
+      Уже и так без звука.
+      Тише уже некуда.
+      Куда уж тише.
+      Тише уже нельзя.
+    {% endchooseline %}
+   {% elif context.error.data.code == 'already_set' %}
+    {% chooseline %}
+      Хорошо.
+      Уже сделала.
+      Звук уже выставлен.
+      Такой уровень звука уже стоит.
+      Ничего не изменилось.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'level_out_of_range' %}
+    Шкала громкости - от 1 до {{ context.sound_max_level }}. Но вы можете управлять ею в процентах, если вам так удобнее.
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+  {{ inability() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if context.has_alicesdk_player %}
+    {% if context.only_text %}
+      {{ sound_done() | only_text }}
+    {% else %}
+      {{ sound_done() }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

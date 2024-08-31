@@ -1,0 +1,64 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" import render_error, render_alarm_time, elari_watch_not_supported, render_alarm_list %}
+
+{% macro alarm_set_render_result() %}
+  {% if context.attentions.get('alarm__need_confirmation') %}
+  {% elif context.attentions.get('alarm__already_set') %}
+    Будильник {{ render_alarm_time(context.date, context.data.time) }} уже установлен.
+  {% elif context.attentions.get('alarm__snooze') %}
+    {% if context.date %}
+      Хорошо, перенесла будильник {{ render_alarm_time(context.date, context.data.time) }}.
+    {% else %}
+      {% chooseline %}
+        Хорошо. Следующий будильник —
+        Окей. Разбужу вас
+        Ну ладно. Следующий будильник —
+      {% endchooseline %}
+      {{ render_alarm_time(context.date, context.data.time, time_preposition='в') }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      Ваш будильник: {{ render_alarm_time(context.date, context.data.time) }}. Завела!
+    {% or %}
+      Нет проблем. Ставлю будильник {{ render_alarm_time(context.date, context.data.time) }}.
+    {% or %}
+      Сделано. Будильник {{ render_alarm_time(context.date, context.data.time) }}. Отдыхайте.
+    {% or %}
+      Принято! Поставила будильник {{ render_alarm_time(context.date, context.data.time) }}.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ alarm_set_render_result() }}
+{% endphrase %}
+
+{% phrase ask__possible_alarms %}
+  Какой из этих будильников вы хотите поставить?
+  \n{% vc %}-{% evc %}
+  {{ render_alarm_list(context.data.possible_alarms) }}
+{% endphrase %}
+
+{% phrase ask__time %}
+  На какое время поставить будильник?
+{% endphrase %}
+
+{% phrase ask__correction_day_part %}
+  {{ context.data.day_part_name | capitalize_first }} - это во сколько?
+{% endphrase %}
+
+{% phrase setting_failed %}
+  Простите, не получилось поставить будильник.
+{% endphrase %}
+
+{% phrase bad_arguments %}
+  Я могу поставить будильник на ближайшие 24 часа. А еще могу поставить повторяющийся будильник на выбранный день недели.
+{% endphrase %}
+
+{% phrase too_many_alarms %}
+  Сейчас уже установлено 25 будильников, я больше не могу.
+{% endphrase %}
+
+{% phrase not_supported %}
+    Я так пока не умею.
+{% endphrase %}

@@ -1,0 +1,362 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: open_site_or_app/common.grnt
+
+$WhatToReadShortcut:
+    %type custom.app_data
+    %value {
+        "irrelevant_on_unsupported_feature": true,
+        "need_feature": "CanOpenLinkSearchViewport",
+        "nav": {
+            "intent": "shortcut.reader.recommendations",
+            "url": {
+                "_": "viewport://?l10n=ru-RU&lr=213&noreask=1&query_source=alice&viewport_id=serp&text=%D0%A7%D1%82%D0%BE%20%D0%BF%D0%BE%D1%87%D0%B8%D1%82%D0%B0%D1%82%D1%8C",
+                "desktop": "viewport://?l10n=ru-RU&lr=213&noreask=1&query_source=alice&viewport_id=serp&text=%D0%A7%D1%82%D0%BE%20%D0%BF%D0%BE%D1%87%D0%B8%D1%82%D0%B0%D1%82%D1%8C"
+            },
+            "text": "Рекомендации книг",
+            "voice_name": "рекомендации книг",
+            "text_name": "рекомендации книг"
+        }
+    }
+    $Filler:
+        $Lets
+        $Want
+        $Interesting
+        $WithRating
+        $Preposition
+        $Smth
+        $ToRead
+        $Genre
+
+        %lemma
+        можно
+        какую нибудь
+        какую-нибудь
+        на? (твой|мой|свой)? вкус
+        в интернете
+        которые
+        отзыв
+        помоги
+
+        сегодня
+        сейчас
+        (скучный|сегодняшний)? вечер
+
+        ты знаешь
+
+        в? тренде
+        топ $sys.num?
+        модно
+        новая
+        новинки
+        посвежее
+        легкое
+
+    [$TellWord* $WhatOrWhich* $Recommend+ $Common.PronounMe* $ToRead* $Book+ $Filler*]
+    [$TellWord* $WhatOrWhich+ $ToReadStrict+ $Recommend* $Book* $Common.PronounMe* $Filler*]
+    [$TellWord* $WhatOrWhich+ $Book+ $Recommendation+ $Filler*]
+    [$TellWord* $Which+ $Interesting+ $Book+ $Filler*]
+
+    [($ShowActionOrNeed|$Recommend|$TheMost)+ $Common.PronounMe* $Interesting+ $Book+ $ToRead* $Filler*]
+    [($ShowActionOrNeed|$Recommend)+ $List+ $Book+ ($ToReadStrict|$Recommendation|$Interesting)+ $Filler*]
+    [$ShowActionOrNeed+ $Recommendation+ ($Book|$ToReadStrict)+ $Common.PronounMe* $Filler*]
+
+    [$Recommend+ $Smth+ $ToRead+ $Book* $Common.PronounMe* $Filler*]
+    [$ShowActionOrNeed* $Common.PronounMe* $Want* $ToReadStrict+ $Smth* $Interesting+ $Book* $Filler*]
+
+    [$ShowActionOrNeed+ $Book+ $WithRating+ $List* $ToRead* $Recommendation* $Interesting* $Filler*]
+
+$Genre:
+    жанр
+    научная? (фантастика)
+    любовь
+    любовный? роман
+    семейной? психологии
+    (российской|зарубежная)? классика
+    детектив
+    триллер
+    драма
+    фэнтези
+    классическая литература
+    проза
+    поэзия
+    комедия
+    трагедия
+    ужас
+    рассказ
+    поэма
+    новелла
+
+$OpenReaderShortcut:
+    %type custom.app_data
+    %value {
+        "irrelevant_on_unsupported_feature": true,
+        "need_feature": "CanOpenReader",
+        "nav": {
+            "intent": "shortcut.reader.open",
+            "url": {
+                "_": "books://library?utm_source=alice",
+                "desktop": "books://library?utm_source=alice"
+            },
+            "text": "Читалка",
+            "voice_name": "читалку",
+            "text_name": "читалку"
+        }
+    }
+    [$Lets* $Common.PronounMe* $Want* $Common.Open* $OpenReader+ $OpenReaderFiller*]
+
+$OpenReaderFiller:
+    $Preposition
+    $Common.PronounMe
+    $WantToReadSmth
+    $List
+    $AdjectiveMy
+    $Interesting
+    $Page
+    # $WhatToReadShortcut.Filler
+
+    %lemma
+    вчера
+    любимая
+    которую
+    $Preposition? телефоне
+    сейчас
+    недавно
+    pdf
+    пдф
+    онлайн
+    избранное
+    литрес
+    последняя
+    недочитанная
+    читаемая
+    $ImReading
+    $ImStopped
+    где
+    там
+    можно
+    какую нибудь
+    какую-нибудь
+    в интернете
+    которые
+    помоги
+
+    сегодня
+    сейчас
+    (скучный|сегодняшний)? вечер
+
+    ты знаешь
+
+$OpenReader:
+
+    $LegacyReader:
+        $Books:
+            книги
+            книжки
+
+        $My:
+            %lemma
+            мои
+
+        $Reader:
+            %lemma
+            читалка
+            ридер
+            ебук
+            ебуки
+
+        [$Common.Open+ ($My? ($Books | $Reader))+]
+        $Reader+
+
+    [$Lets* $Common.PronounMe* $Want* $Common.Open* $LegacyReader+]
+
+    [$OpenStrict+ $AdjectiveMy* ($Book|$ReaderApp)+ $ForReading* $Application* $ToRead* $OpenReaderFiller*]
+    [$Common.Open+ $AdjectiveMy* $ReaderApp+ $ForReading* $Application* $ToRead* $OpenReaderFiller*]
+    [$ShowActionOrNeed* $Application* $ReaderApp+ $ForReading* $Book* $OpenReaderFiller*]
+
+    [$WantToReadSmth+ $Common.Open+ $Application+ $ForReading* $OpenReaderFiller*]
+
+    [$Common.Open+ $Application+ ($Reading|$Book)+ $AdjectiveMy* $OpenReaderFiller*]
+    [$Common.Open* $Application+ ($ToRead|$ForReading)+ $Book* $AdjectiveMy* $OpenReaderFiller*]
+
+    [$ShowActionOrNeed+ ($AdjectiveMy|$Book|$ForReading)+ $Library+ $With* $OpenReaderFiller*]
+    [$Common.Open+ $Library+ $Book* $ForReading* $With* $Application* $OpenReaderFiller*]
+    [$Common.Open+ ($AdjectiveMy|$Saved)+ $Book+ $ForReading* $Library* $Application* $OpenReaderFiller*]
+    [$Common.Open+ $AdjectiveMy* $Saved+ $Book+ $ForReading* $Library* $Application* $OpenReaderFiller*]
+    [$Continue+ ($ReadPure|$Reading)+ $AdjectiveMy* $Saved* $Book* $Library* $ImReading* $Application* $OpenReaderFiller*]
+
+    [($ToRead|$ReadPure)+ $Saved* $Book+ $AdjectiveMy* $Library+ $Application* $OpenReaderFiller*]
+
+    [$Common.Open+ $SomeBook+ ($Saved|$Library|$ReaderApp)+ $OpenReaderFiller*]
+
+$OpenStrict:
+    %lemma
+    открой
+
+$Page:
+    $Noun:
+        %lemma
+        страница
+        место
+        момент
+
+    $Adj:
+        %lemma
+        последняя
+        первая
+        $sys.num
+        то
+        того
+
+    [$Adj? $Noun]
+
+$SomeBook:
+    $Book .? .?
+
+$WantToReadSmth:
+    [$Common.PronounMe? $Want ($ToRead|$ReadPure) $Smth?]
+
+$ImReading:
+    %lemma
+    [$Common.PronounMe? читаю]
+    [$Common.PronounMe? начала ($ToRead|$ReadPure|$Reading)]
+
+$ImStopped:
+    %lemma
+    $Common.PronounMe? (остановилась|приостановилась|закончила)
+
+$Continue:
+    %lemma
+    продолжи
+    продолжаем
+
+$With:
+    с
+
+$ReaderApp:
+    %lemma
+    fb? читалка
+    ридер
+    ебук
+    ебуки
+    fb? reader
+    fbreader
+
+$Library:
+    $Adj:
+        $AdjectiveMy
+        $Electronic
+    $Noun:
+        %lemma
+        библиотека
+    [$Adj? $Noun]
+
+$Electronic:
+    %lemma
+    электронная
+    виртуальная
+
+$List:
+    %lemma
+    список
+    подборка
+
+$WithRating:
+    $Rating:
+        %lemma
+        рейтинг
+        оценка
+    $Adj:
+        %lemma
+        высокий
+        лучший
+        хороший
+        большим
+        наибольшим
+
+    [$Preposition? $TheMost? $Adj? $Rating]
+
+$Recommendation:
+    %lemma
+    рекомендации
+    отзывы
+
+$Smth:
+    %lemma
+    что-нибудь
+    что нибудь
+    (какие нибудь|какие-нибудь) $Book
+
+$TheMost:
+    %lemma
+    самый
+    очень
+    топ $sys.num?
+
+$ToReadStrict:
+    почитать
+    прочесть
+    # прочитать
+
+$Reading:
+    %lemma
+    чтение
+
+$ForReading:
+    %lemma
+    для ($Reading|прочтения)
+
+$ReadPure:
+    %lemma
+    читать
+
+$ToRead:
+    $ToReadStrict
+    %lemma
+    почитать
+    прочитать
+    прочесть
+    к прочтению
+    $ForReading
+
+$Recommend:
+    по советуй
+    по рекомендуй
+    %lemma
+    посоветуй
+    порекомендуй
+    предложи
+    подбери
+
+$Book:
+   %lemma
+   рассказ
+   повесть
+   роман
+   $Electronic? (книга|книжка|книжечка)
+   литература
+
+$Which:
+    %lemma
+    какой (есть|ты? знаешь)?
+
+$WhatOrWhich:
+    %lemma
+    что
+    чего
+    $Which
+
+$Interesting:
+    $Main:
+        %lemma
+        интересный
+        хороший
+        стоящий
+        популярные
+        лучших
+        рекомендованные
+        классная
+        топовые
+
+    [$TheMost? $Main]

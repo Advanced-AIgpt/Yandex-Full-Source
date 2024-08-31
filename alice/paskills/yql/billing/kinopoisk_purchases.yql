@@ -1,0 +1,36 @@
+use hahn;
+
+$toDate = ($x) -> { RETURN DateTime::MakeDate(DateTime::StartOfMonth(DateTime::ParseIso8601($x))) };
+
+$table_paths = (
+    select AGGREGATE_LIST(Path||'/userpurchases') from (
+    SELECT Path
+    FROM FOLDER("//home/paskills/billing/snapshots")
+    order by Path desc 
+    limit 1)
+);
+
+
+--upsert into stat.`//VoiceTech/external_skills/billing_kinopoisk_purchases/monthly`
+insert into `//home/paskills/stat/billing/purchase_stats` with truncate
+select fielddate, 
+    provider, 
+    count(*) as total_purchases, 
+    unwrap(sum(userprice)) as total_amount, 
+    count(distinct uid) as unique_users 
+from (
+    SELECT
+        `uid`,
+        `userprice`,
+        `provider`,
+        cast($toDate(purchasedate) as string) as fielddate
+    FROM each($table_paths)
+    where status = 'CLEARED'
+    and subscriptionid is null
+    --and $toDate(purchasedate) >= cast('2019-04-01' as date)
+    and provider = 'kinopoisk'
+)
+group compact by 
+    unwrap(fielddate) as fielddate, 
+    unwrap(provider) as provider
+order by fielddate, provider;

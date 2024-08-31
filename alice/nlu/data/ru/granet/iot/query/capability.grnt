@@ -1,0 +1,600 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/questions.grnt
+    common/verbs.grnt
+    iot/common.grnt
+
+
+form alice.iot.query.capability.on.off.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source: $IsDeviceOn
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $IsDeviceOn
+
+    $IsDeviceOn:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.on_off",
+            "capability_instance": "on"
+        }
+
+        $Common.LeftFiller* [$IsWorking+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $IsWorking:
+        $Common.TurnedOn
+        $Common.TurnedOff
+        $Common.ToWork<g:indic>
+        $Common.ToGlow<g:indic>
+
+
+form alice.iot.query.capability.color.setting.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source: $WhatColor
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $WhatColorIsOnDevice
+
+    $WhatColorIsOnDevice:
+        $Common.LeftFiller* [$WhatColor+ ($Common.ToGlow|$Common.IsSet|$Common.TurnedOn|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)+]
+
+    $WhatColor:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "color"
+        }
+        [$Common.QuestionWhat+ $Common.TheLight+]|[$Common.TheColor+ ($Common.QuestionWhat|$Common.TheLight)*]  # "свет" – это action-запрос
+
+
+form alice.iot.query.capability.mode.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source:
+                $GenericMode
+                $CleanupMode
+                $CoffeeMode
+                $DishwashingMode
+                $FanSpeedMode
+                $HeatMode
+                $InputSource
+                $ProgramMode
+                $SwingMode
+                $TeaMode
+                $ThermostatMode
+                $WorkSpeedMode
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source: $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $WhatModeIsOnDevice
+        %force_negative
+        %lemma
+        [.* программа $TvDeviceType]
+        [.* скорость $LightDeviceType]
+
+    $WhatModeIsOnDevice:
+        $Common.LeftFiller* [$Mode+ $DeviceWithPrepositions+ ($Common.From|$Common.At|$Common.QuestionWhat|$Common.QuestionHow|$Common.With|$Common.ToGlow|$Common.IsSet|$Common.TurnedOn|$Common.ToWork|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+        %force_negative
+        .* есть .*
+
+    $Mode:
+        %lemma
+        $GenericMode
+        $CleanupMode
+        $CoffeeMode
+        $DishwashingMode
+        $FanSpeedMode
+        $HeatMode
+        $InputSource
+        $ProgramMode
+        $SwingMode
+        $TeaMode
+        $ThermostatMode
+        $WorkSpeedMode
+
+    # GenericMode отправляется без инстанса. В таком случае озвучим все mode capability устройства
+    $GenericMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode"
+        }
+        %lemma
+        режим
+        рабочая? программа
+
+    $HeatMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "heat"
+        }
+        %lemma
+        (режим|программа)? (нагрева|обогрева|нагревания)
+
+    $ProgramMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "program"
+        }
+        %lemma
+        (режим|программа)? (приготовления|готовки) (пищи|еды)?
+
+    $SwingMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "swing"
+        }
+        %lemma
+        направление (потока|воздуха|обдува)*
+
+    $FanSpeedMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "fan_speed"
+        }
+        %lemma
+        скорость? (вентиляции|обдува)
+
+    $WorkSpeedMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "work_speed"
+        }
+        %lemma
+        скорость работы?
+
+    $InputSource:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "input_source"
+        }
+        %lemma
+        источник сигнала?
+        вход
+
+    $CleanupMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "cleanup_mode"
+        }
+        %lemma
+        (режим|программа) (уборки|чистки|очистки)
+
+    $CoffeeMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "coffee_mode"
+        }
+        %lemma
+        (режим|программа) (приготовления|готовки)? кофе
+
+    $DishwashingMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "dishwashing"
+        }
+        %lemma
+        (режим|программа) мойки посуды?
+
+    $TeaMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "tea_mode"
+        }
+        %lemma
+        (режим|программа) (приготовления|готовки)? чая
+
+    $ThermostatMode:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.mode",
+            "capability_instance": "thermostat"
+        }
+        %lemma
+        температурный (режим|программа)
+        [(режим|программа) (температуры|термостата)]
+
+
+form alice.iot.query.capability.range.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source:
+                $GenericRange
+                $BrightnessRange
+                $TemperatureRange
+                $VolumeRange
+                $ChannelRange
+                $OpenRange
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $WhatRangeIsOnDevice
+        %force_negative
+        %lemma
+        .* $sys.num процент .*
+        .* на ($sys.num|максимум|максимальный|минимум) .*
+        %exact
+        .* наше тв .*
+
+    $WhatRangeIsOnDevice:
+        $Common.LeftFiller* [($GenericRange|$Range)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$Verb|$Common.From|$Common.At|$Common.QuestionWhat|$Common.QuestionHow|$Common.With|$Common.QuestionHowMuch|насколько|$UnitWithPrepositions)*]
+        %force_negative
+        .* есть .*
+
+    $Verb:
+        $Common.ToGlow
+        $Common.IsSet
+        $Common.TurnedOn
+        $Common.ToWork
+        $Common.ToShow
+
+    $Range:
+        %lemma
+        $BrightnessRange
+        $ChannelRange
+        $OpenRange
+        $TemperatureRange
+        $VolumeRange
+
+    $GenericRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range"
+        }
+        %lemma
+        процент
+        уровень
+        значение
+        количество
+        величина
+
+    $BrightnessRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "channel"
+        }
+        %lemma
+        (яркость|светлость|насыщенность)
+        [($Common.QuestionWhat|$Common.QuestionHow|$Common.QuestionHowMuch|насколько)+ (яркий|светлый|ярко|светло|темно|темный|тускло|тусклый|бледный|блёклый|бледно|блёкло)+]
+
+    $ChannelRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "channel"
+        }
+        %lemma
+        канал
+        телеканал
+
+    $OpenRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "open"
+        }
+        %lemma
+        (открытие|закрытие)
+        (открыт|закрыт|заперт)
+
+    $TemperatureRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "temperature"
+        }
+        %lemma
+        температура
+        [($Common.QuestionWhat|$Common.QuestionHow|$Common.QuestionHowMuch|насколько)+ (тепло|жарко|холодно|прохладно|греть|охлаждать|остужать|дуть)+]
+        [$Common.QuestionHowMuch+ градус+ (по|цельсий|кельвин|фаренгейт|тепла|((выше|ниже) нуля))*]
+
+    $VolumeRange:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "volume"
+        }
+        %lemma
+        громкость
+        [($Common.QuestionWhat|$Common.QuestionHow|$Common.QuestionHowMuch|насколько)+ (громко|шумно)]
+
+
+form alice.iot.query.capability.toggle.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source:
+                $ControlsToggle
+                $TrunkToggle
+                $CentralLockToggle
+                $BacklightToggle
+                $IonizationToggle
+                $OscillationToggle
+                $KeepWarmToggle
+                $ControlsLockedToggle
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source: $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $WhatToggleIsOnDevice
+
+    $WhatToggleIsOnDevice:
+        $Common.LeftFiller* $Toggle+
+
+    $Toggle:
+        %lemma
+        $ControlsToggle
+        $TrunkToggle
+        $CentralLockToggle
+        $BacklightToggle
+        $IonizationToggle
+        $OscillationToggle
+        $KeepWarmToggle
+        $ControlsLockedToggle
+
+    $ControlsToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "controls_locked"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch)* (блокирован|разблокирован|заблокирован)+ $DeviceWithPrepositions+ (управление|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $TrunkToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "trunk"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch)* (открыт|закрыт|заперт|блокирован|разблокирован|заблокирован)+ $DeviceWithPrepositions+ багажник+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $CentralLockToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.range",
+            "capability_instance": "central_lock"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch)* (открыт|закрыт|заперт|блокирован|разблокирован|заблокирован)+ $DeviceWithPrepositions+ (дверь|(центральный* дверной* замок)) ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $BacklightToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "backlight"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch|$IsWorking)+ подсветка+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $IonizationToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "ionization"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch|$IsWorking)+ (ионизатор|ионизация|ионизирование)+ $DeviceWithPrepositions+ (воздух|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $OscillationToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "oscillation"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch|$IsWorking)+ (вращение|осцилляция)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $KeepWarmToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "keep_warm"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch|$IsWorking)+ (режим* (поддержка|поддержание) ($Common.TheLevel* (температура|тепло)))+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $ControlsLockedToggle:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "capability",
+            "capability_type": "devices.capabilities.toggle",
+            "capability_instance": "controls_locked"
+        }
+        %lemma
+        [($Common.QuestionHow|$Common.QuestionHowMuch|$IsWorking)+ ((блокировка управления*)|(детский режим))+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $IsWorking:
+        $Common.TurnedOn
+        $Common.TurnedOff
+        $Common.ToWork<g:indic>
+        $Common.ToGlow<g:indic>
+
+
+$DeviceWithPrepositions:
+    $CapabilityPreposition* ($IotDeviceOrDemo|$user.iot.group)
+
+$UnitWithPrepositions:
+    ($Common.ConjunctionAnd|$Common.At|$Common.To)* $Unit
+
+$CapabilityPreposition:
+    $Common.ConjunctionAnd
+    $Common.ConjunctionOr
+    $Common.At
+    $Common.From
+    у
+    %force_negative
+    .* есть .*
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Now
+    $ExactTell
+    $Common.Check
+    ($Common.ConjunctionAnd|$Common.ConjunctionOr|$Common.At|$Common.From|у)* $Common.PronounMe
+    там

@@ -1,0 +1,101 @@
+annotations:
+  project: iot-steelix
+meta:
+  id: iot-steelix-priemka
+  acl:
+    - action: allow
+      permissions:
+        - read
+        - write
+        - create
+        - ssh_access
+        - root_ssh_access
+        - read_secrets
+      subjects:
+        - abc:service:15893
+        - abc:service:5558
+  inherit_acl: true
+spec:
+  account_id: abc:service:5558
+  deploy_units:
+    vla:
+      images_for_boxes:
+        steelix_server:
+          name: quasar/steelix
+          registry_host: registry.yandex.net
+          tag: "5985872"
+      network_defaults:
+        network_id: _QUASAR_IOT_STEELIX_TEST_NETS_
+      replica_set:
+        per_cluster_settings:
+          vla:
+            pod_count: 1
+        replica_set_template:
+          constraints:
+            antiaffinity_constraints:
+              - key: rack
+                max_pods: 1
+          deployment_strategy:
+            max_unavailable: 1
+          pod_template_spec:
+            spec:
+              disk_volume_requests:
+                - id: iot-steelix-priemka-disk-0
+                  labels:
+                    used_by_infra: true
+                  quota_policy:
+                    capacity: 5368709120
+                  storage_class: hdd
+              host_infra:
+                monitoring: {}
+              ip6_address_requests:
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_TEST_NETS_
+                  vlan_id: backbone
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_TEST_NETS_
+                  vlan_id: fastbone
+              pod_agent_payload:
+                spec:
+                  boxes:
+                    - id: steelix_server
+                      rootfs: {}
+                  mutable_workloads:
+                    - workload_ref: steelix
+                  resources: {}
+                  workloads:
+                    - box_ref: steelix_server
+                      env:
+                        - name: CLOUD_TYPE
+                          value:
+                            literal_env:
+                              value: deploy
+                        - name: ENV_TYPE
+                          value:
+                            literal_env:
+                              value: priemka
+                        - name: TVM_CLIENT_SECRET_2016207
+                          value:
+                            secret_env:
+                              alias: tvm.secret.2016207:sec-01dpbr78tpqx485txvtqm30f3e:ver-01dpbr798g1h374avqqysq5fjt
+                              id: client_secret
+                      id: steelix
+                      liveness_check:
+                        tcp_check:
+                          port: 8080
+                      readiness_check:
+                        tcp_check:
+                          port: 8080
+                      start:
+                        command_line: /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+                      transmit_logs: true
+              resource_requests:
+                memory_guarantee: 536870912
+                memory_limit: 536870912
+                vcpu_guarantee: 250
+                vcpu_limit: 250
+              secrets:
+                tvm.secret.2016207:sec-01dpbr78tpqx485txvtqm30f3e:ver-01dpbr798g1h374avqqysq5fjt:
+                  delegation_token: t9Le7Vc4BqyIJS3GEGwf2YMdFsVTDgoZ498StlrFXrU.1.a94211b2a5a5536e
+                  secret_id: sec-01dpbr78tpqx485txvtqm30f3e
+                  secret_version: ver-01dpbr798g1h374avqqysq5fjt

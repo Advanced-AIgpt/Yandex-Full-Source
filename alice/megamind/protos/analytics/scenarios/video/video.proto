@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package NAlice.NVideo;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/analytics/scenarios/video";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TItem {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    enum ESource {
+        SOURCE_NOT_DEFINED = 0;
+        ENTITY_SEARCH = 1;
+        KINOPOISK_DUMMY_RECOMMENDATIONS = 2;
+        WEB = 3;
+        YAVIDEO = 4;
+        YAVIDEO_TOUCH = 5;
+        YAVIDEO_SMART = 6;
+        CAROUSEL = 7;
+    }
+
+    enum EType {
+        TYPE_NOT_DEFINED = 0;
+        MOVIE = 1;
+        TV_SHOW = 2;
+        VIDEO = 3;
+    }
+
+    // Best url that can be used to get human-readable info about this
+    // video item.  For example, url to the www.kinopoisk.ru
+    // movie/tv-show description screen.
+    string Url = 1 [json_name = "url", (NYT.column_name) = "url"];
+
+    // Name of the video item - i.e. video name, movie name, tv-show
+    // episode name, etc.
+    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+
+    // Description of the video item - i.e. movie/tv-show short description.
+    string Description = 3 [json_name = "description", (NYT.column_name) = "description"];
+
+    // How this video item was obtained - from entity search, some
+    // recommendation code or something else.
+    ESource Source = 4 [json_name = "source", (NYT.column_name) = "source"];
+
+    // Type of the video item.
+    EType Type = 5 [json_name = "type", (NYT.column_name) = "type"];
+
+    oneof Id {
+        string KinopoiskId = 6 [json_name = "kinopoisk_id", (NYT.column_name) = "kinopoisk_id"];
+        string YoutubeId = 7 [json_name = "youtube_id", (NYT.column_name) = "youtube_id"];
+        string YavideoUrl = 8 [json_name = "yavideo_url", (NYT.column_name) = "yavideo_url"];
+    }
+}
+
+// This message is intended for the move/tv-show description screen.
+message TDescriptionScreen {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Current item.
+    TItem Item = 1 [json_name = "item", (NYT.column_name) = "item"];
+
+    // Is description screen with pay screen
+    bool WithPayScreen = 2 [json_name = "with_pay_screen", (NYT.column_name) = "with_pay_screen"];
+}
+
+// This message is intended for the search gallery screen. There are a
+// list of videos or a list of movies/tv-shows.
+message TSearchGalleryScreen {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // List of items.
+    repeated TItem Items = 1 [json_name = "items", (NYT.column_name) = "items"];
+}
+
+// This message is intended for the season gallery screen.
+message TSeasonGalleryScreen {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // List of episodes names for a season.
+    repeated string Episodes = 1 [json_name = "episodes", (NYT.column_name) = "episodes"];
+
+    // Current season number.
+    int32 SeasonNumber = 2 [json_name = "season_number", (NYT.column_name) = "season_number"];
+
+    // Parent video item.
+    TItem Parent = 3 [json_name = "parent", (NYT.column_name) = "parent"];
+}
+
+// This message is intended for the video commands.
+message TCurrentlyPlayingVideo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Current item.
+    TItem Item = 1 [json_name = "item", (NYT.column_name) = "item"];
+}

@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package NAlice.NRpc;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/grpc_request";
+option java_package = "ru.yandex.alice.megamind.protos.grpc_request";
+option java_outer_classname = "RpcRequestProto";
+
+import "alice/library/client/protos/client_info.proto";
+import "alice/megamind/protos/common/experiments.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+
+message TRpcRequestProto {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TRequestMeta {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // Unique request identifier.
+        string RequestId = 1 [json_name = "request_id", (NYT.column_name) = "request_id"];
+        // Seed for randomisation.
+        uint64 RandomSeed = 2 [json_name = "random_seed", (NYT.column_name) = "random_seed"];
+        // Time when gproxy accepts request.
+        uint64 ServerTimeMs = 3 [json_name = "server_time_ms", (NYT.column_name) = "server_time_ms"];
+        // Experiments enabled for the user.
+        TExperimentsProto Experiments = 4 [json_name = "experiments", (NYT.column_name) = "experiments"];
+        repeated int64 TestIDs = 5 [json_name = "test_ids", (NYT.column_name) = "test_ids"]; // ?
+        // Device info /Users/zamulla/Documents/arc/arcadia/alice/library/client/protos/client_info.proto
+        TClientInfoProto Application = 6 [json_name = "application", (NYT.column_name) = "application"];
+        // Laas from context_load
+        google.protobuf.Struct LaasRegion = 7 [json_name = "laas_region", (NYT.column_name) = "laas_region", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        // Features from device
+        repeated string SupportedFeatures = 8 [json_name = "supported_features", (NYT.column_name) = "supported_features"];
+        repeated string UnsupportedFeatures = 9 [json_name = "unsupported_features", (NYT.column_name) = "unsupported_features"];
+    }
+
+    TRequestMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    // Request body that will be sent to scenario.
+    google.protobuf.Any Request = 2 [json_name = "request", (NYT.column_name) = "request"];
+    // Name of grpc handler corresponding to handlers config (TODO link).
+    string Handler = 3 [json_name = "handler", (NYT.column_name) = "handler"];
+}

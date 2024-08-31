@@ -1,0 +1,195 @@
+{% from "alice/hollywood/library/scenarios/music/nlg/music_tags__ar.nlg" import music_tags_data %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_tag_info %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ar.nlg" import render_repeated_skip with context %}
+
+
+{% macro try_render_prephrase() %}
+    {% set prephrase = context.get('prephrase') %}
+    {% if prephrase == 'master__start' %}
+        أولاً دعنا نتعرف على بعضنا بشكل أفضل.
+    {% endif %}
+{% endmacro %}
+
+
+{% macro try_render_subphrase(subphrase, capitalize=True) %}
+    {% if subphrase == 'artist__ask' %}
+        {% if capitalize %}
+            آ
+        {% endif %}
+        من مغنيك المفضل؟
+    {% elif subphrase == 'genre__ask' %}
+        {% if capitalize %}
+            آ
+        {% endif %}
+        إلى أي لون من ألوان الموسيقى تستمع؟
+    {% elif subphrase == 'track__game_ask' %}
+        {% set phrase =  'هيا نستمع؟ سأشغل لك عدة أغاني، وستقول لي إن أعجبتك أم لا.' %}
+        {% if capitalize %}
+            {{ phrase | capitalize_first }}
+        {% else %}
+            {{ phrase }}
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+
+{% phrase album__like %}
+    حسناً، وضعت إعجاب على الألبوم!
+{% endphrase %}
+
+
+{% phrase artist__ask %}
+    {{ try_render_prephrase() }}
+    من مغنيك الفضل؟
+{% endphrase %}
+
+{% phrase artist__like %}
+    {% if context.artist_name %}
+        {{ context.artist_name | capitalize }}، اختيار رائع!
+    {% else %}
+        حسناً، وضعت إعجاب للمغني!
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__dislike %}
+    {% if context.reask %}
+        حسناً، وضعت عدم إعجاب. أي مغنٍ يعجبك؟
+    {% else %}
+        حسناً، أعطيت المغني عدم إعجاب.
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__no_search_slot %}
+    اعذرني، لم أفهم اسم الشخص. {% if context.reask %} هل يمكنك تكراره؟{% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase artist__not_found %}
+    عذراً، لم أستطع العثور على هذا المغني. {% if context.reask %} من يعجبك أيضاً؟ {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+
+{% phrase track__like %}
+    حسناً، وضعت إعجاباً للمقطع الصوتي!
+{% endphrase %}
+
+{% phrase track__dislike %}
+    حسناً، وضعت عدم إعجاب للتسجيل.
+{% endphrase %}
+
+{% phrase track__game_start %}
+    حسناً! جاري تشغيل المقطع الأول، قل لي إن أعجبك أم لا.
+{% endphrase %}
+
+{% phrase track__game_start_master %}
+    حسناً! جاري تشغيل المقطع الأول.
+{% endphrase %}
+
+{% phrase track__game_start_decline %}
+    طيب.
+{% endphrase %}
+
+{% phrase track__reask %}
+    أودُّ أن أسأل. هل تعجبك هذه الأغنية؟ قل إعجاب.
+{% endphrase %}
+
+{% phrase track__game_like %}
+    {% chooseline %}
+        مرحى! لقد نجحت! اسمع هذا الآن.
+        ممتاز! استمع إلى هذا أيضاً.
+        يسعدني ذلك كثيراً! ما رأيك بهذا؟
+    {% endchooseline %}
+{% endphrase %}
+
+{% phrase track__game_dislike %}
+    {% chooseline %}
+        فهمت.
+        تذكرت!
+        يا للأسف.
+    {% endchooseline %}
+    {% set proposal = render_repeated_skip() | trim %}
+    {% if proposal %}
+        {{ proposal }}
+    {% else %}
+        {% chooseline %}
+            استمع إلى هذا الآن.
+            والآن جرب هذا.
+            ماذا عن هذا؟
+        {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+{% phrase track__game_almost_over %}
+    طيب، سنجرب الأخير.
+{% endphrase %}
+
+{% phrase track__game_end %}
+    حسناً تذكرت. من الآن فصاعداً بمجرد أن تطلب أن أشغل موسيقى سأنطلق مما تفضل. هلا نستمع؟
+{% endphrase %}
+
+{% phrase track__game_music_play_decline %}
+    حسناً. يمكنك أن تقول لي متى شئت "أليسا، شغلي موسيقى".
+{% endphrase %}
+
+{% phrase track__repeated_skip_decline %}
+    حسناً، سأتابع تشغيل الموسيقى، وستقول لي أنت إن كانت تعجبك أم لا.
+{% endphrase %}
+
+
+{% phrase genre__ask %}
+    {{ try_render_prephrase() }}
+    إلى أي لون من ألوان الموسيقى تستمع في معظم الأحيان؟
+{% endphrase %}
+
+{% phrase genre__like %}
+    {% set genre_info = music_tags_data.get('genre') %}
+    {% set genre = render_tag_info(genre_info, context.genre_id) if context.genre_id else '' %}
+    {% if genre %}
+        {{ genre | capitalize }}، يعجبني!
+    {% else %}
+        حسناً، وضعت إعجاب لهذا النوع!
+    {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase genre__no_slot %}
+    لا أستطيع العثور على هذا النوع. {% if context.reask %} هلا كررت؟ {% endif %}
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+
+{% phrase asking__repeat %}
+    {% if context.reask %}
+        لنحاول مرة أخرى:
+        {{ try_render_subphrase(context.subphrase_repeat, False) }}
+    {% else %}
+        حسناً، عندما تقرر، قل: أليسا، اضبطي تفضيلاتي الموسيقية.
+    {% endif %}
+{% endphrase %}
+
+
+{% phrase no_subscription__like_dislike %}
+    لكي تضع إعجاب أو عدم إعجاب للموسيقى تحتاج إلى اشتراك على موسيقى.
+{% endphrase %}
+
+{% phrase no_subscription__onboarding %}
+    لضبط إعدادات توصيات الموسيقى، تحتاج إلى اشتراك على موسيقى.
+{% endphrase %}
+
+{% phrase unsupported_found__like %}
+    اعذرني، فأنا حالياً أستطيع وضع إعجاب فقط للأغاني، والمغنيين والألبومات والألوان الموسيقية.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase unsupported_found__dislike %}
+    آسفة، حالياً أنا أستطيع وضع عدم الإعجاب للأغاني والمغنيين فقط.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}
+
+{% phrase nothing_found %}
+    عذراً، لم أعثر على طلبك.
+    {{ try_render_subphrase(context.subphrase) }}
+{% endphrase %}

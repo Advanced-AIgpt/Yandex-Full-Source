@@ -1,0 +1,22 @@
+OWNER(g:alice_iot)
+
+RECURSE(
+    bass
+    begemot
+    cmd
+    config
+    controller
+    db
+    dto
+    errors
+    logging
+    megamind
+    model
+    nlg
+    protos
+    provider
+    render
+    server
+    testing
+    xtest
+)

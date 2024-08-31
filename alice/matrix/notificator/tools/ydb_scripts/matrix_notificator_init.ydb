@@ -1,0 +1,179 @@
+--!syntax_v1
+
+-- Connections index
+
+-- [BEGIN DeviceLocatorSchema]
+CREATE TABLE device_locator (
+    shard_key Uint64,
+    puid String,
+    device_id String,
+    host String,
+
+    ts Uint64,
+    device_model String,
+    ttl Datetime,
+    config String,
+
+    PRIMARY KEY (shard_key, puid, device_id, host),
+
+    INDEX device_locator_list GLOBAL ON (device_id)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 50,
+    AUTO_PARTITIONING_MAX_PARTITIONS_COUNT = 100,
+
+    TTL = Interval("PT12H") ON ttl
+);
+-- [END DeviceLocatorSchema]
+
+-- [BEGIN ConnectionsShardedSchema]
+CREATE TABLE connections_sharded (
+    shard_key Uint64,
+    ip String,
+    ip_shard_id Uint64,
+    puid String,
+    device_id String,
+
+    port Uint32,
+    monotonic Uint64,
+    device_info String,
+
+    created_at Timestamp,
+    expired_at Timestamp,
+
+    PRIMARY KEY (shard_key, ip, ip_shard_id, puid, device_id),
+
+    INDEX ix_puid_device_id_async GLOBAL ASYNC ON (puid, device_id, ip, ip_shard_id) COVER (port, monotonic, device_info, created_at)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 50,
+    AUTO_PARTITIONING_MAX_PARTITIONS_COUNT = 100,
+
+    TTL = Interval("PT0S") ON expired_at
+);
+-- [END ConnectionsShardedSchema]
+
+-- Technical pushes
+
+CREATE TABLE directives (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+    push_id String,
+
+    directive String,
+    status Uint32,
+    created_at Timestamp,
+    expired_at Timestamp,
+
+    PRIMARY KEY (shard_key, yandexid, device_id, push_id),
+
+    INDEX ix_push_id GLOBAL ON (push_id)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10,
+
+    TTL = Interval("PT0S") ON expired_at
+);
+
+-- Notifications
+
+CREATE TABLE user_subscriptions (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+    subscription_id Uint64,
+
+    `timestamp` Uint64,
+
+    PRIMARY KEY (shard_key, yandexid, device_id, subscription_id),
+
+    INDEX user_subs_list GLOBAL ON (subscription_id, `timestamp`)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);
+
+CREATE TABLE device_subscriptions (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+
+    subscribed Bool,
+
+    PRIMARY KEY (shard_key, yandexid, device_id)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);
+
+CREATE TABLE archived_notifications (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+    unid String,
+
+    notification_id String,
+    read Bool,
+    notification String,
+    ts Uint64,
+    ttl Datetime,
+    subscription_id String,
+
+    PRIMARY KEY (shard_key, yandexid, device_id, unid)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10,
+
+    TTL = Interval("PT0S") ON ttl
+);
+
+CREATE TABLE current_notifications (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+    unid String,
+
+    notification_id String,
+    read Bool,
+    notification String,
+    ts Uint64,
+    ttl Datetime,
+    subscription_id String,
+
+    PRIMARY KEY (shard_key, yandexid, device_id, unid)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10,
+
+    TTL = Interval("PT0S") ON ttl
+);
+
+CREATE TABLE unique_notifications (
+    shard_key Uint64,
+    yandexid String,
+    hash Uint64,
+
+    ttl Datetime,
+
+    PRIMARY KEY (shard_key, yandexid, hash)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10,
+
+    TTL = Interval("PT0S") ON ttl
+);
+
+CREATE TABLE notification_sync (
+    shard_key Uint64,
+    yandexid String,
+    device_id String,
+
+    ts Uint64,
+    last_min_ts Uint64,
+
+    PRIMARY KEY (shard_key, yandexid, device_id)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);

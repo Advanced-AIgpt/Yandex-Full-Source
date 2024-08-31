@@ -1,0 +1,40 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ru.nlg" import timer, timeri, render_error, render_timer, render_timer_list, no_such_timer, suggest_show_timers %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% elif context.attentions.get('multiple_timers') %}
+    {{ render_timer_list(context.data.available_timers) }}\n{% vc %}-{% evc %}
+    {% if context.data.available_timers|length > 1 %}
+      Какой из них вы хотите удалить?
+    {% else %}
+      Вы хотите его удалить?
+    {% endif %}
+  {% else %}
+    Хорошо, удалила
+    {% if context.data.timer_id == 'all' %}
+      все {{ timeri() }}.
+    {% else %}
+      {{ render_timer(None, False, context.data.specification) }}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'not_supported' %}
+    {% chooseitem %}
+      Нет, {{ timer() }} я пока не умею удалять. Но это временно.
+    {% or %}
+      Я пока не умею удалять {{ timeri() }} на этом устройстве, но когда-нибудь научусь.
+    {% endchooseitem %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    Не понимаю какой {{ timer() }} вы хотите отменить.
+  {% else %}
+    {% if context.data.time %}
+      {{ render_error(context.error.data.code, time=context.data.time) }}
+    {% else %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

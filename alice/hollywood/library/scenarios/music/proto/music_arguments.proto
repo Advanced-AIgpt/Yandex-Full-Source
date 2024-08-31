@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+import "alice/hollywood/library/scenarios/music/proto/music_context.proto";
+import "alice/library/geo/protos/user_location.proto";
+import "alice/megamind/protos/common/environment_state.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/protos/data/scenario/music/content_info.proto";
+
+package NAlice.NHollywood; // XXX(vitvlkv): NAlice.NHollywood.NMusic would be better here
+
+option go_package = "a.yandex-team.ru/alice/hollywood/library/scenarios/music/proto";
+option java_package = "ru.yandex.alice.hollywood.library.scenarios.music.proto";
+option java_outer_classname = "MusicArguments";
+
+// apply arguments for the music scenario
+message TMusicArguments {
+    enum EPlayerCommand {
+        None = 0;
+        NextTrack = 1;
+        PrevTrack = 2;
+        Continue = 3;
+        // NOTE: That Pause (or Stop) is implemented in a different scenario, Commands
+        reserved 4; reserved "WhatIsPlaying";
+        Like = 5;
+        Dislike = 6;
+        Shuffle = 7;
+        Replay = 8;
+        Rewind = 9;
+        Repeat = 10;
+        Unshuffle = 11;
+        reserved 12; reserved "SendSongText";
+        ChangeTrackNumber = 13;
+        ChangeTrackVersion = 14;
+        reserved 15; reserved "WhatYearIsThisSong";
+        reserved 16; reserved "WhatAlbumIsThisSongFrom";
+    }
+
+    message TMusicSearchResult {
+        string ContentId = 1 [json_name = "content_id"];
+        string ContentType = 2 [json_name = "content_type"];
+        string ScenarioAnalyticsInfo = 3 [json_name = "scenario_analytics_info"];
+        string Name = 4 [json_name = "name"]; // Name of an artist
+        string Title = 5 [json_name = "title"]; // Title of a playlist
+        bool IsPersonal = 6 [json_name = "is_personal"]; // Used in NLG
+        string TrackGenre = 7 [json_name = "track_genre"];
+        string AlbumGenre = 8 [json_name = "album_genre"];
+        string ArtistGenre = 9 [json_name = "artist_genre"];
+        string Subtype = 10 [json_name = "subtype"];
+    }
+
+    message TPlaybackOptions {
+        bool Shuffle = 1  [json_name = "shuffle"];
+        NAlice.NHollywood.NMusic.ERepeatType RepeatType = 2 [json_name = "repeat_type"];
+        bool DisableAutoflow = 4 [json_name = "disable_autoflow"];
+        bool PlaySingleTrack = 5 [json_name = "play_single_track"];
+        bool DisableNlg = 6 [json_name = "disable_nlg"];
+        uint32 TrackOffsetIndex = 7 [json_name = "track_offset_index"];
+        string StartFromTrackId = 8 [json_name = "start_from_track_id"];
+        string From = 9 [json_name = "from"];
+        bool DisableHistory = 10 [json_name = "disable_history"];
+        string Offset = 11 [json_name = "offset"];
+        bool UseIchwill = 12 [json_name = "use_ichwill"];
+        NAlice.NData.NMusic.TContentInfo ContentInfo = 14 [json_name = "content_info"];
+        string TrackVersion = 15 [json_name = "track_version"];
+    }
+
+    message TBiometryResult {
+        // Actually, it's IsIncognitoUser. "Guest user" term has new semantic since https://st.yandex-team.ru/HOLLYWOOD-537
+        bool IsGuestUser = 1 [json_name = "is_guest_user"];
+        string OwnerName = 2 [json_name = "owner_name"];
+    }
+
+    enum EExecutionFlowType {
+        BassDefault = 0;
+        BassRadio = 1;
+        ThinClientDefault = 2;
+        ComplexLikeDislike = 3;
+        MusicSdkSubgraph = 4;
+    }
+
+    message TFairyTaleArguments {
+        bool IsFairyTaleSubscenario = 1 [json_name = "is_fairy_tale_subscenario"];
+        bool IsBedtimeTales = 2 [json_name = "is_bedtime_tales"];
+        bool IsOndemand = 3 [json_name = "is_ondemand"];
+    }
+
+    message TAmbientSoundArguments {
+        bool IsAmbientSoundRequest = 1 [json_name = "is_ambient_sound_request"];
+    }
+
+    message TAnalyticsInfoData {
+        EPlayerCommand PlayerCommand = 1 [json_name = "player_command"];
+    }
+
+    message TGuestCredentials {
+        string Uid = 1 [json_name = "uid"];
+        string OAuthTokenEncrypted = 2 [json_name = "oauth_token_encrypted"]; // 1) AES-encrypted and then 2) base64-encoded
+    }
+
+    reserved 1;
+    string BassScenarioState = 2 [json_name = "bass_scenario_state"];
+    string Fixlist = 3 [json_name = "fixlist"];
+
+    EPlayerCommand PlayerCommand = 4 [json_name = "player_command"];
+
+    reserved 5; reserved "Puid";
+
+    TMusicSearchResult MusicSearchResult = 6 [json_name = "music_search_result"];
+    TPlaybackOptions PlaybackOptions = 7 [json_name = "playback_options"];
+
+    TBiometryResult BiometryResult = 8 [json_name = "biometry_result"];
+
+    EExecutionFlowType ExecutionFlowType = 9 [json_name = "execution_flow_type"];
+
+    NAlice.NHollywood.NMusic.TAccountStatus AccountStatus = 10 [json_name = "account_status"];
+
+    NAlice.NHollywood.NMusic.TPlaylistRequest PlaylistRequest = 11 [json_name="playlist_request"];
+
+    reserved 12; reserved "WeeklyPromoConfig";
+
+    NAlice.NHollywood.NMusic.TRadioRequest RadioRequest = 13 [json_name = "radio_request"];
+
+    double OffsetMs = 14 [json_name = "offset_ms"];
+
+    bool IsShotPlaying = 15 [json_name = "is_shot_playing"];
+
+    NAlice.NHollywood.NMusic.TGenerativeRequest GenerativeRequest = 16 [json_name = "generative_request"];
+
+    NAlice.NHollywood.NMusic.TOnDemandRequest OnDemandRequest = 17 [json_name = "on_demand_request"];
+
+    string RadioStationId = 18 [json_name = "radio_station_id"];
+
+    string From = 19 [json_name = "from"];
+
+    reserved 20; reserved "FmRadioConfig";
+
+    TAnalyticsInfoData AnalyticsInfoData = 21 [json_name = "analytics_info_data"];
+
+    NAlice.NHollywood.NMusic.TComplexLikeDislikeRequest ComplexLikeDislikeRequest = 22 [json_name = "complex_like_dislike_request"];
+
+    reserved 23; reserved "ShouldActivateMultiroom";
+
+    TFairyTaleArguments FairyTaleArguments = 24 [json_name = "fairy_tale_arguments"];
+
+    bool OnboardingTracksGame = 25 [json_name = "onboarding_tracks_game"];
+
+    NAlice.TUserLocationProto UserLocation = 26 [json_name = "user_location"];
+
+    bool HasSmartDevices = 27 [json_name = "has_smart_devices"];
+
+    reserved 28; reserved "FmRadioRequest";
+
+    NAlice.TIoTUserInfo IoTUserInfo = 29 [json_name = "iot_user_info"];
+
+    reserved 30; reserved "MakeInfiniteFeedRequest";
+
+    TEnvironmentState EnvironmentState = 31 [json_name = "environment_state"];
+
+    TGuestCredentials GuestCredentials = 32 [json_name = "guest_credentials"];
+
+    TAmbientSoundArguments AmbientSoundArguments = 33 [json_name = "ambient_sound_arguments"];
+
+    bool IsOwnerEnrolled = 34 [json_name = "is_owner_enrolled"];
+
+    bool IsNewContentRequestedByUser = 35 [json_name = "is_new_content_requested_by_user"];
+}

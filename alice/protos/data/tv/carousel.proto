@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package NAlice.NTv;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/tv";
+option java_package = "ru.yandex.alice.protos.data.tv";
+option java_outer_classname = "Carousel";
+
+import "alice/protos/data/video/video.proto";
+import "alice/protos/data/tv/application.proto";
+import "alice/protos/data/tv/carousel_item_config/config.proto";
+import "alice/protos/div/div2card.proto";
+import "alice/protos/data/tv/music.proto";
+import "alice/protos/data/action/tv_action.proto";
+
+import "google/protobuf/struct.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TCarouselItemWrapper {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int32 Number = 1 [json_name = "number", (NYT.column_name) = "number"];
+
+    repeated TTvAction OnClickAction = 2 [json_name = "on_click_action", (NYT.column_name) = "on_click_action"];
+    repeated TTvAction OnLongClickAction = 3 [json_name = "on_long_click_action", (NYT.column_name) = "on_long_click_action"];
+    repeated TTvAction OnDoubleClickAction = 4 [json_name = "on_double_click_action", (NYT.column_name) = "on_double_click_action"];
+    NAlice.NTv.TItemConfig ItemConfig = 5 [json_name = "item_config", (NYT.column_name) = "item_config"];
+    google.protobuf.Struct CarouselItemGeneralAnalyticsInfoPayload = 6 [json_name = "carousel_item_general_analytics_info", (NYT.column_name) = "carousel_item_general_analytics_info"];
+
+    oneof Item {
+        option (NYT.variant_field_name) = "item";
+        TPersonItem PersonItem = 101 [json_name = "person_item", (NYT.column_name) = "person_item"];
+        TCollectionItem CollectionItem = 102 [json_name = "collection_item", (NYT.column_name) = "collection_item"];
+        TOttVideoItem VideoItem = 103 [json_name = "video_item", (NYT.column_name) = "video_item"];
+        TWebVideoItem SearchVideoItem = 104 [json_name = "search_video_item", (NYT.column_name) = "search_video_item"];
+        TRecentApplicationsItem RecentApplicationsItem = 105 [json_name = "recent_applications_item", (NYT.column_name) = "recent_applications_item"];
+        TMusicItem MusicItem = 106 [json_name = "music_item", (NYT.column_name) = "music_item"];
+    }
+}
+
+message TCarousel {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+    repeated TCarouselItemWrapper Items = 2 [json_name = "items", (NYT.column_name) = "items"];
+    string Id = 3 [json_name = "id", (NYT.column_name) = "id"];
+    string CacheHash = 4 [json_name = "cache_hash", (NYT.column_name) = "cache_hash"];
+}
+
+message TDivCarousel {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    reserved 2; reserved "DivJson";
+    int32 ElementsCount = 3 [json_name = "elements_count", (NYT.column_name) = "elements_count"];
+    TDiv2Card DivCardJson = 4 [json_name = "div_card_json", (NYT.column_name) = "div_card_json"];
+    string Title = 5 [json_name = "title", (NYT.column_name) = "title"];
+}
+
+// Lets client know that on this position may be another carousel, but for now, it has no items
+// For example: "My KP", "Continue watching"
+message TEmptyCarousel {
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+}

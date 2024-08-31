@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "ActionSpaceProto";
+
+import "alice/megamind/protos/common/frame.proto";
+
+message TActionSpace {
+    message TAction {
+        oneof Effect {
+            TSemanticFrameRequestData SemanticFrame = 1 [json_name = "semantic_frame"];
+            // todo: add directive list
+        }
+    }
+
+    message TNluHint {
+        // A reference to corresponding Action in actions field. Required
+        string ActionId = 1 [json_name = "action_id"];
+        // The name of frame to be matched. Required
+        string SemanticFrameName = 2 [json_name = "semantic_frame_name"];
+    }
+
+    // Mapping from ActionId to Action, it's used by deeplinking and nlu hints
+    map<string, TAction> Actions = 1 [json_name = "effects"];
+    // List of nlu hints to be push to client, these hints could be matched to the user request
+    // and the corresponding action will be invoked
+    repeated TNluHint NluHints = 2 [json_name = "nlu_hints"];
+}

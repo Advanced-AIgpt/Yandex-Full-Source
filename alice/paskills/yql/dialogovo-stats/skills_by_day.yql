@@ -1,0 +1,70 @@
+use hahn;
+pragma yt.Pool='paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$dt = CurrentUtcDate();
+$additional_surfaces = AsList('mobile','desktop');
+
+/*
+-- fill historic data
+--insert into `//home/paskills/stat/skills_by_day` with truncate
+select  T.fielddate as fielddate,
+        T.id as id,
+        T.name as name,
+        T.slug as slug,
+        T.category as category,
+        T.channel as channel,
+        T.surfaces as surfaces,
+        T.developerType as developerType,
+        T.developerName as developerName,
+        T.onAir as onAir,
+        T.createdAt as createdAt,
+        Q.hideInStore as hideInStore,
+        coalesce(Q.skillAccess, case Q.channel
+            when 'aliceSkill' then if(Q.hideInStore, 'hidden', 'public')
+            when 'smartHome' then if(Q.hideInStore, 'private', 'public')
+            else null end) as skillAccess,
+        Q.isTrusted as isTrusted,
+        Q.useAppmetrica as useAppmetrica,
+        Q.useStateStorage as useStateStorage,
+        String::Strip(Q.grammarsBase64??'') != '' as userGranet,
+        Q.isRecommended??false as isRecommended,
+        Q.rsyPlatformId??'' != '' as rsyEnabled
+from `//home/paskills/stat/skills_by_day` as T
+left join `//home/paskills/skills/stable` as Q on T.id = Q.id;
+*/
+
+insert into @old_data
+select * from `//home/paskills/stat/skills_by_day`
+where fielddate != $dt;
+commit;
+
+insert into `//home/paskills/stat/skills_by_day` with truncate
+select  $dt as fielddate,
+        id,
+        name,
+        slug,
+        category??'unknown' as category,
+        channel,
+        unwrap(ListExtend(Yson::ConvertToStringList(surfaces), $additional_surfaces) ?? AsList()) as surfaces,
+        case developerType when 'external' then 'External' when 'yandex' then 'Yandex' else developerType end??'External' as developerType,
+        developerName,
+        onAir,
+        DateTime::MakeDate(DateTime::ParseIso8601(createdAt)) as createdAt,
+        hideInStore,
+        skillAccess,
+        isTrusted as isTrusted,
+        useAppmetrica as useAppmetrica,
+        useStateStorage as useStateStorage,
+        String::Strip(grammarsBase64??'') != '' as userGranet,
+        isRecommended??false as isRecommended,
+        rsyPlatformId??'' != '' as rsyEnabled,
+        userId,
+from `//home/paskills/skills/stable`
+where 1=1
+and channel != 'organizationChat'
+and DateTime::MakeDate(DateTime::ParseIso8601(createdAt)) < $dt
+and (deletedAt is null or DateTime::MakeDate(DateTime::ParseIso8601(deletedAt)) >= $dt)
+union all
+select * from @old_data
+;

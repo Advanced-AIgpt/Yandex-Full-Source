@@ -1,0 +1,156 @@
+{% macro render_fairytale_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  {% if what_is_playing %}
+    يعمل الآن
+    {% if 'قصة' not in normalized_title %}
+      قصة
+    {% endif %}
+  {% else %}
+    {{ render_content_with_saved_progress() }}
+    {% if 'قصة' not in normalized_title %}
+      قصة
+    {% elif music_answer.type == 'playlist' %}
+      مجموعة مختارة
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_fairytale_answer(req_info, music_answer, is_general_playlist=False, what_is_playing=False) %}
+  {% if is_general_playlist and context.is_bedtime_tales and context.attentions.get('bedtime_tales_onboarding_thin_player') %}
+      جاري تشغيل قصص قبل النوم. سيتم إطفاء المكبر عند انتهاء القصة، ولكن ليس قبل 15 دقيقة.
+  {% elif is_general_playlist and context.is_bedtime_tales and context.attentions.get('bedtime_tales_onboarding') %}
+      جاري تشغيل قصص قبل النوم. سيعمل المكبر خلال 15 دقيقة.
+  {% elif is_general_playlist and context.is_bedtime_tales %}
+      جار تشغيل قصص ما قبل النوم.
+  {% elif is_general_playlist and context.attentions.get('show_child_age_promo') %}
+    {% chooseline %}
+      جاري تشغيل القصص. هل تريد أن أرتبها حسب عمر الطفل؟ إذاً قل لي في تطبيق ياندكس على هاتفك: "أليسا، رتبي القصص".
+      سأشغل قصة. لكي أختار واحدة تناسب العمر، قل لي في تطبيق ياندكس على هاتفك: "أليسا، اختاري قصة".
+      جاري تشغيل القصص. بالمناسبة، يمكن اختيارها حسب عمر الطفل. فقط قل لي في تطبيق ياندكس في هاتفك: "أليسا، قومي بإعداد القصص".
+    {% endchooseline %}
+  {% elif is_general_playlist or req_info.experiments['fairytale_radio'] != None and music_answer.type == 'filters' %}
+      جاري تشغيل القصص.
+  {% else %}
+    {{ render_fairytale_answer_beginning(music_answer, what_is_playing) }}
+    {% if music_answer.title %}
+      "{{ music_answer.title }}"
+    {% endif %}
+    .
+  {% endif %}
+  {% if context.attentions.get('can_start_from_the_beginning') %}
+    للتشغيل مجدداً، قل: "أليسا، شغلي مجدداً".
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer_beginning(music_answer, what_is_playing=False) %}
+{% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  جاري التشغيل.
+  {% if music_answer.type == 'track' and 'قصيدة' not in normalized_title %}
+    شعر
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer(music_answer, what_is_playing=False) %}
+  {{ render_poem_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  {% set title_tokens = normalized_title.split() %}
+  {% set has_podcast_in_title = 'podcast' in normalized_title or 'برنامج إذاعي' in normalized_title %}
+
+  {% if what_is_playing %}
+    يعمل الآن
+    {% if 'الحلقة' not in title_tokens %}
+      الحلقة
+    {% endif %}
+  {% else %}
+    {% if not context.attentions.get('music_restricted_by_child_content_settings') %}
+      {{ render_content_with_saved_progress() }}
+      {% if music_answer.type == 'track' and not 'الحلقة' in title_tokens %}
+        الحلقة
+      {% elif music_answer.type == 'album' and not has_podcast_in_title %}
+        برنامج إذاعي
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer(music_answer, what_is_playing=False) %}
+  {% if context.attentions.get('podushki_show') %}
+    {% if context.attentions.get('used_saved_progress') %}
+      سأتابع تشغيل برنامج صباح السعودية من اللحظة التي توقفنا عندها. لتشغيله مجدداً، قل: "أليسا، شغلي مجدداً".
+    {% else %}
+      شغلي صباح السعودية.
+    {% endif %}
+  {% else %}
+    {{ render_podcast_answer_beginning(music_answer, what_is_playing) }}
+    {% if music_answer.title %}
+      "{{ music_answer.title }}"
+    {% endif %}
+    .
+    {% if context.attentions.get('can_start_from_the_beginning') %}
+       لتشغيل آخر حلقة، قل: "أليسا، شغلي من البداية".
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_restricted_by_content_settings() %}
+    من الأفضل أن تستمع إلى البرنامج الإذاعي برفقة والديك.
+{% endmacro %}
+
+{% macro render_audiobook_answer_beginning(music_answer, what_is_playing=False) %}
+  {% if what_is_playing %}
+    يعمل الآن
+  {% else %}
+    {{ render_content_with_saved_progress() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_audiobook_answer(music_answer, what_is_playing=False) %}
+  {{ render_audiobook_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+  .
+  {% if context.attentions.get('can_start_from_the_beginning') %}
+    لتشغيله مجدداً، قل: "أليسا، شغلي من البداية".
+  {% endif %}
+{% endmacro %}
+
+{% macro render_ambient_sound_answer_beginning(music_answer) %}
+  جاري التشغيل.
+{% endmacro %}
+
+{% macro render_ambient_sound_answer(music_answer) %}
+  {{ render_ambient_sound_answer_beginning(music_answer) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_authorization_from_fairytale() %}
+  {% chooseline %}
+    من فضلك أدخل إلى حسابك الشخصي على ياندكس لكي أتمكن من تشغيل القصص بالكامل. في هذه الأثناء استمع إلى مقطع.
+    أرجوك قم بتسجيل الدخول إلى حسابك حتى أتمكن من تشغيل القصص التي تحبها لك بالكامل. أمّا الآن - فإليك مقطع.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_yaplus_fairytale() %}
+  {% chooseline %}
+    تستطيع الحصول على مقطع من القصة فقط دون اشتراك. هذا ليس سيئاً ولكن باشتراك سيكون ممتاز.
+    يمكن الاستماع إلى مقطع من القصة دون اشتراك، لكن أكثر الأجزاء إثارة مازال ينتظرنا!
+    ستتوقف القصة عند أفضل جزء! احصل على اشتراك لتسمعها بالكامل.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_content_with_saved_progress() %}
+  {% if context.attentions.get('used_saved_progress') %}
+    سأتابع
+  {% else %}
+    جاري التشغيل.
+  {% endif %}
+{% endmacro %}

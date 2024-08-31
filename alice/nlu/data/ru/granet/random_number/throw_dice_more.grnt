@@ -1,0 +1,47 @@
+import: random_number/common.grnt
+
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+
+form alice.throw_dice.more:
+    is_action: true
+    root:
+        %lemma
+        # Реагирует на любое слово из набора: "брось" "еще" "кубики"
+        # Варианты типа "брось еще два кубика (со слотами)" обрабатываются через основной запрос
+        $MoreRoot+
+        %force_negative
+        [.* $NegativeRequestsDice]
+
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+        $AdditionalFillerDice
+        $Common.ToWant
+        $Common.Lets
+        $Common.PronounMe
+        $Common.Play
+        # дополнительные филлеры, которые в основном фрейме матчатся в ending
+        сделай
+        свой
+        твой
+
+$MoreRoot:
+        [$Again+ $MoreThrows* $Dice*]
+        [$Again* $MoreThrows+ $Dice*]
+        [$Again* $MoreThrows* $Dice+]
+        [$Again+ $Common.PlayGame* (в? $Dice)*]
+
+$MoreThrows:
+    $Common.Throw
+    %lemma
+    бросание
+    выбрасывание
+    делай ход
+    операция (с|по)?
+    перебрось
+    перевыбрось
+    переходи
+    последний (ход|бросок)

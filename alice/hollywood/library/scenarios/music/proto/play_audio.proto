@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package NAlice.NHollywood.NMusic;
+
+//Formal representation of play audio payload.
+//Used to fill payload struct of a callback.
+message TPlayAudioEvent{
+    string From = 1 [json_name = "from"];
+    string TrackId = 2 [json_name = "trackId"];
+    string ArtistId = 3 [json_name = "artistId"];
+    string PlayId = 4 [json_name = "playId"];
+    float TotalPlayedSeconds = 5 [json_name = "totalPlayedSeconds"];
+    float TrackLengthSeconds = 6 [json_name = "trackLengthSeconds"];
+    float EndPositionSeconds = 7 [json_name = "endPositionSeconds"];
+    string PlaylistId = 8 [json_name = "playlistId"];
+    string Uid = 9 [json_name = "uid"];
+    string RadioSessionId = 10 [json_name = "radioSessionId"];
+    bool Incognito = 11 [json_name = "incognito"];
+    string AlbumId = 12 [json_name = "albumId"];
+    string Context = 13 [json_name = "context"];
+    string ContextItem = 14 [json_name = "contextItem"];
+    reserved 15; reserved "Type";
+    string AlbumType = 16 [json_name = "albumType"];
+    bool ShouldSaveProgress = 17 [json_name = "should_save_progress"];
+    string BatchId = 18 [json_name = "batchId"];
+}
+
+message TRadioFeedbackEvent {
+    enum EType {
+        TypeUndefined = 0;
+        TrackStarted = 1;
+        Skip = 2;
+        TrackFinished = 3;
+        Dislike = 4;
+        RadioStarted = 5;
+    }
+    EType Type = 1 [json_name = "type"];
+    string StationId = 2 [json_name = "stationId"];
+    string BatchId = 3 [json_name = "batchId"];
+    string TrackId = 4 [json_name = "trackId"];
+    reserved 5; reserved "TotalPlayedSeconds";
+    reserved 6; reserved "Uid";
+    string RadioSessionId = 7 [json_name = "radioSessionId"];
+    string GuestOAuthTokenEncrypted = 8 [json_name = "guestOAuthTokenEncrypted"]; // 1) AES-encrypted and then 2) base64-encoded
+}
+
+message TShotFeedbackEvent {
+    enum EType {
+        Unknown = 0;
+        Skip = 1;
+        Play = 2;
+    }
+    string ShotId = 1 [json_name = "shotId"];
+    string EventId = 2 [json_name = "eventId"];
+    EType Type = 3 [json_name = "type"];
+    string From = 4 [json_name = "from"];
+    string PrevTrackId = 5 [json_name = "prevTrackId"];
+    string NextTrackId = 6 [json_name = "nextTrackId"];
+    string Context = 7 [json_name = "context"];
+    string ContextItem = 8 [json_name = "contextItem"];
+    string Uid = 9 [json_name = "uid"];
+}
+
+message TGenerativeFeedbackEvent {
+    enum EType {
+        TypeUndefined = 0;
+        StreamStarted = 1;
+        StreamPlay = 2;
+        StreamPause = 3;
+        TimestampLike = 4;
+        TimestampDislike = 5;
+        TimestampSkip = 6;
+    }
+    EType Type = 1 [json_name = "type"];
+    reserved 2; reserved "StationId";
+    string GenerativeStationId = 3 [json_name = "generativeStationId"];
+    string StreamId = 4 [json_name = "streamId"];
+    string GuestOAuthTokenEncrypted = 8 [json_name = "guestOAuthTokenEncrypted"]; // 1) AES-encrypted and then 2) base64-encoded
+}
+
+message TEvent {
+    oneof Event {
+        TPlayAudioEvent PlayAudioEvent = 1 [json_name = "playAudioEvent"];
+        TRadioFeedbackEvent RadioFeedbackEvent = 2 [json_name = "radioFeedbackEvent"];
+        TShotFeedbackEvent ShotFeedbackEvent = 3 [json_name = "shotFeedbackEvent"];
+        TGenerativeFeedbackEvent GenerativeFeedbackEvent = 4 [json_name = "generativeFeedbackEvent"];
+    }
+}
+
+message TCallbackPayload {
+    repeated TEvent Events = 1 [json_name = "events"];
+}

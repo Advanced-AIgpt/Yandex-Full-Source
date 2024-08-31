@@ -1,0 +1,37 @@
+{% from "alice/hollywood/library/scenarios/reminders/nlg/common__ru.nlg" import shoot_at %}
+
+{% phrase success %}
+  {% if context.everything %}
+    {% chooseline %}
+      Хорошо, удалила все напоминания.
+      Удалила все напоминания.
+    {% endchooseline %}
+  {% else %}
+    {% set amount = context.reminders|length %}
+    {% if amount > 0 %}
+      {% if amount == 1 %}
+        Хорошо, удалила напоминание "{{ context.reminders.0.text }}" на {{ shoot_at(context.reminders.0.datetime) }}.
+      {% else %}
+        Удалила {{ amount }} {{ 'напоминаниe' | pluralize(amount) }}:
+        {% for r in context.reminders %}
+          "{{ r.text }}" на {{ shoot_at(r.datetime) }}
+          {% if not loop.last %}
+          \n
+          {% endif %}
+        {% endfor %}.
+      {% endif %}
+    {% else %}
+      Вы успешно удалили напоминание.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+{% phrase fail %}
+  {% chooseline %}
+    Произошла ошибка при попытке удалить напоминание.
+    Не удалось удалить напоминание.
+  {% endchooseline %}
+{% endphrase %}
+{% phrase not_found %}
+  {% text %}Не могу удалить того, что не существует.{% endtext %}
+  {% voice %}Не могу удалить того что не существует.{% endvoice %}
+{% endphrase %}

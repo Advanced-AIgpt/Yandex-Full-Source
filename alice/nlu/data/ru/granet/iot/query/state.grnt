@@ -1,0 +1,68 @@
+import:
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/prepositions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/questions.grnt
+    common/verbs.grnt
+    iot/common.grnt
+
+
+form alice.iot.query.state.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source: $WhatsUpDevice
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source: $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $Common.LeftFiller* $WhatsUpDevice
+
+    $WhatsUpDevice:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "state"
+        }
+        %lemma
+        [$ExactWhat+ $DeviceWithPrepositions+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)* (находится|пребывает|$Common.At|$Common.With)*]
+
+    $ExactWhat:
+        %exact
+        (((что|че|чо) (с|со))|((что|че|чо)* как (c|со)*)) (состоянием|статусом)*
+        [(в каком|какое|какой)* (состояние|состоянии|статус|статусе)]
+
+$DeviceWithPrepositions:
+    ($Common.ConjunctionAnd|$Common.ConjunctionOr|$Common.With|у)* ($IotDeviceOrDemo|$user.iot.group)
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Now
+    $ExactTell
+    $Common.Check
+    ($Common.ConjunctionAnd|$Common.ConjunctionOr|$Common.At|$Common.From|у)* $Common.PronounMe
+    там

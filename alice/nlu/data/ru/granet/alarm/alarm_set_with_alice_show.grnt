@@ -1,0 +1,42 @@
+import: alarm/alarms.grnt
+import: common/filler.grnt
+import: common/commands.grnt
+import: common/pronouns.grnt
+import: alarm/alarm_set_alice_show.grnt
+
+form personal_assistant.scenarios.alarm_set_with_alice_show:
+    slots:
+        day_part:
+            type: custom.day_part
+            source:
+                $DayPart
+        age:
+            type: custom.age
+            source:
+                $Age
+        time:
+            source: $Alarm.SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+        date:
+            source: $sys.date; $Alarm.SlotWeekdays
+            type:
+                sys.weekdays
+                sys.date
+    root:
+        [$Alarm.Set* с* $Alarm.AliceShow+ (на|вместо|$Sound)* $Alarm.AlarmLemma* $OnTime+]
+        [$Alarm.WakeUp+ под* $Alarm.AliceShow+ $OnTime+]
+    filler:
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.Lets
+        $Common.PronounMe
+        $Common.PronounYou
+        хочу
+        утром
+        $nonsense
+
+$OnTime:
+    (на|в)? $Alarm.SlotTime|(на|в|по)? $sys.date|(на|в)? $Alarm.SlotWeekdays (дням|день|дни)?

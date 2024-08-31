@@ -1,0 +1,244 @@
+import: alarm/alarms.grnt
+import: common/commands.grnt
+import: common/nouns.grnt
+import: music/hardcoded.grnt
+import: music/music_play.grnt
+import: music/radio_play.grnt
+import: volume/commands.grnt
+import: sound/set_level.grnt
+
+form personal_assistant.scenarios.alarm_set_sound:
+    enable_alice_tagger: true
+    slots:
+        target_type:
+            source:
+                $TargetTypeTagged
+                $RadioTagged
+            type:
+                custom.target_type
+
+        this:
+            source:
+                $AlarmSound.This
+            type:
+                string
+
+        radio_freq:
+            source:
+                $custom.fm_radio_freq
+            type:
+                custom.fm_radio_freq
+
+        radio_search:
+            source:
+                $custom.fm_radio_station
+            type:
+                custom.fm_radio_station
+
+        # slots filled by tagger
+        music_search:
+            type:
+                custom.hardcoded_music
+                string
+
+        playlist:
+            type:
+                string
+
+        genre:
+            type:
+                custom.genre
+
+        mood:
+            type:
+                custom.mood
+
+        activity:
+            type:
+                custom.activity
+
+        epoch:
+            type:
+                custom.epoch
+
+        personality:
+            type:
+                custom.personality
+
+        special_playlist:
+            type:
+                custom.music.special_playlist
+                custom.special_playlist
+
+        repeat:
+            type:
+                custom.repeat
+
+    root:
+        [$AlarmSound.Set? $Sound<g:acc> (на $Alarm.AlarmLemma) $Repeated?]
+        [$WakeUp $Sound<g:ins> $Repeated?]
+        [$Change $AlarmSoundSetting]
+
+        %weight 0.01
+        [$AlarmSound.Set $SearchText $Repeated? ($AlarmSoundSetting|на все? $Alarm.AlarmLemma)]
+        [$WakeUp $Common.TheMusic? $SearchText]
+        [$Change $AlarmSoundSetting (на $SearchText)]
+        [($AlarmSoundSetting|на $Alarm.AlarmLemma) $SearchText]
+
+        %negative
+        [($Change|$AlarmSound.Set)* ($Alarm.AlarmLemma|$Alarm.WakeUp|подъем)+ (((на|в|по)? $Alarm.SlotTime|$sys.date|$Alarm.SlotWeekdays $Days?)|$DayPart|$Where|на? $App?)*]
+        [($Change|$AlarmSound.Set)* ($Alarm.AlarmLemma|$Alarm.WakeUp|подъем)+ ((на|в|по)? $Alarm.SlotTime) (((на|в|по)? $Alarm.SlotTime|$sys.date|$Alarm.SlotWeekdays $Days?)|$DayPart|$Where|на? $App?)* $SearchText]
+
+        [($Change|$AlarmSound.Set)* громкость (на $Alarm.AlarmLemma) $Volume.Preposition? ($OldRoot.Level | $OldRoot.VolumeDegree | $OldRoot.LevelEnum | $OldRoot.Root | $NewRoot.SmallNum | $NewRoot.Maximum | $NewRoot.Minimum | $NewRoot.SureLoud | $NewRoot.SureQuiet | $NewRoot.SureMiddle) $Percents?]
+        [$Common.Tell* $How+ ($Change|$AlarmSound.Set)+ $Sound+ (на? $Alarm.AlarmLemma)+]
+
+        [$Common.Play? $Alarm.MusicLikeAlarm]
+
+    filler:
+        $Common.About
+        $Common.Filler
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.WayToCallAlice
+        $Common.Lets
+        пусть
+        пускай
+        завтра
+        сегодня
+        утром
+        чтобы|для
+
+$AlarmSoundSetting:
+    [$Sound (на $Alarm.Alarm<g:abl|acc>)]
+    [(на $Sound) $Alarm.Alarm<g:gen>]
+    [$Sound $Alarm.Alarm<g:|gen>]
+
+    $Sound:
+        $Common.TheMusic
+        $Common.TheSound
+        $TrackTagged
+        звонок
+        сигнал
+
+$AlarmMusicSearchText:
+    $TargetTypeTagged<g:acc|ins> $SearchText
+
+$AlarmSound.Set:
+    $Common.Set
+    $Common.TurnOn
+
+$Repeated:
+    %type "custom.repeat"
+    %value "repeat"
+    на повторе
+    на репите
+    в цикле
+
+    без остановки
+    нон стоп
+    на повтор
+
+$Change:
+    поменяй
+    поменяем
+    поменять
+    замени
+    заменим
+    заменить
+    измени
+    изменим
+    изменить
+    смени
+    сменим
+    сменить
+
+$WakeUp:
+    %lemma
+    $Alarm.WakeUp
+    %lemma off
+    хочу просыпаться (под|с|от)?
+
+$Sound:
+    $AlarmSound.This ($Common.TheMusic|$TargetTypeTagged|$RadioTagged)?
+    $AlarmSound.This? $Personality? ($Common.TheMusic|$TargetTypeTagged|$RadioTagged)
+    $RadioSound
+    $RadioStream
+    $HardcodedPlaylist.Play
+    $HardcodedPlaylist.Listen
+    $custom.special_playlist
+
+$RadioSound:
+    [$RadioTagged+ $Station $Fm*]
+    [$Station $Fm*]
+
+$RadioStream:
+    [([$Stream+ $StreamFiller*] $StreamNameEnum) $StreamFiller*]
+    [$Stream* $MyWave $StreamFiller*]
+
+$AlarmSound.This:
+    $Common.PronounThis
+    $Common.Pronoun3Person
+
+$Personality:
+    $custom.personality
+
+$TargetTypeTagged:
+    $AlbumTagged
+    $ArtistTagged
+    $PlaylistTagged
+    $TrackTagged
+
+$AlbumTagged:
+    %type "custom.target_type"
+    %value "album"
+    $Common.TheAlbum
+
+$ArtistTagged:
+    %type "custom.target_type"
+    %value "artist"
+    $Common.TheArtist
+
+$PlaylistTagged:
+    %type "custom.target_type"
+    %value "playlist"
+    $Common.ThePlaylist
+
+$RadioTagged:
+    %type "custom.target_type"
+    %value "radio"
+    $Radio
+
+$TrackTagged:
+    %type "custom.target_type"
+    %value "track"
+    $Common.TheTrack
+
+$Days:
+    дни
+
+$DayPart:
+    $Alarm.DayPartPlural
+    $Alarm.DayPartWithoutWholeDay
+    $Alarm.DayPart
+
+$Where:
+    в? (универ|университет|школу|институт)
+    на? (работу|тренировку|занятия)
+
+$App:
+    телефон
+    часы
+    %negative
+    %lemma off
+    час
+
+$Percents:
+    %lemma
+    процент
+
+$How:
+    как
+    какие
+    каким образом
+

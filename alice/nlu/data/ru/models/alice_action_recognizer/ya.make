@@ -1,0 +1,16 @@
+OWNER(
+    volobuev
+    g:alice_quality
+)
+UNION()
+FROM_SANDBOX(
+    1746733916
+    OUT_NOAUTO
+    actions.json
+    model_description
+    model_description.json
+    model.mmap
+    model.pb
+    trainable_embeddings.json
+)
+END()

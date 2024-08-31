@@ -1,0 +1,87 @@
+package NJokerProto;
+
+message TStubLogEntry {
+    message TRequestInfo {
+        optional string FirstLine = 1;
+    };
+
+    message TSynced {
+        optional string Version = 1;
+    };
+
+    message TVersioned {
+        optional TSynced Synced = 1;
+        optional TRequestInfo Request = 2;
+    };
+
+    message TCreated {
+        // If `Recent` is true it means that in this run the stub is recretaed by making
+        // a remote request to an original source.
+        // If it happens every run it means that stub keys changes everytime which is not good.
+        optional bool Recent = 1;
+        optional TRequestInfo Request = 2;
+    };
+
+    message TModified {
+        // Unfortunately, both TVersioned and TCreated contains TRequestInfo data.
+        // It is the same!
+
+        optional TVersioned Versioned = 1;
+        optional TCreated Created = 2;
+    };
+
+    message TFailed {
+        optional string Message = 1;
+        optional TRequestInfo Request = 2;
+    };
+
+    oneof Type {
+        // Stub is synced but not requested.
+        // Usually it is a candifate for removing.
+        TSynced Synced = 1;
+
+        // Stub is synced and requested.
+        TVersioned Versioned = 2;
+
+        // A new version of stub returned (made a remote request, e.g. joker is allowed to fetch non existent stubs).
+        // No versioned data exists.
+        TCreated Created = 3;
+
+        // Stub is synced and has version but it also forced to recreate by making a remote request to an original source.
+        // A new version will be used.
+        TModified Modified = 4;
+
+        // Stub is requested but failed (in this case stub returns http error 418 i am a teapot).
+        // Usually because either there is no versioned data or joker is not allowed to fetch non existed stubs.
+        TFailed Failed = 5;
+    };
+
+    optional string ProjectId = 10;
+    optional string ParentId  = 11;
+    optional string ReqHash   = 12;
+};
+
+message TSessionInfo {
+    optional string Id = 1;
+    optional uint64 RunAtMs = 2;
+    optional string RunId = 3;
+    optional uint64 Flags = 4;
+};
+
+message TStubProto {
+    message TRequest {
+        optional string Url = 1;
+        optional string Data = 2;
+    };
+
+    message TResponse {
+        optional string FirstLine = 1;
+        optional string Data      = 2;
+    };
+
+    optional string    Version  = 1;
+    optional TResponse Response = 2;
+    optional TRequest  Request  = 3;
+    optional uint64    CreatedAtMs = 4;
+    optional uint64    DurationMs = 5;
+};

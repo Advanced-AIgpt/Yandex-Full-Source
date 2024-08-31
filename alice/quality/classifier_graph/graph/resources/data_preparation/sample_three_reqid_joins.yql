@@ -1,0 +1,27 @@
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT *
+FROM {{input1}}
+TABLESAMPLE BERNOULLI(70.0) REPEATABLE(125);
+COMMIT;
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT *
+FROM (
+  SELECT left.*
+  FROM {{input1}} as left
+  LEFT ONLY JOIN {{output1}} as right
+  USING(reqid)
+)
+TABLESAMPLE BERNOULLI(33.3);
+COMMIT;
+
+INSERT INTO {{output3}} WITH TRUNCATE
+SELECT left.*
+FROM (
+   SELECT left.*
+   FROM {{input1}} as left
+   LEFT ONLY JOIN {{output1}} as right
+   USING(reqid)
+) as left
+LEFT ONLY JOIN {{output2}} as right
+USING(reqid)

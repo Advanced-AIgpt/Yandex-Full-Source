@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package NAlice.NData;
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/centaur/teasers";
+option java_package = "ru.yandex.alice.protos.data.scenario.centaur.teasers";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+import "alice/protos/data/scenario/news/news.proto";
+import "alice/protos/data/scenario/photoframe/screen_saver.proto";
+import "alice/protos/data/scenario/afisha/afisha.proto";
+import "alice/protos/data/scenario/weather/weather.proto";
+import "alice/protos/data/scenario/dialogovo/skill.proto";
+
+import "google/protobuf/wrappers.proto";
+
+
+message TCentaurTeaserConfigData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string TeaserType = 1 [json_name = "teaser_type", (NYT.column_name) = "teaser_type", (NYT.flags) = SERIALIZATION_PROTOBUF];
+    string TeaserId = 2 [json_name = "teaser_id", (NYT.column_name) = "teaser_id", (NYT.flags) = SERIALIZATION_PROTOBUF];
+}
+
+message TTeaserSettingsData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    
+    message TeaserSetting {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TCentaurTeaserConfigData TeaserConfigData = 1 [json_name = "teaser_config_data", (NYT.column_name) = "teaser_config_data"];
+        bool IsChosen = 3 [json_name = "is_chosen", (NYT.column_name) = "is_chosen"];
+    }
+
+    repeated TeaserSetting TeaserSettings = 1 [json_name = "teaser_settings", (NYT.column_name) = "teaser_settings"];
+}
+
+message TTeaserPreviewScenarioData {
+    oneof PreviewScenarioData {
+        option (NYT.variant_field_name) = "preview_scenario_data";
+        NAlice.NData.TNewsTeaserData NewsTeaserData = 1 [json_name = "news_teaser_data", (NYT.column_name) = "news_teaser_data"];
+        NAlice.NData.TScreenSaverData ScreenSaverData = 2 [json_name = "screen_saver_data", (NYT.column_name) = "screen_saver_data"];
+        NAlice.NData.TAfishaTeaserData AfishaTeaserData = 3 [json_name = "afisha_teaser_data", (NYT.column_name) = "afisha_teaser_data"];
+        NAlice.NData.TWeatherTeaserData WeatherTeaserData = 4 [json_name = "weather_teaser_data", (NYT.column_name) = "weather_teaser_data"];
+        NAlice.NData.TDialogovoSkillTeaserData DialogovoTeaserCardData = 5 [json_name = "dialogovo_teaser_card_data", (NYT.column_name) = "dialogovo_teaser_card_data"];
+    
+    }
+}
+
+message TTeaserSettingsWithContentData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TeaserSettingWithPreview {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        TCentaurTeaserConfigData TeaserConfigData = 1 [json_name = "teaser_config_data", (NYT.column_name) = "teaser_config_data"];
+        bool IsChosen = 2 [json_name = "is_chosen", (NYT.column_name) = "is_chosen"];
+        string TeaserName = 3 [json_name = "teaser_name", (NYT.column_name) = "teaser_name"];
+        TTeaserPreviewScenarioData TeaserPreviewScenarioData = 4 [json_name = "teaser_preview_scenario_data", (NYT.column_name) = "teaser_preview_scenario_data"];
+    }
+
+    repeated TeaserSettingWithPreview TeaserSettingsWithPreview = 1 [json_name = "teaser_settings_with_preview", (NYT.column_name) = "teaser_settings_with_preview"];
+}
+
+
+message TTeasersPreviewData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TTeaserPreview {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        
+        TCentaurTeaserConfigData TeaserConfigData = 1 [json_name = "teaser_config_data", (NYT.column_name) = "teaser_config_data"];
+        string TeaserName = 2 [json_name = "teaser_name", (NYT.column_name) = "teaser_name"];
+        TTeaserPreviewScenarioData TeaserPreviewScenarioData = 3 [json_name = "teaser_preview_scenario_data", (NYT.column_name) = "teaser_preview_scenario_data"];
+    }
+
+    repeated TTeaserPreview TeaserPreviews = 1 [json_name = "teaser_previews", (NYT.column_name) = "teaser_previews"];
+}
+
+
+

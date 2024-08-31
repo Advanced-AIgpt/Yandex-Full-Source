@@ -1,0 +1,92 @@
+// PlantUML version from docs draws this diagram very badly
+// So the result is compiled by hand into png and added as image
+// Compiled with plantUML 1.2022.6beta2
+
+@startuml
+
+package "StartSyncIteration" {
+    [TryAcquireShardLock]
+}
+
+package "MoveActionRowsFromIncomingToProcessing" {
+    [GetIncomingActionRows]
+    package "MoveActionRowFromIncomingToProcessing" {
+        [DoMoveActionRowFromIncomingToProcessing]
+        [MoveActionRowFromIncomingToProcessingFinish]
+    }
+}
+
+
+package "PerformActionsFromProcessing" {
+    [GetProcessingActionRows]
+    package "PerformActionFromProcessing" {
+        [RemoveProcessingActionRowOnly]
+        [RemoveScheduledActionWithProcessingActionRow]
+
+        [GetActionData]
+        [CheckThatActionDataGuidMatches]
+        [CheckActionDeadline]
+        [RecalcActionStatusBeforePerformAndCheckSendPolicy]
+        [UpdateActionStatusAndRescheduleOnRetryTime]
+        [DoAction]
+        [RecalcActionStatusAfterPerformAndCheckSendPolicy]
+        [UpdateActionStatusAndReschedule]
+
+        [PerformActionFromProcessingFinish]
+    }
+}
+
+package "AwaitNewSyncIteration" {
+    [ReleaseShardLock]
+    [Sleep]
+}
+
+
+[Start] -r-> [TryAcquireShardLock]
+
+[TryAcquireShardLock] -r-> [GetIncomingActionRows] : "Succeeded"
+[TryAcquireShardLock] -d-> [Sleep] : "Failed"
+
+[GetIncomingActionRows] -d-> [DoMoveActionRowFromIncomingToProcessing] : "Succeeded"
+[GetIncomingActionRows] -d-> [GetProcessingActionRows] : "Failed"
+
+[DoMoveActionRowFromIncomingToProcessing] -d-> [MoveActionRowFromIncomingToProcessingFinish] : "Any result"
+[MoveActionRowFromIncomingToProcessingFinish] -u-> [DoMoveActionRowFromIncomingToProcessing] : "Has one more action to move"
+[MoveActionRowFromIncomingToProcessingFinish] -d-> [GetProcessingActionRows] : "No more actions to move"
+
+[GetProcessingActionRows] -d-> [GetActionData] : "Succeeded"
+[GetProcessingActionRows] -l-> [ReleaseShardLock] : "Failed"
+
+[GetActionData] -l-> [RemoveProcessingActionRowOnly] : "Action data not found"
+[GetActionData] -l-> [PerformActionFromProcessingFinish] : "Failed"
+[GetActionData] -d-> [CheckThatActionDataGuidMatches] : "Succeeded"
+
+[CheckThatActionDataGuidMatches] -l-> [RemoveProcessingActionRowOnly] : "Action guid not matches"
+[CheckThatActionDataGuidMatches] -d-> [CheckActionDeadline] : "Action guid matches"
+
+[CheckActionDeadline] -l-> [RemoveScheduledActionWithProcessingActionRow] : "Action deadline arrived"
+[CheckActionDeadline] -d-> [RecalcActionStatusBeforePerformAndCheckSendPolicy] : "Action deadline not arrived"
+
+[RecalcActionStatusBeforePerformAndCheckSendPolicy] -l-> [RemoveScheduledActionWithProcessingActionRow] : "Need to remove by send policy"
+[RecalcActionStatusBeforePerformAndCheckSendPolicy] -d-> [UpdateActionStatusAndRescheduleOnRetryTime] : "Ok to perform action"
+
+[UpdateActionStatusAndRescheduleOnRetryTime] -d-> [DoAction] : "Succeeded"
+[UpdateActionStatusAndRescheduleOnRetryTime] -l-> [PerformActionFromProcessingFinish] : "Failed"
+
+[DoAction] -d-> [RecalcActionStatusAfterPerformAndCheckSendPolicy] : "Any result"
+
+[RecalcActionStatusAfterPerformAndCheckSendPolicy] -l-> [RemoveScheduledActionWithProcessingActionRow] : "Need to remove by send policy"
+[RecalcActionStatusAfterPerformAndCheckSendPolicy] -d-> [UpdateActionStatusAndReschedule] : "Ok to to continue action performing"
+
+[UpdateActionStatusAndReschedule] -l-> [PerformActionFromProcessingFinish] : "Any status"
+
+[RemoveProcessingActionRowOnly] -d-> [PerformActionFromProcessingFinish] : "Any status"
+[RemoveScheduledActionWithProcessingActionRow] -d-> [PerformActionFromProcessingFinish] : "Any status"
+
+[PerformActionFromProcessingFinish] -d-> [GetActionData] : "Has one more action to move"
+[PerformActionFromProcessingFinish] -d-> [ReleaseShardLock] : "No more actions to perform"
+
+[ReleaseShardLock] -d-> [Sleep]
+[Sleep] -u-> [TryAcquireShardLock]
+
+@enduml

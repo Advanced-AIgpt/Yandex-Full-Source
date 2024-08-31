@@ -1,0 +1,121 @@
+USE hahn;
+
+
+$pre_activations_table = "//home/paskills/discovery/datasets/PreActivations/raw/2019-09-01-2020-02-01/all";
+$pre_clicks_table = "//home/paskills/discovery/datasets/PreClicks/raw/all";
+$toloka_folder = "//home/paskills/alisa/discovery/saas/markup/toloka/results/valid";
+$top_per_skill = 20;
+$min_query_freq = 20;
+
+$__IS_TOP = ($look, $created, $rating_avg, $rating_count, $wau) -> {
+    RETURN
+    $wau > 1000 AND
+    ($rating_avg >= 4 AND $rating_count >= 20)
+};
+
+$__skills = (
+    SELECT
+        skill.`id` as `id`,
+        skill.`name` as `name`,
+        `rating_count`,
+        `rating_avg`,
+        `wau`,
+        `isRecommended`,
+        $__IS_TOP(`look`, skill.`createdAt`, `rating_avg`, `rating_count`, `wau`) as isTop,
+    FROM hahn.`home/paskills/stat/skills_sum` as stat
+    INNER JOIN hahn.`//home/paskills/skills/stable` as skill
+    USING (id)
+    WHERE
+        `channel` == 'aliceSkill'
+);
+
+
+$__top_skills = (
+    SELECT * FROM $__skills
+    WHERE isTop and isRecommended
+);
+
+SELECT COUNT(*), COUNT_IF(isTop) as isTop ,COUNT_IF(isTop AND isRecommended) as isTop__and__isRecommended, FROM $__skills;
+
+SELECT * FROM $__top_skills;
+
+$tokenizer = TextProcessing::MakeTokenizer(
+    True as Lowercasing,
+    True as Lemmatizing,
+    "BySense" as SeparatorType,
+    AsList("Word", "Number") as TokenTypes
+);
+
+$pre_activations =
+(  SELECT
+    skill_id,
+    String::JoinFromList(ListMap($tokenizer(prev_query), ($x) -> { RETURN $x.Token; }), " ") as normalized_query,
+    prev_query as query
+    FROM
+        $pre_activations_table
+);
+
+$pre_clicks =
+(  SELECT
+    skill_id,
+    String::JoinFromList(ListMap($tokenizer(query), ($x) -> { RETURN $x.Token; }), " ") as normalized_query,
+    query as query
+    FROM
+        $pre_clicks_table
+    UNION ALL
+    (SELECT
+        skill_id,
+        String::JoinFromList(ListMap($tokenizer(next_query), ($x) -> { RETURN $x.Token; }), " ") as normalized_query,
+        next_query as query
+        FROM
+            $pre_clicks_table)
+);
+
+$pre_activations_clicks = (SELECT skill_id, query, normalized_query FROM $pre_activations UNION ALL (SELECT skill_id, query FROM $pre_clicks));
+
+$toloka_all_valid = (SELECT *
+FROM RANGE($toloka_folder));
+
+$pre_activations_clicks_toloka = (
+    SELECT *
+    FROM
+        $pre_activations_clicks
+    UNION ALL
+    (SELECT query, skill_id FROM $toloka_all_valid WHERE answer = "YES")
+);
+
+$pre_activations_clicks_toloka = (
+SELECT
+    pre_activations.query as query,
+    skills.id as skill_id,
+    skills.name as name,
+    COUNT(*) as weight
+FROM
+$pre_activations_clicks_toloka as pre_activations
+JOIN
+$__top_skills as skills
+ON skills.id = pre_activations.skill_id
+GROUP BY pre_activations.query, skills.id, skills.name);
+
+$pre_activations_clicks_toloka = (SELECT
+    query,
+    skill_id,
+    name,
+    weight,
+    ROW_NUMBER() over w as r
+FROM $pre_activations_clicks_toloka
+WINDOW w as (
+    PARTITION BY skill_id
+    ORDER BY weight desc
+));
+
+$pre_activations_clicks_toloka = (SELECT * FROM $pre_activations_clicks_toloka
+WHERE
+    r <= $top_per_skill AND
+    weight >= $min_query_freq);
+
+SELECT * FROM
+    $pre_activations_clicks_toloka
+ORDER BY skill_id, weight DESC;
+
+SELECT query FROM $pre_activations_clicks_toloka;

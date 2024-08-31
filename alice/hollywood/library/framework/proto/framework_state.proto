@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+import "alice/megamind/protos/scenarios/analytics_info.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+
+
+package NAlice.NHollywoodFw;
+
+//
+// Generic Hollywood frame work state
+//
+import "google/protobuf/any.proto";
+
+//
+// Arguments for scenes and renderer
+//
+message TProtoHwArguments {
+    reserved 1; // type_id // typeid of selected scene (deprecated)
+    reserved "TypeId";
+    // scene arguments
+    google.protobuf.Any Args = 2 [json_name = "scene_args"];
+    // selected semantic frame (i.e. selected intent)
+    string SemanticFrameName = 3 [json_name = "semantic_frame_name"];
+    // Scene name (will be used instead of TypeId)
+    string SceneName = 4 [json_name = "scene_name"];
+}
+
+message TProtoHwArgumentsRender {
+    reserved 1; // typeid of selected renderer (deprecated)
+    reserved "TypeId";
+    // render arguments
+    google.protobuf.Any Args = 2 [json_name = "render_args"];
+    // irrelevant renderer flag
+    bool IrrelevantFlag = 3 [json_name = "irrelevant_flag"];
+    // scene for selected renderer (syntax: `scenario_name/` or `scenario_name/scene_name`)
+    string ScenePath = 4 [json_name = "scene_path"];
+}
+
+//
+// Information about setup/sources
+//
+message TProtoSetupSource {
+    enum EResponseType {
+        Undefined = 0; /* unknown or user-define custom answer, can't be parsed by framework */
+        THttpResponse = 1; /* Standard NAppHostHttp::THttpResponse */
+    }
+    string OutgoingName = 1 [json_name = "outgoing_name"];
+    string IncomingName = 2 [json_name = "incoming_name"];
+    EResponseType ResponseType = 3 [json_name = "response_type"];
+}
+
+//
+// Error definition for scenarios
+//
+message TProtoHwError {
+    int32 ErrorCode = 1;
+    string Details = 2;
+    string Backtrace = 3;
+    string What = 4;
+    string Filename = 5;
+    int32 LineNumber = 6;
+    string NodeName = 7;  // Apphost node name (i.e. "/run")
+    string StageName = 8; // Local stage name (i.e. DispatchSetup, etc)
+}
+
+//
+// Generic state (stores to BaseRequestProto::State/BaseResponse::State)
+//
+message TProtoHwFramework {
+    reserved 1; reserved "SemanticFrame";
+    // Last time when scenario storage was updated
+    uint64 LastTimeUpdateStorage = 2 [json_name = "last_time_update_storage"];
+    // Scenario state (formelly TScenarioBaseRequest::State)
+    google.protobuf.Any ScenarioState = 3 [json_name = "scenario_state"];
+}
+
+//
+// Scene/Renderer state (pass through AppHost item)
+//
+message TProtoHwScene {
+    // Custom data set for AI
+    message TAnalyticsInfo {
+        // Actions
+        repeated NScenarios.TAnalyticsInfo.TAction Actions = 1 [json_name = "actions"];
+        // Semantic frame name
+        optional string SemanticFrameName = 2 [json_name = "semantic_frame_name"];
+        // Objects
+        repeated NScenarios.TAnalyticsInfo.TObject Objects = 3 [json_name = "objects"];
+        // Events
+        repeated NScenarios.TAnalyticsInfo.TEvent Events = 4 [json_name = "events"];
+        // Custom product scenario name
+        optional string AiPsn = 9 [json_name = "ai_psn"];
+        // Custom output frame name
+        optional string AiFrameName = 10 [json_name = "ai_frame_name"];
+    }
+    // Commit/Continue/Apply arguments when main and render are in different apphost nodes
+    message TCcaArguments {
+        enum ECcaType {
+            Run = 0;
+            Continue = 1;
+            Commit = 2;
+            Apply = 3;
+        }
+        ECcaType ArgumentType = 1 [json_name = "argument_type"];
+        google.protobuf.Any ScenarioArgs = 2 [json_name = "scenario_args"];
+    }
+
+    reserved 1; reserved "SelectedSceneName";
+    reserved 2; reserved "SemanticFrameName";
+    optional TProtoHwArguments SceneArgs = 3 [json_name = "scene_args"];
+    reserved 4; reserved "RenderArgs";
+    optional TProtoHwError Error = 5 [json_name = "error"];
+    repeated TProtoSetupSource NetworkRequests = 6 [json_name = "network_requests"];
+    optional TProtoHwArgumentsRender RendererArgs = 7 [json_name = "renderer_args"];
+    bool OldFlowSelected = 8 [json_name = "old_flow_selected"];
+    TAnalyticsInfo CustomAnalyticsInfo = 9 [json_name = "custom_analytics_info"];
+    optional NAlice.NScenarios.TScenarioRunResponse.TFeatures RunFeatures = 10 [json_name = "run_features"];
+    TCcaArguments CcaArguments = 11 [json_name = "cca_arguments"];
+    NScenarios.TMementoChangeUserObjectsDirective MementoDirective = 12 [json_name = "memento_directive"];
+
+}
+
+//
+// Message to pass framework state and scenario arguments to /continue /commit /apply
+// This protobuf is used as ContinueArguments/TCommitCandidate::Arguments/ApplyArguments
+//
+message TProtoHwSceneCCAArguments {
+    google.protobuf.Any ScenarioArgs = 1 [json_name = "scenario_args"];
+    TProtoHwScene ProtoHwScene = 2 [json_name = "proto_hw_scene"];
+}
+
+//
+// Empty message for various reasons
+//
+message TProtoHwfEmptyMessage {
+};

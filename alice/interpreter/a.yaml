@@ -1,0 +1,53 @@
+service: megamind
+title: Alice Translator
+
+ci:
+  release-title-source: flow
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  releases:
+    alice-interpreter-release:
+      title: Alice Translator
+      flow: release-alice-interpreter
+      auto: true
+      stages:
+        build:
+          title: Build
+          displace: true
+        stable:
+          title: Deploy
+
+  flows:
+    release-alice-interpreter:
+      title: Alice Translator
+      jobs:
+        build:
+          title: Build package
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/interpreter/package/package.json
+            resource_type: ALICE_INTERPRETER_PACKAGE
+            package_type: tarball
+            build_type: release
+            use_aapi_fuse: true
+            aapi_fallback: true
+            build_system: semi_distbuild
+            binary_executor_release_type: stable
+        stable-deploy:
+          title: Deploy Alice Interpreter
+          task: common/deploy/release
+          stage: stable
+          manual: true
+          input:
+            config:
+              sandboxResourceType: ALICE_INTERPRETER_PACKAGE
+              commonReleaseData:
+                releaseStage: stable
+                releaseNotes: Release from CI
+              stageName: alice-translator
+          needs:
+            - build
+

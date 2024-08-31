@@ -1,0 +1,218 @@
+{% phrase error %}
+  {% chooseline %}
+    لقد اختلط علي الأمر. من فضلك اطلب بطريقة أخرى.
+    لم أفهم. اسأل بطريقة أخرى رجاءً.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase wrong_date %}
+  عذراً لكن هذا التاريخ غير موجود.
+{% endphrase %}
+
+{% phrase error_where %}
+  لم أتمكن من معرفة الموقع.
+{% endphrase %}
+
+{#  #}
+{# Рендерит "был"/"была"/"было"/"будет" в зависимости от для недели #}
+{#  #}
+{% macro optional_tense(dayweek) %}
+  {% if context.Tense == "past" %}
+    {% if dayweek == 2 or dayweek == 4 or dayweek == 5 %} {# среда, пятница, суббота #}
+      كانت
+    {% elif dayweek == 6 %} {# воскресенье #}
+      كان
+    {% else %} {# понедельник, вторник, четверг #}
+      كان
+    {% endif %}
+  {% elif context.Tense == "future" %}
+    {# понедельник, вторник и т.д. #}
+      سيكون
+  {% endif %}
+{% endmacro %}
+
+{#  #}
+{# Рендерит "Да"/"Нет" для вопросов с выбором
+{#  #}
+{% macro yes_no() %}
+  {% if context.IsQuestion == "yes" %}
+    أجل.
+  {% elif context.IsQuestion == "no" %}
+    كلا.
+  {% endif %}
+{% endmacro %}
+
+{# ======================================= #}
+{# Отвечает на запросы "Какой день недели" #}
+{# ======================================= #}
+{% phrase day_of_week %}
+  {{ yes_no() }}
+  {% set voice_and_text = context.SourceDate | render_datetime_raw %}
+  {% voice %}
+    {{ voice_and_text | attr('voice') | capitalize_first }}
+  {% endvoice %}
+  {% text %}
+    {{ voice_and_text | attr('text') | capitalize_first }}
+  {% endtext %}
+
+  {% chooseitem %}
+    {% if context.ResultCity != ""%}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% or %}
+    {% if context.ResultCity != "" and context.IsCustomCity %}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% endchooseitem %}
+
+  {{ optional_tense(context.ResultDayWeek or 0) }}
+  {{ (context.ResultDayWeek or 0) | render_weekday_simple }}
+  .
+{% endphrase %}
+
+{% macro render_result_date(dt, with_year=False) %}
+  {% voice %}
+    {{ '#nom' }}
+  {% endvoice %}
+  {{ dt.day }}
+  {{ dt | human_month('gen') }}
+  {% if with_year %}
+    {{ dt.year }}
+    عام
+  {% endif %}
+{% endmacro %}
+
+{# ================================ #}
+{# Отвечает на запросы "Какая дата" #}
+{# ================================ #}
+{% phrase day_month_year %}
+  {{ yes_no() }}
+  {% set voice_and_text = context.SourceDate | render_datetime_raw %}
+  {% voice %}
+    {{ voice_and_text | attr('voice') | capitalize_first }}
+  {% endvoice %}
+  {% text %}
+    {{ voice_and_text | attr('text') | capitalize_first }}
+  {% endtext %}
+
+  {% chooseitem %}
+    {% if context.ResultCity != ""%}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% or %}
+    {% if context.ResultCity != "" and context.IsCustomCity %}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% endchooseitem %}
+
+  {% if context.Tense == "past" %}
+    كان
+  {% elif context.Tense == "future" %}
+    سيكون
+  {% endif %}
+  {% if context.SourceType != "fixed" %}
+    {# Если контекст context.source_date абсолютный, это уже произнесено выше #}
+    {% set dt = create_date_safe(year=context.ResultYear or 0, month=context.ResultMonth or 0, day=context.ResultDay or 0) %}
+    {{ render_result_date(dt, context.ResultYearDifferent) }}
+  {% endif %}
+  .
+{% endphrase %}
+
+{#  #}
+{# Отвечает на запросы "Какой день недели и число" #}
+{#  #}
+{% phrase day_all %}
+  {{ yes_no() }}
+  {% set voice_and_text = context.SourceDate | render_datetime_raw %}
+  {% voice %}
+    {{ voice_and_text | attr('voice') | capitalize_first }}
+  {% endvoice %}
+  {% text %}
+    {{ voice_and_text | attr('text') | capitalize_first }}
+  {% endtext %}
+
+  {% chooseitem %}
+    {% if context.ResultCity != ""%}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% or %}
+    {% if context.ResultCity != "" and context.IsCustomCity %}
+      {{ context.CityPreparse | city_prepcase }}
+    {% endif %}
+  {% endchooseitem %}
+
+  {{ optional_tense(context.ResultDayWeek or 0) }}
+  {% if context.SourceType != "dayofweek" %}
+    {# Если контекст context.source_date - день недели, это уже произнесено выше #}
+    {{ (context.ResultDayWeek or 0) | render_weekday_simple }}
+    {% if context.SourceType != "fixed" %}
+      ,
+    {% endif %}
+  {% endif %}
+  {% if context.SourceType != "fixed" %}
+    {# Если контекст context.source_date абсолютный, это уже произнесено выше #}
+    {% set dt = create_date_safe(year=context.ResultYear or 0, month=context.ResultMonth or 0, day=context.ResultDay or 0) %}
+    {{ render_result_date(dt, context.ResultYearDifferent) }}
+  {% endif %}
+  .
+{% endphrase %}
+
+{#  #}
+{# Отвечает на запросы "Какая сейчас неделя" #}
+{#  #}
+{% phrase what_week %}
+  {% set voice_and_text = context.SourceDate | render_datetime_raw %}
+  {% voice %}
+    {{ voice_and_text | attr('voice') | capitalize_first }}
+  {% endvoice %}
+  {% text %}
+    {{ voice_and_text | attr('text') | capitalize_first }}
+  {% endtext %}
+  {% if context.Tense == "past" %}
+    كانت
+  {% elif context.Tense == "future" %}
+    سيكون
+  {% endif %}
+  {{ context.ResultWeekNmb or 0 }} - أنا
+  أسبوع السنة.
+{% endphrase %}
+
+{#  #}
+{# Отвечает на запросы "Какой сейчас месяц" #}
+{#  #}
+{% phrase what_month %}
+  {% set voice_and_text = context.SourceDate | render_datetime_raw %}
+  {% voice %}
+    {{ voice_and_text | attr('voice') | capitalize_first }}
+  {% endvoice %}
+  {% text %}
+    {{ voice_and_text | attr('text') | capitalize_first }}
+  {% endtext %}
+  {% if context.Tense == "past" %}
+      كان
+  {% elif context.Tense == "future" %}
+      سيكون
+  {% endif %}
+  {% set dt = create_date_safe(year=context.ResultYear or 0, month=context.ResultMonth or 0, day=context.ResultDay or 0) %}
+  {{ dt | human_month('nom') }}
+  .
+{% endphrase %}
+
+{% phrase suggest_tomorrow %}
+    ماذا سيكون التاريخ بعد غد؟
+{% endphrase %}
+{% phrase suggest_today %}
+  في أي يوم من أيام الأسبوع نحن؟
+{% endphrase %}
+{% phrase suggest_whatyoucan %}
+  ما الذي يمكنك فعله؟
+{% endphrase %}
+{% phrase suggest_holiday %}
+  ما هي المناسبة اليوم؟
+{% endphrase %}
+{% phrase suggest_history %}
+  سيحفر هذا اليوم في ذاكرة التاريخ
+{% endphrase %}
+{% phrase suggest_news %}
+  أهم الأخبار لليوم
+{% endphrase %}

@@ -1,0 +1,152 @@
+import: order/providers_name.grnt
+
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: common/surfaces.grnt
+
+form alice.order.get_status:
+    slots:
+        provider_name:
+            source: $ProviderName
+            type: custom.provider_name
+    root:
+        [$Question* $Status+ $ForWhom* ($OrderName|$CurierName)+ $ProviderName* $Action*]
+        [$Question+ $Status* $ForWhom* ($OrderName|$CurierName)+ $ProviderName* $Action*]
+        [$ProviderName $CurierName]
+        [$Question+ $ProviderName+ $CurierName* $ForWhom* $Action* еду]
+        [$Question+ $ProviderName* $CurierName+ $ForWhom* $Action* еду]
+        [$Question+ $ProviderName* $CurierName* $ForWhom* $Action+ еду]
+
+        [$When $Action+ $ForWhom* (еда|товар) $ProviderName*]
+        [$Question+ $ForWhom еда $ProviderName*]
+
+        %negative
+        [$Status? (получить|сделать|заказать) $OrderName? .*]
+        [$Question $ForWhom* еду]
+        
+
+    filler:
+        $Common.Recognize
+        $Common.Check
+        $Common.Lets
+        $Common.Tell
+        $Common.Help
+        $Common.WayToCallAlice
+        $Common.ToLook
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.ToLearn
+        $Prefix
+        $Noise
+
+$Prefix:
+    $Common.From
+    на
+    в
+    у
+
+$When:
+    когда
+    как? (скоро|долго)
+    в какое время
+    в каком часу
+    через? во? сколько
+
+$Question:
+    $When
+    где
+    что там? (с|по)
+    на каком этапе
+    на какой стадии
+
+$Status:
+    %lemma
+    информация
+    интересует
+    местоположение
+    местонахождение
+    отслеживание
+    отследить
+    найти
+    (каков|какой)? статус
+    как там?
+
+$ForWhom:
+    $Common.PronounMe
+    свой
+    моего
+    моя
+    мой
+    наш
+    нашего
+
+$OrderName:
+    заказанное
+    продуктовый
+    с? едой
+    %lemma
+    заказ еды?
+    покупка
+    доставка еды? товара?
+    продукты
+    
+$CurierName:
+    %lemma
+    курьер
+    доставщик
+
+$Action:
+    приедет
+    едет
+    ехать
+    будут
+    поступит
+    доставлены
+    %lemma
+    прибудет
+    ждать
+    ожидать
+    получить
+    доставить
+    идет
+    находится
+    будет
+    привезти
+    придет
+    принести
+    
+    
+$Noise:
+    я
+    ли
+    до
+    по
+    о
+    могу
+    еще
+    ее
+    этого
+    который
+    которую
+    можешь
+    смогу
+    что-нибудь
+    кто-нибудь
+    оформил
+    оформила
+    %lemma
+    сроки
+    примерные
+    который
+    сообщи
+    уточни
+    заказанные
+    покажи
+    магазин
+    должен
+    сказать
+    подсказать
+    сервис
+    сейчас
+    

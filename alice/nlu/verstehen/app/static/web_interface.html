@@ -1,0 +1,2895 @@
+<html>
+<head>
+    <title>Verstehen</title>
+
+    <!--Favicon link-->
+    <link rel="icon" type="image/ico" href="static/alice_favicon.png"/>
+
+    <!-- Required meta tags for bootstrap -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!--bootstrap-->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
+          integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <!--Font Awesome-->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
+          integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+
+    <!--Custom style-->
+    <style type="text/css">
+        ul.searcheable-string {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul.searcheable-string li {
+            display: inline-block;
+            clear: both;
+            padding: 2px;
+            border-radius: 10px;
+            margin-bottom: 2px;
+            font-family: Helvetica, Arial, sans-serif;
+
+        }
+
+        ul li.positive {
+            background: #dbebd1;
+        }
+
+        ul li.negative {
+            background: #ffe2e9;
+        }
+
+        li button.close {
+            font-size: 15px;
+        }
+
+        td.text-center {
+            text-align: center;
+        }
+
+        tr th.small-col, tr td.small-col {
+            width: 5%;
+        }
+
+        .btn-file {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-file input[type=file] {
+            position: absolute;
+            top: 0;
+            right: 0;
+            min-width: 100%;
+            min-height: 100%;
+            font-size: 100px;
+            text-align: right;
+            filter: alpha(opacity=0);
+            opacity: 0;
+            outline: none;
+            background: white;
+            cursor: inherit;
+            display: block;
+        }
+
+        #current-results-table-body tr:hover {
+            background: #efefef;
+        }
+
+        .table thead th {
+            vertical-align: middle;
+        }
+        .table tfoot td {
+            border-top: 2px solid #bcc0c4;
+        }
+        /*
+        resolving the issue of loosing focus for nested modals, see
+        https://github.com/nakupanda/bootstrap3-dialog/issues/70#issuecomment-64763291
+        */
+        .modal {
+            overflow: auto !important;
+        }
+
+        .modal-lg {
+            max-width: 60% !important;
+        }
+    </style>
+
+    <!--JQuery-->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous"></script>
+    <!--Popper-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+            integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+            crossorigin="anonymous"></script>
+    <!--bootstrap JS-->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
+            integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
+            crossorigin="anonymous"></script>
+    <!--bootstrap notify-->
+    <script src="https://github.com/mouse0270/bootstrap-notify/releases/download/3.1.3/bootstrap-notify.js"></script>
+
+    <!--Bootbox.js for confirmations-->
+    <script src="https://github.com/makeusabrew/bootbox/releases/download/v5.1.3/bootbox.min.js"></script>
+
+    <!--Handlebars-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.js"></script>
+
+    <!--Dash-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.15.0/lodash.min.js" crossorigin></script>
+
+    <!--Custom script will all the logic for updating UI and sending requests to the server-->
+    <script type="text/javascript">
+        // asking a user whether they really want to leave the page
+        $(window).bind(
+            'beforeunload',
+            function () {
+                return confirm('Do you really want to close?')
+            }
+        );
+
+        // all available apss on the server (initialized on load)
+        let all_apps = undefined;
+        // currently chosen app (initialized on load)
+        let current_app = undefined;
+
+        // currently chosen index to search in (initialized on load)
+        let current_index = undefined;
+
+        // limiting current results down to
+        let n_limit_results = 50;
+
+        // limiting showing results for current search
+        let n_limit_shown_current_search = 1000;
+
+        // maximum number of lines in importing file
+        let import_max_lines = 5000;
+
+        // maximum length of the lines in importing file
+        let import_max_line_length = 200;
+
+        // the selected strings by the user. Can be positive, negative or undecided (null).
+        // Any string can be also selected as a search query.
+        // Schema:
+        //  {
+        //      type: "positive" or "negative" or null,
+        //      obj: {  // same as `current_results`
+        //          ui_id: string of unique identifier for UI purposes
+        //          text: text that is used for search on the server,
+        //          payload: additional columns associated with data (can be null if is absent)
+        //      }
+        //      is_used_for_search: true or false
+        //  }
+        let history_results = [];
+        // payload keys in history that will be rendered as additional columns (updated after each search)
+        let history_payload_keys = new Set();
+
+        // last search results returned from server (mutable after interacting with the UI)
+        // Schema:
+        //  {
+        //      ui_id: string of unique identifier for UI purposes
+        //      text: text that is used for search on the server,
+        //      payload: additional columns associated with data (can be null if is absent)
+        //  }
+        let current_results = [];
+        // payload keys in results that will be rendered as additional columns (updated after each search)
+        let current_payload_keys = new Set();
+
+
+        // whether we need to render payloads in current search strings
+        let is_render_payload_in_current_results = false;
+        // whether we need to render payloads in history section
+        let is_render_payload_in_history_results = false;
+
+        // last measurement of time required to make the request to the server (null - no
+        // requests have been sent yet)
+        let last_fetching_time = null;
+        // flag variable for the notion if currently search is already running
+        let current_search_running = false;
+
+        // exporting options with default values
+        let export_options = {
+            export_positive_strings: true,
+            export_negative_strings: true,
+            export_skipped_strings: true,
+            export_current_search_strings: false,
+            export_move_all_to_one_list: false,
+            export_include_payload: false,
+            export_file_format: 'json',
+            export_filename: 'verstehen_results.txt'
+        };
+
+        // storage for tracking violated options to prevent people from using some functions
+        let violated_options_storage = {
+            'search': new Set(),
+            'markup': new Set()
+        };
+
+        // ids for elements that are needed to be displayed and filled out for different scenarios of data markup
+        let markup_scenarios_elements_ids = {
+            'binary_classification': [
+                'nirvana-token',
+                'toloka-secret',
+                'yt-secret',
+                'ssh-secret',
+                'is-sandbox',
+
+                'binary-classification-toloka-project-name',
+                'binary-classification-task-question',
+                'binary-classification-project-instructions',
+                'binary-classification-yt-destination',
+
+                'binary-classification-advanced-trainingset-size',
+                'binary-classification-advanced-training-passing-skill-value',
+                'binary-classification-advanced-overlap',
+                'binary-classification-advanced-task-time-length',
+                'binary-classification-advanced-page-price',
+                'binary-classification-advanced-custom-markup',
+                'binary-classification-advanced-custom-styles',
+                'binary-classification-advanced-custom-script'
+            ],
+            'intent_classification': [
+                'nirvana-token',
+                'toloka-secret',
+                'yql-secret',
+                'yt-secret',
+                'intent-classification-prj-key',
+                'intent-classification-yt-destination'
+            ],
+            'tagging': [
+                'nirvana-token',
+                'toloka-secret',
+                'yt-secret',
+                'ssh-secret',
+                'is-sandbox',
+
+                'tagging-toloka-project-name',
+                'tagging-task-categories',
+                'tagging-goldenset',
+                'tagging-project-instructions',
+                'tagging-yt-destination',
+
+                'tagging-advanced-trainingset-size',
+                'tagging-advanced-training-passing-skill-value',
+                'tagging-advanced-overlap',
+                'tagging-advanced-task-time-length',
+                'tagging-advanced-page-price',
+                'tagging-advanced-custom-markup',
+                'tagging-advanced-styles-static-part',
+                'tagging-advanced-script-static-part'
+            ],
+            'binary_classification_and_tagging': [
+                'nirvana-token',
+                'toloka-secret',
+                'yt-secret',
+                'ssh-secret',
+                'is-sandbox',
+
+                'binary-classification-toloka-project-name',
+                'binary-classification-task-question',
+                'binary-classification-project-instructions',
+                'binary-classification-yt-destination',
+
+                'binary-classification-advanced-trainingset-size',
+                'binary-classification-advanced-training-passing-skill-value',
+                'binary-classification-advanced-overlap',
+                'binary-classification-advanced-task-time-length',
+                'binary-classification-advanced-page-price',
+                'binary-classification-advanced-custom-markup',
+                'binary-classification-advanced-custom-styles',
+                'binary-classification-advanced-custom-script',
+
+                'tagging-yt-destination',
+                'tagging-task-categories',
+                'tagging-goldenset',
+                'tagging-toloka-project-name',
+                'tagging-project-instructions',
+
+                'tagging-advanced-trainingset-size',
+                'tagging-advanced-training-passing-skill-value',
+                'tagging-advanced-overlap',
+                'tagging-advanced-task-time-length',
+                'tagging-advanced-page-price',
+                'tagging-advanced-custom-markup',
+                'tagging-advanced-styles-static-part',
+                'tagging-advanced-script-static-part'
+            ]
+        };
+
+        // default value of current markup scenario
+        let current_markup_scenario = 'binary_classification';
+
+        let data_markup_inputs_prefix = 'data-markup-input';
+
+        // on page load function
+        onload = function () {
+            // Initializing stuff on the page load
+            helpers();
+
+            // sending request to the server to get available apps
+            $.ajax({
+                url: '/apps',
+                success: function (data) {
+                    current_app = data.default_app;
+                    current_index = data.all_apps[current_app]['default_index'];
+                    all_apps = data.all_apps;
+                    renderDefaultOptions();
+                },
+                error: function () {
+                    $.notify(
+                        'The server cannot fetch available apps, the server is not available, reload page or ' +
+                        'contact somebody from information page if it does not help',
+                        {
+                            type: 'danger',
+                            delay: 1000
+                        }
+                    );
+                },
+                timeout: 10000
+            });
+
+            // loading history if possible
+            let history = localStorage.getItem('verstehen_storage');
+
+            // trying to load old history
+            if (history == null) {
+                history = localStorage.getItem('nlu_search_storage');
+            }
+
+            if (history != null) {
+                history_results = JSON.parse(history);
+
+                // checking whether it is an old version of history then we rewrite it to a newer on
+                if (history_results.length > 0 && history_results[0].text !== undefined &&
+                    history_results[0].obj === undefined) {
+                    history_results = history_results.map(el => {
+                        return {
+                            type: el.type,
+                            obj: {
+                                ui_id: generate_uuidv4(),
+                                text: el.text,
+                                payload: null
+                            },
+                            is_used_for_search: el.is_used_for_search
+                        }
+                    })
+                }
+
+                history_payload_keys = new Set();
+                for (let result of history_results) {
+                    if (result.obj.payload != null) {
+                        for (let key in result.obj.payload) {
+                            history_payload_keys.add(key);
+                        }
+                    }
+                }
+            }
+
+            renderHistoryAndQueries();
+            renderCurrentResults();
+            renderDefaultExportOptions();
+            renderExportPreview();
+            setDefaultMarkupScenario();
+            registerHotkeys();
+            registerOptionListeners();
+            registerExportOptionsListeners();
+            registerImportInputFileListener();
+
+            // enabling popovers (this is necessary according to https://getbootstrap.com/docs/4.0/components/popovers/)
+            $(function () {
+                $('[data-toggle="popover"]').popover({html: true});
+            });
+        };
+
+        // Wrapper of function for measuring the time passed between returning of the funciton
+        // and its call.
+        function timeWrapper(fn) {
+            let startTime = new Date().getTime();
+            return function (data) {
+                fn(data, new Date().getTime() - startTime);
+            }
+        }
+
+        // locking the search and unlocking depending on the state
+        function runningSearchCallback(phase) {
+            if (phase === 'start') {
+                current_search_running = true;
+                $('#search_button').attr('disabled', true);
+                $('#spinner_icon').removeAttr('hidden');
+            } else {
+                current_search_running = false;
+                $('#search_button').removeAttr('disabled');
+                $('#spinner_icon').attr('hidden', true);
+            }
+        }
+
+        // adding positive object
+        function addPositiveObject(obj, render = true) {
+            if (obj.text.length === 0) {
+                return;
+            }
+            history_results.push({
+                'type': 'positive',
+                'obj': obj,
+                'is_used_for_search': true
+            });
+            recompute_history_payload_keys();
+
+            if (render) {
+                renderHistoryAndQueries();
+            }
+        }
+
+        // traversing through history to get the payload keys
+        function recompute_history_payload_keys() {
+            history_payload_keys = new Set();
+
+            for (let item of history_results) {
+                if (item.obj.payload != null) {
+                    for (let key in item.obj.payload) {
+                        history_payload_keys.add(key);
+                    }
+                }
+            }
+        }
+
+        // sending query for search and receiving the callback to update the UI
+        function sendSearch(positive_query, negative_query, filter_strings,
+                            onSuccess = onSuccessSearch, onError = onErrorSearch) {
+            if (current_search_running) {
+                return; // if already runs, no search is performed
+            }
+
+            if (all_apps === undefined) {
+                $.notify(
+                    'You cannot perform search since there are no available apps found on the server, reload the ' +
+                    'page or contact somebody from information page if it does not help',
+                    {
+                        type: 'danger',
+                        delay: 1000
+                    }
+                );
+                return;
+            }
+
+            // we need n_limit_results but some results may be filtered out therefore we ask for more
+            let n_samples = n_limit_results + filter_strings.length;
+
+            runningSearchCallback('start');
+
+            $.ajax({
+                url: '/search',
+                dataType: "json",
+                type: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                data: JSON.stringify({
+                    query: {
+                        positive: positive_query,
+                        negative: negative_query
+                    },
+                    app_name: current_app,
+                    index_name: current_index,
+                    n_samples: n_samples,
+                    filters: filter_strings
+                }),
+                success: timeWrapper(onSuccess),
+                error: onError,
+                timeout: 30000
+            });
+        }
+
+        // if call is successful, updating the inner collections and then the UI
+        function onSuccessSearch(data, time) {
+            last_fetching_time = time;
+            current_results = data.search_result.slice(0, n_limit_results).map(el => {
+                el['ui_id'] = generate_uuidv4();
+                return el;
+            });
+            current_payload_keys = new Set();
+            for (let res of current_results) {
+                if (res.payload != null) {
+                    for (let key in res.payload) {
+                        current_payload_keys.add(key);
+                    }
+                }
+            }
+            runningSearchCallback('end');
+            renderCurrentResults();
+        }
+
+        // if call is unsuccessful, log the data and notify the user.
+        function onErrorSearch(xhr, ajaxOptions, thrownError) {
+            last_fetching_time = null;
+            console.error(xhr.status);
+            console.error(ajaxOptions);
+            console.error(thrownError);
+
+            $.notify('Search request failed with the code ' + xhr.status, {
+                type: 'warning',
+                delay: 2000
+            });
+            runningSearchCallback('end');
+            renderCurrentResults();
+        }
+
+        // sending data for markup
+        function sendMarkupRequest() {
+            // validating the options of markup scenarios fields by triggering their checks
+            for (let element_id of markup_scenarios_elements_ids[current_markup_scenario]) {
+                let global_id = '#' + data_markup_inputs_prefix + '-' + element_id;
+                $(global_id)[0].dispatchEvent(new Event('input')); // parent because we need to hide the whole form
+            }
+
+            if (isOptionsViolated('markup')) {
+                $.notify('Some of the options for markup are not set properly, please look up into options section' +
+                    'and fix them accordingly', {
+                    type: 'danger',
+                    delay: 2000
+                });
+                return;
+            }
+
+            bootbox.confirm({
+                message: '<p>Вы уверены, что хотите запустить разметку? Перепроверьте все данные, потому что ' +
+                    'остановить запуск будет возможно уже только через Nirvana или саму Толоку, что может повлиять на ' +
+                    'реальный бюджет!</p>',
+                buttons: {
+                    confirm: {
+                        label: 'Да, я знаю что я делаю',
+                        className: 'btn-danger'
+                    },
+                    cancel: {
+                        label: 'Щааа, падажжииии',
+                        className: 'btn'
+                    }
+                },
+                callback: function(confirmed) {
+                    if (confirmed) {
+                        let input_data = JSON.stringify(generateObjectForExport({
+                            export_positive_strings: true,
+                            export_negative_strings: true,
+                            export_skipped_strings: false,
+                            export_current_search_strings: true,
+                            export_include_payload: false,
+                            export_move_all_to_one_list: false,
+                        }));
+
+                        // params of the request
+                        let params = {};
+
+                        // setting params to the request based on the fields that we have in the UI
+                        for (let element_id of markup_scenarios_elements_ids[current_markup_scenario]) {
+                            let global_id = '#' + data_markup_inputs_prefix + '-' + element_id;
+                            params[element_id] = $(global_id).val();
+                        }
+
+                        // for sandbox there is an exception - we need to cast it too bool (we cannot use val())
+                        params['is-sandbox'] = $('#data-markup-input-is-sandbox').is(':checked');
+
+                        // setting scenario name
+                        params['markup-scenario'] = current_markup_scenario;
+
+                        // setting data to use in markup
+                        params['input-data'] = input_data;
+
+                        $('#data-markup-spinner-icon').removeAttr('hidden');
+                        $.ajax({
+                            url: '/markup',
+                            dataType: 'json',
+                            type: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            data: JSON.stringify(params),
+                            success: function (data) {
+                                $('#data-markup-spinner-icon').attr('hidden', true);
+                                renderTemplate(
+                                    'data-markup-results',
+                                    'data-markup-results-template',
+                                    {
+                                        'nirvana_url': data['nirvana_url'],
+                                        'error': ''
+                                    }
+                                );
+                            },
+                            error: function (xhr, ajaxOptions, thrownError) {
+                                $('#data-markup-spinner-icon').attr('hidden', true);
+                                console.error(xhr.status);
+                                console.error(ajaxOptions);
+                                console.error(thrownError);
+                                renderTemplate(
+                                    'data-markup-results',
+                                    'data-markup-results-template',
+                                    {
+                                        'nirvana_url': 'Unknown',
+                                        'error': xhr.responseText
+                                    }
+                                );
+                            },
+                            timeout: 300000
+                        });
+                    }
+                }
+            });
+        }
+
+        // saving the strings to file and download it
+        function saveStringsToFile() {
+            if (export_options.export_file_format === 'json') {
+                downloadFileFromText(
+                    JSON.stringify(generateObjectForExport(export_options), null, 2), export_options.export_filename,
+                    'text/plain'
+                );
+            } else if (export_options.export_file_format === 'txt') {
+                let export_string = '';
+                let obj = generateObjectForExport(export_options);
+                for (let key in obj) {
+                    let inner_obj = obj[key];
+
+                    // if it is not an array (and not Date)
+                    if (Array.isArray(inner_obj)) {
+                        // if this not the first loop cycle, then make an additional line skip
+                        if (export_string.length > 0) {
+                            export_string += '\n';
+                        }
+
+                        export_string += '# ' + key + ':\n';
+                        export_string += inner_obj.map(str => str + '\n').join('');
+                    }
+                }
+                downloadFileFromText(export_string, export_options.export_filename, 'text/plain');
+            } else {
+                $.notify('Exporting file with format "' + export_options.export_file_format + '" is not supported!', {
+                    type: 'danger',
+                    delay: 2000
+                });
+            }
+        }
+
+        // getting object to export as JSON given set options
+        function generateObjectForExport(export_options) {
+            let positive_strings_texts = history_results.filter(
+                e => e.type === 'positive'
+            ).map(
+                e => export_options.export_include_payload ? {'text': e.obj.text, 'payload': e.obj.payload} : e.obj.text
+            ).reverse();
+            let negative_strings_texts = history_results.filter(
+                e => e.type === 'negative'
+            ).map(
+                e => export_options.export_include_payload ? {'text': e.obj.text, 'payload': e.obj.payload} : e.obj.text
+            ).reverse();
+            let skipped_strings_texts = history_results.filter(
+                e => e.type === 'skipped'
+            ).map(
+                e => export_options.export_include_payload ? {'text': e.obj.text, 'payload': e.obj.payload} : e.obj.text
+            ).reverse();
+            let current_results_to_export = current_results.map(
+                e => export_options.export_include_payload ? e : e.text
+            );
+            let object;
+            object = {};
+
+            if (export_options.export_positive_strings) {
+                object['positive_strings'] = positive_strings_texts;
+            }
+            if (export_options.export_negative_strings) {
+                object['negative_strings'] = negative_strings_texts;
+            }
+            if (export_options.export_skipped_strings) {
+                object['skipped_strings'] = skipped_strings_texts;
+            }
+            if (export_options.export_current_search_strings) {
+                object['current_search_strings'] = current_results_to_export
+            }
+
+            if (export_options.export_move_all_to_one_list) {
+                let all_strings_list = [];
+                for (let key in object) {
+                    all_strings_list.push(...object[key])
+                }
+
+                object = {
+                    'all_strings': all_strings_list
+                }
+            }
+
+            object['date'] = new Date().toISOString();
+            return object;
+        }
+
+        // adding positive strings from the importing text area
+        function addImportingStrings() {
+            let strings = $('#importTextArea').val().split('\n').filter(str => str.length > 0);
+
+            if (strings.length === 0) {
+                $.notify(
+                    'No strings to add or all strings are empty!', {
+                        type: 'danger',
+                    }
+                );
+                return;
+            }
+
+            for (let string of strings) {
+                addPositiveObject(
+                    {
+                        ui_id: generate_uuidv4(),
+                        text: string,
+                        payload: null
+                    },
+                    false
+                );
+            }
+            renderHistoryAndQueries();
+
+            $.notify(
+                'Successfully added new strings from the text area (which were not previously in history)!'
+            )
+        }
+
+        // Util Functions
+
+        // registering helpers for different libraries
+        function helpers() {
+            // ifeq helper for Handlebars that gives an ability to compare objects in Handlebars templates
+            Handlebars.registerHelper('ifeq', function (v1, v2, options) {
+                if (v1 === v2) {
+                    return options.fn(this);
+                }
+                return options.inverse(this);
+            });
+        }
+
+        // util function to render Handlebars templates given element id, template id and the data
+        function renderTemplate(element_id, template_id, context = {}) {
+            let templateScript = $('#' + template_id).html();
+            let template = Handlebars.compile(templateScript);
+            let compiledHtml = template(context);
+            $('#' + element_id).html(compiledHtml);
+        }
+
+        // downloading a file from the web page
+        function downloadFileFromText(content, fileName, contentType) {
+            let a = document.createElement('a');
+            let file = new Blob([content], {type: contentType});
+            a.href = URL.createObjectURL(file);
+            a.download = fileName;
+            a.dispatchEvent(new MouseEvent('click'));  // not a.click(); since it doesn't work for FireFox
+        }
+
+        // adding class of invalidity based on the validation result
+        function validateElement(element, is_validation_passed) {
+            if (is_validation_passed) {
+                element.classList.remove('is-invalid');
+            } else {
+                element.classList.add('is-invalid');
+            }
+        }
+
+        // updating the violation of some options based on their validation
+        function updateOptionsViolation(element, section, is_validation_passed) {
+            let id = element.getAttribute('id');
+            let current_requirement_set = violated_options_storage[section];
+            if (is_validation_passed) {
+                current_requirement_set.delete(id);
+            } else {
+                current_requirement_set.add(id);
+            }
+        }
+
+        // check whether the section of options is violated or not
+        function isOptionsViolated(section) {
+            return violated_options_storage[section].size !== 0;
+        }
+
+        // function to generate fairly good uuid equivalent. From https://stackoverflow.com/a/2117523/3934013
+        function generate_uuidv4() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // UI Events functions
+
+        // registering listeners on changes in UI for options
+        function registerOptionListeners() {
+            // listeners for options changes
+            $('#option_current_index').on('change textInput input', function () {
+                current_index = this.value;
+            });
+            $('#option_current_app').on('change textInput input', function () {
+                current_app = this.value;
+                // available indexes depend on the app
+                renderIndexesChoices();
+            });
+            $('#option_n_limit_results').on('change textInput input', function () {
+                let val = Number(this.value);
+                let is_validation_passed = Number.isInteger(val) && val > 0 && val <= 1000000;
+                if (is_validation_passed) {
+                    n_limit_results = val
+                }
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'search', is_validation_passed);
+            });
+            $("#option_is_render_payload_in_current_results").change(function () {
+                is_render_payload_in_current_results = this.checked;
+                renderCurrentResults();
+            });
+            $("#option_is_render_payload_in_history_results").change(function () {
+                is_render_payload_in_history_results = this.checked;
+                renderHistoryAndQueries();
+            });
+
+            // markup options
+            $('#data-markup-select-scenario').on('change textInput input', function () {
+                current_markup_scenario = this.value;
+                violated_options_storage['markup'] = new Set();
+                renderMarkupInputElements();
+            });
+
+            $('#data-markup-input-nirvana-token').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 10;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-toloka-secret').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-yt-secret').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-ssh-secret').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-yql-secret').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('[id^=data-markup-input-][id$=-toloka-project-name]').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-binary-classification-task-question').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('[id^=data-markup-input-][id$=-project-instructions]').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('[id^=data-markup-input-][id$=-yt-destination]').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0 && this.value.startsWith('//');
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-intent-classification-prj-key').on('change textInput input', function () {
+                let is_validation_passed = this.value.length > 0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-tagging-task-categories').on('change textInput input', function () {
+                function taskCategoriesChecking(string) {
+                    try {
+                        let maybe_array = JSON.parse(string);
+                        if (!Array.isArray(maybe_array) || maybe_array.length === 0) {
+                            return false;
+                        }
+
+                        for (let maybe_pair_of_values of maybe_array) {
+                            if (!Array.isArray(maybe_pair_of_values) || maybe_pair_of_values.length !== 2) {
+                                return false;
+                            }
+
+                            let first = maybe_pair_of_values[0];
+                            let second = maybe_pair_of_values[1];
+
+                            let variables_pattern = /^[$A-Z_][0-9A-Z_$]*$/i;
+                            if (typeof first !== 'string' || first.length === 0 || !variables_pattern.test(first) ||
+                                typeof second !== 'string' || second.length === 0) {
+                                return false;
+                            }
+                        }
+                    } catch (e) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                let is_validation_passed = taskCategoriesChecking(this.value);
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('#data-markup-input-tagging-goldenset').on('change textInput input', function () {
+                function taggingHoneypotsChecking(string) {
+                    try {
+                        let maybe_array = JSON.parse(string);
+                        if (!Array.isArray(maybe_array) || maybe_array.length === 0) {
+                            return false;
+                        }
+                        for (let obj of maybe_array) {
+                            if (!('query' in obj) || !('output' in obj)) {
+                                return false;
+                            }
+                            let query = obj['query'];
+                            let output = obj['output'];
+                            if (typeof query !== 'string' || query.length === 0 || typeof output !== 'string' ||
+                                output.length === 0) {
+                                return false;
+                            }
+                        }
+                    } catch (e) {
+                        return false;
+                    }
+                    return true;
+                }
+
+                let val = Number(this.value);
+                let honeypot_size_validation_passed = Number.isInteger(val) && val > 0 && val <= 100;
+                let is_validation_passed = taggingHoneypotsChecking(this.value) || honeypot_size_validation_passed;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+            });
+
+            $('[id^=data-markup-input-][id$=-advanced-overlap]').on('change textInput input', function () {
+                let val = Number(this.value);
+                let is_validation_passed = Number.isInteger(val) && val > 0 && val <= 100;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+                renderMarkupMenuStatistics();
+            });
+
+            $('[id^=data-markup-input-][id$=-advanced-trainingset-size]').on('change textInput input', function () {
+                let val = Number(this.value);
+                let is_validation_passed = Number.isInteger(val) && val > 0 && val <= 300;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+                renderMarkupMenuStatistics();
+            });
+            $('[id^=data-markup-input-][id$=-advanced-training-passing-skill-value]').on('change textInput input',
+                function () {
+                let val = Number(this.value);
+                let is_validation_passed = Number.isInteger(val) && val > 0 && val <= 100;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+                renderMarkupMenuStatistics();
+            });
+
+            $('[id^=data-markup-input-][id$=-advanced-task-time-length]').on('change textInput input', function () {
+                let val = Number(this.value);
+                let is_validation_passed = val > 0.0 && val <= 2.0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+                renderMarkupMenuStatistics();
+            });
+
+            $('[id^=data-markup-input-][id$=-advanced-page-price]').on('change textInput input', function () {
+                let val = Number(this.value);
+                let is_validation_passed = val > 0.0 && val < 1.0;
+                validateElement(this, is_validation_passed);
+                updateOptionsViolation(this, 'markup', is_validation_passed);
+                renderMarkupMenuStatistics();
+            });
+        }
+
+        // registering listeners on changes in UI for export options
+        function registerExportOptionsListeners() {
+            $("#exportPositiveStrings").change(function () {
+                export_options.export_positive_strings = this.checked;
+                renderExportPreview();
+            });
+            $("#exportNegativeStrings").change(function () {
+                export_options.export_negative_strings = this.checked;
+                renderExportPreview();
+            });
+            $("#exportSkippedStrings").change(function () {
+                export_options.export_skipped_strings = this.checked;
+                renderExportPreview();
+            });
+            $("#exportCurrentSearchStrings").change(function () {
+                export_options.export_current_search_strings = this.checked;
+                renderExportPreview();
+            });
+            $("#exportMoveAllToOneList").change(function () {
+                export_options.export_move_all_to_one_list = this.checked;
+                renderExportPreview();
+            });
+            $("#exportIncludePayload").change(function () {
+                export_options.export_include_payload = this.checked;
+                renderExportPreview();
+            });
+            $("#exportFileAsJson").change(function () {
+                // making exportIncludePayload visibly active since it is available for JSON export
+                $("#exportIncludePayload").removeAttr('disabled');
+                export_options.export_file_format = this.value;
+                renderExportPreview();
+            });
+            $("#exportFileAsTxt").change(function () {
+                // making exportIncludePayload visibly inactive since it is not available for TXT export
+                let include_payload_checkbox = $("#exportIncludePayload");
+                include_payload_checkbox.attr('disabled', true);
+                include_payload_checkbox.prop('checked', false); // for some reason need to use prop instead of attr
+                export_options.export_include_payload = false;
+                export_options.export_file_format = this.value;
+                renderExportPreview();
+            });
+            $('#exportFileName').on('change textInput input', function () {
+                let filename = this.value;
+                if (filename.length > 0) {
+                    export_options.export_filename = filename
+                } else {
+                    $.notify('Filename should be non-empty', {
+                        type: 'danger',
+                        delay: 1000
+                    });
+                }
+            });
+        }
+
+        // registering listener on input of file
+        function registerImportInputFileListener() {
+            $('#importInputFile').on('input', function () {
+                let filename = this.files[0];
+
+                // resetting the field or it will cache the filename and won't react for reattempts
+                $('#importInputFile').val('');
+
+                let reader = new FileReader();
+                reader.readAsText(filename, 'UTF-8');
+                reader.onload = function () {
+                    let strings = reader.result.split('\n');
+
+                    // sanity check
+                    if (strings.length > import_max_lines) {
+                        $.notify(
+                            'File contains more than ' + import_max_lines + ' lines, this is probably wrong so we ' +
+                            'do not parse the file',
+                            {
+                                type: 'danger',
+                                delay: 2000
+                            }
+                        );
+                        return;
+                    } else {
+                        for (let string of strings) {
+                            if (string.length > import_max_line_length) {
+                                $.notify(
+                                    'One of the strings (or more) is more than ' + import_max_line_length +
+                                    ' characters long, this is probably wrong so we do not parse the file',
+                                    {
+                                        type: 'danger',
+                                        delay: 2000
+                                    }
+                                );
+                                return;
+                            }
+                        }
+                    }
+
+                    // setting value to the text area
+                    $('#importTextArea').val(strings.join('\n'));
+                    $.notify(
+                        'The file was successfully read, imported ' + strings.length + ' strings'
+                    )
+                };
+                reader.onerror = function () {
+                    $.notify('Error on reading file!', {
+                        type: 'warning',
+                        delay: 2000
+                    });
+                };
+            });
+        }
+
+        // registering keyboard hot keys
+        function registerHotkeys() {
+            let enter_key = 13;
+
+            // disabling enter key default action for manual input since it lies within the form and triggers something
+            document.getElementById('manualInput').addEventListener('keydown',function(e) {
+                if(e.keyCode === enter_key) {
+                    e.preventDefault();
+                    return false;
+                }
+                },
+                true
+            );
+
+            document.addEventListener('keydown', function (e) {
+                if (e.keyCode === enter_key) {
+                    // on Enter emulate manual adding of a string
+                    manualAddPositiveString();
+
+                    if (e.shiftKey) {
+                        // on Shift + Enter emulate search
+                        searchButtonClick();
+                    }
+                }
+            });
+        }
+
+        // onClick of search button
+        function searchButtonClick() {
+            let positive_query = history_results.filter(
+                e => e.is_used_for_search && e.type === 'positive'
+            ).map(
+                e => e.obj.text
+            );
+            let negative_query = history_results.filter(
+                e => e.is_used_for_search && e.type === 'negative'
+            ).map(
+                e => e.obj.text
+            );
+            let filter_strings = history_results.map(
+                e => e.obj.text
+            );
+
+            if (positive_query.length === 0) {
+                $.notify('The positive queries are absent, please add manually some positive queries to send ' +
+                    'or choose from history if it is not empty', {
+                    type: 'danger',
+                    delay: 2000
+                });
+                return;
+            }
+
+            if (isOptionsViolated('search')) {
+                $.notify('Some of the options for search are not set properly, please look up into options section' +
+                    'and fix them accordingly', {
+                    type: 'danger',
+                    delay: 2000
+                });
+                return;
+            }
+
+            sendSearch(positive_query, negative_query, filter_strings);
+        }
+
+        // click on cross of one of the searchable strings bubble
+        // (removing the string from searchable strings)
+        function removeSearchingString(ui_id) {
+            let item = history_results.filter(e => e.obj.ui_id === ui_id)[0];
+            item.is_used_for_search = false;
+            renderHistoryAndQueries();
+        }
+
+        function addStringAssessmentByUser(type, ui_id) {
+            let obj_to_add = current_results.filter(e => e.ui_id === ui_id)[0];
+
+            history_results.push({
+                type: type,
+                obj: obj_to_add,
+                is_used_for_search: type !== 'skipped'
+            });
+            recompute_history_payload_keys();
+            current_results = current_results.filter(e => e.ui_id !== ui_id);
+
+            if (current_results.length === 0 && history_results.length > 0 && all_apps !== undefined) {
+                searchButtonClick();
+            }
+        }
+
+        // user click on tick or cross button from search results
+        // (adding to the history_results)
+        function newStringAssessmentByUser(type, ui_id) {
+            addStringAssessmentByUser(type, ui_id);
+            renderHistoryAndQueries();
+            renderCurrentResults();
+        }
+
+        // user click on apply for all tick or cross button from search results
+        // (adding to the history_results)
+        function addAllStringsAs(type) {
+            let ui_ids_to_add = current_results.map(el => el.ui_id);
+            for (let ui_id of ui_ids_to_add) {
+                addStringAssessmentByUser(type, ui_id);
+            }
+            document.body.scrollTop = 0; // For Safari
+            document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+            renderHistoryAndQueries();
+            renderCurrentResults();
+        }
+
+        // on change of checkbox for a string whether it is searchable or not
+        function searcheableQueryCheckbox(ui_id) {
+            let item = history_results.filter(e => e.obj.ui_id === ui_id)[0];
+            item.is_used_for_search = !item.is_used_for_search;
+            renderHistoryAndQueries();
+        }
+
+        // user click on tick or cross button from history
+        // (changing status in history_results)
+        function setSelectedQueryStatus(type, ui_id) {
+            let item = history_results.filter(e => e.obj.ui_id === ui_id)[0];
+
+            if (item.type === type) {
+                item.type = 'skipped';
+            } else {
+                item.type = type;
+            }
+            if (item.type === 'skipped') {
+                item.is_used_for_search = false;
+            }
+            renderHistoryAndQueries();
+        }
+
+        // removal of an object from the history
+        // (changing status in history_results)
+        function removeHistoryResult(ui_id) {
+            bootbox.confirm({
+                message: '<p>Are you sure you want delete the row? This action is <b>irreversible</b>.</p>',
+                buttons: {
+                    confirm: {
+                        label: 'Delete',
+                        className: 'btn-danger'
+                    },
+                    cancel: {
+                        label: 'Cancel',
+                        className: 'btn'
+                    }
+                },
+                callback: function(confirmed) {
+                    if (confirmed) {
+                        history_results = history_results.filter(el => el.obj.ui_id != ui_id);
+                        recompute_history_payload_keys();
+                        renderHistoryAndQueries();
+                    }
+                }
+            });
+        }
+
+        // on click on 'Add' button
+        // (adding to searchable strings and history_results)
+        function manualAddPositiveString() {
+            let $manualInput = $('#manualInput');
+            let string = $manualInput.val();
+            addPositiveObject({
+                ui_id: generate_uuidv4(),
+                text: string,
+                payload: null
+            });
+            $manualInput.val('');
+        }
+
+        // clearing all searchable strings
+        function clearUsedForSearch() {
+            history_results.forEach((e) => e.is_used_for_search = false);
+            renderHistoryAndQueries();
+        }
+
+        // clearing all history
+        function clearHistory() {
+            bootbox.confirm({
+                message: '<p>You are about to delete the history, this procedure is <b>irreversible</b>.</p>' +
+                    '<p>Do you want to proceed?</p>',
+                buttons: {
+                    confirm: {
+                        label: 'Clear history',
+                        className: 'btn-danger'
+                    },
+                    cancel: {
+                        label: 'Cancel',
+                        className: 'btn'
+                    }
+                },
+                callback: function(confirmed) {
+                    if (confirmed) {
+                        history_results = [];
+                        if (localStorage.key('verstehen_storage') != null) {
+                            localStorage.removeItem('verstehen_storage');
+                        }
+                        recompute_history_payload_keys();
+                        renderHistoryAndQueries();
+                    }
+                }
+            });
+        }
+
+        // Rendering UI functions
+
+        // rendering the default values of options that are set by the script
+        function renderDefaultOptions() {
+            let $current_app_node = $('#option_current_app');
+            $current_app_node.empty();
+            if (all_apps !== undefined) {
+                for (let option in all_apps) {
+                    $current_app_node.append($('<option>').text(option));
+                }
+                $current_app_node.val(current_app);
+            }
+            $('#option_n_limit_results').val(n_limit_results);
+            $('#option_is_render_payload_in_current_results').attr('checked', is_render_payload_in_current_results);
+            $('#option_is_render_payload_in_history_results').attr('checked', is_render_payload_in_history_results);
+
+            // we initialize textbox with available indexes dynamically since they might be different for different apps
+            renderIndexesChoices();
+        }
+
+        // rendering the menu of choices for available indexes that can vary from app to app
+        function renderIndexesChoices() {
+            let $current_index_node = $('#option_current_index');
+            $current_index_node.empty();
+            let available_indexes = all_apps[current_app]['indexes'];
+            for (let option of available_indexes) {
+                $current_index_node.append($('<option>').text(option));
+            }
+
+            // if current index is not available in newly selected app, then just use the first index from the app
+            if (available_indexes.indexOf(current_index) === -1) {
+                current_index = all_apps[current_app]['default_index'];
+            }
+            $current_index_node.val(current_index);
+        }
+
+        // rendering default export options from variables
+        function renderDefaultExportOptions() {
+            $('#exportPositiveStrings').attr('checked', export_options.export_positive_strings);
+            $('#exportNegativeStrings').attr('checked', export_options.export_negative_strings);
+            $('#exportSkippedStrings').attr('checked', export_options.export_skipped_strings);
+            $('#exportCurrentSearchStrings').attr('checked', export_options.export_current_search_strings);
+            $('#exportMoveAllToOneList').attr('checked', export_options.export_move_all_to_one_list);
+            $('#exportIncludePayload').attr('checked', export_options.export_include_payload);
+            $('#exportFileName').val(export_options.export_filename);
+        }
+
+        // rendering a preview for JSON file that is about to be exported
+        function renderExportPreview() {
+            let max_items_in_list = 5;
+            let obj = generateObjectForExport(export_options);
+
+            let preview_string = '';
+
+            // previewing as json
+            if (export_options.export_file_format === 'json') {
+                let spacing = '    ';  // spacing for indentation (4 spaces, no tabs (ha-ha))
+                preview_string += '{\n';
+
+                for (let key in obj) {
+                    let inner_obj = obj[key];
+
+                    let inner_obj_as_str;
+                    if (Array.isArray(inner_obj) && inner_obj.length > max_items_in_list) {
+                        // if it is a list and too long we stringify it as `["item1", "item2", ...]`
+                        inner_obj_as_str = JSON.stringify(inner_obj.slice(0, max_items_in_list));
+                        inner_obj_as_str = inner_obj_as_str.slice(0, -1) + ', ...]'
+                    } else {
+                        // case of Date (or other misc objects) or small lists
+                        inner_obj_as_str = JSON.stringify(inner_obj);
+                    }
+
+                    preview_string += spacing + '"' + key + '": ' + inner_obj_as_str + '\n';
+                }
+                preview_string += '}';
+            } else if (export_options.export_file_format === 'txt') {
+                for (let key in obj) {
+                    let inner_obj = obj[key];
+
+                    // if it is not an array (and not Date)
+                    if (Array.isArray(inner_obj)) {
+                        preview_string += '# ' + key + ':\n';
+                        preview_string += inner_obj.slice(0, max_items_in_list).map(str => str + '\n').join('');
+
+                        if (inner_obj.length > max_items_in_list) {
+                            preview_string += '...\n';
+                        }
+                        preview_string += '\n';
+                    }
+                }
+            } else {
+                preview_string += 'ERROR OF PREVIEW!';
+            }
+            $('#exportFilePreviewText').val(preview_string);
+
+        }
+
+        // rendering statistics for markup
+        function renderMarkupMenuStatistics() {
+            function color(number, color) {
+                return `<span style="color: ${color};">${number}</span>`
+            }
+
+            let n_positive_strings = history_results.filter(
+                item => item.is_used_for_search && item.type === 'positive'
+            ).length;
+            let n_negative_strings = history_results.filter(
+                item => item.is_used_for_search && item.type === 'negative'
+            ).length;
+            let n_current_results = current_results.length;
+
+            let n_honeypots_total = n_positive_strings + n_negative_strings;
+            let n_to_markup = n_positive_strings + n_negative_strings + n_current_results;
+
+            let n_positive_strings_str = color(n_positive_strings, 'green');
+            let n_negative_strings_str = color(n_negative_strings, 'red');
+
+            let n_honeypots_str = `${n_positive_strings_str} + ${n_negative_strings_str} = ${n_honeypots_total}`;
+            let n_to_markup_str = `${n_positive_strings_str} + ${n_negative_strings_str} + ${n_current_results} = ` +
+                `${n_to_markup}`;
+
+            // exceptional cases requiring addtitional info
+            if (current_markup_scenario === 'intent_classification') {
+                n_honeypots_str = `0 (honeypots вшиты в проект)`;
+            } else if (current_markup_scenario === 'tagging') {
+                n_honeypots_str = `0 (honeypots нужно будет разметить в Sandbox Толоке)`;
+                n_to_markup_str = `${n_positive_strings_str} + ${color('0 (негативные игнорируются)', 'red')} + ` +
+                    `${n_current_results} = ${n_positive_strings + n_current_results}`;
+            } else if (current_markup_scenario === 'binary_classification_and_tagging') {
+                n_honeypots_str += ` (только в классификации, для тэггинга нужно будет разметить в Sandbox)`;
+            }
+
+            renderTemplate(
+                'data-markup-statistics',
+                'data-markup-statistics-template',
+                {
+                    n_honeypots_str: n_honeypots_str,
+                    n_to_markup_str: n_to_markup_str,
+                }
+            )
+        }
+
+        // rendering option UI elements of the markup section depending on the current scenario
+        function renderMarkupInputElements() {
+            // hiding all elements
+            $('[id^=' + data_markup_inputs_prefix + ']').parent().attr('hidden', true);
+
+            // unhiding necessary elements
+            for (let element_id of markup_scenarios_elements_ids[current_markup_scenario]) {
+                let global_id = '#' + data_markup_inputs_prefix + '-' + element_id;
+                $(global_id).parent().removeAttr('hidden'); // parent because we need to hide the whole form
+            }
+
+            // rendering instructions depending on each scenario
+            let mapping_scenario_to_instructions = {
+                'binary_classification': 'data-markup-instructions-binary-classification',
+                'intent_classification': 'data-markup-instructions-intent-classification',
+                'tagging': 'data-markup-instructions-tagging',
+                'binary_classification_and_tagging': 'data-markup-instructions-binary-classification-and-tagging'
+            };
+
+            for (let key in mapping_scenario_to_instructions) {
+                $('#' + mapping_scenario_to_instructions[key]).attr('hidden', true);
+            }
+            $('#' + mapping_scenario_to_instructions[current_markup_scenario]).removeAttr('hidden');
+            renderMarkupMenuStatistics();
+        }
+
+        // setting default markup scenario choice
+        function setDefaultMarkupScenario() {
+            $('#data-markup-select-scenario').val(current_markup_scenario);
+            renderMarkupInputElements();
+        }
+
+        // rendering table for results of current search
+        function renderCurrentResults() {
+            let payload_keys_array = Array.from(current_payload_keys);
+
+            renderTemplate(
+                'current-results-table-head',
+                'current-results-table-head-template',
+                {
+                    'payload_keys': is_render_payload_in_current_results ? payload_keys_array : []
+                }
+            );
+            renderTemplate(
+                'current-results-table-body',
+                'current-results-table-body-template',
+                {
+                    'results': current_results.slice(0, n_limit_shown_current_search).map(el => {
+                        let obj = {
+                            ui_id: el.ui_id,
+                            text: el.text
+                        };
+
+                        if (is_render_payload_in_current_results) {
+                            obj.payload = [];
+                            for (let key of payload_keys_array) {
+                                obj.payload.push(el.payload[key]);
+                            }
+                        }
+                        return obj;
+                    })
+                }
+            );
+            renderTemplate(
+                'current-results-table-foot',
+                'current-results-table-foot-template',
+                {
+                    'payload_keys': is_render_payload_in_current_results ? payload_keys_array : []
+                }
+            );
+            renderTemplate(
+                'results-fetching-time',
+                'results-fetching-time-template',
+                {
+                    last_fetching_time: last_fetching_time
+                }
+            );
+            renderMarkupMenuStatistics();
+        }
+
+        // rendering strings table and also bubbles for searching
+        // also local storage is updated accordingly
+        function renderHistoryAndQueries() {
+            let positive_strings = history_results.filter(
+                item => item.is_used_for_search && item.type === 'positive'
+            );
+            let negative_strings = history_results.filter(
+                item => item.is_used_for_search && item.type === 'negative'
+            );
+            let payload_keys_array = Array.from(history_payload_keys);
+
+            renderTemplate(
+                'searcheable-queries',
+                'searcheable-queries-template',
+                {
+                    'strings': positive_strings.concat(negative_strings),
+                }
+            );
+            renderTemplate(
+                'history-results-strings-table-head',
+                'history-results-strings-table-head-template',
+                {
+                    'payload_keys': is_render_payload_in_history_results ? payload_keys_array : []
+                }
+            );
+            renderTemplate(
+                'history-results-strings-table-body',
+                'history-results-strings-table-body-template',
+                {
+                    'items': history_results.slice().reverse().map(el => {
+                        let obj = {
+                            ui_id: el.obj.ui_id,
+                            text: el.obj.text
+                        };
+
+                        if (is_render_payload_in_history_results) {
+                            obj.payload = [];
+                            for (let key of payload_keys_array) {
+                                if (el.obj.payload != null && key in el.obj.payload) {
+                                    obj.payload.push(el.obj.payload[key]);
+                                } else {
+                                    obj.payload.push('');
+                                }
+                            }
+                        }
+
+                        return {
+                            'type': el.type,
+                            'obj': obj,
+                            'is_used_for_search': el.is_used_for_search
+                        };
+                    }),
+                }
+            );
+            localStorage.setItem('verstehen_storage', JSON.stringify(history_results));
+            renderExportPreview();
+            renderMarkupMenuStatistics();
+        }
+    </script>
+
+    <!--Handlebars templates-->
+
+    <!--Handlebar template for searcheable strings-->
+    <script id="searcheable-queries-template" type="text/x-handlebars-template">
+        <ul class="searcheable-string">
+            {{#each strings}}
+
+            <li class="mr-1 {{this.type}}">
+                {{this.obj.text}}
+                <button type="button" class="close mr-1"
+                        onClick="removeSearchingString('{{this.obj.ui_id}}');">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </li>
+            {{/each}}
+        </ul>
+    </script>
+
+    <!--Handlebar template for current search results table header-->
+    <script id="current-results-table-head-template" type="text/x-handlebars-template">
+        <tr>
+            <th scope="col">Text Result</th>
+
+            {{#each payload_keys}}
+            <th scope="small-col col">{{this}}</th>
+            {{/each}}
+
+            <th class="small-col text-center" scope="col">Accept</th>
+            <th class="small-col text-center" scope="col">Decline</th>
+            <th class="small-col text-center" scope="col">Skip</th>
+        </tr>
+    </script>
+
+    <!--Handlebar template for current search results table items-->
+    <script id="current-results-table-body-template" type="text/x-handlebars-template">
+        {{#each results}}
+        <tr>
+            <td class="align-middle result-text">{{this.text}}</td>
+
+            {{#if this.payload}}
+            {{#each this.payload}}
+            <td class="align-middle result-text">{{this}}</td>
+            {{/each}}
+            {{/if}}
+
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-success"
+                        onclick="newStringAssessmentByUser('positive', '{{this.ui_id}}')">
+                    <i class="fa fa-check"/>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-danger"
+                        onclick="newStringAssessmentByUser('negative', '{{this.ui_id}}')">
+                    <i class="fa fa-times fa-fw"/>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="newStringAssessmentByUser('skipped', '{{this.ui_id}}')">
+                    <i class="fa fa-ban fa-fw"/>
+                </button>
+            </td>
+        </td>
+        {{/each}}
+    </script>
+
+    <!--Handlebar template for current search results table footer-->
+    <script id="current-results-table-foot-template" type="text/x-handlebars-template">
+        <tr>
+            <td scope="col"><b>Apply for all</b></td>
+
+            {{#each payload_keys}}
+            <td scope="small-col col">
+                <!--Empty on purpose-->
+            </td>
+            {{/each}}
+
+            <td class="align-middle text-center" scope="col">
+                <button type="button" class="btn btn-outline-success"
+                        onClick="addAllStringsAs('positive')">
+                    <i class="fa fa-check"></i>
+                </button>
+            </td>
+            <td class="align-middle text-center" scope="col">
+                <button type="button" class="btn btn-outline-danger"
+                        onClick="addAllStringsAs('negative')">
+                    <i class="fa fa-times fa-fw"></i>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-secondary"
+                        onClick="addAllStringsAs('skipped')">
+                    <i class="fa fa-ban fa-fw"></i>
+                </button>
+            </td>
+        </tr>
+    </script>
+
+    <!--Handlebar template for history table header-->
+    <script id="history-results-strings-table-head-template" type="text/x-handlebars-template">
+        <tr>
+            <th scope="col">Text</th>
+            {{#each payload_keys}}
+            <th scope="small-col col">{{this}}</th>
+            {{/each}}
+            <th class="small-col text-center" scope="col">Searchable</th>
+            <th class="small-col text-center" scope="col">Positive</th>
+            <th class="small-col text-center" scope="col">Negative</th>
+            <th class="small-col text-center" scope="col">Skipped</th>
+            <th class="small-col text-center" scope="col"><!--Reserved deletion icon--></th>
+        </tr>
+    </script>
+
+    <!--Handlebar template for history table items-->
+    <script id="history-results-strings-table-body-template" type="text/x-handlebars-template">
+        {{#each items}}
+        <tr>
+            <td class="align-middle">{{this.obj.text}}</td>
+            {{#if this.obj.payload}}
+            {{#each this.obj.payload}}
+            <td class="align-middle result-text">{{this}}</td>
+            {{/each}}
+            {{/if}}
+            <td class="align-middle text-center">
+                <input type="checkbox"
+                       onclick="searcheableQueryCheckbox('{{this.obj.ui_id}}');"
+                       {{#ifeq this.type 'skipped'}} disabled {{/ifeq}} {{#if this.is_used_for_search}} checked
+                {{/if}}>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-success {{#ifeq this.type 'positive'}} active {{/ifeq}}"
+                        onclick="setSelectedQueryStatus('positive', '{{this.obj.ui_id}}')">
+                    <i class="fa fa-check"/>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-danger {{#ifeq this.type 'negative'}} active {{/ifeq}}"
+                        onclick="setSelectedQueryStatus('negative', '{{this.obj.ui_id}}')">
+                    <i class="fa fa-times fa-fw"/>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="btn btn-outline-secondary {{#ifeq this.type 'skipped'}} active {{/ifeq}}"
+                        onclick="setSelectedQueryStatus('skipped', '{{this.obj.ui_id}}')">
+                    <i class="fa fa-ban fa-fw"/>
+                </button>
+            </td>
+            <td class="align-middle text-center">
+                <button type="button" class="close" aria-label="Close"
+                        onclick="removeHistoryResult('{{this.obj.ui_id}}')">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </td>
+        </tr>
+        {{/each}}
+    </script>
+
+    <!--Handlebar template for last fetching time to obtain response from the server-->
+    <script id="results-fetching-time-template" type="text/x-handlebars-template">
+        <p>{{#if last_fetching_time}} {{last_fetching_time}} ms {{else}} - {{/if}}</p>
+    </script>
+
+    <!--Handlebar template for markup menu statistics-->
+    <script id="data-markup-statistics-template" type="text/x-handlebars-template">
+        <h4 class="mt-3">Статистика</h4>
+        <ul>
+            <!--beware of triple brackets in the template-->
+            <li>Всего размеченных примеров (honeypots): <b>{{{n_honeypots_str}}}</b></li>
+            <li>Всего фраз, которые уйдут на разметку: <b>{{{n_to_markup_str}}}</b></li>
+        </ul>
+    </script>
+
+    <!--Handlebar template for data markup request results-->
+    <script id="data-markup-results-template" type="text/x-handlebars-template">
+        <p>Nirvana URL: {{#ifeq nirvana_url 'Unknown'}} <b>Unknown</b> {{else}}
+            <a target="_blank" rel="noopener noreferrer" href="{{nirvana_url}}">{{nirvana_url}}</a> {{/ifeq}}</p>
+        {{#if error}} <p>Error: <b>{{error}}</b></p> {{/if}}
+    </script>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="container-fluid">
+        <div class="row">
+            <!--Search UI interaction and history column-->
+            <div class="col-6">
+                <div class="row-fluid mt-3">
+                    <h4>Search</h4>
+                    <div class="row-fluid mb-3">
+                        <button type="button" class="btn btn-success" id="search_button" onclick="searchButtonClick();">
+                            Search <i class="fa fa-search">
+                        </i>
+                        </button>
+                        <button class="btn" type="button" data-toggle="collapse" data-target="#optionsArea"
+                                aria-expanded="false" aria-controls="collapseExample">
+                            <i class="fa fa-cog" aria-hidden="true">
+                            </i>
+                        </button>
+                        <button class="btn" type="button" data-toggle="modal" data-target="#info-modal">
+                            <i class="fa fa-info" aria-hidden="true">
+                            </i>
+                        </button>
+                        <i class="fa fa-spinner fa-spin fa-2x" aria-hidden="true" id="spinner_icon" hidden>
+                        </i>
+                        <div class="collapse" id="optionsArea">
+                            <div class="form-group">
+                                <label for="option_current_app" class="form-text text-muted">App to use</label>
+                                <select class="form-control" id="option_current_app">
+                                    <!--will be initialized renderDefaultOptions-->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="option_current_index" class="form-text text-muted">Index type</label>
+                                <select class="form-control" id="option_current_index">
+                                    <!--will be initialized renderDefaultOptions-->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="option_n_limit_results" class="form-text text-muted">Number of results to
+                                    display per search</label>
+                                <input class="form-control" id="option_n_limit_results">
+                                <div class="invalid-feedback">
+                                    Number of results must be a positive integer less than 1000000
+                                </div>
+                            </div>
+                            <div class="form-check mt-3">
+                                <input type="checkbox" class="form-check-input"
+                                       id="option_is_render_payload_in_current_results">
+                                <label for="option_is_render_payload_in_current_results" class="form-check-label">
+                                    Render payload columns in search results
+                                </label>
+                            </div>
+
+                            <div class="form-check mt-3">
+                                <input type="checkbox" class="form-check-input"
+                                       id="option_is_render_payload_in_history_results">
+                                <label for="option_is_render_payload_in_history_results" class="form-check-label">
+                                    Render payload columns in history
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-info mt-3" data-toggle="collapse" data-target="#exportingArea"
+                            aria-expanded="false" aria-controls="collapseExample">
+                        Exporting...
+                    </button>
+                    <button class="btn btn-info mt-3" type="button" data-toggle="modal"
+                            data-target="#data-markup-modal">
+                        Data Markup
+                    </button>
+
+                    <div class="collapse mt-3" id="exportingArea">
+                        <div class="row">
+                            <div class="col-6">
+                                <h5>Exporting Options</h5>
+
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportPositiveStrings">
+                                    <label for="exportPositiveStrings" class="form-check-label">Export positive
+                                        strings</label>
+                                </div>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportNegativeStrings">
+                                    <label for="exportNegativeStrings" class="form-check-label">Export negative
+                                        strings</label>
+                                </div>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportSkippedStrings">
+                                    <label for="exportSkippedStrings" class="form-check-label">Export skipped
+                                        strings</label>
+                                </div>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportCurrentSearchStrings">
+                                    <label for="exportCurrentSearchStrings" class="form-check-label">Export current
+                                        search strings</label>
+                                </div>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportMoveAllToOneList">
+                                    <label for="exportMoveAllToOneList" class="form-check-label">Move selected strings
+                                        to one list</label>
+                                </div>
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" class="form-check-input" id="exportIncludePayload">
+                                    <label for="exportIncludePayload" class="form-check-label">Include payload columns
+                                        (JSON only)</label>
+                                </div>
+                                <div class="form-group row-fluid">
+                                    <div class="form-check form-check-inline mt-3">
+                                        <input class="form-check-input" type="radio" id="exportFileAsJson"
+                                               name="exportFileFormat" value="json" checked>
+                                        <label class="form-check-label" for="exportFileAsJson">JSON</label>
+                                    </div>
+                                    <div class="form-check form-check-inline mt-3">
+                                        <input class="form-check-input" type="radio" id="exportFileAsTxt"
+                                               name="exportFileFormat" value="txt">
+                                        <label class="form-check-label" for="exportFileAsTxt">TXT</label>
+                                    </div>
+                                </div>
+                                <div class="form-group mt-3">
+                                    <label for="exportFileName" class="form-text text-muted">Export File
+                                        Name</label>
+                                    <input class="form-control" id="exportFileName">
+                                </div>
+                                <button type="button" class="btn btn-secondary mt-3" onclick="saveStringsToFile();">
+                                    Export File <i class="fa fa-save"></i>
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label for="exportFilePreviewText">File Preview (schematic)</label>
+                                    <textarea disabled style="resize:none" class="form-control"
+                                              id="exportFilePreviewText" rows="13">
+                                    </textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <form autocomplete="off">
+                        <div class="input-group mb-3 mt-3">
+                                <input type="text" class="form-control" placeholder="Manually add text for search..."
+                                       id="manualInput"/>
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-success" id="go_button"
+                                        onclick="manualAddPositiveString();">Add
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    <h4>Texts for search
+                        <button type="button" class="btn btn-light" onclick="clearUsedForSearch();">
+                            Clear
+                        </button>
+                        <button type="button" class="btn btn-info" data-toggle="collapse"
+                                data-target="#importingArea"
+                                aria-expanded="false" aria-controls="collapseExample">
+                            Importing...
+                        </button>
+                    </h4>
+
+                    <div class="collapse mt-3" id="importingArea">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="importTextArea">Lines to add</label>
+                                    <textarea style="resize:none" class="form-control"
+                                              id="importTextArea" rows="13"></textarea>
+                                </div>
+                                <button class="btn btn-info btn-file">
+                                    From File <input type="file" id="importInputFile">
+                                </button>
+                                <button class="btn btn-success" onclick="addImportingStrings();">
+                                    Add All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row-fluid mt-3">
+                        <div id="searcheable-queries">
+                        </div>
+                    </div>
+                </div>
+                <!--Table for history-->
+                <div>
+                    <div class="row mt-3">
+                        <div class="col-6 offset-3">
+                            <h4 class="text-center">History</h4>
+                        </div>
+                        <div class="col-3 text-right">
+                            <button type="button" class="btn btn-danger" data-toggle="modal" onClick="clearHistory();">
+                                Clear history
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col">
+                            <table class="table">
+                                <thead id="history-results-strings-table-head">
+                                </thead>
+                                <tbody id="history-results-strings-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--Current search results column-->
+            <div class="col-6">
+                <div class="row mt-3">
+                    <div class="col-6 offset-3">
+                        <h4 class="text-center">Current Search Results</h4>
+                    </div>
+                    <div class="col-3 text-right">
+                        <div id="results-fetching-time">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <table class="table">
+                            <thead id="current-results-table-head"></thead>
+                            <tbody id="current-results-table-body"></tbody>
+                            <tfoot id="current-results-table-foot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="data-markup-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title">Разметка данных</h1>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">Важно!</h4>
+                    На этой странице возможно отправить данные для разметки с помощью
+                    <a target="_blank" rel="noopener noreferrer" href="https://toloka.yandex.ru">Толоки</a>. Пожалуйста,
+                    внимательно читайте данную страницу, чтобы интеграция с самой Толокой не сломалась в самом
+                    неподходящем месте, что <b>может повлиять на финансовую сторону вашего аккаунта в Толоке</b>.
+                </div>
+                <div class="alert alert-info" role="alert">
+                    <p>
+                        Если вам не хватает информации, указанной на данной странице, советуем вам ознакомиться с
+                        <a target="_blank" rel="noopener noreferrer"
+                           href="https://wiki.yandex-team.ru/users/artemkorenev/verstehen/#razmetkadannyx">
+                            соответствующей секцией</a> на нашей wiki-странице.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-select-scenario" class="form-text text-muted">Сценарий разметки</label>
+                    <select class="form-control" id="data-markup-select-scenario">
+                        <option value="binary_classification">Бинарная Классификация</option>
+                        <option value="intent_classification">Классификация на интенты</option>
+                        <option value="tagging">Тэггинг</option>
+                        <option value="binary_classification_and_tagging">Бинарная Классификация, а затем тэггинг на
+                            отфильтрованных примерах
+                        </option>
+                    </select>
+                </div>
+
+                <h2>
+                    Как это работает?
+                </h2>
+                <p>
+                    После того, как вы разметили значительное количество данных, качество вашего поиска должно было
+                    улучшиться, и в результатах должны чаще появляться релевантные фразы. Но со временем, есть смысл
+                    взять большое количество результатов поиска и разметить для необходимой задачи. Это эффективно,
+                    потому что обученный на ваших данных поиск сможет доставать данные, которые часто нужны именно вам
+                    и вы можете получать больше необходимой разметки, тратя на это меньшее количество денег.
+                </p>
+
+                <p>
+                    Здесь собран небольшой интерфейс, который позволит вам запустить процесс разметки и отправить
+                    результаты в необходимое вам место на YT.
+                </p>
+
+                <p>
+                    В случае бинарной классификации, контроль честности и эффективности пользователей Толоки будет
+                    осуществлен с помощью уже размеченных вами данных (только положительные и отрицательные),
+                    поэтому важно отнестись к их разметке <b>серьезно</b>. Размеченные данные на Толоке называются
+                    <b>honeypots</b> и используются для контроля пользователей, чтобы качество разметки было на желаемом
+                    уровне.
+                </p>
+
+                <h3>
+                    Что именно происходит, когда я пользуюсь этой фичёй?
+                </h3>
+
+                <p>
+                    Весь процесс разметки состоит из следующих верхнеуровневых этапов:
+                </p>
+
+
+                <div id="data-markup-instructions-binary-classification">
+                    <h4>Бинарная Классификация</h4>
+                    <ol>
+                        <li>
+                            Создается и запускается граф на <a target="_blank" rel="noopener noreferrer"
+                                                               href="https://nirvana.yandex-team.ru">Nirvana</a>, в
+                            который передаются данные из данной тулзы, а также настройки, которые указаны для Толоки.
+                            Ссылка на выполняющийся граф появится вскоре отправки запроса на разметку.
+                        </li>
+                        <li>
+                            На Толоке будет создан или переиспользован проект для классификации. Если проект существует
+                            с таким названием, то его инструкция будет обновлена до указанной (<b>это меняет инструкцию,
+                            которую видят пользователи</b>, поэтому аккуратнее с обновлением инструкций в проектах, где
+                            на данный момент происходит разметка).
+                        </li>
+                        <li>
+                            Будет создан или переиспользован навык Толоки, который ассоциирован с названием проекта и
+                            версией инструкции (если инструкция и названия проекта не менялись, то будет переиспользован
+                            существующий навык).
+                        </li>
+                        <li>
+                            В проекте будет создан специальный обучающий пул, куда будет отправлена часть honeypots
+                            (размеченные вами данные) для того, чтобы новые пользователи научились выполнять задания.
+                            Для этого будет создан или переиспользован существующий специальный навык, который будет
+                            указываться в последующих пулах. Если инструкция обновлялась с прошлого раза, когда был
+                            использован проект, то старые пользователи лишатся этого навыка, чтобы вынудить их пройти
+                            обучение заново.
+                        </li>
+                        <li>
+                            Будет создан новый пул для основного проекта, который будут размечать пользователи Толоки.
+                            Туда будут отправлены оставшиеся honeypots и остальные неразмеченные данные. Размечаться
+                            будут данные из результатов текущего поиска (те, что справа).
+                        </li>
+                        <li>
+                            Размеченные толокерами данные сольются с данными honeypots (которые вы сами разметили, мы их
+                            считаем за ground truth).
+                        </li>
+                        <li>
+                            После завершения пула, данные будут выкачены с Толоки и загружены в нужное место на YT.
+                        </li>
+                    </ol>
+                </div>
+                <div id="data-markup-instructions-intent-classification">
+                    <h4>Классификация на интенты</h4>
+                    <ol>
+                        <li>
+                            Создается и запускается граф на <a target="_blank" rel="noopener noreferrer"
+                                                               href="https://nirvana.yandex-team.ru">Nirvana</a>, в
+                            который передаются данные из данной тулзы, а также настройки, которые указаны для Толоки.
+                            Ссылка на выполняющийся граф появится вскоре отправки запроса на разметку.
+                        </li>
+                        <li>
+                            Будет переиспользован существующий проект на Толоки, который доступен пользователям
+                            voice-toloka. Если у вас нет к нему доступа, увы, мы пока не можем поддержать этот сценарий.
+                        </li>
+                        <li>
+                            В проекте будет создан пул, куда зальются данные из результатов текущего поиска (те, что
+                            справа), а также положительные и отрицательные примеры (то есть то, что вы разметили).
+                        </li>
+                        <li>
+                            После завершения пула, данные будут выкачены с Толоки и загружены в нужную таблицу на YT.
+                        </li>
+                    </ol>
+                </div>
+                <div id="data-markup-instructions-tagging">
+                    <h4>Тэггинг</h4>
+                    <ol>
+                        <li>
+                            Создается и запускается граф на <a target="_blank" rel="noopener noreferrer"
+                                                               href="https://nirvana.yandex-team.ru">Nirvana</a>, в
+                            который передаются данные из данной тулзы, а также настройки, которые указаны для Толоки.
+                            Ссылка на выполняющийся граф появится вскоре отправки запроса на разметку.
+                        </li>
+                        <li>
+                            На Толоке будет создан или переиспользован проект для тэггинга. Если проект существует с
+                            таким названием, то его инструкция будет обновлена до указанной (<b>это меняет инструкцию,
+                            которую видят пользователи</b>, поэтому аккуратнее с обновлением инструкций в проектах, где
+                            на данный момент происходит разметка).
+                        </li>
+                        <li>
+                            Если вы не задали ханипоты, то будет создан дополнительный проект на Sandbox Толоки,
+                            идентичный прошлому но с суффиксом в названии "(sandbox dev)". Если проект существует с
+                            таким названием, то его инструкция будет обновлена до указанной. Это специальный проект,
+                            куда будут отправляться данные, чтобы сформировать honeypots - данные для контроля
+                            пользователей Толоки (в текущей туле этого сделать нельзя). Часть данных (количество вы
+                            в опциях) будет отправлена в новый пул в этом проекте, и эти данные нужно будет разметить
+                            самостоятельно (проще с личного аккаунта, который добавлен в "Доверенных пользователей").
+                        </li>
+                        <li>
+                            В проекте будет создан специальный обучающий пул, куда будет отправлена часть honeypots для
+                            того, чтобы новые пользователи научились выполнять задания. Для этого будет создан или
+                            переиспользован существующий специальный навык, который будет указываться в последующих
+                            пулах. Если инструкция обновлялась с прошлого раза, когда был использован проект, то старые
+                            пользователи лишатся этого навыка, чтобы вынудить их пройти обучение заново.
+                        </li>
+                        <li>
+                            Будет создан новый пул для основного проекта, который будут размечать пользователи Толоки.
+                            Туда будут отправлены оставшиеся honeypots и остальные неразмеченные данные.
+                        </li>
+                        <li>
+                            Размеченные толокерами данные сольются с данными honeypots (мы их считаем за ground truth).
+                        </li>
+                        <li>
+                            После завершения пула, данные будут выкачены с Толоки и загружены в нужное место на YT.
+                        </li>
+                    </ol>
+                </div>
+                <div id="data-markup-instructions-binary-classification-and-tagging">
+                    <h4>Бинарная Классификация, а затем тэггинг на отфильтрованных примерах</h4>
+                    <ol>
+                        <li>
+                            Создается и запускается граф на <a target="_blank" rel="noopener noreferrer"
+                                                               href="https://nirvana.yandex-team.ru">Nirvana</a>, в
+                            который передаются данные из данной тулзы, а также настройки, которые указаны для Толоки.
+                            Ссылка на выполняющийся граф появится вскоре отправки запроса на разметку.
+                        </li>
+                        <li>
+                            На Толоке будет создан или переиспользован проект для классификации. Если проект существует
+                            с таким названием, то его инструкция будет обновлена до указанной (<b>это меняет инструкцию,
+                            которую видят пользователи</b>, поэтому аккуратнее с обновлением инструкций в проектах, где
+                            на данный момент происходит разметка).
+                        </li>
+                        <li>
+                            Будет создан или переиспользован навык Толоки, который ассоциирован с названием проекта и
+                            версией инструкции (если инструкция и названия проекта не менялись, то будет переиспользован
+                            существующий навык).
+                        </li>
+                        <li>
+                            В проекте будет создан специальный обучающий пул, куда будет отправлена часть honeypots
+                            (размеченные вами данные) для того, чтобы новые пользователи научились выполнять задания.
+                            Для этого будет создан или переиспользован существующий специальный навык, который будет
+                            указываться в последующих пулах. Если инструкция обновлялась с прошлого раза, когда был
+                            использован проект, то старые пользователи лишатся этого навыка, чтобы вынудить их пройти
+                            обучение заново.
+                        </li>
+                        <li>
+                            Будет создан новый пул для основного проекта, который будут размечать пользователи Толоки.
+                            Туда будут отправлены оставшиеся honeypots и остальные неразмеченные данные. Размечаться
+                            будут данные из результатов текущего поиска (те, что справа).
+                        </li>
+                        <li>
+                            Размеченные толокерами данные сольются с данными honeypots (которые вы сами разметили, мы их
+                            считаем за ground truth).
+                        </li>
+                        <li>
+                            После завершения пула, данные будут выкачены с Толоки и загружены в нужное место на YT.
+                        </li>
+                        <li>
+                            Размеченные фильтруются, оставляя только те примеры, которые считаются позитивными (иначе
+                            там нечего тэгировать) и они отправляются в следующие этапы для тэггинга.
+                        </li>
+                        <li>
+                            На Толоке будет создан или переиспользован проект для тэггинга. Если проект существует с
+                            таким названием, то его инструкция будет обновлена до указанной (<b>это меняет инструкцию,
+                            которую видят пользователи</b>, поэтому аккуратнее с обновлением инструкций в проектах, где
+                            на данный момент происходит разметка).
+                        </li>
+                        <li>
+                            Если вы не задали ханипоты, то будет создан дополнительный проект на Sandbox Толоки,
+                            идентичный прошлому но с суффиксом в названии "(sandbox dev)". Если проект существует с
+                            таким названием, то его инструкция будет обновлена до указанной. Это специальный проект,
+                            куда будут отправляться данные, чтобы сформировать honeypots - данные для контроля
+                            пользователей Толоки (в текущей туле этого сделать нельзя). Часть данных (количество вы
+                            в опциях) будет отправлена в новый пул в этом проекте, и эти данные нужно будет разметить
+                            самостоятельно (проще с личного аккаунта, который добавлен в "Доверенных пользователей").
+                        </li>
+                        <li>
+                            В проекте будет создан специальный обучающий пул, куда будет отправлена часть honeypots для
+                            того, чтобы новые пользователи научились выполнять задания. Для этого будет создан или
+                            переиспользован существующий специальный навык, который будет указываться в последующих
+                            пулах. Если инструкция обновлялась с прошлого раза, когда был использован проект, то старые
+                            пользователи лишатся этого навыка, чтобы вынудить их пройти обучение заново.
+                        </li>
+                        <li>
+                            Будет создан новый пул для основного проекта, который будут размечать пользователи Толоки.
+                            Туда будут отправлены оставшиеся honeypots и остальные неразмеченные данные.
+                        </li>
+                        <li>
+                            Размеченные толокерами данные сольются с данными honeypots (мы их считаем за ground truth).
+                        </li>
+                        <li>
+                            После завершения пула, данные будут выкачены с Толоки и загружены в нужное место на YT.
+                        </li>
+                    </ol>
+                </div>
+
+                <!--Generic part (keys)-->
+                <div class="row">
+                    <div class="form-group col-3">
+                        <label for="data-markup-input-nirvana-token" class="form-text text-muted">
+                            OAuth-токен Nirvana (<a target="_blank" rel="noopener noreferrer"
+                                                    href="https://wiki.yandex-team.ru/JandeksPoisk/Nirvana/Components/API/">отсюда</a>)
+                        </label>
+                        <input type="password" class="form-control" id="data-markup-input-nirvana-token">
+                        <div class="invalid-feedback">
+                            Токен для Нирваны должен быть непустым
+                        </div>
+                    </div>
+                    <div class="form-group col-3">
+                        <label for="data-markup-input-toloka-secret" class="form-text text-muted">
+                            Секрет для Толоки (не токен)
+                        </label>
+                        <input class="form-control" id="data-markup-input-toloka-secret" required>
+                        <div class="invalid-feedback">
+                            Секрет для Толоки должен быть непустым
+                        </div>
+                    </div>
+                    <div class="form-group col-3">
+                        <label for="data-markup-input-yt-secret" class="form-text text-muted">
+                            Секрет для YT (не токен)
+                        </label>
+                        <input class="form-control" id="data-markup-input-yt-secret" required>
+                        <div class="invalid-feedback">
+                            Секрет для YT должен быть непустым
+                        </div>
+                    </div>
+                    <div class="form-group col-3">
+                        <label for="data-markup-input-yql-secret" class="form-text text-muted">
+                            Секрет для YQL (не токен)
+                        </label>
+                        <input class="form-control" id="data-markup-input-yql-secret" required>
+                        <div class="invalid-feedback">
+                            Секрет для YQL должен быть непустым
+                        </div>
+                    </div>
+                    <div class="form-group col-3">
+                        <label for="data-markup-input-ssh-secret" class="form-text text-muted">
+                            Секрет для SSH, с доступом в BitBucket VOICE Analytics (не токен)
+                        </label>
+                        <input class="form-control" id="data-markup-input-ssh-secret" required
+                               value="voice-robot-ssh-key">
+                        <div class="invalid-feedback">
+                            Секрет для SSH должен быть непустым
+                        </div>
+                    </div>
+                </div>
+
+                <!--Generic part (other)-->
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="data-markup-input-is-sandbox">
+                    <label for="data-markup-input-is-sandbox" class="form-check-label text-muted">Запустить на Sandbox
+                        Толоке <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                                  data-trigger="hover" data-content="Sandbox Толока это тестовая Толока, которая
+                                  находится по адресу
+                                  <a href=&quot;https:/sandbox.toloka.yandex.ru&quot;>sandbox.toloka.yandex.ru</a>.
+                                  Используется для тестов и деньги на ней не тратятся. Но настоящих Толокеров там нету,
+                                  а значит, скорее всего, никто не разметит ваши данные и ваш пул будет висеть вечно
+                                  если вы его сами не закроете.">
+                        </i>
+                    </label>
+                </div>
+
+                <!--Binary Classification Section-->
+                <div class="form-group">
+                    <label for="data-markup-input-binary-classification-toloka-project-name"
+                           class="form-text text-muted">
+                        Название проекта на Толоке для бинарной классификации
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Заголовок проекта, который будет виден в Толоке (пользователям в том числе)">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-binary-classification-toloka-project-name"
+                           required>
+                    <div class="invalid-feedback">
+                        Название проекта должно быть непустым
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-binary-classification-task-question" class="form-text text-muted">
+                        Вопрос, который увидят пользователи
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Вопрос, который увидят пользователи с фразой для разметки.
+                           Он <b>обязан</b> подразумевать ответ либо &quot;Да&quot;, либо &quot;Нет&quot;.">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-binary-classification-task-question">
+                    <div class="invalid-feedback">
+                        Вопрос должен быть непустым
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-binary-classification-project-instructions"
+                           class="form-text text-muted">
+                        Инструкция для проекта бинарной классификации (HTML)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Инструкция в HTML формате, которая будет показана пользователю Толоки
+                           и которая должна обучать его делать задание. Это важная штука, составляйте ее ответственно
+                           и с примерами.">
+                        </i>
+                    </label>
+                    <textarea class="form-control" id="data-markup-input-binary-classification-project-instructions"
+                              rows="5"></textarea>
+                    <div class="invalid-feedback">
+                        Инструкция уж точно не должна быть пустой
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-binary-classification-yt-destination" class="form-text text-muted">
+                        Путь к конечному YT файлу с разметкой после бинарной классификации (на hahn)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Адрес файла на YT, куда отправится данные после разметки">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-binary-classification-yt-destination">
+                    <div class="invalid-feedback">
+                        Путь к YT должен быть непустым и начинаться с '//'
+                    </div>
+                </div>
+
+                <!--Intent Classification Section-->
+                <div class="form-group">
+                    <label for="data-markup-input-intent-classification-prj-key" class="form-text text-muted">
+                        Ключ проекта (project key)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Название проекта в репозитории. Если не понимаете, о чем речь, то вам подойдет
+                                         general">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-intent-classification-prj-key" value="general"/>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-intent-classification-yt-destination" class="form-text text-muted">
+                        Путь к конечному YT файлу с разметкой классификации на интенты (на hahn)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Адрес файла на YT, куда отправится данные после разметки">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-intent-classification-yt-destination">
+                    <div class="invalid-feedback">
+                        Путь к YT должен быть непустым и начинаться с '//'
+                    </div>
+                </div>
+
+                <!--Binary Classification Section-->
+                <div class="form-group">
+                    <label for="data-markup-input-tagging-toloka-project-name" class="form-text text-muted">
+                        Название проекта на Толоке для тэггинга
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Заголовок проекта, который будет виден в Толоке (пользователям в том числе)">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-tagging-toloka-project-name" required>
+                    <div class="invalid-feedback">
+                        Название проекта должно быть непустым
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-tagging-task-categories" class="form-text text-muted">
+                        Категории для тэггинга (JSON список списков)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Категории, которые будут использованы в тэггере при разметке. Задаются списком
+                                         пар - переменная и описание. Например, если в задании 2 категории про
+                                         музыкальные альбомы и исполнителей, то категории могут быть
+                                         [ [&quot;artist&quot;, &quot;Исполнитель&quot; ], [&quot;album&quot;,
+                                         &quot;Альбом&quot; ]]">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-tagging-task-categories" required>
+                    <div class="invalid-feedback">
+                        Категории должны быть в виде JSON списка, где каждый элемент это список длиной 2,
+                        состоящий из двух строк (первая строка будет переменной JS).
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-tagging-goldenset" class="form-text text-muted">
+                        Ханипоты для тэггинга или количество, которое будет случайно выбрано и отправлено на разметку
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Если вы указываете ханипоты, то они должны быть JSON массивом, где каждый
+                           элемент имеет строки &quot;query&quot; (фраза) и &quot;output&quot; (ответ). Если вы
+                           указываете количество ханипотов, толучайным образом будет выбрано заданное количество фраз в
+                           качестве ханипотов и их нужно будет разметить самостоятельно в Sandbox Толоке.">
+                        </i>
+                    </label>
+                    <textarea class="form-control" id="data-markup-input-tagging-goldenset" rows="5"></textarea>
+                    <div class="invalid-feedback">
+                        Если вы указываете ханипоты, то они должны быть JSON массивом, где каждый элемент имеет строки
+                        "query" (фраза) и "output" (ответ). Если вы указываете количество ханипотов, то их количество
+                        должно быть положительным целым числом и не более 100.
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-tagging-project-instructions" class="form-text text-muted">
+                        Инструкция для проекта тэггинга (HTML)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Инструкция в HTML формате, которая будет показана пользователю Толоки
+                           и которая должна обучать его делать задание. Это важная штука, составляйте ее ответственно
+                           и с примерами.">
+                        </i>
+                    </label>
+                    <textarea class="form-control" id="data-markup-input-tagging-project-instructions"
+                              rows="5"></textarea>
+                    <div class="invalid-feedback">
+                        Инструкция уж точно не должна быть пустой
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="data-markup-input-tagging-yt-destination" class="form-text text-muted">
+                        Путь к конечному YT файлу с разметкой после тэггинга (на hahn)
+                        <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover" data-trigger="hover"
+                           data-content="Адрес файла на YT, куда отправится данные после разметки">
+                        </i>
+                    </label>
+                    <input class="form-control" id="data-markup-input-tagging-yt-destination">
+                    <div class="invalid-feedback">
+                        Путь к YT должен быть непустым и начинаться с '//'
+                    </div>
+                </div>
+
+                <button class="btn btn-info" type="button" data-toggle="collapse"
+                        data-target="#data-markup-advanced-area"
+                        aria-expanded="false" aria-controls="collapseExample">
+                    Дополнительные опции
+                </button>
+
+                <div class="collapse mt-3" id="data-markup-advanced-area">
+                    <!--Advanced Binary Classification Section-->
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-trainingset-size"
+                               class="form-text text-muted">
+                            Количество заданий, из которых будет сформирован обучающий пул для бинарной классификации
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Количество заданий, которые будут взяты из honeypots
+                               и которые будут отправлены для обучения Толокеров. Эти задания будут показаны Толокерам
+                               до реальной разметки и за них они не будут получать денег.">
+                            </i>
+                        </label>
+                        <input class="form-control"
+                               id="data-markup-input-binary-classification-advanced-trainingset-size"
+                               value="60">
+                        <div class="invalid-feedback">
+                            Количество должно быть положительным целым числом и не более 300
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-training-passing-skill-value"
+                               class="form-text text-muted">
+                            Значение навыка точности обучения для бинарной классификации
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Минимальное значение навыка, которое должен получить
+                               Толокер после обучения, чтобы получить доступ к боевым заданиям.">
+                            </i>
+                        </label>
+                        <input class="form-control"
+                               id="data-markup-input-binary-classification-advanced-training-passing-skill-value"
+                               value="90">
+                        <div class="invalid-feedback">
+                            Количество должно быть положительным целым числом и быть в пределах от 0 до 100
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-overlap"
+                               class="form-text text-muted">
+                            Перекрытие для бинарной классификации
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Количество Толокеров, которое выполнит одно задание
+                                (напрямую влияет на цену всей разметки). Чем больше значение, тем больше точность
+                                разметки">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-binary-classification-advanced-overlap"
+                               value="3">
+                        <div class="invalid-feedback">
+                            Перекрытие должно быть положительным целым числом и не превышать 100
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-task-time-length"
+                               class="form-text text-muted">
+                            Среднее время в минутах, требуемое на одно задание (не страницу заданий) для бинарной
+                            классификации
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover"
+                               data-content="Посчитайте или оцените среднее время, которое тратится на одно задание,
+                               чтобы вычислить количество заданий на странице, закладывая на это примерно 2 минуты на
+                               страницу заданий">
+                            </i>
+                        </label>
+                        <input class="form-control"
+                               id="data-markup-input-binary-classification-advanced-task-time-length" value="0.07">
+                        <div class="invalid-feedback">
+                            Время должно быть положительным числом, но не более 2.0 (минут).
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-page-price"
+                               class="form-text text-muted">
+                            Цена за страницу заданий для бинарной классификации
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Базовая сумма в $, которая будет платиться Толокеру за
+                               выполнение одной страницы заданий (напрямую влияет на цену всей разметки). На данный
+                               момент не конфигурируемо.">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-binary-classification-advanced-page-price"
+                               value="0.02" disabled>
+                        <div class="invalid-feedback">
+                            Цена за страницу заданий должна быть положительным числом и не превышать 1.0
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-custom-markup"
+                               class="form-text text-muted">
+                            Кастомная разметка для бинарной классификации (HTML)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомная HTML разметка для заданий. Если использован,
+                               то он переопределит автоматически генерируемую разметку.">
+                            </i>
+                        </label>
+                        <textarea class="form-control"
+                                  id="data-markup-input-binary-classification-advanced-custom-markup"
+                                  rows="5"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-custom-styles"
+                               class="form-text text-muted">
+                            Кастомные стили для бинарной классификации (CSS)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомные CSS стили для заданий">
+                            </i>
+                        </label>
+                        <textarea class="form-control"
+                                  id="data-markup-input-binary-classification-advanced-custom-styles"
+                                  rows="5"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-binary-classification-advanced-custom-script"
+                               class="form-text text-muted">
+                            Кастомный скрипт для бинарной классификации (JS)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомный JS скрипт для заданий.">
+                            </i>
+                        </label>
+                        <textarea class="form-control"
+                                  id="data-markup-input-binary-classification-advanced-custom-script"
+                                  rows="5"></textarea>
+                    </div>
+
+                    <!--Advanced Tagging-->
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-trainingset-size"
+                               class="form-text text-muted">
+                            Количество заданий, из которых будет сформирован обучающий пул
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Количество заданий, которые будут взяты из honeypots
+                               и которые будут отправлены для обучения Толокеров. Эти задания будут показаны Толокерам
+                               до реальной разметки и за них они не будут получать денег.">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-tagging-advanced-trainingset-size"
+                               value="40">
+                        <div class="invalid-feedback">
+                            Количество должно быть положительным целым числом и не более 300
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-training-passing-skill-value"
+                               class="form-text text-muted">
+                            Значение навыка точности обучения для тэггинга
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Минимальное значение навыка, которое должен получить
+                               Толокер после обучения, чтобы получить доступ к боевым заданиям.">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-tagging-advanced-training-passing-skill-value"
+                               value="80">
+                        <div class="invalid-feedback">
+                            Количество должно быть положительным целым числом и быть в пределах от 0 до 100
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-overlap" class="form-text text-muted">
+                            Перекрытие для тэггинга
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Количество Толокеров, которое выполнит одно задание
+                                (напрямую влияет на цену всей разметки). Чем больше значение, тем больше точность
+                                разметки">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-tagging-advanced-overlap" value="3">
+                        <div class="invalid-feedback">
+                            Перекрытие должно быть положительным целым числом и не превышать 100
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-task-time-length" class="form-text text-muted">
+                            Среднее время в минутах, требуемое на одно задание (не страницу заданий) для тэггинга
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover"
+                               data-content="Посчитайте или оцените среднее время, которое тратится на одно задание,
+                               чтобы вычислить количество заданий на странице, закладывая на это примерно 2 минуты на
+                               страницу заданий">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-tagging-advanced-task-time-length"
+                               value="0.1">
+                        <div class="invalid-feedback">
+                            Время должно быть положительным числом, но не более 2.0 (минут).
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-page-price" class="form-text text-muted">
+                            Цена за страницу заданий для тэггинга
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Базовая сумма в $, которая будет платиться Толокеру за
+                               выполнение одной страницы заданий (напрямую влияет на цену всей разметки). На данный
+                               момент не конфигурируемо.">
+                            </i>
+                        </label>
+                        <input class="form-control" id="data-markup-input-tagging-advanced-page-price" value="0.02"
+                               disabled>
+                        <div class="invalid-feedback">
+                            Цена за страницу заданий должна быть положительным числом и не превышать 1.0
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-custom-markup" class="form-text text-muted">
+                            Кастомная разметка дли тэггинга (HTML)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомная HTML разметка для заданий. Если использован,
+                               то он переопределит автоматически генерируемую разметку. Если разметка пуста, то будет
+                               подставлена автоматически генерируемая разметка с помощью &quot;Толоки для
+                               лисичек&quot;.">
+                            </i>
+                        </label>
+                        <textarea class="form-control" id="data-markup-input-tagging-advanced-custom-markup"
+                                  rows="5"><!-- to override generated HTML --></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-styles-static-part" class="form-text text-muted">
+                            Кастомные статические стили для тэггинга (CSS)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомные CSS стили для заданий">
+                            </i>
+                        </label>
+                        <textarea disabled class="form-control"
+                                  id="data-markup-input-tagging-advanced-styles-static-part"
+                                  rows="5"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="data-markup-input-tagging-advanced-script-static-part" class="form-text text-muted">
+                            Кастомный статический скрипт для тэггинга (JS)
+                            <i class="fa fa-question-circle" aria-hidden="true" data-toggle="popover"
+                               data-trigger="hover" data-content="Кастомный JS скрипт для заданий.">
+                            </i>
+                        </label>
+                        <textarea disabled class="form-control"
+                                  id="data-markup-input-tagging-advanced-script-static-part"
+                                  rows="5"></textarea>
+                    </div>
+                </div>
+
+                <div id="data-markup-statistics"></div>
+                <div id="data-markup-results"></div>
+
+                <i class="fa fa-spinner fa-spin fa-2x" aria-hidden="true" id="data-markup-spinner-icon" hidden>
+                </i>
+                <div class="float-right">
+                    <button class="btn btn-success" type="button" data-toggle="modal" onclick="sendMarkupRequest();">
+                        Запустить разметку
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--modal with info of the search-->
+<div class="modal fade" id="info-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title">Verstehen</h1>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Инструмент, который позволяет быстро искать в больших количествах коротких текстов и размечать
+                    полученные результаты. Базовое использование описано в официальной
+                    <a target="_blank" rel="noopener noreferrer"
+                       href="https://docs.yandex-team.ru/alice-scenarios/nlu/verstehen">документации сценариев</a>.
+                </p>
+                <p>Наиболее полное описание того, что из себя представляет этот инструмент, можно почитать на
+                    <a target="_blank" rel="noopener noreferrer"
+                       href="https://wiki.yandex-team.ru/users/artemkorenev/verstehen">нашей wiki-странице</a>.
+                </p>
+                <h5><b>Как использовать</b></h5>
+                <ul>
+                    <li>Добавьте несколько строчек, которые будут вашим первым запросом с помощью кнопки <b>"Add"</b>
+                        (хоткей - <b>Enter</b>) или используйте кнопку <b>"Importing..."</b>, чтобы загрузить много фраз
+                        сразу (каждая строка - одна запись).
+                    </li>
+                    <li>Запустите поиск нажатием на кнопку <b>"Search"</b> (хоткей - <b>Shift + Enter</b>)</li>
+                    <li>Разметьте поисковую выдачу (вам не нужно размечать ее всю). Если вы неуверены, относится ли
+                        элемент выдачи к релевантным (positive) или нерелевантным (negative) используйте опцию
+                        <b>"Skip"</b>.
+                    </li>
+                    <li>Подправьте, если нужно, ваш поисковый запрос (зеленые и красные бабблы). И не беспокойтесь, если
+                        вы уберете их из поискового запроса, они останутся в истории.
+                    </li>
+                    <li>Перезапустите поиск.</li>
+                    <li>Повторяйте до тех пор пока не получите достаточно релевантных данных для ваших потребностей.
+                    </li>
+                    <li>Нажмите кнопку <b>"Exporting..."</b> чтобы выгрузить нужные данные в нужном формате.</li>
+                    <li>Возможно, в какой-то момент времени вам захочется отправить какие-нибудь данные на Толоку. Для
+                        этого нужно будет внимательно ознакомиться со вкладкой <b>"Data Markup"</b>.
+                    </li>
+                    <li>Дайте самому себе "пять" за отлично проделанную работу :)</li>
+                </ul>
+                <h4><b>Краткий FAQ</b></h4>
+                <h5><b>Как эффективнее всего набрать крутых нужных мне логов?</b></h5>
+                <p>
+                    Наиболее эффективный способ поиска логов отличается от случая к случаю, но мы можем попытаться
+                    описать базовую стратегию того, как делать это довольно эффективно:
+                </p>
+                <ul>
+                    <li>Для начала вам нужно добавить несколько базовых запросов, чтобы начать поиск. Желательно, чтобы
+                    эти фразы были максимально разнообразны, чтобы поиск смог наиболее лучшим образом понять семантику
+                    того, что вы хотите найти.</li>
+                    <li>После составления начального запроса, попытайтесь воспользоваться каким-нибудь индексом (кроме
+                        "[Active Learning]"), чтобы найти больше релевантных примеров. Постепенно размечайте выдачу,
+                        и со временем выдача начнет быть наиболее точной.</li>
+                    <li>Если ваша выдача стала слишком однообразной, попробуйте использовать индекс с <b>"[Active
+                        Learning]"</b>, который будет выдавать менее уверенные примеры, что увеличит разнообразие.</li>
+                    <li>Не забывайте, что выделять негативные примеры тоже важно для более корректной выдачи, поэтому
+                    не пренебрегайте их разметкой.</li>
+                </ul>
+                <h5><b>Какой самый крутой индекс для поиска нужных фраз?</b></h5>
+                <p>
+                    По нашему опыту, в среднем лучше всего работают индексы <b>"DSSM + KNN with Logistic Regression"</b>
+                    и <b>"DSSM + KNN with Logistic Regression + CatBoost"</b>.
+                    Оба алгоритма хорошо учитывают как позитивные, так и негативные запросы. Однако, если необходимо
+                    иметь наиболее разнообразную выдачу, то может помочь индекс с надписью <b>"[Active Learning]"</b>.
+                    Если же вам важно иметь поиск, который находит определенные слова, не обращая внимания на
+                    семантику, то используйте <b>"BM25"</b>.
+                </p>
+                <h5><b>Моя выдача очень однообразна. Как мне увеличить разнообразие?</b></h5>
+                <p>
+                    Так как наши алгоритмы были сделаны так, чтобы выдавать наиболее релевантную выдачу, то часто может
+                    быть ситуация, когда выдача <i>слишком</i> релевантна и представлять одну и ту же фразу, просто
+                    сказанную чуть-чуть по-другому. Чтобы решить эту проблему, мы добавили индексы с <b>["Active
+                    Learning"]</b>, которые позволяют находить менее уверенные примеры, что значительно повышает
+                    разнообразие. После использования этих индексов, можно разнообразить свою выдачу и вернуться к
+                    другим индексам, чтобы находить самые уверенные примеры, которые теперь будут более разнообразны.
+                </p>
+                <h5><b>Что такое "DSSM" в индексах?</b></h5>
+                <p>
+                    <a target="_blank" rel="noopener noreferrer" href="https://wiki.yandex-team.ru/dssm/">DSSM</a> -
+                    библиотека для нейронных сетей, написанная в Яндексе. Мы используем предобученную нейронную сеть на
+                    огромном количестве текстов, чтобы превратить запросы в векторные представления в многомерном
+                    пространстве. Обучение осуществлялось таким образом, чтобы векторы, соответствующие текстам с
+                    похожим смыслом оказались рядом друг с другом. Таким образом, мы ищем самые ближайшие векторы в
+                    другом пространстве, которые соответствуют фразам из нашего индекса.
+                </p>
+                <h5><b>Что означает "with Logistic Regression" в одном из индексов?</b></h5>
+                <p>
+                    Мы используем алгоритм логистической регрессии, на фразах, которые содержатся в запросе.
+                    Логистическая регрессия - алгоритм бинарной классификации. На каждый ваш запрос мы учим новый
+                    классификатор, который использует позитивные и негативные примеры в качестве обучающих данных. После
+                    мы используем этот классификатор, чтобы найти наиболее релевантные фразы из нашего индекса, то есть
+                    те, которые классификатор наиболее уверенно классифицирует как позитивные.
+                </p>
+                <h5><b>Что означает "[Active Learning]" в названии индексов?</b></h5>
+                <p>
+                    Когда выдача становится слишком однообразной, бывает полезно размечать наименее уверенные примеры,
+                    чтобы улучшить качество классификатора. Когда выделается опция "Active Learning" мы возвращаем не
+                    самые уверенные позитивные фразы, а те фразы, в которых поиск менее уверен. Как правило, в такой
+                    выдаче много и позитивных, и негативных примеров, размечая которые, вы добавляете большое
+                    количество полезной информации, чтобы классификатор принимал более верные решения. Помимо этого,
+                    с "Active Learning" сильно улучшается разнообразность выдачи, а это часто необходимо для поиска
+                    релевантных фраз.
+                </p>
+                <h5><b>Что такое "BM25" в индексах?</b></h5>
+                <p>
+                    Мы реализовали вариацию алгоритма текстового поиска
+                    <a target="_blank" rel="noopener noreferrer" href="https://ru.wikipedia.org/wiki/Okapi_BM25">
+                        BM25</a>, который ищет фразы по лемматизированным словам из ваших запросов. Алгоритм учитывает
+                    статистики слов в индексе и ваших запросах, и может быть полезен в ряде случаев, когда необходимо
+                    найти запросы с определенными словами в разных формах.
+                </p>
+                <h5><b>Что такое "CatBoost" в индексах?</b></h5>
+                <p>
+                    <a target="_blank" rel="noopener noreferrer" href="https://catboost.ai">CatBoost</a> это метод
+                    градиентного бустинга, разработанный внутри Яндекса. Мы его используем, чтобы строить классификатор
+                    хороших и плохих фраз в вашем поиске и использовать этот классификатор как ранжировщик фраз индекса.
+                    Если CatBoost указан вместе с другими индексами, как правило это означает, что он участвует во
+                    второй фазе поиска, где первые гипотезы поиска были сделаны одним индексом, а CatBoost ранжирует
+                    эти гипотезы для улучшения качества. Причина, по которой CatBoost используется именно как
+                    ранжировщик как правило в том, что его невозможно достаточно быстро применить ко всему индексу,
+                    чтобы выдать ранжированную выдачу, поэтому мы оперируем на подвыборке кандидатов, созданной другим
+                    индексом.
+                </p>
+                <h5><b>Как работает "DSSM with Logistic Regression + BM25" индекс?</b></h5>
+                <p>
+                    Этот индекс является композитным, он совмещает два алгоритма одновременно. На данный момент
+                    реализация возвращает две выдачи от двух индексов независимо в режиме round-robin, при этом мы
+                    фильтруем дубликаты, чтобы не возвращать одинаковые фразы.
+                </p>
+                <h5><b>Как и где я могу разметить свои данные, которые я насобирал?</b></h5>
+                <p>
+                    Данные, которые вы набрали в качестве запросов или данные, которые у вас в выдаче, можно отправить
+                    на Толоку для разметки на несколько сценариев (бинарная классификация, тэггинг, классификация на
+                    интенты). Подробнее об этом можно почитать в закладке <b>Data Markup</b>.
+                </p>
+
+                <h4><b>Хоткеи</b></h4>
+                <ul>
+                    <li><b>Shift + Enter</b>: запуск поиска.</li>
+                    <li><b>Enter</b>: добавление текста в поисковый запрос.</li>
+                </ul>
+                <p>Если вам встретятся какие-либо ошибки, или вы просто считаете нужным высказаться, обращайтесь в чат
+                    <a target="_blank" rel="noopener noreferrer"
+                       href="https://t.me/+DJryz0GP71djN2Ri">поддержки NLU</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

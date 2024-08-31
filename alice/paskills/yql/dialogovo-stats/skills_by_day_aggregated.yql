@@ -1,0 +1,62 @@
+use hahn;
+pragma yt.Pool='paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$borders = select AsStruct(min(fielddate) as min_date, max(fielddate) as max_date) from `//home/paskills/stat/skills_by_day`;
+
+$is_private = ($skillAccess) -> {return $skillAccess??'public'=='private';};
+
+$skills_by_day = select id, name, fielddate,
+    category??'unknown' as category, channel, onAir, skillAccess,
+    String::ToLower(developerType) as developer_type,
+    is_private,
+    onAir and not is_private and (not lag(onAir) over w or lag(is_private) over w or (lag(id) over w is null and fielddate > $borders.min_date))  as published,
+    --(not lag(onAir) over w and onAir) or (lag(is_private) over w and not is_private) as published,
+    --(lag(onAir) over w and not onAir) or (not lag(is_private) over w and is_private) as unpublished,
+    (not onAir or is_private) and (lag(onAir) over w and not lag(is_private) over w) and fielddate > $borders.min_date as unpublished,
+    not lag(isRecommended) over w and isRecommended as recommended,
+    lag(isRecommended) over w and not isRecommended as unrecommended,
+    lag(id)  over w is null and fielddate > $borders.min_date as created,
+    lead(id) over w is null and fielddate < $borders.max_date as deleted,
+    lag(is_private) over w as lag_is_private,
+    lag(onAir) over w as lag_on_air,
+    lag(isRecommended) over w as lag_is_recommended,
+    lag(id) over w as lag_id,
+    lead(is_private) over w as lead_is_private,
+    lead(onAir) over w as lead_on_air,
+    lead(isRecommended) over w as lead_is_recommended,
+    lead(id) over w as lead_id,
+    from (select T.*, $is_private(skillAccess) as is_private from `//home/paskills/stat/skills_by_day` as T)
+    window w as(partition compact by id order by fielddate asc ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING);
+
+insert into `//home/paskills/stat/skills_by_day_aggregated` with truncate
+select fielddate, unwrap(category) as category, channel, unwrap(developer_type) as developer_type,
+    unwrap(cnt) as cnt, private_cnt, hidden_cnt,
+    published, unpublished, recommended, unrecommended, created, deleted_public,
+from (
+    select fielddate, channel, category, developer_type,
+    count_if(onAir and is_private = false) as cnt,
+    count_if(onAir and is_private = true) as private_cnt,
+    count_if(onAir and skillAccess = 'hidden') as hidden_cnt,
+    count_if(onAir and is_private = false and published) as published,
+    count_if(unpublished) as unpublished,
+    count_if(onAir and recommended) as recommended,
+    count_if(onAir and unrecommended) as unrecommended,
+    count_if(created) as created,
+    (lag(count_if(deleted and is_private = false and onAir)) over w)??0 as deleted_public,
+    from $skills_by_day
+    --where channel = 'aliceSkill'-- and onAir and is_private = false
+    --and fielddate between Date('2020-08-01') and Date('2020-08-10')
+    group compact by fielddate, channel, category, developer_type, is_private
+    window w as (order by fielddate rows between 1 PRECEDING and current row)
+
+    union all
+
+    select fielddate, channel, category, developer_type,
+    Unwrap(sum(cast(skills as Uint64))) as cnt,
+    from `//home/paskills/stat/alice_skill_stat_dump`
+    where fielddate < $borders.min_date
+    and onair = true
+    and surface='mobile' -- almost every skill works on mobile, so it's the only way to count skills but not product of skills vs surfaces
+    group compact by fielddate, category, channel, developertype as developer_type
+);

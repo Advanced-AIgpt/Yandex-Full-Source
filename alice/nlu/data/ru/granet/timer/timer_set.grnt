@@ -1,0 +1,68 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: timer/timers.grnt
+
+form personal_assistant.scenarios.timer_set:
+    slots:
+        time:
+            source:
+                $sys.units_time
+                $typeparser.time
+            type:
+                sys.units_time
+                typeparser.time
+
+    lemma: true
+
+    root:
+        [(($Common.Set|$Common.TurnOn|$Timer.Notch)|$Timer)+ $Kind* (на|через)* ($sys.units_time)*]
+        [$Timer+ $Common.Repeat+ (на|через)* ($sys.units_time)*]
+        [$Move $Timer еще? на? ($sys.units_time)*]
+        $Timer.Notch время
+        (засеки|засекай)
+        ($Common.Set будильник на?) [$Common.Set $Timer на? $sys.units_time]
+
+        %weight 0.001
+        [($Common.Set|$Common.TurnOn)* ($Timer.Notch|$Timer)+ $Kind* (на|через)* ($typeparser.time)*]
+        [$Timer+ $Common.Repeat+ (на|через)? ($typeparser.time)*]
+
+        %weight 10
+        %negative
+        [($Common.Set|$Common.TurnOn)+ $Kind* на* $sys.num*]
+        ($Common.Set|$Common.TurnOn)+
+        [$Common.TurnOn $sys.num+]
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        $Common.Let
+        там
+        нужен|нужно
+        умеешь|научись
+        расскажи
+        завтра
+        сегодня
+        вечером
+        утром
+        сработать
+
+    $Timer:
+        %lemma
+        таймер
+        секундомер
+
+    $Kind:
+        новый
+        еще? один
+        еще
+        заново
+
+    $Move:
+        продли
+        добавь к?
+        переставь
+        отложи
+        сдвинь
+        подвинь

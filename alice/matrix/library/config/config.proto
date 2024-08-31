@@ -1,0 +1,107 @@
+package NMatrix;
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+message TYDBClientCommonSettings {
+    required string Address = 1 [(NProtoConfig.Help) = "YDB Address."];
+    required string DBName = 2 [(NProtoConfig.Help) = "Name of DB."];
+    optional uint32 NetworkThreads = 3 [(NProtoConfig.Help) = "Number of network threads.", default = 4];
+}
+
+message TYDBClientSettings {
+    optional uint32 MaxRetries = 1 [(NProtoConfig.Help) = "Operations' max retries count.", default = 2];
+    optional string OperationTimeout = 2 [(NProtoConfig.Help) = "Operation level timeout.", default = "2500ms"];
+    optional string ClientTimeout = 3 [(NProtoConfig.Help) = "Transport level timeout.", default = "3s"];
+    optional string CancelAfter = 4 [(NProtoConfig.Help) = "Cancel after timeout.", default = "2500ms"];
+    optional uint32 MaxActiveSessions = 5 [(NProtoConfig.Help) = "Max active sessions count in sessions' pool.", default = 1000];
+    optional bool ReportOperationsTimings = 6 [(NProtoConfig.Help) = "Create histogram with timings for each operation.", default = true];
+}
+
+message TServerSettings {
+    required uint32 HttpPort = 1 [(NProtoConfig.Help) = "Http server port."];
+    optional uint32 GrpcPort = 2 [(NProtoConfig.Help) = "Grpc server port (will be HttpPort + 1 if not set)."];
+
+    optional uint32 LoopThreads = 3 [(NProtoConfig.Help) = "Server loop threads.", default = 16];
+    optional uint32 GrpcThreads = 4 [(NProtoConfig.Help) = "Grpc server threads.", default = 16];
+
+    optional uint32 AdminThreads = 5 [(NProtoConfig.Help) = "Http server admin threads.", default = 1];
+    optional uint32 ToolsThreads = 6 [(NProtoConfig.Help) = "Http server tools threads.", default = 1];
+}
+
+message TLoggerSettings {
+    optional string FilePath = 1 [(NProtoConfig.Help) = "Eventlog file path.", default = "evlog"];
+}
+
+message TRtLogSettings {
+    optional string FilePath = 1 [(NProtoConfig.Help) = "RtLog file path.", default = "rtlog"];
+    optional string Service = 2 [(NProtoConfig.Help) = "Service name.", default = "unknown"];
+    optional string FlushPeriod = 3 [(NProtoConfig.Help) = "Flush period."];
+    optional string FileStatCheckPeriod = 4 [(NProtoConfig.Help) = "File stat check period."];
+    optional uint64 FlushSize = 5 [(NProtoConfig.Help) = "Flush size.", default = 1048576];
+}
+
+message TNehSettings {
+    message TProtocolOption {
+        optional string Key = 1 [(NProtoConfig.Help) = "Protocol option key."];
+        optional string Value = 2 [(NProtoConfig.Help) = "Protocol Option value."];
+    }
+
+    message TConnectionsLimits {
+        optional uint64 SoftLimit = 1 [(NProtoConfig.Help) = "Soft limit.", default = 40000];
+        optional uint64 HardLimit = 2 [(NProtoConfig.Help) = "Hard limit.", default = 50000];
+    }
+
+    optional bool TcpKeepAlive = 1 [(NProtoConfig.Help) = "Keep tcp connection alive.", default = true];
+    repeated TProtocolOption ProtocolOptions = 2 [(NProtoConfig.Help) = "Protocol options."];
+    optional TConnectionsLimits HttpInputConnectionsLimits = 3 [(NProtoConfig.Help) = "Input connections limits."];
+    optional TConnectionsLimits HttpOutputConnectionsLimits = 4 [(NProtoConfig.Help) = "Output connections limits."];
+}
+
+message TIoTClientSettings {
+    optional string Host = 1 [(NProtoConfig.Help) = "IoT host.", default = "iot.quasar.yandex.net"];
+    optional uint32 Port = 2 [(NProtoConfig.Help) = "IoT port.", default = 80];
+    optional string Timeout = 3 [(NProtoConfig.Help) = "Request timeout.", default = "500ms"];
+}
+
+message TTvmClientSettings {
+    message TTvmApiSettings {
+        message TTvmIdAlias {
+            optional string Alias = 1 [(NProtoConfig.Help) = "Alias name."];
+            optional uint32 TvmId = 2 [(NProtoConfig.Help) = "Tvm id."];
+        }
+
+        optional string Host = 1 [(NProtoConfig.Help) = "Tvm api host.", default = "https://tvm-api.yandex.net"];
+        optional uint32 Port = 2 [(NProtoConfig.Help) = "Tvm api port.", default = 443];
+
+        optional uint32 SelfTvmId = 3 [(NProtoConfig.Help) = "Self tvm service id."];
+
+        optional string DiskCacheDir = 4 [(NProtoConfig.Help) = "Dir where tvm client's cache will be stored.", default = "."];
+
+        repeated TTvmIdAlias FetchServiceTicketsFor = 5 [(NProtoConfig.Help) = "Enable background service tickets fetching for this tvm ids."];
+
+        oneof Secret {
+            string SecretEnvironmentVariable = 7 [(NProtoConfig.Help) = "Environment variable to get tvm secret from.", default = "TVM_SECRET"];
+            string PlainTextSecret = 8 [(NProtoConfig.Help) = "Tvm secret (special option only for tests, do not use it in production)."];
+        }
+    }
+
+    message TTvmToolSettings {
+        optional uint32 Port = 1 [(NProtoConfig.Help) = "Tvm tool port."];
+        optional string SelfAlias = 2 [(NProtoConfig.Help) = "Self tvm service id alias.", default = "self"];
+
+        optional string AuthToken = 3 [(NProtoConfig.Help) = "Tvm tool auth token (special option only for tests, do not use it in production)."];
+    }
+
+    oneof Mode {
+        TTvmApiSettings TvmApi = 1 [(NProtoConfig.Help) = "Tvm api options."];
+        TTvmToolSettings TvmTool = 2 [(NProtoConfig.Help) = "Tvm tool options."];
+    }
+}
+
+message TSubwayClientSettings {
+    optional string Timeout = 1 [(NProtoConfig.Help) = "Request timeout.", default = "700ms"];
+
+    // For overriding in tests.
+    optional string HardcodedForTestsHostOrIp = 2 [(NProtoConfig.Help) = "HostOrIp to override in tests."];
+    optional uint32 HardcodedForTestsPort = 3 [(NProtoConfig.Help) = "Port to override in tests."];
+}

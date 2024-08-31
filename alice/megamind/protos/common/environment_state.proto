@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package NAlice;
+// Documentation: https://wiki.yandex-team.ru/alice/vins/speechkitapi/
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/common";
+option java_package = "ru.yandex.alice.megamind.protos.common";
+option java_outer_classname = "EnvironmentStateProto";
+
+import "alice/library/client/protos/client_info.proto";
+import "alice/megamind/protos/common/device_state.proto";
+import "alice/megamind/protos/common/subscription_state.proto";
+import "alice/megamind/protos/common/tandem_state.proto";
+import "alice/protos/endpoint/endpoint.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TEnvironmentDeviceInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TClientInfoProto Application = 1 [json_name = "application", (NYT.column_name) = "application"];
+    repeated string SupportedFeatures = 2 [json_name = "supported_features", (NYT.column_name) = "supported_features"];
+    reserved 3;
+    reserved "DeviceState";
+    oneof OneOfStates {
+        option (NYT.variant_field_name) = "one_of_states";
+        TDeviceState SpeakerDeviceState = 4 [json_name = "device_state", (NYT.column_name) = "device_state"];
+    }
+}
+
+message TEnvironmentGroupInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EEnvironmentGroupType {
+        unknown_group = 0;
+        tandem = 1;
+        stereopair = 2;
+    }
+
+    enum EEnvironmentGroupDeviceRole {
+        unknown_role = 0;
+        leader = 1;
+        follower = 2;
+    }
+
+    message TEnvironmentGroupDeviceInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Platform = 2 [json_name = "platform", (NYT.column_name) = "platform"];
+        EEnvironmentGroupDeviceRole Role = 3 [json_name = "role", (NYT.column_name) = "role"];
+    }
+
+    EEnvironmentGroupType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+    repeated TEnvironmentGroupDeviceInfo Devices = 2 [json_name = "devices", (NYT.column_name) = "devices"];
+}
+
+message TEnvironmentState {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TEnvironmentDeviceInfo Devices = 1 [json_name = "devices", (NYT.column_name) = "devices"];
+    repeated TEnvironmentGroupInfo Groups = 2 [json_name = "groups", (NYT.column_name) = "groups"];
+
+    repeated TEndpoint Endpoints = 3 [json_name = "endpoints", (NYT.column_name) = "endpoints"];
+
+    // Endpoint groups should appear here someday
+    // Stereopairs, Tandems, Multirooms should all be expressed via this entity
+    // repeated TEndpointGroup EndpointGroups = 4;
+}
+
+message TTandemDeviceState {
+    TTandemState TandemState = 1 [json_name = "tandem_state", (NYT.column_name) = "tandem_state"];
+    TSubscriptionState DeviceSubscriptionState = 2 [json_name = "subscription_state", (NYT.column_name) = "subscription_state"];
+}
+
+message TTandemEnvironmentDeviceInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    reserved 2;
+    reserved "SupportedFeatures";
+
+    TClientInfoProto Application = 1 [json_name = "application", (NYT.column_name) = "application"];
+    oneof OneOfStates {
+        option (NYT.variant_field_name) = "one_of_states";
+        TTandemDeviceState TandemDeviceState = 3 [json_name = "device_state", (NYT.column_name) = "device_state"];
+    }
+}
+
+message TTandemEnvironmentState {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TTandemEnvironmentDeviceInfo Devices = 1 [json_name = "devices", (NYT.column_name) = "devices"];
+    repeated TEnvironmentGroupInfo Groups = 2 [json_name = "groups", (NYT.column_name) = "groups"];
+}

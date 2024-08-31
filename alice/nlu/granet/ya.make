@@ -1,0 +1,11 @@
+RECURSE(
+    lib
+    lib/compiler/ut
+    lib/lang/ut
+    lib/sample/ut
+    lib/user_entity/ut
+    lib/ut
+    lib/utils/ut
+    tests
+    tools
+)

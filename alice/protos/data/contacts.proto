@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package NAlice.NData;
+
+option go_package = "a.yandex-team.ru/alice/protos/data";
+option java_package = "ru.yandex.alice.protos.data";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TContactsList {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    // Contacts with multiple external accounts (phone numbers, telegram accounts, etc)
+    // have multiple instances of this structure with the same ContactId and LookupKey
+    message TContact {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        // Phone number or account name in the external messenger app
+        // WhatsApp is special and uses a constant string here, to find out the actual account name,
+        // find the phone number contact with the same LookupKey and use the phone number for that.
+        string AccountName = 1 [json_name = "account_name", (NYT.column_name) = "account_name"];
+        // Examples: com.google, com.viber.voip, org.telegram.messenger, com.whatsapp
+        string AccountType = 2 [json_name = "account_type", (NYT.column_name) = "account_type"];
+        string DisplayName = 3 [json_name = "display_name", (NYT.column_name) = "display_name"];
+        string FirstName = 4 [json_name = "first_name", (NYT.column_name) = "first_name"];
+        string MiddleName = 5 [json_name = "middle_name", (NYT.column_name) = "middle_name"];
+        string SecondName = 6 [json_name = "second_name", (NYT.column_name) = "second_name"];
+        // Not unique
+        // Might change over time, use LookupKey instead
+        int64 ContactId = 7 [json_name = "contact_id", (NYT.column_name) = "contact_id"];
+        // Unique id of the item
+        int32 Id = 8 [json_name = "_id", (NYT.column_name) = "id"];
+        string LookupKey = 9 [json_name = "lookup_key", (NYT.column_name) = "lookup_key"];
+        uint64 LastTimeContacted = 10 [json_name = "last_time_contacted", (NYT.column_name) = "last_time_contacted"];
+        uint32 TimesContacted = 11 [json_name = "times_contacted", (NYT.column_name) = "times_contacted"];
+        uint32 LookupKeyIndex = 12 [json_name = "lookup_key_index", (NYT.column_name) = "lookup_key_index"];
+    }
+    message TPhone {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        int32 Id = 1 [json_name = "_id", (NYT.column_name) = "id"];
+        string AccountType = 2 [json_name = "account_type", (NYT.column_name) = "account_type"];
+        string LookupKey = 3 [json_name = "lookup_key", (NYT.column_name) = "lookup_key"];
+        string Phone = 4 [json_name = "phone", (NYT.column_name) = "phone"];
+        // Examples: mobile, home, work, unknown
+        string Type = 5 [json_name = "type", (NYT.column_name) = "type"];
+        string IdString = 6 [json_name = "_id_string", (NYT.column_name) = "id_string"];
+        uint32 LookupKeyIndex = 7 [json_name = "lookup_key_index", (NYT.column_name) = "lookup_key_index"];
+    }
+
+    repeated TContact Contacts = 1 [json_name = "contacts", (NYT.column_name) = "contacts"];
+    repeated TPhone Phones = 2 [json_name = "phones", (NYT.column_name) = "phones"];
+    bool IsKnownUuid = 3 [json_name = "is_known_uuid", (NYT.column_name) = "is_known_uuid"];
+    bool Deleted = 4 [json_name = "deleted", (NYT.column_name) = "deleted"];
+    bool Truncated = 5 [json_name = "truncated", (NYT.column_name) = "truncated"];
+    bytes LookupKeyMapSerialized = 6 [json_name = "lookup_key_map_serialized", (NYT.column_name) = "lookup_key_map_serialized"];
+};
+
+
+message TUpdateContactsRequest {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TTelegramContactInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        string UserId = 1 [json_name = "user_id", (NYT.column_name) = "user_id"];
+        string Provider = 2 [json_name = "provider", (NYT.column_name) = "provider"];
+        string ContactId = 3 [json_name = "contact_id", (NYT.column_name) = "contact_id"];
+        string FirstName = 4 [json_name = "first_name", (NYT.column_name) = "first_name"];
+        string SecondName = 6 [json_name = "second_name", (NYT.column_name) = "second_name"];
+    }
+
+    message TContactInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        oneof ContactInfo {
+            option (NYT.variant_field_name) = "optional_contact_info";
+            TTelegramContactInfo TelegramContactInfo = 1 [json_name = "telegram_contact_info", (NYT.column_name) = "telegram_contact_info"];
+        }
+    }
+
+	repeated TContactInfo CreatedContacts = 7 [json_name = "created_contacts", (NYT.column_name) = "created_contacts"];
+	repeated TContactInfo UpdatedContacts = 1 [json_name = "updated_contacts", (NYT.column_name) = "updated_contacts"];
+	repeated TContactInfo RemovedContacts = 2 [json_name = "removed_contacts", (NYT.column_name) = "removed_contacts"];
+};

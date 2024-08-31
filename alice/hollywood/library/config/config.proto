@@ -1,0 +1,107 @@
+import "alice/library/logger/proto/config.proto";
+import "library/cpp/getoptpb/proto/confoption.proto";
+
+package NAlice.NHollywood;
+
+message TConfig {
+    option (NGetoptPb.Title) = "Protocol scenarios server";
+
+    message TAppHostConfig {
+        optional uint32 Port = 1 [
+            (NGetoptPb.Conf).Descr = "AppHost server port",
+            (NGetoptPb.Conf).Type = "<uint16>",
+            (NGetoptPb.Conf).Short = "p",
+            default = 80
+        ];
+
+        optional uint32 Threads = 2 [
+            (NGetoptPb.Conf).Descr = "AppHost server worker threads",
+            (NGetoptPb.Conf).Short = "t",
+            default = 100
+        ];
+    }
+
+    message TDumpRequestsMode {
+        optional bool Enabled = 1 [default = false];
+        optional string OutputDirPath = 2 [default = ""];
+    };
+
+    optional TAppHostConfig AppHostConfig = 1;
+
+    optional TRTLog RTLog = 2;
+
+    repeated string Scenarios = 3 [
+        (NGetoptPb.Conf).Descr = "Enabled scenarios",
+        (NGetoptPb.Conf).Short = "s"
+    ];
+
+    optional string FastDataPath = 4 [
+        (NGetoptPb.Conf).Short = "f"
+    ];
+    optional string ScenarioResourcesPath = 5;
+    optional string CommonResourcesPath = 6 ;
+
+    enum ECommonResource {
+        Geobase = 0;
+        NlgTranslations = 1;
+    }
+
+    repeated ECommonResource EnabledCommonResources = 7;
+
+    // determines which memory pages of the server process must be locked in memory
+    // and which might be swapped out in case of memory pressure
+    enum ELockMemory {
+        None = 0; // don't lock anything
+        Startup = 1; // lock memory that was mapped in while initializing, including any heap pages
+        All = 2; // lock everything in memory, nothing can be swapped out ever
+    }
+
+    optional ELockMemory LockMemory = 8;
+
+    optional TDumpRequestsMode DumpRequestsMode = 9;
+
+    optional string CurrentDc = 10 [
+        (NGetoptPb.Conf).Descr = "Current Dc for balancing hints"
+    ];
+
+    optional bool EnableCommonHandles = 11 [default = false];
+
+    message THwServicesConfig {
+
+        message TModifiersConfig {
+
+            message TModifier {
+                optional string Name = 1;
+                optional bool Enabled = 2;
+            }
+
+            repeated TModifier Modifiers = 1;
+        }
+
+        optional TModifiersConfig ModifiersConfig = 1;
+    }
+
+    optional THwServicesConfig HwServicesConfig = 12;
+
+    optional string HwServicesResourcesPath = 13;
+
+    optional bool IgnoreMissingScenarios = 14 [
+         default = false,
+         (NGetoptPb.Conf).Descr = "Skip scenarios found in PB file but missing in source code"
+    ];
+
+    optional bool UseSignalFilter = 15 [
+         default = false,
+         (NGetoptPb.Conf).Descr = "Activates signal() exception filter to dump SIGSERV to stderr"
+    ];
+
+    optional bool FailOnEmptySecrets = 16 [
+        default = true,
+        (NGetoptPb.Conf).Descr = "Defines wether secrets' values are allowed to be empty"
+    ];
+
+    optional bool HwfDump = 17 [
+         default = false,
+         (NGetoptPb.Conf).Descr = "Dump detailed information about HWF scenarios and scenes to json stdout"
+    ];
+}

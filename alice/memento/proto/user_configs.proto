@@ -1,0 +1,244 @@
+syntax = "proto3";
+
+package ru.yandex.alice.memento.proto;
+
+option go_package = "a.yandex-team.ru/alice/memento/proto;memento";
+option java_package = "ru.yandex.alice.memento.proto";
+option java_outer_classname = "UserConfigsProto";
+
+import "google/protobuf/timestamp.proto";
+
+import "alice/megamind/protos/proactivity/proactivity.proto";
+import "alice/protos/data/child_age.proto";
+import "alice/protos/data/news_provider.proto";
+import "alice/protos/data/scenario/music/topic.proto";
+import "alice/protos/data/scenario/centaur/my_screen/widgets.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+// use only for tests
+message TConfigForTests {
+    string DefaultSource = 1 [deprecated = true];
+}
+
+message TNewsConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum ENewsConfigType {
+        DEFAULT_GENERAL_PROVIDER = 0;
+    }
+
+    message TNewsConfigProviderPair {
+        ENewsConfigType NewsConfigType = 1;
+        NAlice.NData.TNewsProvider NewsProvider = 2;
+    }
+
+    // test only
+    string DefaultSource = 1 [deprecated = true];
+    // map<ENewsConfigType, NAlice.NData.TNewsProvider>
+    repeated TNewsConfigProviderPair NewsConfig = 2;
+    bool IsNew = 3;
+    bool IsOnboarded = 4 [json_name = "is_onboarded", (NYT.column_name) = "is_onboarded"];
+}
+
+message TMorningShowNewsConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated NAlice.NData.TNewsProvider NewsProviders = 1 [json_name = "news_providers", (NYT.column_name) = "news_providers"];
+    bool Disabled = 2 [json_name = "disabled", (NYT.column_name) = "disabled"];
+    bool Default = 3 [json_name = "default", (NYT.column_name) = "default"];
+}
+
+message TMorningShowSkillsConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TSkillProvider {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string SkillSlug = 1 [json_name = "skill_slug"];
+        // optional
+        string FeedId = 2 [json_name = "feed_id"];
+    }
+
+    repeated TSkillProvider SkillProviders = 1 [json_name = "skill_providers"];
+    bool Disabled = 2 [json_name = "disabled"];
+    bool Default = 3 [json_name = "default", (NYT.column_name) = "default"];
+}
+
+message TMorningShowTopicsConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated NAlice.NData.NMusic.TTopic Topics = 1 [json_name = "topics", (NYT.column_name) = "topics"];
+    bool Disabled = 2 [json_name = "disabled", (NYT.column_name) = "disabled"];
+    bool Default = 3 [json_name = "default", (NYT.column_name) = "default"];
+}
+
+message TNewsPostrollStateConfig {
+
+    enum ENewsPostrollState {
+        NOT_SHOWED = 0;
+        SHOWED_NOT_REACTED = 1;
+        REACTED = 2;
+    }
+
+    ENewsPostrollState State = 1;
+}
+
+message TMusicPromoConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    bool IsShortPromoActivated = 1;
+    int64 MusicActivationsWithoutYaPlus = 2;
+}
+
+message TProactivityConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    NAlice.NMegamind.TProactivityStorage Storage = 1;
+}
+
+message TExternalSkillUserAgreements {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TSingleExternalSkillUserAgreementList {
+        repeated TExternalSkillUserAgreement UserAgreements = 1;
+    }
+
+    message TExternalSkillUserAgreement {
+        // all fields are required
+
+        string UserAgreementId = 1;
+        google.protobuf.Timestamp AgreedAt = 2;
+        string Ip = 3;
+        string UserAgent = 4;
+        string UserAgreementLinks = 5;
+    }
+
+    map<string, TSingleExternalSkillUserAgreementList> UserAgreements = 1;
+}
+
+message TIoTResponseOptions {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    enum EIoTResponseReactionType {
+        SOUND = 0;
+        NLG = 1;
+        SILENT = 2;
+    }
+
+    EIoTResponseReactionType ReactionType = 1;
+}
+
+message TMusicFmRadioConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int64 MusicActivationsWithoutYaPlus = 1; // this field is the same as in TMusicPromoConfig, but their meanings differ
+    bool RedirectAvailable = 2;
+}
+
+message TSmartTvMusicPromoConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    int64 BannerShowCount = 1;
+    int64 CategoryOpenCount = 2;
+    uint64 FirstShowTime = 3;
+}
+
+message TTtsWhisperConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    bool Enabled = 1 [(NYT.column_name) = "enabled"];
+}
+
+message TGenerativeTale {
+    uint64 UsageCounter = 1 [json_name = "generative_tale_usage_counter", (NYT.column_name) = "generative_tale_usage_counter"];
+
+    string TaleName = 2 [json_name = "generative_tale_name", (NYT.column_name) = "generative_tale_name"];
+    string TaleText = 3 [json_name = "generative_tale_text", (NYT.column_name) = "generative_tale_text"];
+}
+
+message TSmartTvTemplateInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string TemplateName = 1 [json_name = "template_name", (NYT.column_name) = "template_name"];
+
+    int32 ShowCount = 2 [json_name = "show_count", (NYT.column_name) = "show_count"];
+    uint64 LastAppearanceTime = 3 [json_name = "last_appearance_time", (NYT.column_name) = "last_appearance_time"];  // epoch time
+}
+
+message TTimeCapsuleInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TTimeCapsuleData {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum ETimeCapsuleType {
+            Unknown = 0;
+            Demo = 1;
+            NewYear2021 = 2;
+        }
+
+        ETimeCapsuleType TimeCapsuleType = 1 [json_name = "time_capsule_type", (NYT.column_name) = "time_capsule_type"];
+        string TimeCapsuleId = 2 [json_name = "time_capsule_id", (NYT.column_name) = "time_capsule_id"];
+
+        message TAnswerRecord {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string S3Bucket = 1 [json_name = "s3_bucket", (NYT.column_name) = "s3_bucket"];
+            string S3Path = 2 [json_name = "s3_path", (NYT.column_name) = "s3_path"];
+
+            enum EQuestionType {
+                Unknown = 0;
+                WhatsUName = 1;
+                WhatsUp = 2;
+                WhatRUDoingToday = 3;
+                RULoveSomeOneNow = 4;
+                HaveUTraveledLotThisYear = 5;
+                UPersonalOscar = 6;
+                DoULikeULife = 7;
+                WhyCanULoveWinter = 8;
+                WhatSUFavoriteColor = 9;
+                WhatSGoodHasHappenedRecently = 10;
+                WhatSGoodHasHappenedRecentlySecond = 22;
+                WhoWasRealHeroThisYear = 11;
+                WhatDidUDreamAboutToday = 12;
+                WhatRUDreamingAbout = 13;
+                WhatRUDreamingAboutSecond = 23;
+                HaveUBehavedWellThisYear = 14;
+                WhatWasMostImportantEventThisYear = 15;
+                DoUWantWishUselfSmthForFuture = 16;
+                WhatGiftFromDeadMoroz = 17;
+                DoUSellRybov = 18;
+                WhoDoUWantThank = 19;
+                WhatWillURemember2021 = 20;
+                SaySomethingElse = 21;
+
+                // next question index 24
+            }
+
+            EQuestionType QuestionType = 3 [json_name = "question_type", (NYT.column_name) = "question_type"];
+        }
+
+        repeated TAnswerRecord AnswerRecords = 3 [json_name = "answer_records", (NYT.column_name) = "answer_records"];
+        uint64 RecordTime = 4 [json_name = "record_time", (NYT.column_name) = "record_time"]; // epoch time
+        string AliceSessionId = 5 [json_name = "alice_session_id", (NYT.column_name) = "alice_session_id"];
+    }
+
+    repeated TTimeCapsuleData TimeCapsulesData = 1 [json_name = "time_capsules_data", (NYT.column_name) = "time_capsules_data"];
+}
+
+message TVolumeOnboardingConfig {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    uint64 UsageCounter = 1 [json_name = "usage_counter", (NYT.column_name) = "usage_counter"];
+}
+
+message TCentaurWidgetsConfig {
+    option deprecated = true;
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TColumn {
+        repeated NAlice.NData.TCentaurWidgetData Widgets = 1 [json_name = "widgets", (NYT.column_name) = "widgets"];
+    }
+    repeated TColumn Columns = 1 [json_name = "columns", (NYT.column_name) = "columns"];
+}

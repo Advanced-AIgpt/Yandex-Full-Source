@@ -1,0 +1,836 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music_tags__ar.nlg" import music_tags_data %}
+
+{% ext_from "alice/hollywood/library/common_nlg/macros_ar.nlg" import inability, unable_to_provide_explicit_content %}
+{% ext_from "alice/hollywood/library/common_nlg/intents_ar.nlg" import tts_pause %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/alarm__common__ar.nlg" import stoit, stoyat, alarm_stoit, alarm_stoyat with context %}
+
+{% from "alice/hollywood/library/scenarios/music/nlg/nonmusic_common__ar.nlg" import render_podcast_restricted_by_content_settings with context %}
+
+{% macro do_not_know() %}
+  {% chooseline %}
+    لقد صرخ الديك في أذني عندما كنت صغيرة. لهذا ليس عندي أذن موسيقية.
+    لم أتمكن من العثور عليه ما هذا اللحن. ارفع الصوت.
+    لنحاول مرة أخرى.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro ya_plus() -%}
+  ياندكس.بلاس
+{%- endmacro %}
+
+{% macro render_ya_plus_required(content='موسيقى') %}
+  {% chooseitem %}
+    للاستماع إلى {{ content }}، تحتاج إلى الحصول على اشتراك {{ ya_plus() }}.
+  {% or %}
+    اعذرني، لكنني لا أستطيع حالياً تشغيل ما تطلبه. للقيام بذلك ينبغي تفعيل اشتراك على بلاس.
+  {% or %}
+    اعذرني، كنت أود ذلك لكن ليس لديك اشتراك على بلاس.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_authorization_required(content='موسيقى') %}
+  {% chooseline %}
+    إذا أردت الاستماع إلى {{ content }}، رجاءً قم بتسجيل الدخول.
+    قم بتسجيل الدخول من فضلك وسأشغل لك مباشرة جميع ما تطلب!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_authorization_from_music_play() %}
+  {% chooseline %}
+    من فضلك، ادخل على حسابك في ياندكس لكي أتعرف عليك وأتذكر ذوقك.
+    رجاءً ادخل على حسابك لكي أتمكن من وضع إعجاب لأغانيك المفضلة.
+    ادخل على حسب ياندكس، وسأشغل لك ما تحب.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_yaplus() %}
+  {% chooseline %}
+    رجاء احصل على اشتراك بلاس، للاستماع إلى الموسيقى بالكامل.
+    هناك مقطع متوفر فقط دون اشتراك. هذا ليس سيئاً، ولكن باشتراك سيكون رائعاً.
+    يمكن الاستماع إلى مقطع من التسجيل الصوتي دون اشتراك.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_station_promo() %}
+  {% if context.attentions.get('has_plus') %}
+      سأشغل. علماً أنه من الأفضل الاستماع إلى الموسيقى على الوحدة - ويمكنك الحصول عليها الآن في الحال، عند شراء الاشتراك الخاص.
+  {% else %}
+      حسناً، سأشغل لك مقطعاً صغيراً لكن دون اشتراك لا أستطيع غير ذلك. بالمناسبة، يمكن شراء اشتراك الآن والحصول على وحدة للاستماع إلى الموسيقى عليها. ذلك سيكون أفضل بكثير.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_before_redirect_to_fm_radio() %}
+  {% chooseline %}
+    أستطيع الآن أن أشغل شيئاً آخر.
+    لن أتركك دون موسيقى!
+    أثناء ذلك أستطيع أن أشغل لك راديو، أتمنى أن يعجبك.
+    لكنني أستطيع تشغيل الراديو لك.
+    لن يمنعنا ذلك من الاستماع إلى الراديو.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro own_song_joke() %}
+  {% chooseline %}
+    أنتم طلبتم!
+    الكل يرقص!
+    سأغني الآن!
+    ارقصوا!
+    لنبدأ!
+    مسيرة الصاعقة العصبية!
+    هذا عمرو خالد مثلاً.
+    هذا شيء من الإبداعات القديمة
+    الكلمات تأليف شخصي، موسيقى للروح من تأليف أليسا.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro alice_shots_stub() %}
+  كنت أودّ ذلك، لكنني أستطيع فعل ذلك في تطبيق موسيقى.ياندكس فقط أو عبر المكبر الذكي.
+{% endmacro %}
+
+{% macro unable_to_provide_explicit_music_content() %}
+  {% if context.is_alarm_set_with_sound_intent %}
+    {% chooseline %}
+      أعرف هذا النوع من الموسيقى، لكن لا يمكنني تثبيتها في وضع الأطفال.
+      يسعدني أن أضع لك هذه الموسيقى، لكن وضع البحث الخاص بالأطفال مشغل عندك.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      لا أستطيع وضع هذه الأغنية في وضع الأطفال.
+      أعرف هذا لكنني لا أستطيع تشغيله في وضع الأطفال.
+      لا يمكن تشغيل ذلك في وضع الأطفال.
+      لا أستطيع. هل تعرف لماذا؟ وضع الأطفال مشغل لديك.
+      أودّ ذلك، ولكن وضع البحث الخاص بالأطفال مشغل عندك.
+      لن ينجح. وضع الأطفال يعمل لديك، وهذا غير مناسب للأطفال.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro content_type() -%}
+  {%- if 'content_type_fm_radio' in context.attentions -%}
+    راديو
+  {%- else -%}
+    موسيقى
+  {%- endif -%}
+{%- endmacro %}
+
+{% phrase render_error__musicerror %}
+  {% if context.attentions.get('launch_youtube_app') %}
+    لحظة.
+  {% elif context.error.data.code == 'unsupported_operation' %}
+    {{ inability() }}
+  {% elif context.error.data.code == 'alice_shots_stub' %}
+    {{ alice_shots_stub() }}
+  {% elif context.error.data.code == 'forbidden-content' %}
+    {{ unable_to_provide_explicit_music_content() }}
+  {% elif context.error.data.code == 'morning_show_not_supported' %}
+    اعذرني، لا أستطيع تشغيل العرض هنا، لكنني أستطيع فعل ذلك بسهولة في المكبر الذكي الذي أعيش فيه
+  {% elif context.error.data.code == 'music_not_found' %}
+    {% if context.attentions.get('music_play_not_supported_on_device') %}
+      {% if context.is_tv_device %}
+        {% set special_playlist_slot = form.special_playlist or context.slots.special_playlist %}
+        {% if special_playlist_slot == 'fairy_tales_default' or context.attentions.get('is_fairy_tale_subscenario') %}
+          {% chooseline %}
+            اعذرني لكنني لا أستطيع تشغيل القصة هنا. اطلب مني ذلك على المكبر الذكي أو تطبيق ياندكس.
+            لم يتم تحميل القصص على التلفاز، ولكن يسرّني أن أحكيها لك عبر التطبيق أو عبر المكبر إن طلبت.
+          {% endchooseline %}
+        {% else %}
+          {% chooseline %}
+            أستطيع تشغيل الموسيقى بلا تلفاز، أستطيع هنا إيجاد كليب مناسب.
+            من الواضح أن هذا لن ينجح دون صور. دعني أشغل كليباً موسيقياً.
+            لا أستطيع تشغيل الموسيقى هنا فقط، جرّب البحث عن كليب مناسب.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        عذراً، حالياً لا أستطيع البحث عن موسيقى
+      {% endif %}
+    {% else %}
+      {% if context.is_alarm_set_with_sound_intent %}
+        {% chooseline %}
+          لكني لم أعثر على هذه الموسيقى — جرب واحدة أخرى.
+          للأسف لم أعثر على هذه الموسيقى — جرب غيرها.
+        {% endchooseline %}
+      {% elif context.attentions.get('unknown_fairy_tale') %}
+        {% chooseline %}
+          اعذرني هذه القصة غير موجودة عندي حالياً.
+          سامحني، لا توجد لدي قصة كهذه.
+          اعذرني، هذه القصة ليست موجودة عندي
+          آسفة. هذه القصة غير موجودة.
+        {% endchooseline %}
+      {% else %}
+        {% chooseline %}
+          للأسف، ليست لدي هذه الموسيقى
+          كانت لدي هذه الموسيقى في مكان ما... لا أستطيع العثور عليها، سامحني.
+          لسوء الحظ، هذه الموسيقى غير موجودة لدي.
+          ليس لدي هذا النوع من الموسيقى، جرب شيئا آخر.
+          لم أجد موسيقى على طلبك، جرّب ثانية.
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% elif context.error.data.code in ('not_music', 'music_not_recognized') %}
+    {% if not context.is_smart_speaker %}
+      {{ do_not_know() }}
+    {% else %}
+      يبدو لي أن لا شيء يعمل الآن.
+    {% endif %}
+  {% elif context.error.data.code == 'music_restricted_by_child_content_settings' %}
+    {% if context.attentions.get('forbidden_podcast') %}
+      {{ render_podcast_restricted_by_content_settings() }}
+    {% else %}
+      {% if 'content_type_fm_radio' in context.attentions %}
+        من الأفضل الاستماع إلى هذه الإذاعة مع أهلك.
+      {% else %}
+        الأفضل أن تستمع إلى هذه الموسيقى مع أهلك.
+      {% endif %}
+    {% endif %}
+  {% else %}
+    حدث شيء غريب، لكنه موسيقي تماماً. تصدر أخطاء البرامج صوت موسيقى حزينة خاصة بها.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__unauthorized %}
+  {% if context.error.data.code == 'music_authorization_problem' %}
+    {% chooseline %}
+      لا يبدو أنك قمت بتسجيل الدخول. ادخل إلى حسابك على ياندكس للاستماع إلى {{ content_type() }}.
+      للاستماع إلى {{ content_type() }} يجب تسجيل الدخول. رجاءً، قم بالدخول إلى حسابك على ياندكس.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'unavailable_for_unauthorized' %}
+    لا أستطيع تشغيل قائمة التشغيل خاصتك، لأنني لا أعرفك تفقد الإذن في التطبيق.
+  {% elif context.error.data.code == 'unauthorized_general' %}
+    {{ render_authorization_required() }}
+  {% elif context.error.data.code == 'payment-required' %}
+    {% if 'plus_push' in context.attentions %}
+      للاستماع إلى{{ content_type() }} تحتاج إلى اشترك {{ ya_plus() }}.
+      سيصلك رابط الشراء على هاتفك — لقد أرسلته.
+    {% elif 'fairy_tale_noplus' in context.attentions %}
+      للاستماع إلى المحتوى الصوتي تحتاج إلى اشتراك على ياندكس.بلاس. مع أنك دائماً تستطيع أن تقول لي «"شغلي مجموعة "القصص"»، وسأشغل مجموعة مجانية.
+    {% else %}
+      للاستماع إلى{{ content_type() }}، يجب تفعيل اشتراك {{ ya_plus() }}.
+    {% endif %}
+  {% elif context.error.data.code == 'promo_available' and req_info.experiments.get('alter_music_promo_nlg') != None %}
+    للاستماع إلى{{ content_type() }}، يجب تفعيل اشتراك {{ ya_plus() }}.
+    افتح تطبيق ياندكس لتفعيل الفترة الترويجية. أرسلت لك الرابط على هاتفك.
+  {% elif context.error.data.code == 'promo_available' %}
+    للاستماع إلى{{ content_type() }}، يجب تفعيل اشتراك {{ ya_plus() }}.
+    الفترة الترويجية متاحة الآن. يمكنك تفعيلها في تطبيق ياندكس.
+  {% elif context.error.data.code == 'extra_promo_period_available' and context.extra_promo_period_expires_date is not none %}
+    للاستماع إلى {{ content_type() }}، يجب أن تحصل عل اشتراك ياندكس.بلاس. حالياً الفترة الترويجية هي المتاحة لك.
+    إذا قمت بتفعيله على تطبيق ياندكس قبل {{ context.extra_promo_period_expires_date | parse_dt | human_date }}، ستحصل على شهر إضافي مجاناً.
+  {% elif context.error.data.code == 'weekly_promo_available' %}
+    يبدو أنه ليس لديك اشتراك على ياندكس بلاس. أنت محظوظ اليوم لأنني أشعر بالطيبة: استمع 7 أيام دون قيود، وبعد ذلك فعّل الاشتراك من فضلك. هل نبدأ؟
+  {% elif context.is_auto %}
+    لا أستطيع تشغيله {{ content_type() }}. يجب أن تدخل أولاً إلى حسابك في ياندكس.
+    للقيام بذلك، انتقل إلى الإعدادات وانقر على "تسجيل الدخول".
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+    {{ inability() }}
+{% endphrase %}
+
+{% macro launch(action_request) %}
+  {% if action_request %}
+    جاري التشغيل
+  {% else %}
+    جاري الفتح
+  {% endif %}
+{% endmacro %}
+
+{% macro render_composers(music_answer, case, short=False)  %}
+  {% set composers = [] %}
+  {% for artist in music_answer.artists %}
+    {% if artist.composer %}
+      {% do composers.append(artist) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if composers %}
+    {% if short %}
+      {{ (composers|first).name }}
+    {% else %}
+      {{ composers|map(attribute='name')|join(', ') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_composers(music_answer, short=False)  %}
+  {% set artists = [] %}
+  {% for artist in music_answer.artists %}
+    {% if not artist.composer %}
+      {% do artists.append(artist) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if artists %}
+    {% if short %}
+      {{ (artists|first).name }}
+    {% else %}
+      {{ artists|map(attribute='name')|join(', ') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_artists(music_answer, short=False)  %}
+  {% if music_answer.artists %}
+    {% set composers = render_composers(music_answer, short) | trim %}
+    {% set artists = render_not_composers(music_answer, short) | trim %}
+
+    {% if composers %}
+      {{ composers }}
+      {% if artists %}
+        , {{ artists }}
+      {% endif %}
+    {% elif artists %}
+      {{ artists }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro track_keyword(music_answer, title) %}
+  {% if music_answer.genre == 'classical' or music_answer.genre == 'classicalmasterpieces' %}
+    مقطع صوتي
+  {% else %}
+    {% if 'أغنية' not in title.lower() %}
+      أغنية
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro _render_music_answer(music_answer, case, render_album, shorten_artists, shorten_track_title) %}
+  {% if music_answer.type == 'track' %}
+    {% set artists=render_artists(music_answer, shorten_artists) | trim %}
+    {% if artists %}
+      {{ artists }},
+    {% endif %}
+
+    {% if render_album and music_answer.album %}
+      ألبوم
+      "{{ music_answer.album.title }}",
+    {% endif %}
+
+    {% set track_title = music_answer.title|music_title_shorten if shorten_track_title else music_answer.title %}
+    {% if not artists and (not render_album or not music_answer.album) %}
+      {{ track_keyword(music_answer, track_title) | inflect(case) }}
+    {% else %}
+      {{ track_keyword(music_answer, track_title) }}
+    {% endif %}
+    "{{ track_title }}"
+  {% elif music_answer.type == 'album' %}
+    {% set artists=render_artists(music_answer, shorten_artists) | trim %}
+    {% if artists %}
+      {{ artists }},
+    {% endif %}
+
+    {% if not artists %}
+      {{ 'ألبوم' | inflect(case) }}
+    {% else %}
+      ألبوم
+    {% endif %}
+    "{{ music_answer.title }}"
+  {% elif music_answer.type == 'artist' %}
+    {{ music_answer.name }}
+    {% if (render_album or not music_answer.track) and music_answer.album %}
+      ، ألبوم
+      "{{ music_answer.album.title }}"
+    {% endif %}
+    {% if music_answer.track %}
+      {% set track_title = music_answer.track.title|music_title_shorten if shorten_track_title else music_answer.track.title %}
+      , {{ track_keyword(music_answer, track_title) }}
+      "{{ track_title }}"
+    {% endif %}
+  {% elif music_answer.type == 'playlist' %}
+    {{ 'مجموعة' | inflect(case) }}
+    "{{ music_answer.title }}"
+  {% elif music_answer.type == 'generative' %}
+    {# Should not go into here #}
+  {% elif music_answer.type == 'radio' %}
+    {% if music_answer.type == 'radio' and music_answer.station.is_personal %}
+      {{ 'إذاعتك' | inflect(case) }}
+    {% else %}
+      راديو
+      "{{ music_answer.station.name }}"
+    {% endif %}
+  {% elif music_answer.type == 'filters' %}
+    {% if 'need_similar' in context.attentions %}
+      {% if music_answer.artists %}
+        {{ (music_answer.artists|first).name }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_generative_answer(music_answer) %}
+  {% if music_answer.station == 'generative:energy' %}
+    أضف بعض القيادة — تحصل على نغمة مثالية.
+  {% elif music_answer.station == 'generative:focus' %}
+    {% chooseline %}
+      موسيقى للأعصاب من أجلك. حافظ على تركيزك.
+      لا يوجد شيء إضافي في موسيقى الأعصاب — كل ما يلزم للتجمعات. جاري التشغيل.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      من الجيد أن أشعر أنني دي جي. انطلقي أيتها الخوارزميات!
+      لك - موسيقى غربية. تشغل لأول مرة.
+      موسيقى للأعصاب، مقطوعة "{{ music_answer.title }}" يتم تشغيلها لأول مرة.
+      لقد اخترت للتو مقطوعة لذلك. سأشغلها.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_answer(music_answer, case, render_album=True, shorten=False) %}
+  {% if not music_answer.omit_object_name %}
+    {% set body = _render_music_answer(music_answer, case, render_album, False, False) %}
+    {% if (body|number_of_readable_tokens) > 10 and shorten %}
+      {% set body = _render_music_answer(music_answer, case, render_album, True, False) %}
+      {% if (body|number_of_readable_tokens) > 10 %}
+        {% set body = _render_music_answer(music_answer, case, render_album, True, True) %}
+      {% endif %}
+    {% endif %}
+    {{ body }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_tts_pause() %}
+  {{ tts_pause(600) }}
+{% endmacro %}
+
+{% macro render_tag_info(filter_info, tag) %}
+  {% set tag_info = filter_info.get(tag) %}
+  {% if not tag_info is mapping %}
+    {{ tag_info }}
+  {% else %}
+    {% vc %}{{ tag_info.voice }}{% evc %}
+    {% tx %}{{ tag_info.text }}{% etx %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_default() %}
+  {% if context.is_alarm_set_sound_intent %}
+    حسناً، ستوقظك قائمة منتقاة.
+  {% elif context.is_alarm_set_with_sound_intent %}
+    ستوقظك مجموعة مختارة.
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} مجموعة خاصة.
+  {% else %}
+    {% chooseline %}
+      هل هناك شيء لي.
+      هناك فكرة واحدة.
+      هذا موجود لدي.
+      هناك موسيقى لهذه الحالة.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_genre(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      حسناً. ستوقظك {{ tag_info }}.
+    {% or %}
+      اختيار ممتاز. على هاتفك الآن {{ tag_info }}.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    أوقظك {{ tag_info }}.
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} {{ tag_info }}.
+  {% else %}
+    {% if context.attentions.get('restricted_content_settings') %}
+      من الأفضل الاستماع إلى هذا مع والديك - اطلب منهم تشغيله. أثناء ذلك لك - {{ tag_info }}.
+    {% else %}
+      {% chooseitem %}
+        فهمت. {{ tag_info }} - لك.
+      {% or %}
+        بسيطة. لأجلك - {{ tag_info }}.
+      {% or %}
+        {{ tag_info | capitalize_first }} - اختيار ممتاز.
+      {% endchooseitem %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_person_mood(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      حسناً، سأوقظك على موسيقى على {{ tag_info | inflect('acc') }} المزاج.
+    {% or %}
+      حسناً، ستوقظك موسيقى على {{ tag_info | inflect('gen') }} مزاجك.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseitem %}
+      سأوقظك على موسيقى ل {{ tag_info | inflect('acc') }} المزاج.
+    {% or %}
+      ستوقظك موسيقى ل{{ tag_info | inflect('gen') }} المزاج.
+    {% endchooseitem %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} موسيقى
+    {% chooseitem %}
+      على {{ tag_info | inflect('acc') }} المزاج.
+    {% or %}
+      ل{{ tag_info | inflect('gen') }} المزاج.
+    {% endchooseitem %}
+  {% else %}
+    {% chooseitem %}
+      هذا يتطابق بالضبط مع {{ tag_info | inflect('acc') }} المزاج.
+    {% or %}
+      ها هو، {{ render_tts_pause() }} ممتاز مناسب {{ tag_info | inflect('acc') }} للمزاج.
+    {% or %}
+      هناك موسيقى رائعة ل {{ tag_info | inflect('gen') }} المزاج.
+    {% or %}
+      أعرف موسيقى مناسبة {{ tag_info | inflect('gen') }} للمزاج
+    {% or %}
+      ها هو، {{ render_tts_pause() }} بالضبط {{ tag_info | inflect('gen') }} على المزاج.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_track_mood(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseitem %}
+      حسناً، ستوقظك موسيقى {{ tag_info | inflect('nom') }}.
+    {% or %}
+      وضعت {{ tag_info | inflect('acc') }} موسيقى على المنبه.
+    {% or %}
+      فهمت. سأوقظك على {{ tag_info | inflect('ins') }} موسيقى.
+    {% endchooseitem %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseitem %}
+      ستوقظك موسيقى {{ tag_info | inflect('nom') }}.
+    {% or %}
+      سأوقظك{{ tag_info | inflect('ins') }} على موسيقى.
+    {% endchooseitem %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} {{ tag_info | inflect('nom') }} موسيقى.
+  {% else %}
+    {% chooseitem %}
+      هناك {{ tag_info | inflect('nom') }} موسيقى لهذه المناسبة.
+    {% or %}
+      من أجلك - {{ tag_info | inflect('nom') }} موسيقى.
+    {% or %}
+      سأضع {{ tag_info | inflect('acc') }} موسيقى.
+    {% or %}
+      سنستمع إلى {{ tag_info | inflect('acc') }} موسيقى؟
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_music_tags_activity(tag_info) %}
+  {% if context.is_alarm_set_sound_intent %}
+    {% chooseline %}
+      حسناً ستوقظك موسيقى ل
+      أوكي. وضعت على المنبه موسيقى ل
+      فهمت. سأوقظك على موسيقى ل
+    {% endchooseline %}
+  {% elif context.is_alarm_set_with_sound_intent %}
+    {% chooseline %}
+      ستوقظك موسيقى ل
+      سأوقظك على موسيقى ل
+    {% endchooseline %}
+  {% elif context.is_alarm_what_sound_is_set_intent %}
+    {{ alarm_stoit() }} موسيقى ل
+  {% else %}
+    {% chooseitem %}
+      تماماً، {{ render_tts_pause() }} مناسب تماماً ل
+    {% or %}
+      ها هو، {{ render_tts_pause() }} تماماً من أجل
+    {% or %}
+      جاري تشغيل الموسيقى ل
+    {% or %}
+      طيب، موسيقى ل
+    {% or %}
+      حسناً. موسيقى ل
+    {% endchooseitem %}
+  {% endif %}
+  {{ tag_info }}.
+{% endmacro %}
+
+{% macro render_music_tags(filter, tag) %}
+  {% set for_alarm_set = context.is_alarm_set_sound_intent %}
+  {% set for_alarm_set_combo = context.is_alarm_set_with_sound_intent %}
+  {% set for_alarm_what = context.is_alarm_what_sound_is_set_intent %}
+  {% set filter_info = music_tags_data.get(filter, None) %}
+  {% if filter == 'mood' %}
+    {% set person_mood = filter_info.get('person_mood') %}
+    {% set track_mood = filter_info.get('track_mood') %}
+    {% if tag == 'lullaby' %}
+      {% if for_alarm_set %}
+        حسناً. ستوقظك
+      {% elif for_alarm_set_combo %}
+        سيوقظك
+      {% elif for_alarm_what %}
+        {{ alarm_stoyat() }}
+      {% else %}
+        حسناً، جاري التشغيل
+      {% endif %}
+      تهويدات.
+    {% elif tag == 'discovery' %}
+      {% if for_alarm_set %}
+        حسناً، ستوقظك موسيقى ممتعة.
+      {% elif for_alarm_set_combo %}
+        ستوقظك موسيقى ممتعة.
+      {% elif for_alarm_what %}
+        {{ alarm_stoit() }} موسيقى ممتعة.
+      {% else %}
+        {% chooseitem 1 %}
+          {% chooseline %}
+            جاري التشغيل. ضع إعجاباً بكل تأكيد، إذا صحّ تخميني لهذا المقطع. سيجعل هذا توصياتي أفضل.
+            جاري التشغيل. لكي أحسن نفسي كدي جي لمنزلك لا تنس أن تضع إعجاب، إذا اخترت أغان جيدة.
+            جاري تشغيل موسيقى على ذوقك. إذا تطابقت أذواقنا ضع إعجاب، وسأفهمك أكثر.
+            جاري التشغيل، لكن علي أن أنبهك أنني عبثت قليلاً وقد تكون النتيجة غير عادية. لا تتردد في قول "إعجاب!" إذا أعجبك شيء ما.
+            جاري التشغيل. ولكي أفهم اهتماماتك بشكل أفضل، ضع إعجاباً خاصة على الأغاني الرائعة وقل: "التالي!"، إذا لم تعجبك.
+            جاري التشغيل. أريد التأكد من أنني أعرفك جيداً. إذا أعجبتك ضع إعجاب.
+            جاري التشغيل. إذا أعجبتك أغنية ما فقط قل: "إعجاب!"
+            جاري تشغيل. إذا تطابقت أذواقناـ قل: "إعجاب!"، كي أعرف أنني أفعل كل شيء بشكل صحيح.
+            سأقوم بالتشغيل. إذا أعجبك شيء ما، قل: "إعجاب!"، سيجعل هذا اقتراحاتي أدق وأكثر تنوعاً.
+            جاري التشغيل. إذا فاتني شيء ما فلا تحكم علي بقسوة، فقط قل: "التالي".
+            جاري تشغيل. إذا لم يناسبك شيء. ضع لي عدم إعجاب.
+            جاري التشغيل. لقد بذلت جهدي لكنني قد أخطئ. في حال لم يعجبك شيء ما ضع عدم إعجاب.
+            جاري التشغيل. إذا أعجبتك، قل: "إعجاب!" - إن ذلك سيسعدني.
+          {% endchooseline %}
+        {% or 2 %}
+          جاري تشغيل موسيقى ممتعة.
+        {% endchooseitem %}
+      {% endif %}
+    {% elif tag in person_mood %}
+      {% set tag_info = render_tag_info(person_mood, tag) %}
+      {{ render_music_tags_person_mood(tag_info) }}
+    {% elif tag in track_mood %}
+      {% set tag_info = render_tag_info(track_mood, tag) %}
+      {{ render_music_tags_track_mood(tag_info) }}
+    {% else %}
+      {{ render_music_tags_default() }}
+    {% endif %}
+  {% elif not filter_info or not tag in filter_info %}
+    {{ render_music_tags_default() }}
+  {% else %}
+    {% set tag_info = render_tag_info(filter_info, tag) %}
+    {% if filter == 'genre' %}
+      {{ render_music_tags_genre(tag_info) }}
+    {% elif filter == 'activity' %}
+      {% if tag == 'work_background' %}
+        {% if for_alarm_set %}
+          أوكي. وضعت موسيقى الخلفية على المنبه.
+        {% elif for_alarm_set_combo %}
+          هل أوقظك على موسيقى الخلفية.
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} موسيقى الخلفية.
+        {% else %}
+          أوكي. أشغل موسيقى الخلفية.
+        {% endif %}
+      {% elif tag == 'fall_asleep' %}
+        {% if for_alarm_set %}
+          حسناً ستوقظك موسيقة لطيفة للنوم. مع أنني لست متأكدة من أنك ستستيقظ هكذا.
+        {% elif for_alarm_set_combo %}
+          هل أوقظك على موسيقى لطيفة للنوم. مع أنني غير متأكدة أنك ستستيقظ.
+        {% elif for_alarm_what %}
+          تم وضع موسيقى لطيفة للنوم على المنبه. لكنني لست متأكدة إن كانت ستوقظك.
+        {% else %}
+          {% chooseline %}
+            لا مشكلة. موسيقى للنوم.
+            لا مشكلة. موسيقى لطيفة للنوم.
+          {% endchooseline %}
+        {% endif %}
+      {% elif tag == 'sex' and context.children_content_restriction %}
+        {% if for_alarm_set %}
+          حسناً. وضعت على المنبه موسيقى كبار.
+        {% elif for_alarm_set_combo %}
+          هل أوقظك على موسيقى للكبار.
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} موسيقى للكبار.
+        {% else %}
+          حسناً. جاري تشغيل موسيقى للكبار.
+        {% endif %}
+      {% else %}
+        {{ render_music_tags_activity(tag_info) }}
+      {% endif %}
+    {% elif filter == 'epoch' %}
+      {% if tag == 'the_greatest_hits' %}
+        {% if for_alarm_set %}
+          حسناً، سيوقظك
+        {% elif for_alarm_set_combo %}
+          سيوقظك
+        {% elif for_alarm_what %}
+          {{ alarm_stoyat() }}
+        {% else %}
+          جاري التشغيل.
+        {% endif %}
+        أغاني خالدة.
+      {% else %}
+        {% if for_alarm_set %}
+          حسناً، وضعت موسيقى على المنبه
+        {% elif for_alarm_set_combo %}
+          ستوقظك الموسيقى
+        {% elif for_alarm_what %}
+          {{ alarm_stoit() }} موسيقى
+        {% else %}
+          جاري تشغيل الموسيقى
+        {% endif %}
+        {{ tag_info }}.
+      {% endif %}
+    {% elif not (for_alarm_set or for_alarm_set_combo or for_alarm_what) %}
+      {# reaching here should be impossible #}
+      {{ render_music_tags_default() }}
+    {% elif filter == 'personality' %}
+      {% if tag == 'is_personal' %}
+        {% if for_alarm_set %}
+          {% chooseline %}
+            وضعت موسيقاك المفضلة على المنبه.
+            حسناً، ستوقظك أغانيك المفضلة.
+          {% endchooseline %}
+        {% elif for_alarm_set_combo %}
+          {% chooseline %}
+            وضعت موسيقاك المفضل.
+            ستوقظك أغانيك المفضلة.
+          {% endchooseline %}
+        {% else %}
+          أغانيك المفضلة {{ alarm_stoyat() }}.
+        {% endif %}
+      {% else %} {# elif tag == 'is_user_stream' #}
+        {% if for_alarm_set %}
+          {% chooseline %}
+            حسناً، وضعت شيئاً مناسباً لك.
+            حسناً، اخترت لك شيئاً على مزاجك.
+            وضعت الأغاني التي تحبها عادة.
+          {% endchooseline %}
+        {% elif for_alarm_set_combo %}
+          {% chooseline %}
+            سيوقظك شيء على ذوقك.
+            سأوقظك على شيء مناسب لك.
+            ستوقظك أغاني تعجبك عادة.
+          {% endchooseline %}
+        {% else %}
+          {% chooseitem %}
+            تم ضبط موسيقى على المنبه يجب أن تعجبك.
+          {% or %}
+            لقد وضعت موسيقى لابدّ أن تعجبك.
+          {% endchooseitem %}
+        {% endif %}
+      {% endif %}
+    {% else %} {# elif filter == 'special_playlist' #}
+      {% if tag == 'ny_alice_playlist' %}
+        {% if for_alarm_set %}
+          حسناً، سأوقظك
+        {% elif for_alarm_set_combo %}
+          سأوقظك
+        {% else %}
+          سأوقظك
+        {% endif %}
+        ستطربون بغنائي. أنتم أصررتم!
+      {% else %}
+        {% if for_alarm_set %}
+          حسناً، وضعتها على المنبه
+        {% elif for_alarm_set_combo %}
+          وضعتها على المنبه
+        {% else %}
+          {{ alarm_stoit() }}
+        {% endif %}
+        {{ tag_info }}.
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_simple_music_answer(music_answer) -%}
+  "{{ music_answer.title }}"
+  {% if music_answer.artists %}
+    {% for artist in music_answer.artists %}
+      , {{ artist.name }}
+    {% endfor %}
+  {% endif %}
+{%- endmacro %}
+
+{% phrase render_suggest_caption__authorize %}
+  {% if 'suggest_authorization_from_music_play' in context.attentions %}
+    دخول
+  {% else %}
+    إذن الدخول
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__authorize %}
+  {{ context.authorize.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__yaplus %}
+  المزيد
+{% endphrase %}
+
+{% phrase render_suggest_uri__yaplus %}
+  {{ context.yaplus.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__station_promo %}
+  المزيد
+{% endphrase %}
+
+{% phrase render_suggest_uri__station_promo %}
+  {{ context.station_promo.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__fallback_to_music_vertical %}
+  انتقال
+{% endphrase %}
+
+{% phrase render_suggest_uri__fallback_to_music_vertical %}
+  {{ context.fallback_to_music_vertical.data.uri }}
+{% endphrase %}
+
+{% set supported_only_on_music_commands = ["player_dislike", "player_like", "player_shuffle"] %}
+
+{% macro render_supported_only_on_music() %}
+  حالياً أستطيع فعل ذلك فقط عبر ياندكس.موسيقى.
+{% endmacro %}
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("راديو" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    راديو "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_supported_on_radio(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    لا يمكن، سامحني. إنه بث مباشر على {{ rendered_radio_title }}.
+  {% or %}
+    لن ينجح شيء، للأسف. هذا بث مباشر {{ rendered_radio_title }}.
+  {% or %}
+    لا أستطيع. هذا بث مباشر.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_error_nothing_is_playing() %}
+  {% chooseline %}
+      لا يمكنني القيام بذلك، إذ لا يوجد شيء قيد التشغيل الآن.
+      لن ينفع. لا يوجد شيء قيد التشغيل الآن.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_error__playererror %}
+{% set code = context.error.data|get_item('code') %}
+{% set command = context.error.data|get_item('command') %}
+{% set radio = context.error.data|get_item('radio') %}
+  {% if (code == 'radio_unsupported' or code == 'bluetooth_unsupported') and command in supported_only_on_music_commands %}
+    {{ render_supported_only_on_music() }}
+  {% elif code == 'radio_unsupported' %}
+    {{ render_not_supported_on_radio(radio|get_item('radioTitle')) }}
+  {% elif code == 'bluetooth_unsupported' %}
+    {{ inability() }}
+  {% elif code == 'nothing_is_playing' %}
+    {{ render_error_nothing_is_playing() }}
+  {% else %}
+    حدث شيء غريب، لكنه موسيقي تماماً. تصدر أخطاء البرامج صوت موسيقى حزينة خاصة بها.
+  {% endif %}
+{% endphrase %}
+
+{% macro render_repeated_skip() %}
+  {% if 'repeated_skip' in context.attentions %}
+    {% chooseline %}
+      يبدو أن أذواقنا لا تطابق اليوم. ماذا تريد أن تسمع؟
+      يبدو أن ما اخترت لم يعجبك. ماذا تأمر؟
+      ماذا أشغل لك، شيء يعجبك؟
+      ماذا أشغل لك ليسعدك؟
+      هيا نستمع لما يعجبك. ماذا أشغل لك؟
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}

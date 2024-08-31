@@ -1,0 +1,81 @@
+USE hahn;
+
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA YSON.DisableStrict = 'true';
+
+$target_folder = 'home/paskills/stat/skill_operations/operations-by-day';
+
+-- $from = CAST('2021-06-01' as Date);
+$from = SELECT max(CAST(substring(Path,Length($target_folder) + 1u) as Date))
+       FROM folder($target_folder)
+       WHERE Type = 'table';
+$to = Unwrap(CurrentUtcDate());
+
+$parse_date = ($str) -> {
+    RETURN cast(DateTime::MakeDate(DateTime::ParseIso8601($str)) as Date);
+};
+
+DEFINE ACTION $insert_negative_reviews_stat($date) AS
+    $target_path = $target_folder || '/' || CAST($date AS String);
+
+    $operations = (
+        SELECT
+            Yson::ConvertToString(s.channel) AS channel,
+            $parse_date(s.createdAt) as skill_created_date,
+            Yson::ConvertToString(o.type) AS operation_type,
+            s.id AS skill_id
+        FROM `home/paskills/upload/stable/skills` AS s
+        JOIN `home/paskills/upload/stable/operations` AS o ON
+            o.itemId = s.id
+        WHERE
+            $parse_date(s.createdAt) = $date
+            AND
+            Yson::ConvertToString(o.type) IN ('skillCreated',
+                    'reviewRequested',
+                    'reviewApproved',
+                    'deployRequested',
+                    'deployCompleted')
+        );
+
+    $operations_grouped = (
+        SELECT
+            channel,
+            skill_created_date,
+            operation_type,
+            COUNT(*) as count
+        FROM $operations
+        GROUP BY
+            channel, skill_created_date, operation_type
+    );
+
+    INSERT INTO $target_path WITH TRUNCATE
+        SELECT
+            channel,
+            skill_created_date AS fielddate,
+            SUM(IF(operation_type == 'skillCreated', count, 0)) AS skill_created,
+            SUM(IF(operation_type == 'reviewRequested', count, 0)) AS review_requested,
+            SUM(IF(operation_type == 'reviewApproved', count, 0)) AS review_approved,
+            SUM(IF(operation_type == 'deployRequested', count, 0)) AS deploy_requested,
+            SUM(IF(operation_type == 'deployCompleted', count, 0)) AS deploy_completed
+        FROM $operations_grouped
+        GROUP BY channel, skill_created_date;
+
+    COMMIT;
+    DISCARD select Ensure(count(distinct fielddate),
+        count(distinct fielddate)<=1,
+        'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', values: '||(ListConcat(ListMap(aggregate_list_distinct(fielddate), ($x) -> {return cast($x as String); }))??'none'))
+    FROM $target_path;
+END DEFINE;
+
+$range = ListFromRange(1, DateTime::ToDays(Unwrap($to - $from)));
+$shift_back_by_days = ($days_count) -> {
+    RETURN Unwrap(
+        $to - $days_count * Interval("P1D"),
+        "Failed to shift today back by " || CAST($days_count AS String) || " days"
+    );
+};
+$dates = (SELECT ListSortAsc(ListMap($range, $shift_back_by_days)));
+SELECT $dates;
+EVALUATE FOR $date IN $dates DO $insert_negative_reviews_stat($date);

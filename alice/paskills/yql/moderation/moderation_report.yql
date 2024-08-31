@@ -1,0 +1,249 @@
+USE hahn;
+
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA YSON.DisableStrict = 'true';
+
+--$from = CAST('2021-05-02' as Date);
+$from = SELECT max(CAST(substring(Path,Length('home/paskills/stat/moderation/moderation-report-by-day') + 1u) as Date))
+       FROM folder('//home/paskills/stat/moderation/moderation-report-by-day')
+       WHERE Type = 'table';
+$to = CurrentUtcDate();
+$range = ListFromRange(1, DateTime::ToDays(Unwrap($to - $from)));
+$shift_back_by_days = ($days_count) -> {
+    RETURN Unwrap(
+        $to - $days_count * Interval("P1D"),
+        "Failed to shift today back by " || CAST($days_count AS String) || " days"
+    );
+};
+$dates = (SELECT ListSortAsc(ListMap($range, $shift_back_by_days)));
+SELECT $dates;
+
+--functions
+$parse_date = ($str) -> {
+    RETURN cast(DateTime::MakeDate(DateTime::ParseIso8601($str)) as Date);
+};
+$parse_date_from_path = ($path) -> {
+    RETURN $parse_date(TableName($path));
+};
+$timestampToHours = ($ts) -> {
+    RETURN CAST($ts AS Double) / 1000000 / 60 / 60;
+};
+$parseTimestamp = ($dateString) -> {
+    RETURN DateTime::MakeTimestamp(DateTime::ParseIso8601($dateString));
+};
+
+--channels
+$channels = (
+    SELECT 'aliceSkill' AS channel
+    UNION ALL
+    SELECT 'organizationChat' AS channel
+);
+
+$skill_channels = (
+    SELECT
+        id,
+        Yson::ConvertToString(channel) AS channel,
+    FROM `home/paskills/upload/stable/skills`
+    WHERE Yson::ConvertToString(channel) IN $channels
+);
+
+$yang_chats_exports_dir = 'home/paskills/moderation/stable/chat_requests';
+$yang_skills_exports_dir = 'home/paskills/moderation/stable/requests';
+$target_folder = 'home/paskills/stat/moderation/moderation-report-by-day/';
+$load_date = unwrap(cast(CurrentUtcDate() as String));
+
+DEFINE ACTION $insert_moderation_report($date) AS
+    $target_path = $target_folder || CAST($date AS String);
+
+    $operations = (
+        SELECT
+            createdAt,
+            itemId,
+            Yson::ConvertToString(type) AS type,
+        FROM `home/paskills/upload/stable/operations`
+        WHERE
+            $parse_date(createdAt) == $date
+    );
+
+    -- exports to YANG
+    $yang_exports = (
+        SELECT
+            channel,
+            SUM(count) AS count
+        FROM (
+            SELECT
+                'organizationChat' as channel,
+                Yson::LookupInt64(Attributes, 'row_count') as count
+            FROM
+                FOLDER($yang_chats_exports_dir, 'row_count')
+            WHERE
+                $parse_date_from_path(Path) == $date
+            UNION ALL
+            SELECT
+                'aliceSkill' as channel,
+                Yson::LookupInt64(Attributes, 'row_count') as count
+            FROM
+                FOLDER($yang_skills_exports_dir, 'row_count')
+            WHERE
+                $parse_date_from_path(Path) == $date
+        )
+        GROUP BY channel
+    );
+    --SELECT * FROM  $yang_exports;
+
+    -- quantitative metrics
+    $operations_by_type = (
+        SELECT
+            s.channel AS channel,
+            IF(type == 'skillCreated',    o.itemId, NULL) AS skillCreated,
+            IF(type == 'reviewRequested', o.itemId, NULL) AS reviewRequested,
+            IF(type == 'reviewApproved',  o.itemId, NULL) AS reviewApproved,
+            IF(type == 'reviewCancelled', o.itemId, NULL) AS reviewCancelled,
+            IF(type == 'deployRequested', o.itemId, NULL) AS deployRequested,
+            IF(type == 'deployCompleted', o.itemId, NULL) AS deployCompleted,
+            IF(type == 'deployRejected',  o.itemId, NULL) AS deployRejected
+        FROM
+            $operations AS o
+        JOIN
+            $skill_channels AS s ON s.id == o.itemId
+    );
+
+    $quantitative = (
+        SELECT
+            channel,
+            COUNT(DISTINCT skillCreated) as skillCreated,
+            COUNT(DISTINCT reviewRequested) as reviewRequested,
+            COUNT(DISTINCT reviewApproved) as reviewApproved,
+            COUNT(DISTINCT reviewCancelled) as reviewCancelled,
+            COUNT(DISTINCT deployRequested) as deployRequested,
+            COUNT(DISTINCT deployCompleted) as deployCompleted,
+            COUNT(DISTINCT deployRejected) as deployRejected
+        FROM
+            $operations_by_type
+        GROUP COMPACT BY channel
+    );
+    --SELECT * FROM $quantitative;
+
+    -- time ranges
+    $lagged_operations = (
+        SELECT
+            o.type AS type,
+            o.itemId AS itemId,
+            s.channel AS channel,
+            LAG(o.type, 1) OVER w as prevType,
+            o.createdAt AS createdAt,
+            LAG(o.createdAt, 1) OVER w as prevCreatedAt,
+            DateTime::ToMicroseconds($parseTimestamp(o.createdAt) - $parseTimestamp(LAG(o.createdAt, 1) OVER w)) as delta
+        FROM (
+                SELECT
+                    createdAt,
+                    itemId,
+                    Yson::ConvertToString(type) AS type,
+                FROM `home/paskills/upload/stable/operations`
+                WHERE
+                    itemId IN (SELECT itemId FROM $operations)
+            ) AS o
+        JOIN
+            $skill_channels AS s ON s.id == o.itemId
+        WINDOW w AS (PARTITION COMPACT BY o.itemId ORDER BY o.createdAt ASC)
+    );
+
+    $time_deltas = (
+        SELECT
+            type,
+            prevType,
+            itemId,
+            channel,
+            IF(
+                prevType = 'reviewRequested' AND type IN ('reviewApproved', 'reviewCancelled'),
+                delta,
+                NULL
+            ) AS timeInReview,
+            IF(
+                prevType = 'reviewApproved' AND type = 'deployRequested',
+                delta,
+                NULL
+            ) AS timeToRequestDeploy,
+            IF(
+                prevType = 'deployRequested' AND type = 'deployCompleted',
+                delta,
+                NULL
+            ) as timeToDeploySuccess,
+            IF(
+                prevType IN ('reviewApproved', 'deployRequested') AND type = 'deployRejected',
+                delta,
+                NULL
+            ) as timeToDeployError
+        FROM
+            $lagged_operations
+        WHERE
+            $parse_date(createdAt) == $date
+    );
+
+    $time_intervals = (
+        SELECT
+            channel,
+            -- timeInReview
+            MEDIAN(timeInReview) AS timeInReviewP50,
+            PERCENTILE(timeInReview, 0.9) AS timeInReviewP90,
+            MAX(timeInReview) AS timeInReviewP100,
+            -- timeToRequestDeploy
+            MEDIAN(timeToRequestDeploy) AS timeToRequestDeployP50,
+            PERCENTILE(timeToRequestDeploy, 0.9) AS timeToRequestDeployP90,
+            MAX(timeToRequestDeploy) AS timeToRequestDeployP100,
+            -- timeToDeploySuccess
+            MEDIAN(timeToDeploySuccess) AS timeToDeploySuccessP50,
+            PERCENTILE(timeToDeploySuccess, 0.9) AS timeToDeploySuccessP90,
+            MAX(timeToDeploySuccess) AS timeToDeploySuccessP100,
+            -- timeToDeployError
+            MEDIAN(timeToDeployError) AS timeToDeployErrorP50,
+            PERCENTILE(timeToDeployError, 0.9) AS timeToDeployErrorP90,
+            MAX(timeToDeployError) AS timeToDeployErrorP100
+        FROM
+            $time_deltas
+        GROUP COMPACT BY channel
+    );
+    --SELECT * FROM $time_intervals;
+
+    -- result
+    INSERT INTO $target_path WITH TRUNCATE
+        SELECT
+            c.channel as channel,
+            $date AS fielddate,
+            $load_date AS load_date,
+            COALESCE(yang.count, 0) AS sent_to_yang,
+            COALESCE(q.skillCreated, 0) as skill_created,
+            COALESCE(q.reviewRequested, 0) as review_requested,
+            COALESCE(q.reviewApproved, 0)  as review_approved,
+            COALESCE(q.reviewCancelled, 0) as review_cancelled,
+            COALESCE(q.deployRequested, 0) as deploy_requested,
+            COALESCE(q.deployCompleted, 0) as deploy_completed,
+            COALESCE(q.deployRejected, 0)  as deploy_rejected,
+            $timestampToHours(COALESCE(ti.timeInReviewP50, 0)) AS time_in_review_p50,
+            $timestampToHours(COALESCE(ti.timeInReviewP90, 0)) AS time_in_review_p90,
+            $timestampToHours(COALESCE(ti.timeInReviewP100, 0)) AS time_in_review_p100,
+            $timestampToHours(COALESCE(ti.timeToRequestDeployP50, 0)) AS time_to_request_deploy_p50,
+            $timestampToHours(COALESCE(ti.timeToRequestDeployP90, 0)) AS time_to_request_deploy_p90,
+            $timestampToHours(COALESCE(ti.timeToRequestDeployP100, 0)) AS time_to_request_deploy_p100,
+            $timestampToHours(COALESCE(ti.timeToDeploySuccessP50, 0)) AS time_to_deploy_success_p50,
+            $timestampToHours(COALESCE(ti.timeToDeploySuccessP90, 0)) AS time_to_deploy_success_p90,
+            $timestampToHours(COALESCE(ti.timeToDeploySuccessP100, 0)) AS time_to_deploy_success_p100,
+            $timestampToHours(COALESCE(ti.timeToDeployErrorP50, 0)) AS time_to_deploy_error_p50,
+            $timestampToHours(COALESCE(ti.timeToDeployErrorP90, 0)) AS time_to_deploy_error_p90,
+            $timestampToHours(COALESCE(ti.timeToDeployErrorP100, 0)) AS time_to_deploy_error_p100
+        FROM
+            $channels AS c
+        LEFT JOIN
+            $yang_exports AS yang ON yang.channel == c.channel
+        LEFT JOIN
+            $quantitative AS q ON q.channel == c.channel
+        LEFT JOIN
+            $time_intervals as ti ON ti.channel == c.channel
+        ORDER BY channel;
+
+    COMMIT;
+END DEFINE;
+
+EVALUATE FOR $date IN $dates DO $insert_moderation_report($date);

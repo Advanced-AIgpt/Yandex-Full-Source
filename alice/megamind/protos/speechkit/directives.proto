@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package NAlice.NSpeechKit;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/speechkit";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+message TUniproxyDirectiveMeta {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Puid = 1 [json_name = "puid", (NYT.column_name) = "puid"];
+}
+
+message TDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    string AnalyticsType = 3 [json_name = "sub_name", (NYT.column_name) = "sub_name"];
+    bool IgnoreAnswer = 4 [json_name = "ignore_answer", (NYT.column_name) = "ignore_answer"];
+    google.protobuf.Struct Payload = 5 [json_name = "payload", (NYT.column_name) = "payload", (NYT.flags) = SERIALIZATION_PROTOBUF, (FieldAccess) = A_PRIVATE_RESPONSE];
+
+    oneof OptionalMultiroomSessionId {
+        string MultiroomSessionId = 6 [json_name = "multiroom_session_id", (NYT.column_name) = "multiroom_session_id"];
+    }
+
+    repeated string RoomDeviceIds = 7 [json_name = "room_device_ids", (NYT.column_name) = "room_device_ids"];
+
+    bool IsLedSilent = 8 [json_name = "is_led_silent", (NYT.column_name) = "is_led_silent"];
+
+    google.protobuf.StringValue EndpointId = 9 [json_name = "endpoint_id", (NYT.column_name) = "endpoint_id"];
+
+    TUniproxyDirectiveMeta UniproxyDirectiveMeta = 10 [json_name = "uniproxy_directive_meta", (NYT.column_name) = "uniproxy_directive_meta"];
+}
+
+message TProtobufUniproxyDirective {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TContextSaveDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string DirectiveId = 1 [json_name = "directive_id", (NYT.column_name) = "directive_id"];
+        google.protobuf.Any Payload = 2 [json_name = "payload", (NYT.column_name) = "payload"];
+    }
+
+    oneof Directives {
+        option (NYT.variant_field_name) = "directives";
+        TContextSaveDirective ContextSaveDirective = 1 [json_name = "context_save_directive", (NYT.column_name) = "context_save_directive"];
+    }
+
+    TUniproxyDirectiveMeta UniproxyDirectiveMeta = 2 [json_name = "uniproxy_directive_meta", (NYT.column_name) = "uniproxy_directive_meta"];
+}

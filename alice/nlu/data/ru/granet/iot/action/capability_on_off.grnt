@@ -1,0 +1,351 @@
+import:
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/prepositions.grnt
+    common/verbs.grnt
+    iot/action/common.grnt
+    iot/common.grnt
+    iot/discovery/common.grnt
+
+form alice.iot.action.capability.on_off.ifexp.bg_enable_iot_action_forms:
+    slots:
+        intent_parameters:
+            source: $OnOff
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $user.iot.device
+                $IotDeviceType
+                $user.iot.demo.device
+                $PetFeederDeviceType
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+        on_off_value:
+            source:
+                $TurnOn
+                $TurnOff
+            type:
+                custom.iot.on_off.value
+        # некоторые грамматики специфичны для типа устройства.
+        # required_type содержит информацию о типе в таких случаях.
+        # Если required_type не совпадает с типом указанного в запросе устройства, нужно сказать, что устройство такого не умеет.
+        required_type:
+            source:
+                $TurnOnVacuumCleaner
+                $OpenCurtains
+                $MakeTea
+                $FeedPet
+                $MakeCoffee
+                $StartDishwashing
+                $StopVacuumCleaner
+                $CloseCurtains
+                $StopDishwashing
+            type:
+                custom.iot.required.device.types
+        all_devices_requested:
+            source: $AllDevices
+            type: string
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+        for_datetime:
+            keep_variants: true
+            source: $ForDateTime
+            type: sys.datetime_range
+
+    root:
+        $OnOff
+
+    $OnOff:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.on_off",
+            "capability_instance": "on"
+        }
+
+        $TurnOn
+        $TurnOff
+        $Invert
+
+    $TurnOn:
+        %type custom.iot.on_off.value
+        %value true
+
+        $FeedPet
+        $TurnOnVacuumCleaner
+        $SimpleTurnOn
+        $OpenCurtains
+        $MakeTea
+        $MakeCoffee
+        $StartDishwashing
+
+    $TurnOff:
+        %type custom.iot.on_off.value
+        %value false
+
+        $StopVacuumCleaner
+        $SimpleTurnOff
+        $CloseCurtains
+        $StopDishwashing
+
+    $Invert:
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.on_off",
+            "capability_instance": "on",
+            "relativity_type": "invert"
+        }
+
+        [($user.iot.device|$user.iot.group|$IotDeviceType)+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        %force_negative
+        %lemma
+        .* тв (тысяча|три|двадцать четыре) .*
+
+
+$TurnOnVacuumCleaner:
+    %type custom.iot.required.device.types
+    %value ["devices.types.vacuum_cleaner"]
+    %lemma
+
+    [($Common.Continue|$Common.Start)* $CleaningStart+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $CleaningStart:
+        $Common.Clean
+        $Common.VacuumClean
+        $Common.TheCleanup
+        %force_negative
+        %exact
+        убирайся
+
+$SimpleTurnOn:
+    [$TurnOn+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [($TurnOn+ $AllDevices+) ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]  # порядок в "включи всё" важен
+    [$Open+ ($RoomWithPrepositions|$HouseholdWithPrepositions)+ $IotDateTime*] # https://st.yandex-team.ru/ALICE-15614
+
+    %force_negative
+    .* ($Discover|$Discovery) .*
+
+    $TurnOn:
+        $Common.TurnOn
+        $Common.TurnOnLight
+        $Common.Start
+        %force_negative
+        $Common.Connect
+
+
+$OpenCurtains:
+    %type custom.iot.required.device.types
+    %value ["devices.types.openable", "devices.types.openable.curtain"]
+
+    [$Open+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+
+$Open:
+    %lemma
+    $Common.Open
+    $Common.LiftUp
+    $Common.MoveApart
+    отворить
+    %force_negative
+    %exact
+    $Common.Display
+    $Common.TurnOn
+    (отворен|отворена|отворено|отворены|отворенный|отворенная|отворенное|отворенные)
+    %lemma
+    поставить
+
+
+$MakeTea:
+    %type custom.iot.required.device.types
+    %value ["devices.types.cooking.kettle"]
+    %lemma
+
+    [($Common.ToBoil|поставь)+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [$Common.MakeTeaOrCoffee+ (чай|чайку)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+$FeedPet:
+    %type custom.iot.required.device.types
+    %value ["devices.types.pet_feeder"]
+
+    [$Feed+ $Pet+ ($Food|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [$Common.Fill+ $PetFeederDeviceType+ ($Pet|$Food|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [$Pour+ $Food+ ((в* $PetFeederDeviceType)|$Pet)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    %negative
+    [$Feed (нас|меня) .*]
+
+    $Feed:
+        %lemma
+        покормить
+        накормить
+        кормить
+
+    $Pour:
+        %lemma
+        насыпать
+        насыпь  # не матчится на "насыпать"
+        положить
+        дать
+
+    $Food:
+        $ToEat
+        $Common.Something
+        %lemma
+        еда
+        корм
+        съестное
+
+    $ToEat:
+        есть
+        поесть
+        кушать
+        покушать
+        жрать
+        пожрать
+        жевать
+        пожевать
+
+    $Pet:
+        %lemma
+        (кот|кошка|котик|кошечка|котёнок|котёночек|котяра)
+        (пёс|собака|пёсик|собачка|щенок|щеночек|пёсель)
+        (попугай|птица|попугайчик|птичка|попуг|попуга)
+        золотой* (рыба|рыбка|рыбонька)
+        (любимец|животное|питомец|зверь)
+
+$MakeCoffee:
+    %type custom.iot.required.device.types
+    %value ["devices.types.cooking.coffee_maker"]
+    %lemma
+
+    [$Common.MakeTeaOrCoffee+ (кофе|кофейку)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+$StartDishwashing:
+    %type custom.iot.required.device.types
+    %value ["devices.types.dishwasher"]
+    %lemma
+
+    [($Common.Start|$Common.TurnOn)+ ($Common.TheWashing|мыть)+ (программа|посуда|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [$Common.ToWash+ посуда+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    %force_negative
+    .* ($Discover|$Discovery) .*
+
+$StopVacuumCleaner:
+    %type custom.iot.required.device.types
+    %value ["devices.types.vacuum_cleaner"]
+    %lemma
+
+    [$Common.Fill+ $Common.TheCharge+ $DeviceWithPrepositions+ ($Common.TheLevel|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [$CleanerSend+ $ToCleanerStation+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [($Common.ToStop|$Common.StopObject)+ $CleaningStop+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $CleanerSend:
+        %lemma
+        $Common.ToSend
+        $Common.Return
+        поставить
+        %force_negative
+        %exact
+        (поставлен|поставлена|поставлено|поставлены|поставленный|поставленная|поставленное|поставленные)
+
+    $ToCleanerStation:
+        $Common.ToBeCharged
+        $Common.ToCharge
+        %lemma
+        (к|на)* (база|зарядка|домой|[(зарядный|зарядки|док)* станция])
+
+    $CleaningStop:
+        $Common.Clean
+        $Common.VacuumClean
+        $Common.TheCleanup
+        %force_negative
+        %exact
+        убирайся
+
+    %force_negative
+    %exact
+    .* (отключайся|отключись|выключись|вырубись|вырубайся) .*
+    .* $Common.TurnedOff .*
+
+$SimpleTurnOff:
+    [$TurnOff+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+    [($TurnOff+ $AllDevices+) ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]  # порядок в "выключи всё" важен
+
+    $TurnOff:
+        $Common.TurnOff
+        $Common.TurnOffLight
+        $Common.ToStop
+        %force_negative
+        $Common.TurnedOff
+
+    %force_negative
+    %exact
+    .* (отключайся|отключись|выключись|вырубись|вырубайся) .*
+
+$CloseCurtains:
+    %type custom.iot.required.device.types
+    %value ["devices.types.openable", "devices.types.openable.curtain"]
+    %lemma
+
+    [$Close+ $DeviceWithPrepositions+ ($RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $Close:
+        %lemma
+        $Common.Close
+        $Common.LowerDown
+        затворить
+        %force_negative
+        %exact
+        (затворен|затворена|затворено|затворены|затворенный|затворенная|затворенное|затворенные)
+
+$StopDishwashing:
+    %type custom.iot.required.device.types
+    %value ["devices.types.dishwasher"]
+    %lemma
+
+    [($Common.ToStop|$Common.StopObject|$Common.TurnOff)+ ($Common.TheWashing|мыть)+ (программа|посуда|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    %force_negative
+    %exact
+    .* (отключайся|отключись|выключись|вырубись|вырубайся) .*
+    .* $Common.TurnedOff .*
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Lets
+    все
+    %force_negative
+    раздвинь

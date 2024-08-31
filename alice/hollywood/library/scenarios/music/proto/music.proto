@@ -1,0 +1,232 @@
+syntax = "proto3";
+
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+import "alice/megamind/protos/scenarios/stack_engine.proto";
+import "alice/protos/data/scenario/music/content_id.proto";
+import "alice/protos/endpoint/capability.proto";
+import "google/protobuf/struct.proto";
+
+package NAlice.NHollywoodFw.NMusic;
+
+// Common scene args for all scenes
+message TMusicScenarioSceneArgsCommon {
+    // Contains common frame slots
+    message TFrame {
+        bool DisableNlg = 1;
+        NData.NMusic.TContentId ContentId = 2;
+    }
+
+    message TAccountStatus {
+        string Uid = 1;
+    }
+
+    TFrame Frame = 1;
+    TAccountStatus AccountStatus = 2;
+    TTypedSemanticFrame OriginalSemanticFrame = 3;
+}
+
+// CENTAUR SCENE
+message TMusicScenarioSceneArgsCentaur {
+}
+
+message TMusicScenarioRenderArgsCentaur {
+}
+
+// PLAYER COMMAND REMOVE_LIKE SCENE
+message TMusicScenarioSceneArgsPlayerCommandRemoveLike {
+    TMusicScenarioSceneArgsCommon CommonArgs = 1;
+}
+
+// PLAYER COMMAND REMOVE_DISLIKE SCENE
+message TMusicScenarioSceneArgsPlayerCommandRemoveDislike {
+    TMusicScenarioSceneArgsCommon CommonArgs = 1;
+}
+
+// PLAYER COMMAND REPEAT SCENE
+message TMusicScenarioSceneArgsPlayerCommandRepeat {
+    TMusicScenarioSceneArgsCommon CommonArgs = 1;
+    TRepeatModeSlot.EValue RepeatMode = 2;
+}
+
+// PLAYER COMMAND REWIND SCENE
+message TMusicScenarioSceneArgsPlayerCommandRewind {
+    string RewindType = 1;
+    string Time = 2; // a json value, like '{"hours": 1, "minutes": 28, "seconds": 15}'
+}
+
+// PLAYER COMMAND SEND_SONG_TEXT SCENE
+message TMusicScenarioSceneArgsPlayerCommandSendSongText {
+}
+
+message TMusicScenarioRenderArgsPlayerCommandSendSongText {
+    TMusicScenarioRenderArgsCommon CommonArgs = 1;
+    TSendPushDirectiveArgs SendPushDirectiveArgs = 2;
+}
+
+// PLAYER COMMAND SONGS_BY_THIS_ARTIST SCENE
+message TMusicScenarioSceneArgsPlayerCommandSongsByThisArtist {
+}
+
+// PLAYER COMMAND WHAT_YEAR_IS_THIS_SONG SCENE
+message TMusicScenarioSceneArgsPlayerCommandWhatYearIsThisSong {
+}
+
+// PLAYER COMMAND WHAT_ALBUM_IS_THIS_SONG_FROM SCENE
+message TMusicScenarioSceneArgsPlayerCommandWhatAlbumIsThisSongFrom {
+}
+
+// PLAYER COMMAND WHAT_IS_THIS_SONG_ABOUT SCENE
+message TMusicScenarioSceneArgsPlayerCommandWhatIsThisSongAbout {
+}
+
+message TMusicScenarioRenderArgsPlayerCommandWhatIsThisSongAbout {
+    TMusicScenarioRenderArgsCommon CommonArgs = 1;
+    TSendPushDirectiveArgs SendPushDirectiveArgs = 2;
+}
+
+// PLAYER COMMAND SHUFFLE SCENE
+message TMusicScenarioSceneArgsPlayerCommandShuffle {
+}
+
+// PLAYER COMMAND WHAT_IS_PLAYING SCENE
+message TMusicScenarioSceneArgsPlayerCommandWhatIsPlaying {
+}
+
+// EQUALIZER SCENE
+message TMusicScenarioSceneArgsEqualizer {
+}
+
+// MULTIROOM REDIRECT SCENE
+message TMusicScenarioSceneArgsMultiroomRedirect {
+    NScenarios.TMultiroomSemanticFrameDirective MultiroomSemanticFrameDirective = 1;
+    NScenarios.TPushTypedSemanticFrameDirective PushTypedSemanticFrameDirective = 2;
+    NScenarios.TClearQueueDirective ClearQueueDirective = 3;
+
+    NScenarios.TScenarioRunResponse.TFeatures.TPlayerFeatures PlayerFeatures = 4;
+}
+
+// FM RADIO SCENE
+message TMusicScenarioSceneArgsFmRadio {
+    enum ERequestStatus {
+        Undefined = 0;
+        OK = 1;
+        Unrecognized = 2;
+    }
+
+    // "включи радио шансон" -> FmRadioId=chanson
+    message TExplicitRequest {
+        string FmRadioId = 1;
+    }
+
+    // "включи радио"
+    message TGeneralRequest {
+    }
+
+    // "следующее"
+    message TNextRequest {
+    }
+
+    oneof Request {
+        TExplicitRequest ExplicitRequest = 1;
+        TGeneralRequest GeneralRequest = 2;
+        TNextRequest NextRequest = 5;
+    }
+    ERequestStatus RequestStatus = 3;
+
+    TMusicScenarioSceneArgsCommon CommonArgs = 4;
+}
+
+// ELARI WATCH SCENE
+message TMusicScenarioSceneArgsElariWatch {
+}
+
+// PLAY LESS SCENE
+message TMusicScenarioSceneArgsPlayLess {
+}
+
+// TANDEM FOLLOWER SCENE
+message TMusicScenarioSceneArgsTandemFollower {
+}
+
+// START MULTIROOM SCENE
+message TMusicScenarioSceneArgsStartMultiroom {
+    NScenarios.TLocationInfo LocationInfo = 1;
+}
+
+// Nlg context proto
+message TMusicNlgContext {
+    message TError {
+        message TData {
+            string Code = 1 [json_name = "code"];
+        }
+
+        TData Data = 1 [json_name = "data"];
+    }
+
+    message TAnswer {
+        message TArtist {
+            string Name = 1 [json_name = "name"];
+            bool Composer = 2 [json_name = "composer"];
+        }
+
+        message TLyricsInfo {
+            bool HasAvailableSyncLyrics = 1 [json_name = "has_available_sync_lyrics"];
+            bool HasAvailableTextLyrics = 2 [json_name = "has_available_text_lyrics"];
+        }
+
+        string Name = 1 [json_name = "name"];
+        string Title = 2 [json_name = "title"];
+        string TrackTitle = 3 [json_name = "track_title"];
+        string AlbumTitle = 4 [json_name = "album_title"];
+        string Genre = 5 [json_name = "genre"];
+        string Type = 6 [json_name = "type"];
+        string Subtype = 7 [json_name = "subtype"];
+        repeated TArtist Artists = 8 [json_name = "artists"];
+        TLyricsInfo LyricsInfo = 9 [json_name = "lyrics_info"];
+        int32 AlbumYear = 13 [json_name = "album_year"];
+
+        string Station = 10 [json_name = "station"];
+        bool Active = 11 [json_name = "active"];
+        bool Available = 12 [json_name = "available"];
+
+        // TODO: filters for radio
+        // https://a.yandex-team.ru/arcadia/alice/hollywood/library/scenarios/music/music_backend_api/result_renders.cpp?rev=r9604895#L109-120
+    }
+
+    map<string, bool> Attentions = 1 [json_name = "attentions"];
+    TError Error = 2 [json_name = "error"];
+    TAnswer Answer = 3 [json_name = "answer"];
+    bool IsSmartSpeaker = 4 [json_name = "is_smart_speaker"];
+    string StreamId = 5 [json_name = "stream_id"];
+    bool PushSent = 6 [json_name = "push_sent"];
+    bool IsRadio = 7 [json_name = "is_radio"];
+    bool NlgDisabled = 8 [json_name = "nlg_disabled"];
+    bool IsFmRadio = 9 [json_name = "is_fm_radio"];
+    string FmRadioName = 10 [json_name = "fm_radio_name"];
+    bool IsGenerative = 11 [json_name = "is_generative"];
+    bool IsNonMusic = 12 [json_name = "is_non_music"];
+}
+
+// Common render context
+message TMusicScenarioRenderArgsCommon {
+    message TNlgData {
+        string Template = 1;
+        string Phrase = 2;
+        TMusicNlgContext Context = 3;
+    }
+
+    reserved 2; reserved "Directives";
+    reserved 3; reserved "ServerDirectives";
+
+    TNlgData NlgData = 1;
+    NScenarios.TStackEngine StackEngine = 4;
+    repeated NScenarios.TDirective DirectiveList = 5;
+    repeated NScenarios.TServerDirective ServerDirectiveList = 6;
+}
+
+// Common push directive args
+message TSendPushDirectiveArgs {
+    string CurrentItemTrackId = 1;
+}

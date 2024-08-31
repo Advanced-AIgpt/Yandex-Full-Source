@@ -1,0 +1,9 @@
+RECURSE(
+    advisers
+    dialogovo
+    general_conversation
+    iot
+    search
+    video
+    vins
+)

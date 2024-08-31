@@ -1,0 +1,76 @@
+import: order/providers_name.grnt
+
+import: common/filler.grnt
+import: common/verbs.grnt
+
+form alice.order.make_order:
+    slots:
+        provider_name:
+            source: $ProviderName
+            type: custom.provider_name
+   
+    root:
+        [$MakeOrderVerb+ $Want? $Order* $AliceCan* $ForWhom* $Prefix* $ProviderName .?]
+        [$MakeOrderVerb? $Want+ $Order* $AliceCan* $ForWhom* $Prefix* $ProviderName .?]
+
+        %negative
+        [(как|что|где) $MakeOrderVerb+ $Want? $AliceCan? $Order* $ForWhom* $Prefix+ $ProviderName .?]
+        [не $MakeOrderVerb+ .*]
+
+    filler:
+        $Common.WayToCallAlice
+        $Common.Filler
+        $Common.LeftFiller
+        $Noise
+
+$Prefix:
+    %lemma
+    (на|от|в|с|из) сервис?
+    через
+
+$Want:
+    хочу
+    хотел 
+    (мне|нам) надо
+
+$MakeOrderVerb:
+    заказать
+    закажем
+    заказывай
+    сформировать
+    оформить
+    закажи
+    заказывать
+    привези
+    купи
+    доставь
+    делай
+    делать
+    сделать
+    сделай
+    оформи
+
+$Order:
+    (продукты|продуктов)
+    (еду|еды)
+    (заказ|доставку) (еды|продуктов)?
+
+$ForWhom:
+    у? из? $Common.PronounMe
+    мой
+    свой
+
+$AliceCan:
+    можешь
+    умеешь
+    открой
+    покажи
+
+$Noise:
+    давай (ка)?
+    помоги
+    что нибудь
+    нужно
+    ты
+    ли
+    бы

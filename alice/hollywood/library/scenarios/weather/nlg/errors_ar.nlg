@@ -1,0 +1,77 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ar.nlg" %}
+
+{% macro render_weather_error__nousergeo() %}
+  {% chooseline %}
+    لكي أجيب على هذا السؤال يجب أن أعرف موقعك. لكنني لم أستطع تحديده.
+    لم أستطع تحديد مكانك.
+    لكي أعطيك جواباً يجب أن أعرف موقعك، لكنني لم أتمكن من تحديده.
+    لا أستطيع تحديد موقعك.
+    لا أستطيع تحديد مكانك.
+    لا أعرف أين أنت الآن لذلك لا أستطيع إعطاءك جواباً.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_weather_error__nogeo(where) %}
+  {% chooseline %}
+    للأسف،
+    اعذرني،
+    سامحني،
+    للأسف، لكن
+  {% endchooseline %}
+  {% chooseline %}
+    لا أستطيع أن أفهم،
+    لا أعرف،
+  {% endchooseline %}
+  أين هذا "{{ where }}".
+{% endmacro %}
+
+{% phrase render_weather_error__system %}
+  حدث خطأ ما. لا أستطيع إخبارك بشيء عن الطقس.
+{% endphrase %}
+
+{% phrase render_weather_error__invalidparam %}
+  حدث خطأ ما. لا أستطيع إخبارك بشيء عن الطقس.
+{% endphrase %}
+
+{% phrase render_weather_error__nogeo %}
+  {% if not context.where %}
+    {{ render_weather_error__nousergeo() }}
+  {% else %}
+    {{ render_weather_error__nogeo(context.where) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_weather_error__noweather %}
+  لا توجد معلومات عن الطقس
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    في هذا المكان
+  {% endif %}
+  في هذا التاريخ.
+{% endphrase %}
+
+{% phrase render_weather_error__nopressure %}
+  لا توجد معلومات عن الضغط
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    في هذا المكان
+  {% endif %}
+  في هذا التاريخ.
+{% endphrase %}
+
+{% phrase render_weather_error__nowind %}
+  لا توجد معلومات عن الريح
+  {% if context.forecast_location is defined and context.forecast_location and context.forecast_location.city is defined and context.forecast_location.city %}
+    {{ context.forecast_location | city_prepcase }}
+  {% else %}
+    في هذا المكان
+  {% endif %}
+  في هذا التاريخ.
+{% endphrase %}
+
+{% phrase render_weather_error__weathererror %}
+  حدث خطأ ما. لا أستطيع إخبارك بشيء عن الطقس.
+{% endphrase %}

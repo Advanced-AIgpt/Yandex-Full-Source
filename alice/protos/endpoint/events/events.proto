@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/events;eventspb";
+option java_package = "ru.yandex.alice.protos.endpoint.events";
+option java_outer_classname = "EventsProto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+import "alice/protos/endpoint/endpoint.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TCapabilityEvent {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    google.protobuf.Timestamp Timestamp = 1 [json_name = "timestamp", (NYT.column_name) = "timestamp"];
+
+    // Event must be a member of NAlice.TCapabilityEventHolder message
+    // from alice/protos/endpoint/events/all/all.proto
+    // but never TCapabilityEventHolder itself due to the fact that TCapabilityEventHolder depends on every known capability event
+    google.protobuf.Any Event = 2 [json_name = "event", (NYT.column_name) = "event"];
+}
+
+message TEndpointCapabilityEvents {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string EndpointId = 1 [json_name = "endpoint_id", (NYT.column_name) = "endpoint_id"];
+    repeated TCapabilityEvent Events = 2  [json_name = "events", (NYT.column_name) = "events"];
+}
+
+message TEndpointEvents {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string EndpointId = 1 [json_name = "endpoint_id", (NYT.column_name) = "endpoint_id"];
+    TEndpoint.TStatus EndpointStatus = 2 [json_name = "endpoint_status", (NYT.column_name) = "endpoint_status"];
+    repeated TCapabilityEvent CapabilityEvents = 3 [json_name = "capability_events", (NYT.column_name) = "capability_events"];
+}
+
+message TEndpointEventsBatch {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TEndpointEvents Batch = 1 [json_name = "batch", (NYT.column_name) = "batch"];
+}

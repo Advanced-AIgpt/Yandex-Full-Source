@@ -1,0 +1,13 @@
+RECURSE_FOR_TESTS(
+    arabic
+    basic_run_apply_request
+    basic_run_request
+    combinators
+    conditional_datasources
+    modifiers
+    parallel_continue
+    postclassify
+    postpone_log_writer
+    scenario_state
+    warm_up
+)

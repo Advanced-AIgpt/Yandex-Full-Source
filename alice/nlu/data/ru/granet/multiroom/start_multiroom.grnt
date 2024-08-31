@@ -1,0 +1,180 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/location.grnt
+    common/nouns.grnt
+    common/pronouns.grnt
+    common/questions.grnt
+    player/common.grnt
+
+
+form alice.multiroom.start_multiroom:
+    slots:
+        room:  # DEPRECATED
+            source:
+                $user.iot.room
+                $user.iot.group
+                $user.iot.device
+                $user.iot.multiroom_all_devices
+                $AtLocationEverywhere
+            type:
+                user.iot.room
+                user.iot.group
+                user.iot.device
+                user.iot.multiroom_all_devices
+        location_room:
+            type:
+                user.iot.room
+            source:
+                $user.iot.room
+                $AtLocationEverywhere
+        location_group:
+            type:
+                user.iot.group
+            source:
+                $user.iot.group
+        location_device:
+            type:
+                user.iot.device
+            source:
+                $user.iot.device
+        location_everywhere:
+            type:
+                user.iot.multiroom_all_devices
+            source:
+                $user.iot.multiroom_all_devices
+        player_type:
+            type:
+                custom.player_type
+            source:
+                $custom.player_type
+                $MusicPlaybackAcc.MusicAcc
+                $MusicPlaybackAcc.MusicGen
+                $MusicPlayback
+    root:
+        $Common.LeftFiller* [$PlayOrResume+ $CurrentTrack+ $Common.Location+]
+        $Common.LeftFiller* [($PlayOrResume|$CurrentTrack|$MusicPlaybackAcc)+ $AtLocationStrict+]
+        $Common.LeftFiller* [($PlayOrResume|$CurrentTrack)+ $MusicPlayback+ $AtLocationStrict+]
+        $Common.LeftFiller* $AndNow [$FromThisPoint+ $AtLocationStrict+]
+
+        %negative
+        [$Common.QuestionWhat+ $CurrentTrack.IsPlaying+ $Common.Location+]
+        [$Common.Play+ $MusicPlaybackAcc+ $AtLocationStrict+ $NotThis*]  # "включи музыку на кухне"
+
+    filler:
+        $nonsense
+        $Common.Additionally
+        $Common.Filler
+        $Common.PronounMe
+        $Common.ToWant
+        $Common.There
+        $Common.Here
+        $Common.WayToCallAlice
+        $MakeItSoFiller
+        $Playback
+        дома
+        (было|бы)
+        (слышно|слышали|слышал|слышала)
+        через
+
+    $PlayOrResume:
+        $Common.Play
+        $Common.Resume
+        %lemma
+        транслировать
+        переключить
+        переключать
+        подрубить
+        вывести
+        %negative
+        активировать
+
+    $MusicPlaybackAcc:
+        $MusicAcc
+        воспроизведение $MusicGen
+
+        $MusicAcc:
+            %type "custom.player_type"
+            %value "music"
+            (музыку|песню|мелодию)
+
+        $MusicGen:
+            %type "custom.player_type"
+            %value "music"
+            (музыки|песни|мелодии)
+
+    $MusicPlayback:
+        ($Playback|$custom.player_type)+
+
+    $CurrentTrack:
+        [($Common.PronounThis|$BeingPlayed)+ $Common.MusicCharacteristic* $custom.player_type* $Filler*]
+        ее
+        [(((это|то) же|тоже) самое) вот*]
+        [($Common.PronounThis|$Common.PronounThat|$Common.QuestionWhat|че)+ $IsPlaying+ $Filler* $custom.player_type*]
+
+        $IsPlaying:
+            играет
+            проигрывается
+            воспроизводится
+            слушаем
+        $BeingPlayed:
+            %lemma
+            играющая
+            воспроизводимая
+            текущая
+        $Filler:
+            вот
+            прямо? сейчас
+            в этот момент
+            $Common.There
+            $Common.Here
+            на (этой|текущей) колонке
+
+    $MakeItSoFiller:
+        сделай так
+        чтобы
+        (проигрывался|проигрывалась|играла|играл|воспроизводилась|воспроизводился|транслировалась|транслировался)
+
+    $Playback:
+        %lemma
+        воспроизведение
+        проигрывание
+
+    $AndNow:
+        а? (теперь|сейчас|давай)+
+
+    $FromThisPoint:
+        с этого же? (места|момента)
+        отсюда же
+
+    $NotThis:
+        .
+        %negative
+        этот | эту | это
+        $CurrentTrack
+
+
+$AtLocationStrict:
+    $AtLocationStrictOther
+    $AtLocationEverywhere
+
+$AtLocationStrictOther:
+    %lemma
+    [($Common.At? колонку?) ($Common.At+ (комнате? $user.iot.room | группе? $user.iot.group | (устройстве|колонке)? $user.iot.device))]
+    [($Common.At? колонку?) $user.iot.multiroom_all_devices]
+    %negative
+    .* дома .*
+
+$AtLocationEverywhere:
+     %type "user.iot.room"
+     %value "everywhere"
+     везде
+     всюду
+     во всей квартире
+     во всем доме
+     в доме
+     в квартире
+     на? все (мои|наши)? колонки
+     по всему дому

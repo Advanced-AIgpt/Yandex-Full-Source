@@ -1,0 +1,48 @@
+form music.play_song:
+    slots:
+        request:
+            type: string
+            source:
+                $Request.PlaySong
+                $Request.Play
+                $Request.LetsSong
+        request.right_minor:
+            type: string
+            source:
+                $Request.RightMinor
+        song:
+            type: string
+            source:
+                $Song.FullAny
+                $Song.FullSure
+    root:
+        $Request.PlaySong  $Song.FullSure  $Request.RightMinor
+        $Request.PlaySong  $Song.FullAny
+        $Request.LetsSong  $Song.FullSure
+        $Request.Play      $Song.FullSure
+
+$Request.PlaySong:      $M.Play  $M.Song
+$Request.Play:          $M.CanYou?  $M.Play  $M.Me?
+$Request.LetsSong:      $M.UncertainLets+  $M.Me?  $M.Song
+$Request.RightMinor:    $M*
+$Song.FullAny:          .+
+$Song.FullSure:         $Dict.SongAuthor?  $Dict.SongName      $Dict.SongAuthor?
+                        $Dict.SongAuthor?  $Dict.SongCitation  $Dict.SongAuthor?
+$Dict.SongAuthor:       %include song_author.txt
+$Dict.SongName:         %include song_name.txt
+$Dict.SongCitation:     %include_raw song_words.txt
+$Word.Song:             песня | песню | песенка | песенку
+$Word.Play:             играй | врубай | вруби | врубить | включи | включай | включить | поставь | ставь | поставить
+$Word.Me:               мне | нам
+$Word.CanYou:           можешь | можно
+$Word.Please:           пожалуйста | плиз
+$Word.Lets:             давай
+$Word.Quickly:          быстро | живо | бегом
+$Word.UncertainLets:    $Word.CanYou | $Word.Please | $Word.Lets
+$Word.MinorWords:       а | и | ну | ка | же | уже | блин | ты | да
+$M:                     $Word.Lets | $Word.Please | $Word.Quickly | $Word.MinorWords
+$M.Song:                $M*  $Word.Song
+$M.Play:                $M*  $Word.Play
+$M.Me:                  $M*  $Word.Me
+$M.CanYou:              $M*  $Word.CanYou
+$M.UncertainLets:       $M*  $Word.UncertainLets

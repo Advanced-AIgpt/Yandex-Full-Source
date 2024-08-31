@@ -1,0 +1,235 @@
+// See https://wiki.yandex-team.ru/Alice/VINS/speechkitapi/
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/speechkit";
+option java_package = "ru.yandex.alice.megamind.protos.speechkit";
+option java_outer_classname = "SpeechkitRequestProto";
+
+import "alice/megamind/protos/blackbox/blackbox.proto";
+
+import "alice/megamind/protos/common/device_state.proto";
+import "alice/megamind/protos/common/environment_state.proto";
+import "alice/megamind/protos/common/events.proto";
+import "alice/megamind/protos/common/experiments.proto";
+import "alice/megamind/protos/common/location.proto";
+import "alice/megamind/protos/common/smart_home.proto";
+import "alice/megamind/protos/guest/guest_data.proto";
+import "alice/megamind/protos/guest/guest_options.proto";
+import "alice/megamind/protos/guest/enrollment_headers.proto";
+import "alice/megamind/protos/scenarios/notification_state.proto";
+import "alice/megamind/protos/quasar/auxiliary_config.proto";
+
+import "alice/library/censor/protos/extension.proto";
+import "alice/library/field_differ/protos/extension.proto";
+
+import "alice/library/client/protos/client_info.proto";
+
+import "alice/protos/data/contacts.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "google/protobuf/struct.proto";
+
+message TSpeechKitRequestProto {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message THeader {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string RequestId = 1 [json_name = "request_id", (NYT.column_name) = "request_id"]; // уникальный идентификатор запроса, генерируется клиентом
+
+        // Id последнего запроса ответ на который успешно получен от vins, null в случае если это первое сообщение в сессии.
+        // Проставляется клиентом (quasar, alicekit, строка, навигатор и т.д.). Отсутствует для старых клиентов.
+        optional string PrevReqId = 2 [json_name = "prev_req_id", (NYT.column_name) = "prev_req_id"];
+
+        // Счетчик увеличивающийся для каждого запроса в vins, важно чтобы КАЖДЫЙ запрос отправленный в vins был с увеличенным счетчиком и чтобы они никогда не повторялись в рамках сессии.
+        // Проставляется speechkit, управляется клиентом. Отсутствует для старых клиентов.
+        optional uint32 SequenceNumber = 3 [json_name = "sequence_number", (NYT.column_name) = "sequence_number"];
+
+        optional string DialogId = 4 [json_name = "dialog_id", (NYT.column_name) = "dialog_id"];
+
+        optional string RefMessageId = 5 [json_name = "ref_message_id", (NYT.column_name) = "ref_message_id"];
+        optional string SessionId = 6 [json_name = "session_id", (NYT.column_name) = "session_id"];
+
+        optional uint64 RandomSeed = 7 [json_name = "random_seed", (NYT.column_name) = "random_seed"];
+    }
+
+    message TRequest {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TAdditionalOptions {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            message TBassOptions {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                optional string UserAgent = 1 [json_name = "user_agent", (NYT.column_name) = "user_agent"];
+                optional uint32 FiltrationLevel = 2 [json_name = "filtration_level", (NYT.column_name) = "filtration_level"];
+                optional string ClientIP = 3 [json_name = "client_ip", (NYT.column_name) = "client_ip"];
+                repeated string Cookies = 4 [json_name = "cookies", (NYT.column_name) = "cookies", (FieldAccess) = A_PRIVATE_REQUEST, (FieldAccess) = A_PRIVATE_EVENTLOG];
+                optional double ScreenScaleFactor = 5 [json_name = "screen_scale_factor", (NYT.column_name) = "screen_scale_factor"];
+                optional string MegamindCgi = 6 [json_name = "megamind_cgi_string", (NYT.column_name) = "megamind_cgi_string"];
+                optional string ProcessId = 7 [json_name = "process_id", (NYT.column_name) = "process_id"];
+                optional int32 VideoGalleryLimit = 8 [json_name = "video_gallery_limit", (NYT.column_name) = "video_gallery_limit"];
+                optional int32 RegionId = 9 [json_name = "region_id", (NYT.column_name) = "region_id"];
+            }
+
+            message TPermission {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                reserved 56788;
+
+                optional string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+                oneof PermissionStatus {
+                    bool Granted = 1 [json_name = "granted", (NYT.column_name) = "granted"];
+                    // Some apps send granted, some - status. Prefer Granted, please. Don't use both.
+                    bool Status = 3 [json_name = "status", (NYT.column_name) = "status"];
+                }
+            }
+
+            enum ESourceScreen {
+                undefined = 0;
+                cloud_ui = 1;
+                chat_ui = 2;
+            }
+
+            optional string OAuthToken = 1 [json_name = "oauth_token", (NYT.column_name) = "oauth_token", (FieldAccess) = A_PRIVATE_REQUEST, (FieldAccess) = A_PRIVATE_EVENTLOG]; // Vins пробрасывает токен в BASS,
+            reserved 2;
+            optional TBassOptions BassOptions = 3 [json_name = "bass_options", (NYT.column_name) = "bass_options"];
+            repeated string SupportedFeatures = 4 [json_name = "supported_features", (NYT.column_name) = "supported_features"];
+            repeated string UnsupportedFeatures = 5 [json_name = "unsupported_features", (NYT.column_name) = "unsupported_features"];
+            optional string DivKitVersion = 6 [json_name = "divkit_version", (NYT.column_name) = "divkit_version"];
+            optional string YandexUID = 7 [json_name = "yandex_uid", (NYT.column_name) = "yandex_uid"];
+            optional uint64 ServerTimeMs = 8 [json_name = "server_time_ms", (NYT.column_name) = "server_time_ms", (NAlice.ImportantFieldCheck) = IFC_PRESENCE];
+            repeated string RadioStations = 9 [json_name = "radiostations", (NYT.column_name) = "radiostations"];
+            optional string AppInfo = 10 [json_name = "app_info", (NYT.column_name) = "app_info"];
+            optional NQuasarAuxiliaryConfig.TAuxiliaryConfig QuasarAuxiliaryConfig = 11 [json_name = "quasar_auxiliary_config", (NYT.column_name) = "quasar_auxiliary_config"];
+            optional bool DoNotUseUserLogs = 12 [json_name = "do_not_use_user_logs", (NYT.column_name) = "do_not_use_user_logs"];
+            optional string Puid = 13 [json_name = "puid", (NYT.column_name) = "puid"];
+            repeated TPermission Permissions = 14 [json_name = "permissions", (NYT.column_name) = "permissions"];
+            optional string ICookie = 15 [json_name = "icookie", (NYT.column_name) = "icookie"];
+            optional string Expboxes = 16 [json_name = "expboxes", (NYT.column_name) = "expboxes"];
+            repeated TFavouriteLocation FavouriteLocations = 17 [json_name = "favourites", (NYT.column_name) = "favourites"];
+            reserved 18;
+            reserved "GuestOptions";
+
+            optional TGuestOptions GuestUserOptions = 19 [json_name = "guest_user_options", (NYT.column_name) = "guest_user_options", (FieldAccess) = A_PRIVATE_REQUEST];
+            // screen id in terms of search app: either the cloud or the regular chat
+            // used only for analytics purposes that's why it's in additional_options but not in device_state
+            optional ESourceScreen SourceScreenId = 20 [json_name = "source_screen_id", (NYT.column_name) = "source_screen_id"];
+        }
+
+        message TUniproxyOptions {
+            optional string MegamindUrl = 1 [json_name = "megamind_url", (NYT.column_name) = "megamind_url"];
+        }
+
+        optional TEvent Event = 1 [json_name = "event", (NYT.column_name) = "event"];
+        optional TLocation Location = 2 [json_name = "location", (NYT.column_name) = "location"];
+
+        optional TExperimentsProto Experiments = 3 [(NYT.column_name) = "experiments"];
+
+        // DeviceState and DeviceStateRaw for virtual oneof to protect logging from incompatible change (see PR).
+        // Never set both fields
+        // oneof DeviceStateType {
+
+            optional TDeviceState DeviceState = 4 [json_name = "device_state", (NYT.column_name) = "device_state"];
+            // contains bytes from TDeviceState proto message. Raw field is used for binary forwards compatibility.
+            // After migration to binary protobuf protocol between client and uniproxy old field will be used again.
+            optional bytes DeviceStateRaw = 18 [json_name = "device_state_raw", (NYT.column_name) = "device_state_raw"];
+        // }
+        optional TAdditionalOptions AdditionalOptions = 5 [json_name = "additional_options", (NYT.column_name) = "additional_options"];
+
+        optional bool VoiceSession = 6 [json_name = "voice_session", (NYT.column_name) = "voice_session"]; // Если true, в ответе будет voice_response, false - нет. Если не указано, voice_response будет возвращён только в ответ на voice_input.
+        optional bool ResetSession = 7 [json_name = "reset_session", (NYT.column_name) = "reset_session"]; // Если true, состояние сессии будет сброшено перед обработкой запроса
+        repeated int64 TestIDs = 8 [json_name = "test_ids", (NYT.column_name) = "test_ids"];
+        optional google.protobuf.Struct LaasRegion = 9 [json_name = "laas_region", (NYT.column_name) = "laas_region", (NYT.flags) = SERIALIZATION_PROTOBUF];
+        optional string RawPersonalData = 10 [json_name = "raw_personal_data", (NYT.column_name) = "raw_personal_data", (FieldAccess) = A_PRIVATE_REQUEST];
+        optional TSmartHomeInfo SmartHomeInfo = 11 [json_name = "smart_home", (NYT.column_name) = "smart_home"];
+        optional TNotificationState NotificationState = 12 [json_name = "notification_state", (NYT.column_name) = "notification_state"];
+        optional string ActivationType = 14 [json_name = "activation_type", (NYT.column_name) = "activation_type"];
+        optional string MegamindCookies = 15 [json_name = "megamind_cookies", (NYT.column_name) = "megamind_cookies"];
+
+        // EnvironmentState and EnvironmentStateRaw for virtual oneof to protect logging from incompatible change (see PR).
+        // Never set both fields
+        // oneof EnvironmentStateType {
+
+            optional TEnvironmentState EnvironmentState = 16 [json_name = "environment_state", (NYT.column_name) = "environment_state"];
+            // contains bytes from TEnvironmentState proto message. Raw field is used for binary forwards compatibility.
+            // After migration to binary protobuf protocol between client and uniproxy old field will be used again.
+            optional bytes EnvironmentStateRaw = 19 [json_name = "environment_state_raw", (NYT.column_name) = "environment_state_raw"];
+        // }
+
+        optional TUniproxyOptions UniproxyOptions = 17 [json_name = "uniproxy_options", (NYT.column_name) = "uniproxy_options"];
+    }
+
+    message TContacts {
+
+        optional NAlice.NData.TContactsList Data = 1 [json_name = "data", (FieldAccess) = A_PRIVATE_EVENTLOG];
+        optional string Status = 2 [json_name = "status"];
+    }
+
+    optional THeader Header = 1 [json_name = "header", (NYT.column_name) = "header"];
+    optional TClientInfoProto Application = 2 [json_name = "application", (NYT.column_name) = "application"];
+    optional TRequest Request = 3 [json_name = "request", (NYT.column_name) = "request"];
+    optional string Session = 4 [json_name = "session", (NYT.column_name) = "session", (FieldAccess) = A_PRIVATE_REQUEST, (FieldAccess) = A_PRIVATE_EVENTLOG]; // Сериализованная сессия
+
+    optional string MementoData = 5 [json_name = "memento", (NYT.column_name) = "memento", (FieldAccess) = A_PRIVATE_REQUEST];
+
+    optional string IoTUserInfoData = 6 [json_name = "iot_user_info_data", (NYT.column_name) = "iot_user_info_data"];
+
+    optional TContacts Contacts = 7 [json_name = "contacts", (NYT.column_name) = "contacts", (FieldAccess) = A_PRIVATE_REQUEST];
+    // https://a.yandex-team.ru/review/2073518/details#comment-2783598
+    optional string ContactsProto = 8 [json_name = "contacts_proto", (NYT.column_name) = "contacts_proto", (FieldAccess) = A_PRIVATE_REQUEST, (FieldAccess) = A_PRIVATE_EVENTLOG];
+    reserved 9;
+    reserved "GuestData";
+    optional TGuestData GuestUserData = 10 [json_name = "guest_user_data", (NYT.column_name) = "guest_user_data", (FieldAccess) = A_PRIVATE_REQUEST];
+
+    message TEventSource {
+        enum EEvent {
+            UnknownEvent = 0;
+            Spotter = 1;
+            Directive = 2;
+            AutoDirective = 3;
+            AutoListen = 4;
+            Click = 5;
+            DoubleClick = 6;
+            Remote = 7;
+            Keyboard = 8;
+            Camera = 9;
+            Gesture = 10;
+            External = 11;
+            Push = 12;
+            Scheduler = 13;
+            Application = 14;
+            ZoomIn = 15;
+            ZoomOut = 16;
+            ScrollVertical = 17;
+            ScrollHorizontal = 18;
+            HandleDivAction = 19;
+        }
+
+        enum ESource {
+            UnknownSource = 0;
+            UserInterface = 1;
+            Hardware = 2;
+            Software = 3;
+        }
+
+        enum EType {
+            UnknownType = 0;
+            Text = 1;
+            Voice = 2;
+            Music = 3;
+            VoiceprintMatch = 4;
+        }
+
+        optional EEvent Event = 1 [json_name = "event", (NYT.column_name) = "event"];
+        optional ESource Source = 2 [json_name = "source", (NYT.column_name) = "source"];
+        optional EType Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+        optional string Id = 4 [json_name = "id", (NYT.column_name) = "id"];
+    }
+
+    optional TEventSource EventSource = 11 [json_name = "event_source", (NYT.column_name) = "event_source"];
+    optional TEnrollmentHeaders EnrollmentHeaders = 12 [json_name = "enrollment_headers", (NYT.column_name) = "enrollment_headers"];
+}

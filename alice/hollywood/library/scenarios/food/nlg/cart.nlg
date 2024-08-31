@@ -1,0 +1,80 @@
+{% macro render_number_female(num) %}
+  {% text %}
+    {{ num }}
+  {% endtext %}
+  {% voice %}
+    {% if num == 1 %}
+      одна
+    {% elif num == 2 %}
+      две
+    {% else %}
+      {{ num }}
+    {% endif %}
+  {% endvoice %}
+{% endmacro %}
+
+{% macro render_quantity_female(num, what) %}
+  {{ render_number_female(num) }} {{ what|pluralize(num) }}
+{% endmacro %}
+
+{# ==== !!!!! ==== #}
+
+{% macro render_cart_items_text(items) %}
+  {% for item in items %}
+    *
+    {% if item.quantity > 1 %}
+      {{ item.quantity }} x
+    {% endif %}
+    {{ item.name }}
+    {% if item.item_option_names %}
+      ({{ item.item_option_names|join(", ") }})
+    {% endif %}
+    – {{ item.price }} р.\n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_cart_items_voice(items) %}
+  {% for item in items %}
+    {{ item.name }}.
+    {% if item.quantity > 1 %}
+      {{ render_quantity_female(item.quantity, "штука") }}.
+    {% endif %}
+    {% if item.item_option_names %}
+      Опции: {{ item.item_option_names|join(", ") }}.
+    {% endif %}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_cart_items(items) %}
+  {% text %}
+    {{ render_cart_items_text(items) }}
+  {% endtext %}
+  {% voice %}
+    {{ render_cart_items_voice(items) }}
+  {% endvoice %}
+{% endmacro %}
+
+{% macro render_unknown_items_text(items) %}
+  {% for item in items %}
+    * «{{item|inflect('nom')}}» \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_unknown_items_voice(items) %}
+  {% for item in items %}
+    {{item|inflect('nom')}}. \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_unavailable_items_text(items) %}
+  {% for item in items %}
+    * {{item}} \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_unavailable_items_voice(items) %}
+  {% for item in items %}
+    {{item}}. \n
+  {% endfor %}
+{% endmacro %}

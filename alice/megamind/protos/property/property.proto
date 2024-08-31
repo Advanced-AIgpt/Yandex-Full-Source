@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/property";
+option java_package = "ru.yandex.alice.megamind.protos.property";
+option java_outer_classname = "Property";
+
+import "alice/megamind/protos/property/alice_show_profile.proto";
+import "alice/megamind/protos/property/iot_profile.proto";
+import "alice/megamind/protos/property/morning_show_profile.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+// Properties of some objects
+message TProperty {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    message TProfile {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TParamsValue {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Value = 1 [json_name = "value", (NYT.column_name) = "value"];
+            string HumanReadable = 2 [json_name = "human_readable", (NYT.column_name) = "human_readable"];
+        }
+
+        map<string, TParamsValue> Params = 3 [json_name = "params", (NYT.column_name) = "params", (NYT.flags) = MAP_AS_DICT];
+    }
+
+    string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+    string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    string HumanReadable = 3 [json_name = "human_readable", (NYT.column_name) = "human_readable"];
+
+    oneof Payload {
+        TProfile Profile = 4 [json_name = "profile", (NYT.column_name) = "profile"]; // User profile
+        TIotProfile IotProfile = 5 [json_name = "iot_profile", (NYT.column_name) = "iot_profile"];
+        TMorningShowProfile MorningShowProfile = 6 [json_name = "morning_show_profile", (NYT.column_name) = "morning_show_profile"];
+        NAnalytics.TAliceShowProfile AliceShowProfile = 7 [json_name = "alice_show_profile", (NYT.column_name) = "alice_show_profile"];
+    }
+}

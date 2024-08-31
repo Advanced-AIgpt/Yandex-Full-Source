@@ -1,0 +1,44 @@
+USE hahn;
+
+$from_date = '2020-01-20';
+$to_date = '2020-02-05';
+
+$results = String::JoinFromList(AsList('//home/paskills/discovery/datasets/markup/raw/unknown_skill/',$from_date,'-',$to_date), "");
+
+$out_valid = String::JoinFromList(AsList('//home/paskills/discovery/datasets/markup/valid/unknown_skill/',$from_date,'-',$to_date), "");
+$out_test = String::JoinFromList(AsList('//home/paskills/discovery/datasets/markup/test/unknown_skill/',$from_date,'-',$to_date), "");
+
+$between = ($value, $l, $r) -> {
+    RETURN $l <= $value AND $value < $r;
+};
+
+$choose = ($query, $l, $r) -> {
+    $hash = Digest::MurMurHash($query) % 100;
+    RETURN $between($hash, $l, $r);
+};
+
+$__RAW = (
+    SELECT
+        weight,
+        utterance as query
+    FROM
+        $results
+);
+
+$__VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50)
+);
+
+INSERT INTO $out_valid WITH TRUNCATE
+SELECT * FROM $__VALID;
+
+$__TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100)
+);
+
+INSERT INTO $out_test WITH TRUNCATE
+SELECT * FROM $__TEST;

@@ -1,0 +1,39 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" import alicesdk_player_response, render_supported_only_on_music with context %}
+
+{% macro shuffle_confirm() %}
+  {% if context.attentions.get('unknown_music') %}
+    {% chooseline %}
+      Перемешаю для вас тишину, потому что ничего не играет.
+      Сейчас ведь ничего не играет.
+      Честно говоря, сейчас ничего не играет.
+      Не знаю, как быть - ничего ведь не играет.
+    {% endchooseline %}
+  {% elif context.is_generative %}
+    Простите, я не могу перемешать нейромузыку.
+  {% elif context.is_fm_radio %}
+    {{ render_supported_only_on_music() }}
+  {% elif context.is_radio %}
+    {% chooseline %}
+      А я уже.
+      Да тут и так все вперемешку.
+      Ок, еще раз пропустила через блендер.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Сделала. После этого трека всё будет вперемешку.
+      Пожалуйста. После этого трека - всё вперемешку.
+      Готово. После этого трека включаю полный винегрет.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.nlg_disabled %}
+    {# nlg is explicitly disabled #}
+  {% elif context.has_alicesdk_player %}
+    {{ alicesdk_player_response(shuffle_confirm()) }}
+  {% else %}
+    {{ shuffle_confirm() }}
+  {% endif %}
+{% endphrase %}

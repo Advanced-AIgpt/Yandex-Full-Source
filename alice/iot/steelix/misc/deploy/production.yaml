@@ -1,0 +1,266 @@
+meta:
+  acl:
+    - action: allow
+      permissions:
+        - read
+        - write
+        - create
+        - ssh_access
+        - root_ssh_access
+        - read_secrets
+      subjects:
+        - abc:service:15893
+        - abc:service:5558
+  inherit_acl: true
+  project_id: iot-steelix
+  id: iot-steelix-production
+spec:
+  account_id: abc:service:5558
+  deploy_units:
+    man:
+      images_for_boxes:
+        steelix_server:
+          name: iot/steelix
+          registry_host: registry.yandex.net
+          tag: "7153182"
+      network_defaults:
+        network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+      replica_set:
+        per_cluster_settings:
+          man:
+            deployment_strategy:
+              max_unavailable: 1
+            pod_count: 3
+        replica_set_template:
+          constraints:
+            antiaffinity_constraints:
+              - key: rack
+                max_pods: 1
+          pod_template_spec:
+            spec:
+              disk_volume_requests:
+                - id: iot-steelix-production-disk-0
+                  labels:
+                    used_by_infra: true
+                  quota_policy:
+                    capacity: 5368709120
+                  storage_class: hdd
+              host_infra:
+                monitoring: {}
+              ip6_address_requests:
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: backbone
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: fastbone
+              pod_agent_payload:
+                spec:
+                  boxes:
+                    - id: steelix_server
+                      rootfs: {}
+                  mutable_workloads:
+                    - workload_ref: steelix
+                  resources: {}
+                  workloads:
+                    - box_ref: steelix_server
+                      env:
+                        - name: CLOUD_TYPE
+                          value:
+                            literal_env:
+                              value: deploy
+                        - name: ENV_TYPE
+                          value:
+                            literal_env:
+                              value: production
+                        - name: TVM_CLIENT_SECRET_2016427
+                          value:
+                            secret_env:
+                              alias: sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4
+                              id: client_secret
+                      id: steelix
+                      liveness_check:
+                        tcp_check:
+                          port: 8080
+                      readiness_check:
+                        tcp_check:
+                          port: 8080
+                      start:
+                        command_line: /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+                      transmit_logs: true
+              resource_requests:
+                memory_guarantee: 1073741824
+                memory_limit: 1073741824
+                vcpu_guarantee: 2000
+                vcpu_limit: 2000
+              secrets:
+                sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4:
+                  delegation_token: iKlWYf9H4tBpok_7ajCeqf6VvUkSdFO2WKhgVa_kDrY.1.41ecd86a9c09a14
+                  secret_id: sec-01dqa4kx61b0hk60w3572s17gy
+                  secret_version: ver-01dqa4kxe64rrjzp76kycd38m4
+      tvm_config: {}
+    sas:
+      images_for_boxes:
+        steelix_server:
+          name: iot/steelix
+          registry_host: registry.yandex.net
+          tag: "7153182"
+      network_defaults:
+        network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+      replica_set:
+        per_cluster_settings:
+          sas:
+            deployment_strategy:
+              max_unavailable: 1
+            pod_count: 3
+        replica_set_template:
+          constraints:
+            antiaffinity_constraints:
+              - key: rack
+                max_pods: 1
+          pod_template_spec:
+            spec:
+              disk_volume_requests:
+                - id: iot-steelix-production-disk-0
+                  labels:
+                    used_by_infra: true
+                  quota_policy:
+                    capacity: 5368709120
+                  storage_class: hdd
+              host_infra:
+                monitoring: {}
+              ip6_address_requests:
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: backbone
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: fastbone
+              pod_agent_payload:
+                spec:
+                  boxes:
+                    - id: steelix_server
+                      rootfs: {}
+                  mutable_workloads:
+                    - workload_ref: steelix
+                  resources: {}
+                  workloads:
+                    - box_ref: steelix_server
+                      env:
+                        - name: CLOUD_TYPE
+                          value:
+                            literal_env:
+                              value: deploy
+                        - name: ENV_TYPE
+                          value:
+                            literal_env:
+                              value: production
+                        - name: TVM_CLIENT_SECRET_2016427
+                          value:
+                            secret_env:
+                              alias: sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4
+                              id: client_secret
+                      id: steelix
+                      liveness_check:
+                        tcp_check:
+                          port: 8080
+                      readiness_check:
+                        tcp_check:
+                          port: 8080
+                      start:
+                        command_line: /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+                      transmit_logs: true
+              resource_requests:
+                memory_guarantee: 1073741824
+                memory_limit: 1073741824
+                vcpu_guarantee: 2000
+                vcpu_limit: 2000
+              secrets:
+                sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4:
+                  delegation_token: gG76WgUrnf4uosjfgpBR9UDjKuo3x-ne7tYzeghDpjU.1.2639a4767d5d66f9
+                  secret_id: sec-01dqa4kx61b0hk60w3572s17gy
+                  secret_version: ver-01dqa4kxe64rrjzp76kycd38m4
+      tvm_config: {}
+    vla:
+      images_for_boxes:
+        steelix_server:
+          name: iot/steelix
+          registry_host: registry.yandex.net
+          tag: "7153182"
+      network_defaults:
+        network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+      replica_set:
+        per_cluster_settings:
+          vla:
+            deployment_strategy:
+              max_unavailable: 1
+            pod_count: 3
+        replica_set_template:
+          constraints:
+            antiaffinity_constraints:
+              - key: rack
+                max_pods: 1
+          pod_template_spec:
+            spec:
+              disk_volume_requests:
+                - id: iot-steelix-production-disk-0
+                  labels:
+                    used_by_infra: true
+                  quota_policy:
+                    capacity: 5368709120
+                  storage_class: hdd
+              host_infra:
+                monitoring: {}
+              ip6_address_requests:
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: backbone
+                - enable_dns: true
+                  network_id: _QUASAR_IOT_STEELIX_PROD_NETS_
+                  vlan_id: fastbone
+              pod_agent_payload:
+                spec:
+                  boxes:
+                    - id: steelix_server
+                      rootfs: {}
+                  mutable_workloads:
+                    - workload_ref: steelix
+                  resources: {}
+                  workloads:
+                    - box_ref: steelix_server
+                      env:
+                        - name: CLOUD_TYPE
+                          value:
+                            literal_env:
+                              value: deploy
+                        - name: ENV_TYPE
+                          value:
+                            literal_env:
+                              value: production
+                        - name: TVM_CLIENT_SECRET_2016427
+                          value:
+                            secret_env:
+                              alias: sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4
+                              id: client_secret
+                      id: steelix
+                      liveness_check:
+                        tcp_check:
+                          port: 8080
+                      readiness_check:
+                        tcp_check:
+                          port: 8080
+                      start:
+                        command_line: /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+                      transmit_logs: true
+              resource_requests:
+                memory_guarantee: 1073741824
+                memory_limit: 1073741824
+                vcpu_guarantee: 2000
+                vcpu_limit: 2000
+              secrets:
+                sec-01dqa4kx61b0hk60w3572s17gy:ver-01dqa4kxe64rrjzp76kycd38m4:
+                  delegation_token: yR5Ih-nbMkAlewD1-cHEe4Yu0F4szXoKfQw86XnYu2M.1.aa4ce15db30e4f9
+                  secret_id: sec-01dqa4kx61b0hk60w3572s17gy
+                  secret_version: ver-01dqa4kxe64rrjzp76kycd38m4
+      tvm_config: {}
+  revision_info: {}

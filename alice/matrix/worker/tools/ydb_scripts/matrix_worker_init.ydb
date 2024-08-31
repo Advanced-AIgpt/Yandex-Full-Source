@@ -1,0 +1,36 @@
+-- [BEGIN ProcessingQueueSchema]
+CREATE TABLE processing_queue (
+    shard_id Uint64,
+    scheduled_at Timestamp,
+    action_id String,
+    action_guid String,
+
+    added_to_incoming_queue_at Timestamp,
+
+    moved_from_incoming_to_processing_queue_by_sync_with_guid String,
+    moved_from_incoming_to_processing_queue_at Timestamp,
+
+    last_reschedule_by_sync_with_guid String,
+    last_reschedule_at Timestamp,
+
+    PRIMARY KEY (shard_id, scheduled_at, action_id, action_guid)
+) WITH (
+    AUTO_PARTITIONING_BY_LOAD = ENABLED,
+    AUTO_PARTITIONING_MIN_PARTITIONS_COUNT = 10
+);
+-- [END ProcessingQueueSchema]
+
+-- [BEGIN ShardLocksSchema]
+CREATE TABLE shard_locks (
+    shard_id Uint64,
+
+    locked Bool,
+    last_lock_guid String,
+    last_locked_by String,
+
+    last_processing_start_at Timestamp,
+    last_heartbeat_at Timestamp,
+
+    PRIMARY KEY (shard_id)
+);
+-- [END ShardLocksSchema]

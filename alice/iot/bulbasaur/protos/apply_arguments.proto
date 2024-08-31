@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package NAlice.NIoT;
+
+option go_package = "a.yandex-team.ru/alice/iot/bulbasaur/protos";
+
+import "google/protobuf/timestamp.proto";
+
+import "alice/megamind/protos/analytics/scenarios/iot/iot.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/protos/endpoint/endpoint.proto";
+import "alice/protos/endpoint/capability.proto";
+
+import "alice/iot/bulbasaur/protos/device.proto";
+import "alice/iot/bulbasaur/protos/room.proto";
+import "alice/iot/bulbasaur/protos/group.proto";
+import "alice/iot/bulbasaur/protos/scenario.proto";
+import "alice/iot/bulbasaur/protos/megamind_states.proto";
+
+message NLG {
+    repeated string Variants = 1;
+}
+
+message DateTime {
+    google.protobuf.Timestamp Time = 1;
+    bool IsTimeSpecified = 2;
+}
+
+message TimeInfo {
+    bool IsInterval = 1;
+    DateTime DateTime = 2;
+    DateTime StartDateTime = 3;
+    DateTime EndDateTime = 4;
+}
+
+message ExtractedAction {
+    uint32 Id = 1;
+    repeated Device Devices = 2;
+    Scenario Scenario = 3;
+    NLG NLG = 4;
+    TimeInfo TimeInfo = 5;
+    google.protobuf.Timestamp CreatedTime = 6;
+}
+
+message DeviceActionsApplyArguments {
+    repeated Device Devices = 1;
+    repeated ExtractedAction ExtractedActions = 2;
+    THypotheses Hypotheses = 3;
+    TSelectedHypotheses SelectedHypotheses = 4;
+};
+
+message ExtractedQueryAttributes {
+    repeated string Devices = 1 [json_name = "devices"];
+    repeated string Rooms = 2 [json_name = "rooms"];
+    repeated string Groups = 3 [json_name = "groups"];
+}
+
+message ExtractedQuery {
+    uint32 Id = 1;
+    THypothesis.TAction SearchFor = 2;
+    repeated Device Devices = 3;
+    repeated Group Groups = 4;
+    repeated Room Rooms = 5;
+    ExtractedQueryAttributes Attributes = 6;
+}
+
+message DevicesQueryApplyArguments {
+    ExtractedQuery ExtractedQuery = 1;
+    THypotheses Hypotheses = 2;
+    TSelectedHypotheses SelectedHypotheses = 3;
+};
+
+message CancelScenarioApplyArguments {
+    string ScenarioId = 1;
+};
+
+message CancelScenarioLaunchApplyArguments {
+    string LaunchId = 1;
+};
+
+message CancelAllScenariosApplyArguments {
+};
+
+message CreateScenarioApplyArguments {
+};
+
+message SpeakerActionCallbackApplyArguments {
+    string LaunchId = 1;
+    uint32 StepIndex = 2;
+    string DeviceID = 3;
+    string ActionResult = 4;
+}
+
+message ExtractedActionIntent {
+    repeated TIoTUserInfo.TDevice Devices = 1;
+    google.protobuf.Timestamp CreatedTime = 2;
+    google.protobuf.Timestamp RequestedTime = 3;
+}
+
+message ActionIntentApplyArguments {
+    ExtractedActionIntent ExtractedActionIntent = 1;
+    bool SilentResponseRequired = 2;
+}
+
+message StartDiscoveryApplyArguments {
+    message ProtocolSupport {
+        bool ClientSupport = 1;
+        bool AccountSupport = 2;
+    }
+
+    YandexIODiscoveryState State = 1;
+    ProtocolSupport Zigbee = 2;
+}
+
+message FinishDiscoveryApplyArguments {
+    message ParentEndpointLocation {
+        string HouseholdID = 1;
+        string RoomName = 2;
+    }
+    repeated TIotDiscoveryCapability.TProtocol Protocols = 1;
+    repeated TEndpoint DiscoveredEndpoints = 2;
+    ParentEndpointLocation ParentLocation = 3;
+    string ActiveTuyaToken = 4;
+}
+
+message EndpointUpdatesApplyArguments {
+    repeated TEndpoint EndpointUpdates = 1;
+}
+
+message UniversalApplyArguments {
+    string ProcessorName = 1;
+    bytes PayloadJSON = 2;
+}
+
+message TApplyArguments {
+    oneof Value {
+        DeviceActionsApplyArguments DeviceActionsApplyArguments = 1;
+        CancelScenarioApplyArguments CancelScenarioApplyArguments = 2;
+        CancelAllScenariosApplyArguments CancelAllScenariosApplyArguments = 3;
+        DevicesQueryApplyArguments DevicesQueryApplyArguments = 4;
+        CancelScenarioLaunchApplyArguments CancelScenarioLaunchApplyArguments = 5;
+        CreateScenarioApplyArguments CreateScenarioApplyArguments = 6;
+        SpeakerActionCallbackApplyArguments SpeakerActionCallbackApplyArguments = 8;
+        ActionIntentApplyArguments ActionIntentApplyArguments = 9;
+        StartDiscoveryApplyArguments StartDiscoveryApplyArguments = 10;
+        FinishDiscoveryApplyArguments FinishDiscoveryApplyArguments = 11;
+        EndpointUpdatesApplyArguments EndpointUpdatesApplyArguments = 12;
+        UniversalApplyArguments UniversalApplyArguments = 13;
+    }
+
+    reserved 7; reserved "LaunchActionCallbackApplyArguments";
+};

@@ -1,0 +1,98 @@
+{% macro temp(grad) %}
+  {% if grad > 0 %}
+    +{{ grad }}
+  {% else %}
+    {{ grad }}
+  {% endif %}
+{% endmacro %}
+
+{% macro min_max_temp(min, max) %}
+  {% if min == max %}
+    {{ temp(min) }}
+  {% elif min < 0 and max < 0 %}
+    {{ temp(max) }} ile {{ temp(min) }}
+  {% else %}
+    {{ temp(min) }} ile {{ temp(max) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro weather_for_date() %}
+  {% set (min, max)=form.weather_forecast.temperature %}
+  {% set city=form.forecast_location.city_cases.locative %}
+  {% set condition=form.weather_forecast.condition %}
+  {% set temperature=min_max_temp(min, max) %}
+
+  # render result
+  {% if form.when.days == 0 %}
+    Bugün {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+  {% elif form.when.days == -2 %}
+    {{ city }} önceki gün {{ temperature }} derece, {{ condition | lower}}.
+  {% elif form.when.days == -1 %}
+    Dün {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+  {% elif form.when.days == 1 %}
+    Yarın {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+  {% elif form.when.days == 2 %}
+    {{ city }} öğleden sonra {{ temperature }} derece, {{ condition | lower}}.
+  {% endif %}
+{% endmacro %}
+
+{% macro weather_current() %}
+  {% set city=form.forecast_location.city_cases.locative %}
+  {% set condition=form.weather_forecast.condition %}
+  {% set temperature=temp(form.weather_forecast.temperature) %}
+
+  # render result
+  Şimdi {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+{% endmacro %}
+
+{% macro weather_today() %}
+  {% set city=form.forecast_location.city_cases.locative %}
+  {% set condition=form.weather_forecast.condition %}
+  {% set temperature=temp(form.weather_forecast.temperature) %}
+
+  # render result
+  Bugün {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+{% endmacro %}
+
+{% macro weather_weekend() %}
+  {% set city=form.forecast_location.city_cases.locative %}
+  {% set condition=form.weather_forecast.days[0].condition %}
+
+  {% set temps = namespace(min=1000, max=-1000) %}
+  {% for day in form.weather_forecast.days %}
+    {% if temps.min > day.temperature[0] %}
+      {% set temps.min = day.temperature[0] %}
+    {% endif %}
+    {% if temps.max < day.temperature[1] %}
+      {% set temps.max = day.temperature[1] %}
+    {% endif %}
+  {% endfor %}
+  {% set temperature=min_max_temp(temps.min, temps.max) %}
+
+  # render result
+  Hafta sonu {{ city }} {{ temperature }} derece, {{ condition | lower}}.
+{% endmacro %}
+
+{% macro render_all() %}
+  {% set weather %}
+    {% if form.weather_forecast.type == "weather_for_date" and form.when|get_item("days") != "" %}
+      {{ weather_for_date() }}
+    {% elif form.weather_forecast.type == "weather_current" %}
+      {{ weather_current() }}
+    {% elif form.weather_forecast.type == "weather_today" and form.when|get_item("days") == ""  %}
+      {{ weather_current() }}
+    {% elif form.weather_forecast.type == "weather_today" %}
+      {{ weather_today() }}
+    {% elif form.weather_forecast.type == "weather_for_range" and (form.when|get_item("start")).weekend and form.weather_forecast.days|length == 2 %}
+      {{ weather_weekend() }}
+    {% else %}
+      Bir şeyler ters gitti. Şimdiye kadar hava durumu hakkında söyleyemem.
+    {% endif %}
+  {% endset %}
+
+  {{ weather }}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ render_all() | capitalize_first }}
+{% endphrase %}

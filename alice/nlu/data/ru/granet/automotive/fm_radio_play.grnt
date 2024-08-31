@@ -1,0 +1,133 @@
+import: common/filler.grnt
+import: common/commands.grnt
+
+form alice.automotive.fm_radio_play:
+    slots:
+        fm_radio:
+            source:
+                $FmRadioStation
+            type: string
+        fm_known_radio:
+            source:
+                $PopularStations
+                $VeryPopularStations
+            type: string
+        fm_radio_freq:
+            source: $FmRadioFreq
+            type:
+                sys.float
+                sys.num
+                string
+    root:
+        # using wildcard, frequency and popular stations
+        [$TurnOn* $Radio+ $Station $Fm*]
+        [$TurnOn* $Station $Fm+]
+        # popular stations
+        [$TurnOn* $RadioExtended+ ($PopularStations|$VeryPopularStations|$FmRadioFreq) $Fm*]
+        [$TurnOn+ ($PopularStations|$VeryPopularStations|$FmRadioFreq)]
+        [$VeryPopularStations]
+
+filler:
+    $nonsense
+    $Common.WayToCallAlice
+    $Common.Filler
+    $RadioNonsense
+
+$RadioNonsense:
+    %lemma
+    любое
+    какое
+    нибудь
+    популярное
+    онлайн
+    прямой эфир
+    бесплатно
+    играть
+    поиграть
+    болтать
+    поболтать
+
+$FmRadioStation:
+    .+
+    %negative
+    [$TurnOn* $Radio* $Fm* $Common.WayToCallAlice* $Common.Filler* $RadioNonsense*]
+
+$FmRadioFreq:
+    $sys.float
+    $sys.num
+
+$Station:
+    $FmRadioStation
+    $FmRadioFreq
+    $PopularStations
+    $VeryPopularStations
+
+$TurnOn:
+    $Common.Play
+    $Common.PlayAudio
+    найди
+    переключи на
+    открой
+
+$Radio:
+    %lemma
+    radio
+    радио
+    радиостанция
+    радио станция
+    радиоволна
+    радио волна
+    частота
+
+$RadioExtended:
+    # набор синонимов слова "радио", которые дают сильное увеличение false positive,
+    # если их добавить в список $Radio. Не использовать для wildcard'а
+    %lemma
+    волна
+    станция
+
+$Fm:
+    фм
+    fm
+
+$PopularStations:
+    лайк|like
+    лав|лов|love
+
+    %lemma
+    дача
+    детское
+    дорожное
+    жара
+    звезда
+    коммерсант
+    комсомольская правда
+    кэпитал|capital
+    маяк
+    мегаполис
+    милицейское
+    наше
+    орфей
+    релакс
+    ретро
+    шоколад
+    эрмитаж
+    эхо
+
+$VeryPopularStations:
+    dfm|дфм
+    русский хит
+
+    %lemma
+    авторадио
+    говорит москва
+    европа плюс
+    максимум
+    милицейская волна
+    монте карло|монте-карло|монтекарло
+    семь на семи холмах|семь на семи
+    студия двадцать один|студия 21|студия twenty one|studio twenty one
+    серебряный дождь
+    эльдорадио
+    энерджи|энержи|energy
+    эхо москвы

@@ -1,0 +1,327 @@
+import: common/filler.grnt
+import: general_conversation/movie_discuss_common.grnt
+import: quasar/video_common.grnt
+
+
+
+form alice.general_conversation.lets_discuss_specific_movie:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $LetsDiscussSpecificMovie
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+        film_id:
+            type:
+                entity_search.film
+                string
+            source:
+                $MovieName
+                $MovieNameWeak
+
+form alice.general_conversation.lets_discuss_specific_movie_ellipsis:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $LetsDiscussSpecificMovieEllipsis
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+        film_id:
+            type:
+                entity_search.film
+                string
+            source:
+                $MovieName
+                $MovieNameWeak
+
+form alice.general_conversation.lets_discuss_some_movie:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $WhatIsYourFavoriteMovie
+        $WhatDidYouWatch
+        $LetsDiscussAnotherMovie
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+form alice.general_conversation.what_is_your_favorite_movie:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+    root:
+        $WhatIsYourFavoriteMovieEllipsisPrefix? а $WhatIsYourFavoriteMovieEllipsis
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+form alice.general_conversation.what_is_your_favorite_movie_weak:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $WhatIsYourFavoriteMovieEllipsisPrefix? а $WhatIsYourFavoriteMovieEllipsis
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+form alice.general_conversation.lets_discuss_unrecognized_movie:
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $LetsDiscussUnrecognizedSpecificMovie
+    slots:
+        content_type:
+            type:
+                movie_content_type
+                string
+            source: $MovieContentType
+
+form alice.general_conversation.yes_i_watched_it:
+    is_action: true
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $Yes+
+        # fixlist for gc suggests
+        и смотрела и читала
+        что конкретно рассказать
+
+        %weight 1000000
+        %negative
+        .* нет .*
+
+form alice.general_conversation.no_i_did_not_watch_it:
+    is_action: true
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        $No+ ($IsItGoodMovie?|но собираюсь посмотреть)
+
+        %weight 1000000
+        %negative
+        .* да .*
+
+form alice.general_conversation.i_dont_know:
+    is_action: true
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+
+    root:
+        не помню
+        не знаю
+        ничего
+        никакой
+
+form alice.general_conversation.movie_open:
+    is_action: true
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $nonsense
+    root:
+        [$Play+ $ThisItem+ $MovieContentType?]
+
+$LetsDiscussSpecificMovie:
+    [$Lets? $Discuss лучше? $MovieContentType $MovieNameWeak]
+    [$Lets? $Discuss лучше? $MovieContentType? $MovieName]
+    [((я|мы|$You)? $UserWatched) $MovieContentType $MovieNameWeak]
+    [((я|мы|$You)? $UserWatched) $MovieContentType? $MovieName]
+    $ILike $MovieContentType это? $MovieNameWeak
+    [что $You? (думаешь|думаете) про $MovieContentType $MovieNameWeak]
+    [что $You? (думаешь|думаете) про $MovieContentType? $MovieName]
+    [как $You? (относишься|относитесь) к $MovieContentType $MovieNameWeak]
+    [как $You? (относишься|относитесь) к $MovieContentType? $MovieName]
+    [как $You? (оцениваешь|оцениваете) $MovieContentType $MovieNameWeak]
+    [как $You? (оцениваешь|оцениваете) $MovieContentType? $MovieName]
+    [как $Thee $MovieContentType $MovieNameWeak]
+    [как $Thee $MovieContentType? $MovieName]
+    [$You? $LikeForYou $MovieContentType $MovieNameWeak]
+    [$You? $LikeForYou $MovieContentType? $MovieName]
+    [$Thee $LikeForThee $MovieContentType $MovieNameWeak]
+    [$Thee $LikeForThee $MovieContentType? $MovieName]
+
+$LetsDiscussSpecificMovieEllipsis:
+    [(($Most? $Top) $MovieContentType) $MovieNameWeak]
+    [($You? $AliceKnows) $MovieContentType? $MovieNameWeak]
+    $ILike $MovieContentType? это? $MovieNameWeak
+
+$LetsDiscussUnrecognizedSpecificMovie:
+    [$Lets? $Discuss лучше? $MovieContentType .*]
+
+$WhatIsYourFavoriteMovie:
+    [$What $MovieContentType $You? $LikeForYou $More? $ToWatchInf?]
+    [$What $Last? $MovieContentType $Thee $LikeForThee $More? $ToWatchInf?]
+    %lemma
+    [$What $MovieContentType (твой|у тебя|ваш|у вас) ($Most? любимый)]
+
+$WhatDidYouWatch:
+    [$What $Last? $MovieContentType $You $AliceWatched]
+
+$LetsDiscussAnotherMovie:
+    $Lets? $Discuss $Another? $MovieContentType
+
+$WhatIsYourFavoriteMovieEllipsisPrefix:
+    $LetsDiscussSpecificMovie
+    $LetsDiscussSpecificMovieEllipsis
+    [$MovieContentType? $MovieNameWeak]
+
+$WhatIsYourFavoriteMovieEllipsis:
+    [$What $MovieContentType? $You $LikeForYou $More? $ToWatchInf?]
+    [$What $Last? $MovieContentType? $Thee $LikeForThee $More? $ToWatchInf?]
+    %lemma
+    [$What? $MovieContentType? (твой|у тебя|ваш|у вас) ($Most? любимый)?]
+
+$Yes:
+    да
+    ага
+    [$I? ($UserWatched|$Love) этот? $MovieContentType?]
+    [$Me? очень? $LikeForThee этот? $MovieContentType?]
+    очень? $Top $MovieContentType (но на любителя)?
+
+$No:
+    нет
+    неа
+    ни одной части не $UserKnows
+    $I? $Such? не знаю
+    [$I? еще? никогда? ничего? (не $UserKnows) (его|$Such? $MovieContentType)?]
+    [$I? (не $UserKnows) Such? $MovieContentType?]
+
+$IsItGoodMovie:
+    очень? $Top $MovieContentType
+    (рекомендуешь|рекомендуете)
+    стоит
+    %lemma
+    интересный
+
+$Lets:
+    давай
+    давайте
+
+$Discuss:
+    %lemma
+    обсудить
+    обсуждать
+    поговорить про
+
+$ToWatchInf:
+    (смотреть|посмотреть)
+
+$UserWatched:
+    $ToWatchInf<g:2p,f,sg,praet|2p,m,sg,praet|2p,pl,praet>
+    (видела|видел|видели)
+
+$AliceWatched:
+    $ToWatchInf<g:2p,f,sg,praet|2p,f,sg,inpraes|2p,f,pl,praet|2p,f,pl,inpraes>
+    видела
+
+$AliceKnows:
+    $AliceWatched
+    знаешь
+    слышала про
+
+$UserKnows:
+    $UserWatched
+    (знаю|знаем)
+    (слышал|слышала|слышали) про
+
+$ILike:
+    я? больше? люблю
+    мой? любимый
+    мне? больше? $LikeForThee
+
+$Another:
+    %lemma
+    другой
+
+$What:
+    %lemma
+    какой
+
+$LikeForYou:
+    (любишь|любите)
+
+$LikeForThee:
+    (нравится|нравятся|понравился|понравились)
+
+$Love:
+    (люблю|любим|обожаю|обожаем)
+
+$More:
+    больше всего
+
+$Most:
+    %lemma
+    самый
+    очень
+
+$Top:
+    %lemma
+    классный
+    клевый
+    крутой
+    топовый
+    лучший
+    отличный
+    хороший
+
+$Such:
+    %lemma
+    (этот|такой)
+
+$Last:
+    %lemma
+    последний
+
+$Play:
+    $Action.open
+    $Action.play
+    $Start
+    $Find
+    поставь
+    поставьте
+    поставить
+    покажи
+    покажите
+    показать
+    посмотрим
+    посмотреть
+
+$ThisItem:
+    $Such
+    (его|их)
+    (данный|данные)

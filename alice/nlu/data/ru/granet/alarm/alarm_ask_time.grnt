@@ -1,0 +1,39 @@
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.alarm_ask_time:
+    slots:
+        time:
+            source: $SlotTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+            matching_type: exact
+        date:
+            source: $sys.date; $SlotWeekdays
+            type:
+                sys.weekdays
+                sys.date
+
+        alarm_id:
+            source: $sys.num
+            type: sys.num
+    root:
+        [($Common.Set|$Common.TurnOn|давай|хочу)? ((на|в)? $SlotTime|на? $sys.date|на? $SlotWeekdays)+]
+        [($Common.Set|$Common.TurnOn|давай|хочу)? номер? $sys.num]
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+
+    $SlotWeekdays:
+        %lemma
+        (в|по)? ($sys.weekdays|рабочие) дни?
+
+    $SlotTime:
+        $typeparser.time
+        $sys.time
+        $sys.units_time

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package NAlice.NMegamind;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/analytics";
+option java_package = "ru.yandex.alice.megamind.protos.analytics";
+option java_outer_classname = "MegamindAnalyticsInfo";
+
+import "alice/library/censor/protos/extension.proto";
+import "alice/library/field_differ/protos/extension.proto";
+
+import "alice/megamind/protos/analytics/analytics_info.proto";
+import "alice/megamind/protos/analytics/combinators/combinator_analytics_info.proto";
+import "alice/megamind/protos/analytics/recognized_action_info.proto";
+import "alice/megamind/protos/analytics/user_info.proto";
+import "alice/megamind/protos/analytics/modifiers/analytics_info.proto";
+import "alice/megamind/protos/common/device_state.proto";
+import "alice/megamind/protos/common/iot.proto";
+import "alice/megamind/protos/common/location.proto";
+import "alice/megamind/protos/modifiers/modifiers.proto";
+import "alice/megamind/protos/modifiers/modifier_response.proto";
+import "alice/megamind/protos/scenarios/analytics_info.proto";
+import "alice/megamind/protos/scenarios/combinator_response.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TUserProfile {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated string Subscriptions = 1 [json_name = "subscriptions", (NYT.column_name) = "subscriptions"];
+    bool HasYandexPlus = 2 [json_name = "has_yandex_plus", (NYT.column_name) = "has_yandex_plus", (ImportantFieldCheck) = IFC_DIFF];
+}
+
+message TMegamindAnalyticsInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Analytics info for Final Scenario Response.
+    map<string, TAnalyticsInfo> AnalyticsInfo = 1 [json_name = "analytics_info", (NYT.column_name) = "analytics_info", (NYT.flags) = MAP_AS_DICT];
+    // Users' profiles for analytics per Run Response.
+    map<string, TUserInfo> UsersInfo = 2 [json_name = "users_info", (NYT.column_name) = "users_info", (NYT.flags) = MAP_AS_DICT, (FieldAccess) = A_PRIVATE_RESPONSE];
+
+    string OriginalUtterance = 3 [json_name = "original_utterance", (NYT.column_name) = "original_utterance", (FieldAccess) = A_PRIVATE_RESPONSE, (ImportantFieldCheck) = IFC_PRESENCE];
+
+    string ChosenUtterance = 20 [json_name = "chosen_utterance", (NYT.column_name) = "chosen_utterance", (FieldAccess) = A_PRIVATE_RESPONSE];
+
+    message TTunnellerRawResponses {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated string Responses = 1 [json_name = "responses", (NYT.column_name) = "responses"];
+    }
+    map<string, TTunnellerRawResponses> TunnellerRawResponses = 4 [json_name = "tunneller_raw_responses", (NYT.column_name) = "tunneller_raw_responses", (NYT.flags) = MAP_AS_DICT];
+
+    TModifiersInfo ModifiersInfo = 5 [json_name = "modifiers_info", (NYT.column_name) = "modifiers_info"];
+
+    reserved 6;
+
+    map<string, TDeviceStateAction> DeviceStateActions = 7 [json_name = "device_state_actions", (NYT.column_name) = "device_state_actions", (NYT.flags) = MAP_AS_DICT];
+
+    TRecognizedActionInfo RecognizedAction = 8 [json_name = "recognized_action", (NYT.column_name) = "recognized_action", deprecated = true];
+    repeated TRecognizedActionInfo RecognizedActions = 21 [json_name = "recognized_actions", (NYT.column_name) = "recognized_actions"];
+
+    map<string, NScenarios.TAnalyticsInfo.TScenarioTimings> ScenarioTimings = 9 [json_name = "scenario_timings", (NYT.column_name) = "scenario_timings", (NYT.flags) = MAP_AS_DICT];
+
+    message TWinnerScenario {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+    }
+    TWinnerScenario WinnerScenario = 10 [json_name = "winner_scenario", (NYT.column_name) = "winner_scenario"];
+
+    uint64 PreClassifyDuration = 11 [json_name = "pre_classify_duration", (NYT.column_name) = "pre_classify_duration"];
+    uint64 PostClassifyDuration = 12 [json_name = "post_classify_duration", (NYT.column_name) = "post_classify_duration"];
+
+    map<string, uint64> ServiceSourceTimings = 13 [json_name = "service_source_timings", (NYT.column_name) = "service_source_timings", (NYT.flags) = MAP_AS_DICT];
+
+    // Utterance from SK Request normalized by ASR in case it present otherwise just text
+    string ShownUtterance = 14 [json_name = "shown_utterance", (NYT.column_name) = "shown_utterance", (FieldAccess) = A_PRIVATE_RESPONSE];
+
+    TIoTUserInfo IoTUserInfo = 15 [json_name = "iot_user_info", (NYT.column_name) = "iot_user_info"];
+
+    string ParentProductScenarioName = 16 [json_name = "parent_product_scenario_name", (NYT.column_name) = "parent_product_scenario_name", (ImportantFieldCheck) = IFC_PRESENCE];
+
+    TUserProfile UserProfile = 17 [json_name = "user_profile", (NYT.column_name) = "user_profile"];
+
+    TLocation Location = 18 [json_name = "location", (NYT.column_name) = "location"];
+
+    TModifierResponse.TAnalyticsInfo ModifierAnalyticsInfo = 19 [json_name = "modifier_analytics_info", (NYT.column_name) = "modifier_analytics_info", deprecated = true];
+    NModifiers.TAnalyticsInfo ModifiersAnalyticsInfo = 22 [json_name = "modifiers_analytics_info", (NYT.column_name) = "modifiers_analytics_info"];
+
+    reserved 23; reserved "CombinatorAnalyticsInfo";
+    NCombinators.TCombinatorAnalyticsInfo CombinatorsAnalyticsInfo = 24 [json_name = "combinators_analytics_info", (NYT.column_name) = "combinators_analytics_info"];
+}

@@ -1,0 +1,1109 @@
+use hahn;
+
+pragma yt.Pool='paskills';
+pragma yson.DisableStrict = 'true';
+PRAGMA GroupByLimit = "128";
+
+--$from = '2020-02-01';
+--$to = '2020-04-29';
+$to = select cast(max(cast(substring(Path,Length('home/paskills/sessions/')) as Date)) as String )
+from folder('home/paskills/sessions')
+where Type = 'table';
+
+$max_history_length = Interval("P500D");
+$to_date = cast($to as Date);
+-- $from_date = cast($from as Date);
+$from_date = $to_date - $max_history_length;
+
+-- days window size
+$wau_days = 7;
+$mau_days = 30;
+
+$from_mau = cast(($from_date -  DateTime::IntervalFromDays(cast($mau_days - 1 as Int16))) as String);
+
+$filter = ($baseDate, $from, $to) -> { RETURN ($x) ->
+  { RETURN $x between $baseDate + DateTime::IntervalFromDays($from) and $baseDate + DateTime::IntervalFromDays($to); };
+};
+
+$retention_struct = ($future_dates, $fielddate) -> {
+    --$dates = ListUniq($future_dates);
+    $dates = ListSortAsc($future_dates);
+
+    -- возвраты в 1ую, 2ю, 3ю и 4ю неделю независимо от возвратов в предыдущие недели.
+    $s = AsStruct(
+        ListHasItems(ListFilter($dates, $filter($fielddate,1,28))) as returned_d28,
+        ListHasItems(ListFilter($dates, $filter($fielddate,1,1))) as returned_d1,
+        ListHasItems(ListFilter($dates, $filter($fielddate,1,7))) as returned_w1_only,
+        ListHasItems(ListFilter($dates, $filter($fielddate,8,14))) as returned_w2_only,
+        ListHasItems(ListFilter($dates, $filter($fielddate,15,21))) as returned_w3_only,
+        ListHasItems(ListFilter($dates, $filter($fielddate,22,28))) as returned_w4_only
+    );
+
+    -- возвраты в 1ю, 2ю, 3ю, и 4ю недели с учетом возвратов во все предыдущие недели
+    $s2 = AsStruct(
+        $s.returned_w1_only as returned_w1,
+        $s.returned_w1_only and $s.returned_w2_only as returned_w2,
+        $s.returned_w1_only and $s.returned_w2_only and $s.returned_w3_only as returned_w3,
+        $s.returned_w1_only and $s.returned_w2_only and $s.returned_w3_only and $s.returned_w4_only as returned_w4,
+        );
+
+    RETURN CombineMembers($s, $s2);
+};
+
+-- given session contributes to it's date date and 6 next dates wau and 29 next dates mau
+-- the function generates dates list from given date to $delta days in future
+$generate_dates = ($t, $delta) ->
+-- generate dates from max_of($t+i,$from_date) to min_of($to, $t+$delta)
+{ RETURN ListMap(ListFromRange(
+        --0,
+        unwrap(max_of(max_of(DateTime::ToDays($from_date - $t), 0), 0)),
+        unwrap(min_of(max_of(DateTime::ToDays($to_date - $t), 0)+1, $delta))
+    ),
+    ($x) -> { RETURN $t + DateTime::IntervalFromDays(cast($x as Int16)); });
+};
+
+$base = select skill_id, fielddate, app_group??'unknown' as app_group, app??'unknown' as app,
+unwrap(min(category) over w2, 'Null category for skill_id '||skill_id||' and fielddate '||cast(fielddate as String)) as category,
+unwrap(case min(dev_type) over w2 when 'internal' then 'Yandex' when 'external' then 'External' else (min(dev_type) over w2) end, 'Null dev_type for skill_id '||skill_id||' and fielddate '||cast(fielddate as String)) as dev_type,
+`uuid`, is_long_session,
+coalesce(cast(skill_session_duration_sec as Double),0.0) as skill_session_duration_sec,
+coalesce(cast(tpt_session_duration_sec as Double),0.0) as tpt_session_duration_sec,
+coalesce(cast(in_session_req_cnt as Double), 0.0) as in_session_req_cnt,
+$retention_struct(AGGREGATE_LIST_DISTINCT(fielddate) over w, fielddate) as retention_struct,
+cohort, cast(first_day as date) as first_day,
+cast(tpt_tts_session_duration_sec??tpt_session_duration_sec??0.0 as Double) as tpt_tts_session_duration_sec,
+cast(player_tlt_sec??0.0 as Double) as player_tlt_sec,
+from range(`home/paskills/sessions`, $from_mau, $to)
+window w as (partition compact by skill_id, `uuid` order by fielddate DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW ),
+w2 as (partition by skill_id, fielddate);
+
+-- размножаем строки, чтобы каждая сессия давала вклад в фактическую и последующие даты
+-- так если смотреть в рамках одной даты, там находятся как сессии фактически случившиеся в нее, так и добавленные сессии из прошлого
+-- сгруппировав сессии по дате можно посчитать все uuid формирующие wau/mau
+$generated_base =
+    select skill_id, unwrap(mau_fielddate) as mau_fielddate, `uuid`, fielddate, app_group, app,
+        unwrap(first_value(category) over w) as category,
+        unwrap(first_value(dev_type) over w) as dev_type,
+        mau_fielddate == fielddate as for_dau,
+        mau_fielddate - fielddate < DateTime::IntervalFromDays($wau_days) as for_wau,
+        mau_fielddate - fielddate < DateTime::IntervalFromDays($mau_days) as for_mau,
+        is_long_session,
+        skill_session_duration_sec,
+        tpt_session_duration_sec,
+        retention_struct,
+        in_session_req_cnt,
+        tpt_tts_session_duration_sec,
+        player_tlt_sec,
+    from (select * from $base flatten by ($generate_dates(fielddate, $mau_days) as mau_fielddate))
+    -- гарантируем, что на каждую дату не будет нескольких значений категорий/типов для одного навыка
+    window w as (partition by skill_id, mau_fielddate order by fielddate desc);
+
+$mau_base = select
+    unwrap(skill_id??'_total_') as skill_id,
+    unwrap(app??'_total_') as app,
+    unwrap(app_group??'_total_') as app_group,
+    unwrap(category??'_total_') as category,
+    unwrap(dev_type??'_total_') as dev_type,
+    unwrap(mau_fielddate) as fielddate,
+    `uuid`,
+
+    bool_or(for_dau and retention_struct.returned_d28) as returned_d28,
+    bool_or(for_dau and retention_struct.returned_d1) as returned_d1,
+    bool_or(for_dau and retention_struct.returned_w1) as returned_w1,
+    bool_or(for_dau and retention_struct.returned_w1) and bool_or(for_dau and retention_struct.returned_w2) as returned_w2,
+    bool_or(for_dau and retention_struct.returned_w1) and bool_or(for_dau and retention_struct.returned_w2) and bool_or(for_dau and retention_struct.returned_w3) as returned_w3,
+    bool_or(for_dau and retention_struct.returned_w1) and bool_or(for_dau and retention_struct.returned_w2) and bool_or(for_dau and retention_struct.returned_w3) and bool_or(for_dau and retention_struct.returned_w4) as returned_w4,
+
+    bool_or(for_dau and retention_struct.returned_w1_only) as returned_w1_independently,
+    bool_or(for_dau and retention_struct.returned_w2_only) as returned_w2_independently,
+    bool_or(for_dau and retention_struct.returned_w3_only) as returned_w3_independently,
+    bool_or(for_dau and retention_struct.returned_w4_only) as returned_w4_independently,
+
+    bool_or(for_mau) as for_mau,
+    bool_or(for_wau) as for_wau,
+    bool_or(for_dau) as for_dau,
+    -- mau/wau only with long sessions
+    bool_or(for_mau and is_long_session) as for_lmau,
+    bool_or(for_wau and is_long_session) as for_lwau,
+    bool_or(for_dau and is_long_session) as for_ldau,
+
+    -- user's sessions
+    count_if(for_dau) as user_session_count_d,
+    count_if(for_dau and is_long_session) as user_long_session_count_d,
+
+    count_if(for_wau) as user_session_count_w,
+    count_if(for_wau and is_long_session) as user_long_session_count_w,
+
+    count_if(for_mau) as user_session_count_m,
+    count_if(for_mau and is_long_session) as user_long_session_count_m,
+    -- user's sessions total duration
+    sum_if(skill_session_duration_sec, for_dau) as user_session_duration_d,
+    sum_if(skill_session_duration_sec, for_dau and is_long_session) as user_long_session_duration_d,
+    sum_if(skill_session_duration_sec, for_wau) as user_session_duration_w,
+    sum_if(skill_session_duration_sec, for_wau and is_long_session) as user_long_session_duration_w,
+    sum_if(skill_session_duration_sec, for_mau) as user_session_duration_m,
+    sum_if(skill_session_duration_sec, for_mau and is_long_session) as user_long_session_duration_m,
+
+    sum_if(tpt_session_duration_sec, for_dau) as user_session_tpt_duration_d,
+    sum_if(tpt_session_duration_sec, for_dau and is_long_session) as user_long_session_tpt_duration_d,
+    sum_if(tpt_session_duration_sec, for_dau and in_session_req_cnt > 1) as user_plus1_session_tpt_duration_d,
+    sum_if(tpt_session_duration_sec, for_wau) as user_session_tpt_duration_w,
+    sum_if(tpt_session_duration_sec, for_wau and is_long_session) as user_long_session_tpt_duration_w,
+    sum_if(tpt_session_duration_sec, for_wau and in_session_req_cnt > 1) as user_plus1_session_tpt_duration_w,
+    sum_if(tpt_session_duration_sec, for_mau) as user_session_tpt_duration_m,
+    sum_if(tpt_session_duration_sec, for_mau and is_long_session) as user_long_session_tpt_duration_m,
+    sum_if(tpt_session_duration_sec, for_mau and in_session_req_cnt > 1) as user_plus1_session_tpt_duration_m,
+
+    sum_if(tpt_tts_session_duration_sec, for_dau) as tpt_tts_session_duration_sec_d,
+    sum_if(tpt_tts_session_duration_sec, for_wau) as tpt_tts_session_duration_sec_w,
+    sum_if(tpt_tts_session_duration_sec, for_mau) as tpt_tts_session_duration_sec_m,
+
+    sum_if(player_tlt_sec, for_dau) as player_tlt_sec_d,
+    sum_if(player_tlt_sec, for_wau) as player_tlt_sec_w,
+    sum_if(player_tlt_sec, for_mau) as player_tlt_sec_m,
+
+    sum_if(in_session_req_cnt, for_dau) as session_length_d,
+    sum_if(in_session_req_cnt, for_wau) as session_length_w,
+    sum_if(in_session_req_cnt, for_mau) as session_length_m,
+
+    sum_if(in_session_req_cnt, for_dau and is_long_session) as long_session_length_d,
+    sum_if(in_session_req_cnt, for_wau and is_long_session) as long_session_length_w,
+    sum_if(in_session_req_cnt, for_mau and is_long_session) as long_session_length_m,
+
+    sum_if(in_session_req_cnt, for_dau and in_session_req_cnt > 1) as session_1_plus_length_d,
+    sum_if(in_session_req_cnt, for_wau and in_session_req_cnt > 1) as session_1_plus_length_w,
+    sum_if(in_session_req_cnt, for_mau and in_session_req_cnt > 1) as session_1_plus_length_m,
+
+    count_if(for_dau and in_session_req_cnt > 1) as session_1_plus_count_d,
+    count_if(for_wau and in_session_req_cnt > 1) as session_1_plus_count_w,
+    count_if(for_mau and in_session_req_cnt > 1) as session_1_plus_count_m,
+
+from $generated_base
+where mau_fielddate between $from_date and $to_date
+-- perform group by uuid so use only simple group by with count_if on the next step but not count(distinct uuid)
+-- use compact as no more then 30 records (cused by records generation) may appear per group
+--group compact by mau_fielddate, skill_id, category, app, dev_type, `uuid`
+group compact by --skill_id, category, app, dev_type, mau_fielddate
+GROUPING SETS (
+
+    (mau_fielddate, `uuid`, dev_type, category, skill_id, app_group, app ),
+    (mau_fielddate, `uuid`, dev_type, category, skill_id, app_group      ),
+ -- (mau_fielddate, `uuid`, dev_type, category, skill_id,            app ),
+    (mau_fielddate, `uuid`, dev_type, category, skill_id                 ),
+    (mau_fielddate, `uuid`, dev_type, category,           app_group, app ),
+    (mau_fielddate, `uuid`, dev_type, category,           app_group      ),
+ -- (mau_fielddate, `uuid`, dev_type, category,                      app ),
+    (mau_fielddate, `uuid`, dev_type, category                           ),
+ -- (mau_fielddate, `uuid`, dev_type,           skill_id, app_group, app ),
+ -- (mau_fielddate, `uuid`, dev_type,           skill_id, app_group      ),
+ -- (mau_fielddate, `uuid`, dev_type,           skill_id,            app ),
+ -- (mau_fielddate, `uuid`, dev_type,           skill_id                 ),
+    (mau_fielddate, `uuid`, dev_type,                     app_group, app ),
+    (mau_fielddate, `uuid`, dev_type,                     app_group      ),
+ -- (mau_fielddate, `uuid`, dev_type,                                app ),
+    (mau_fielddate, `uuid`, dev_type                                     ),
+ -- (mau_fielddate, `uuid`,           category, skill_id, app_group, app ),
+ -- (mau_fielddate, `uuid`,           category, skill_id, app_group      ),
+ -- (mau_fielddate, `uuid`,           category, skill_id,            app ),
+ -- (mau_fielddate, `uuid`,           category, skill_id                 ),
+    (mau_fielddate, `uuid`,           category,           app_group, app ),
+    (mau_fielddate, `uuid`,           category,           app_group      ),
+ -- (mau_fielddate, `uuid`,           category,                      app ),
+    (mau_fielddate, `uuid`,           category                           ),
+ -- (mau_fielddate, `uuid`,                     skill_id, app_group, app ),
+ -- (mau_fielddate, `uuid`,                     skill_id, app_group      ),
+ -- (mau_fielddate, `uuid`,                     skill_id,            app ),
+ -- (mau_fielddate, `uuid`,                     skill_id                 ),
+    (mau_fielddate, `uuid`,                               app_group, app ),
+    (mau_fielddate, `uuid`,                               app_group      ),
+ -- (mau_fielddate, `uuid`,                                          app ),
+    (mau_fielddate, `uuid`                                               )
+)
+;
+
+$skills = select
+    ToDict(aggregate_list(AsTuple(id, name)))
+from `//home/paskills/skills/stable` where channel = 'aliceSkill';
+
+$wau_mau_b =
+select
+    skill_id,
+    if(skill_id == '_total_','_total_',DictLookup($skills, skill_id)) as skill_name,
+    app,
+    category,
+    dev_type,
+    app_group,
+    fielddate,
+    count_if(for_dau)  as dau,
+    count_if(for_mau)  as mau,
+    count_if(for_wau)  as wau,
+    count_if(for_lmau) as lmau,
+    count_if(for_lwau) as lwau,
+    count_if(for_ldau) as ldau,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), count_if(for_dau)-count_if(returned_d28)) as new_users,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), 1-NANVL(count_if(returned_d28)/cast(count_if(for_dau) as float), 0.0)) as new_users_part,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), count_if(returned_d28)) as returned_d28,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 1 as Int16)), count_if(returned_d1 )) as returned_d1,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 7 as Int16)), count_if(returned_w1 )) as returned_w1,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(14 as Int16)), count_if(returned_w2 )) as returned_w2,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(21 as Int16)), count_if(returned_w3 )) as returned_w3,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), count_if(returned_w4 )) as returned_w4,
+
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 7 as Int16)), count_if(returned_w1_independently )) as returned_w1_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(14 as Int16)), count_if(returned_w2_independently )) as returned_w2_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(21 as Int16)), count_if(returned_w3_independently )) as returned_w3_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), count_if(returned_w4_independently )) as returned_w4_independently,
+
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 7 as Int16)), nanvl(count_if(returned_w1_independently )/cast(count_if(for_dau) as float), 0.0)) as retention_w1_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(14 as Int16)), nanvl(count_if(returned_w2_independently )/cast(count_if(for_dau) as float), 0.0)) as retention_w2_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(21 as Int16)), nanvl(count_if(returned_w3_independently )/cast(count_if(for_dau) as float), 0.0)) as retention_w3_independently,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), nanvl(count_if(returned_w4_independently )/cast(count_if(for_dau) as float), 0.0)) as retention_w4_independently,
+
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), NANVL(count_if(returned_d28)/cast(count_if(for_dau) as float), 0.0)) as retention_d28,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 1 as Int16)), NANVL(count_if(returned_d1 )/cast(count_if(for_dau) as float), 0.0)) as retention_d1,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast( 7 as Int16)), NANVL(count_if(returned_w1 )/cast(count_if(for_dau) as float), 0.0)) as retention_w1,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(14 as Int16)), NANVL(count_if(returned_w2 )/cast(count_if(for_dau) as float), 0.0)) as retention_w2,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(21 as Int16)), NANVL(count_if(returned_w3 )/cast(count_if(for_dau) as float), 0.0)) as retention_w3,
+    if($to_date - fielddate >= DateTime::IntervalFromDays(cast(28 as Int16)), NANVL(count_if(returned_w4 )/cast(count_if(for_dau) as float), 0.0)) as retention_w4,
+
+    coalesce(sum(user_session_count_d),0) as session_count_d,
+    coalesce(sum(user_long_session_count_d),0) as long_session_count_d,
+    coalesce(sum(user_session_count_w),0) as session_count_w,
+    coalesce(sum(user_long_session_count_w),0) as long_session_count_w,
+    coalesce(sum(user_session_count_m),0) as session_count_m,
+    coalesce(sum(user_long_session_count_m),0) as long_session_count_m,
+
+    coalesce(sum(user_session_duration_d),0) as sessions_total_duration_d,
+    coalesce(sum(user_long_session_duration_d),0) as long_session_total_duration_d,
+    coalesce(sum(user_session_duration_w),0) as sessions_total_duration_w,
+    coalesce(sum(user_long_session_duration_w),0) as long_session_total_duration_w,
+    coalesce(sum(user_session_duration_m),0) as sessions_total_duration_m,
+    coalesce(sum(user_long_session_duration_m),0) as long_session_total_duration_m,
+
+    coalesce(sum(user_session_tpt_duration_d),0) as sessions_tpt_duration_d,
+    coalesce(sum(user_long_session_tpt_duration_d),0) as long_session_tpt_duration_d,
+    coalesce(sum(user_session_tpt_duration_w),0) as sessions_tpt_duration_w,
+    coalesce(sum(user_long_session_tpt_duration_w),0) as long_session_tpt_duration_w,
+    coalesce(sum(user_session_tpt_duration_m),0) as sessions_tpt_duration_m,
+    coalesce(sum(user_long_session_tpt_duration_m),0) as long_session_tpt_duration_m,
+
+    coalesce(sum(tpt_tts_session_duration_sec_d), 0) as tpt_tts_session_duration_sec_d,
+    coalesce(sum(tpt_tts_session_duration_sec_w), 0) as tpt_tts_session_duration_sec_w,
+    coalesce(sum(tpt_tts_session_duration_sec_m), 0) as tpt_tts_session_duration_sec_m,
+
+    coalesce(sum(player_tlt_sec_d), 0) as player_tlt_sec_d,
+    coalesce(sum(player_tlt_sec_w), 0) as player_tlt_sec_w,
+    coalesce(sum(player_tlt_sec_m), 0) as player_tlt_sec_m,
+
+    NANVL(coalesce(avg(user_session_duration_d),0.0),0.0) as avg_sessions_total_duration_d,
+    NANVL(coalesce(avg(user_long_session_duration_d),0.0),0.0) as avg_long_session_total_duration_d,
+    NANVL(coalesce(avg(user_session_duration_w),0.0),0.0) as avg_sessions_total_duration_w,
+    NANVL(coalesce(avg(user_long_session_duration_w),0.0),0.0) as avg_long_session_total_duration_w,
+    NANVL(coalesce(avg(user_session_duration_m),0.0),0.0) as avg_sessions_total_duration_m,
+    NANVL(coalesce(avg(user_long_session_duration_m),0.0),0.0) as avg_long_session_total_duration_m,
+
+    NANVL(coalesce(avg(user_session_tpt_duration_d),0.0), 0.0) as avg_sessions_tpt_duration_d,
+    NANVL(coalesce(avg(user_long_session_tpt_duration_d),0.0), 0.0) as avg_long_session_tpt_duration_d,
+    NANVL(coalesce(avg(user_plus1_session_tpt_duration_d),0.0), 0.0) as avg_plus1_session_tpt_duration_d,
+    NANVL(coalesce(avg(user_session_tpt_duration_w),0.0), 0.0) as avg_sessions_tpt_duration_w,
+    NANVL(coalesce(avg(user_long_session_tpt_duration_w),0.0), 0.0) as avg_long_session_tpt_duration_w,
+    NANVL(coalesce(avg(user_plus1_session_tpt_duration_w),0.0), 0.0) as avg_plus1_session_tpt_duration_w,
+    NANVL(coalesce(avg(user_session_tpt_duration_m),0.0), 0.0) as avg_sessions_tpt_duration_m,
+    NANVL(coalesce(avg(user_long_session_tpt_duration_m),0.0), 0.0) as avg_long_session_tpt_duration_m,
+    NANVL(coalesce(avg(user_plus1_session_tpt_duration_m),0.0), 0.0) as avg_plus1_session_tpt_duration_m,
+
+    coalesce(sum(session_length_d), 0) as session_length_d,
+    coalesce(sum(session_length_w), 0) as session_length_w,
+    coalesce(sum(session_length_m), 0) as session_length_m,
+    coalesce(sum(long_session_length_d), 0) as long_session_length_d,
+    coalesce(sum(long_session_length_w), 0) as long_session_length_w,
+    coalesce(sum(long_session_length_m), 0) as long_session_length_m,
+    coalesce(sum(session_1_plus_length_d), 0) as session_1_plus_length_d,
+    coalesce(sum(session_1_plus_length_w), 0) as session_1_plus_length_w,
+    coalesce(sum(session_1_plus_length_m), 0) as session_1_plus_length_m,
+
+    coalesce(sum(session_1_plus_count_d), 0) as session_1_plus_count_d,
+    coalesce(sum(session_1_plus_count_w), 0) as session_1_plus_count_w,
+    coalesce(sum(session_1_plus_count_m), 0) as session_1_plus_count_m,
+
+    nanvl(coalesce(avg(session_1_plus_length_d), 0.0), 0.0) as avg_session_1_plus_length_d,
+    nanvl(coalesce(avg(session_1_plus_length_w), 0.0), 0.0) as avg_session_1_plus_length_w,
+    nanvl(coalesce(avg(session_1_plus_length_m), 0.0), 0.0) as avg_session_1_plus_length_m,
+    nanvl(coalesce(avg(long_session_length_d), 0.0), 0.0) as avg_long_session_length_d,
+    nanvl(coalesce(avg(long_session_length_w), 0.0), 0.0) as avg_long_session_length_w,
+    nanvl(coalesce(avg(long_session_length_m), 0.0), 0.0) as avg_long_session_length_m,
+    nanvl(coalesce(avg(session_length_d), 0.0), 0.0) as avg_session_length_d,
+    nanvl(coalesce(avg(session_length_w), 0.0), 0.0) as avg_session_length_w,
+    nanvl(coalesce(avg(session_length_m), 0.0), 0.0) as avg_session_length_m,
+
+    coalesce(median(user_session_tpt_duration_d),0) as median_sessions_tpt_duration_d,
+    coalesce(median(user_long_session_tpt_duration_d),0) as median_long_session_tpt_duration_d,
+    coalesce(median(user_plus1_session_tpt_duration_d),0) as median_plus1_session_tpt_duration_d,
+    coalesce(median(user_session_tpt_duration_w),0) as median_sessions_tpt_duration_w,
+    coalesce(median(user_long_session_tpt_duration_w),0) as median_long_session_tpt_duration_w,
+    coalesce(median(user_plus1_session_tpt_duration_w),0) as median_plus1_session_tpt_duration_w,
+    coalesce(median(user_session_tpt_duration_m),0) as median_sessions_tpt_duration_m,
+    coalesce(median(user_long_session_tpt_duration_m),0) as median_long_session_tpt_duration_m,
+    coalesce(median(user_plus1_session_tpt_duration_m),0) as median_plus1_session_tpt_duration_m,
+
+    nanvl(coalesce(median(session_1_plus_length_d), 0.0), 0.0) as median_session_1_plus_length_d,
+    nanvl(coalesce(median(session_1_plus_length_w), 0.0), 0.0) as median_session_1_plus_length_w,
+    nanvl(coalesce(median(session_1_plus_length_m), 0.0), 0.0) as median_session_1_plus_length_m,
+    nanvl(coalesce(median(long_session_length_d), 0.0), 0.0) as median_long_session_length_d,
+    nanvl(coalesce(median(long_session_length_w), 0.0), 0.0) as median_long_session_length_w,
+    nanvl(coalesce(median(long_session_length_m), 0.0), 0.0) as median_long_session_length_m,
+    nanvl(coalesce(median(session_length_d), 0.0), 0.0) as median_session_length_d,
+    nanvl(coalesce(median(session_length_w), 0.0), 0.0) as median_session_length_w,
+    nanvl(coalesce(median(session_length_m), 0.0), 0.0) as median_session_length_m,
+
+from $mau_base
+-- compact leads to overflow
+group by fielddate, category, dev_type, app, skill_id, app_group
+;
+
+$wau_mau_c = select d.*,
+avg(dau) over w as dau_1w_avg,
+avg(ldau) over w as ldau_1w_avg,
+avg(retention_w1) over w as retention_w1_1w_avg,
+avg(retention_w2) over w as retention_w2_1w_avg,
+avg(retention_w3) over w as retention_w3_1w_avg,
+avg(retention_w4) over w as retention_w4_1w_avg,
+avg(retention_w1_independently) over w as retention_w1_independently_1w_avg,
+avg(retention_w2_independently) over w as retention_w2_independently_1w_avg,
+avg(retention_w3_independently) over w as retention_w3_independently_1w_avg,
+avg(retention_w4_independently) over w as retention_w4_independently_1w_avg,
+avg(retention_d1) over w as retention_d1_1w_avg,
+avg(retention_d28) over w as retention_d28_1w_avg,
+from $wau_mau_b as d
+window w as (partition compact by skill_id, app, app_group, dev_type, category order by fielddate asc ROWS BETWEEN 6 PRECEDING AND CURRENT ROW);
+
+$wau_mau =
+
+    select d.*,
+
+    lag(dau,  1 ) over w as dau_lag_1d,
+    lag(dau,  7 ) over w as dau_lag_7d,
+    lag(dau,  28) over w as dau_lag_28d,
+    lag(ldau, 1 ) over w as ldau_lag_1d,
+    lag(ldau, 7 ) over w as ldau_lag_7d,
+    lag(ldau, 28) over w as ldau_lag_28d,
+    lag(wau,  7 ) over w as wau_lag_1w,
+    lag(wau,  28) over w as wau_lag_4w,
+    lag(lwau, 7 ) over w as ldau_lag_1w,
+    lag(lwau, 28) over w as ldau_lag_4w,
+    lag(mau,  28) over w as mau_lag_1m,
+    lag(lmau, 28) over w as lmau_lag_1m,
+
+    lag(dau_1w_avg,  1 ) over w as dau_1w_avg_lag_1d,
+    lag(dau_1w_avg,  7 ) over w as dau_1w_avg_lag_7d,
+    lag(dau_1w_avg,  28) over w as dau_1w_avg_lag_28d,
+    lag(ldau_1w_avg, 1 ) over w as ldau_1w_avg_lag_1d,
+    lag(ldau_1w_avg, 7 ) over w as ldau_1w_avg_lag_7d,
+    lag(ldau_1w_avg, 28) over w as ldau_1w_avg_lag_28d,
+
+    cast(dau as Float)  - lag(dau,  1) over w as dau_delta_1d,
+    cast(dau as Float)  - lag(dau,  7) over w as dau_delta_7d,
+    cast(dau as Float)  - lag(dau, 28) over w as dau_delta_28d,
+    cast(ldau as Float) - lag(ldau, 1) over w as ldau_delta_1d,
+    cast(ldau as Float) - lag(ldau, 7) over w as ldau_delta_7d,
+    cast(ldau as Float) - lag(ldau,28) over w as ldau_delta_28d,
+    cast(wau as Float)  - lag(wau,  7) over w as wau_delta_1w,
+    cast(wau as Float)  - lag(wau, 28) over w as wau_delta_4w,
+    cast(lwau as Float) - lag(lwau, 7) over w as ldau_delta_1w,
+    cast(lwau as Float) - lag(lwau,28) over w as ldau_delta_4w,
+    cast(mau as Float)  - lag(mau, 28) over w as mau_delta_1m,
+    cast(lmau as Float) - lag(lmau,28) over w as lmau_delta_1m,
+
+    NANVL((cast(dau as Float)  - lag(dau,  1))/cast(lag(dau,  1) as Float),0.0) over w as dau_delta_1d_rel,
+    NANVL((cast(dau as Float)  - lag(dau,  7))/cast(lag(dau,  7) as Float),0.0) over w as dau_delta_7d_rel,
+    NANVL((cast(dau as Float)  - lag(dau, 28))/cast(lag(dau, 28) as Float),0.0) over w as dau_delta_28d_rel,
+    NANVL((cast(ldau as Float) - lag(ldau, 1))/cast(lag(ldau, 1) as Float),0.0) over w as ldau_delta_1d_rel,
+    NANVL((cast(ldau as Float) - lag(ldau, 7))/cast(lag(ldau, 7) as Float),0.0) over w as ldau_delta_7d_rel,
+    NANVL((cast(ldau as Float) - lag(ldau,28))/cast(lag(ldau,28) as Float),0.0) over w as ldau_delta_28d_rel,
+    NANVL((cast(wau as Float)  - lag(wau,  7))/cast(lag(wau,  7) as Float),0.0) over w as wau_delta_1w_rel,
+    NANVL((cast(wau as Float)  - lag(wau, 28))/cast(lag(wau, 28) as Float),0.0) over w as wau_delta_4w_rel,
+    NANVL((cast(lwau as Float) - lag(lwau, 7))/cast(lag(lwau, 7) as Float),0.0) over w as ldau_delta_1w_rel,
+    NANVL((cast(lwau as Float) - lag(lwau,28))/cast(lag(lwau,28) as Float),0.0) over w as ldau_delta_4w_rel,
+    NANVL((cast(mau as Float)  - lag(mau, 28))/cast(lag(mau, 28) as Float),0.0) over w as mau_delta_1m_rel,
+    NANVL((cast(lmau as Float) - lag(lmau,28))/cast(lag(lmau,28) as Float),0.0) over w as lmau_delta_1m_rel,
+
+    lag(new_users, 28) over w as new_users_shifted,
+    lag(new_users_part, 28) over w as new_users_part_shifted,
+    lag(returned_d28, 28) over w as returned_d28_shifted,
+    lag(returned_d1, 1) over w as returned_d1_shifted,
+    lag(returned_w1, 7) over w as returned_w1_shifted,
+    lag(returned_w2, 14) over w as returned_w2_shifted,
+    lag(returned_w3, 21) over w as returned_w3_shifted,
+    lag(returned_w4, 28) over w as returned_w4_shifted,
+    lag(retention_d28, 28) over w as retention_d28_shifted,
+    lag(retention_d1, 1) over w as retention_d1_shifted,
+    lag(retention_w1, 7) over w as retention_w1_shifted,
+    lag(retention_w2, 14) over w as retention_w2_shifted,
+    lag(retention_w3, 21) over w as retention_w3_shifted,
+    lag(retention_w4, 28) over w as retention_w4_shifted,
+
+    lag(returned_w1_independently,  7) over w as returned_w1_independently_shifted,
+    lag(returned_w2_independently, 14) over w as returned_w2_independently_shifted,
+    lag(returned_w3_independently, 21) over w as returned_w3_independently_shifted,
+    lag(returned_w4_independently, 28) over w as returned_w4_independently_shifted,
+
+    lag(retention_w1_independently,  7) over w as retention_w1_independently_shifted,
+    lag(retention_w2_independently, 14) over w as retention_w2_independently_shifted,
+    lag(retention_w3_independently, 21) over w as retention_w3_independently_shifted,
+    lag(retention_w4_independently, 28) over w as retention_w4_independently_shifted,
+
+    lag(new_users, 28) over w as new_users_shifted_d28,
+    lag(new_users_part, 28) over w as new_users_part_shifted_d28,
+    lag(returned_d28, 28) over w as returned_d28_shifted_d28,
+    lag(returned_d1, 28) over w as returned_d1_shifted_d28,
+    lag(returned_w1, 28) over w as returned_w1_shifted_d28,
+    lag(returned_w2, 28) over w as returned_w2_shifted_d28,
+    lag(returned_w3, 28) over w as returned_w3_shifted_d28,
+    lag(returned_w4, 28) over w as returned_w4_shifted_d28,
+    lag(retention_d28, 28) over w as retention_d28_shifted_d28,
+    lag(retention_d1, 28) over w as retention_d1_shifted_d28,
+    lag(retention_w1, 28) over w as retention_w1_shifted_d28,
+    lag(retention_w2, 28) over w as retention_w2_shifted_d28,
+    lag(retention_w3, 28) over w as retention_w3_shifted_d28,
+    lag(retention_w4, 28) over w as retention_w4_shifted_d28,
+
+    lag(returned_w1_independently, 28) over w as returned_w1_independently_shifted_d28,
+    lag(returned_w2_independently, 28) over w as returned_w2_independently_shifted_d28,
+    lag(returned_w3_independently, 28) over w as returned_w3_independently_shifted_d28,
+    lag(returned_w4_independently, 28) over w as returned_w4_independently_shifted_d28,
+
+    lag(retention_w1_independently, 28) over w as retention_w1_independently_shifted_d28,
+    lag(retention_w2_independently, 28) over w as retention_w2_independently_shifted_d28,
+    lag(retention_w3_independently, 28) over w as retention_w3_independently_shifted_d28,
+    lag(retention_w4_independently, 28) over w as retention_w4_independently_shifted_d28,
+
+    lag(retention_w1_1w_avg,  7) over w as retention_w1_1w_avg_shifted,
+    lag(retention_w2_1w_avg, 14) over w as retention_w2_1w_avg_shifted,
+    lag(retention_w3_1w_avg, 21) over w as retention_w3_1w_avg_shifted,
+    lag(retention_w4_1w_avg, 28) over w as retention_w4_1w_avg_shifted,
+    lag(retention_w1_independently_1w_avg,  7) over w as retention_w1_independently_1w_avg_shifted,
+    lag(retention_w2_independently_1w_avg, 14) over w as retention_w2_independently_1w_avg_shifted,
+    lag(retention_w3_independently_1w_avg, 21) over w as retention_w3_independently_1w_avg_shifted,
+    lag(retention_w4_independently_1w_avg, 28) over w as retention_w4_independently_1w_avg_shifted,
+
+    lag(retention_w1_1w_avg, 28) over w as retention_w1_1w_avg_shifted_d28,
+    lag(retention_w2_1w_avg, 28) over w as retention_w2_1w_avg_shifted_d28,
+    lag(retention_w3_1w_avg, 28) over w as retention_w3_1w_avg_shifted_d28,
+    lag(retention_w4_1w_avg, 28) over w as retention_w4_1w_avg_shifted_d28,
+    lag(retention_w1_independently_1w_avg, 28) over w as retention_w1_independently_1w_avg_shifted_d28,
+    lag(retention_w2_independently_1w_avg, 28) over w as retention_w2_independently_1w_avg_shifted_d28,
+    lag(retention_w3_independently_1w_avg, 28) over w as retention_w3_independently_1w_avg_shifted_d28,
+    lag(retention_w4_independently_1w_avg, 28) over w as retention_w4_independently_1w_avg_shifted_d28,
+
+    lag(retention_d28_1w_avg, 28) over w as retention_d28_1w_avg_shifted,
+    lag(retention_d28_1w_avg, 28) over w as retention_d28_1w_avg_shifted_d28,
+
+    lag(retention_d1_1w_avg,  1) over w as retention_d1_1w_avg_shifted,
+    lag(retention_d1_1w_avg, 28) over w as retention_d1_1w_avg_shifted_d28,
+
+    from $wau_mau_c as d
+    -- оконные функции с сортировкой последовательно выдают строки в окне, а не сортируют все окно в рамках partition by,
+    -- т.е. работают как комулятивная сумма
+    -- поэтому сортируем по возрастанию дат, чтобы к $to_date уже все строки в окно пошли и тогда берем последнюю not null строку
+    window w as (partition compact by skill_id, app, app_group, dev_type, category order by fielddate asc ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);
+
+DISCARD SELECT
+Ensure(null, count(distinct category)==1, 'Category duplicates found in $base for fielddate '||cast(fielddate as String)||' and skill_id = '||skill_id||' count - '||cast(count(distinct category) as String) ||' app_group - '||app_group||' app - '||app),
+Ensure(null, count(distinct dev_type)==1, 'Dev_type duplicates found in $base for fielddate '||cast(fielddate as String)||' and skill_id = '||skill_id||' count - '||cast(count(distinct dev_type) as String) ||' app_group - '||app_group||' app - '||app),
+from $wau_mau
+where skill_id != '_total_'
+group compact by fielddate, skill_id, app_group, app
+having count(distinct category)>1 or count(distinct dev_type)>1;
+
+insert into `home/paskills/stat/dialogovo_stat` with truncate
+--$b =
+select
+    fielddate,
+    skill_id,
+    skill_name,
+    app,
+    app_group,
+    category,
+    dev_type,
+
+    dau,
+    wau,
+    mau,
+    retention_d28,
+    retention_d1,
+    retention_w1,
+    session_count_d,
+    session_count_w,
+    session_count_m,
+    ldau,
+    lwau,
+    lmau,
+
+    dau_1w_avg,
+    ldau_1w_avg,
+
+    retention_w2,
+    retention_w3,
+    retention_w4,
+
+    retention_w1_independently,
+    retention_w2_independently,
+    retention_w3_independently,
+    retention_w4_independently,
+
+    avg_sessions_tpt_duration_d,
+    avg_sessions_tpt_duration_w,
+    avg_sessions_tpt_duration_m,
+
+    avg_long_session_tpt_duration_d,
+    avg_long_session_tpt_duration_w,
+    avg_long_session_tpt_duration_m,
+
+    avg_plus1_session_tpt_duration_d,
+    avg_plus1_session_tpt_duration_w,
+    avg_plus1_session_tpt_duration_m,
+
+    median_sessions_tpt_duration_d,
+    median_sessions_tpt_duration_w,
+    median_sessions_tpt_duration_m,
+
+    median_long_session_tpt_duration_d,
+    median_long_session_tpt_duration_w,
+    median_long_session_tpt_duration_m,
+
+    median_plus1_session_tpt_duration_d,
+    median_plus1_session_tpt_duration_w,
+    median_plus1_session_tpt_duration_m,
+
+    sessions_tpt_duration_d,
+    sessions_tpt_duration_w,
+    sessions_tpt_duration_m,
+
+    long_session_tpt_duration_d,
+    long_session_tpt_duration_w,
+    long_session_tpt_duration_m,
+
+    avg_sessions_total_duration_d,
+    avg_sessions_total_duration_w,
+    avg_sessions_total_duration_m,
+
+    avg_long_session_total_duration_d,
+    avg_long_session_total_duration_w,
+    avg_long_session_total_duration_m,
+
+    sessions_total_duration_d,
+    sessions_total_duration_w,
+    sessions_total_duration_m,
+
+    long_session_count_d,
+    long_session_count_w,
+    long_session_count_m,
+
+    long_session_total_duration_w,
+    long_session_total_duration_d,
+    long_session_total_duration_m,
+
+    new_users,
+    new_users_part,
+    returned_w1,
+    returned_w2,
+    returned_w3,
+    returned_w4,
+    returned_d28,
+    returned_d1,
+
+    dau_lag_1d,
+    dau_lag_7d,
+    dau_lag_28d,
+    ldau_lag_1d,
+    ldau_lag_7d,
+    ldau_lag_28d,
+    wau_lag_1w,
+    wau_lag_4w,
+    ldau_lag_1w,
+    ldau_lag_4w,
+    mau_lag_1m,
+    lmau_lag_1m,
+
+    dau_1w_avg_lag_1d,
+    dau_1w_avg_lag_7d,
+    dau_1w_avg_lag_28d,
+    ldau_1w_avg_lag_1d,
+    ldau_1w_avg_lag_7d,
+    ldau_1w_avg_lag_28d,
+
+    dau_delta_1d,
+    dau_delta_7d,
+    dau_delta_28d,
+    ldau_delta_1d,
+    ldau_delta_7d,
+    ldau_delta_28d,
+    wau_delta_1w,
+    wau_delta_4w,
+    ldau_delta_1w,
+    ldau_delta_4w,
+    mau_delta_1m,
+    lmau_delta_1m,
+
+    dau_delta_1d_rel,
+    dau_delta_7d_rel,
+    dau_delta_28d_rel,
+    ldau_delta_1d_rel,
+    ldau_delta_7d_rel,
+    ldau_delta_28d_rel,
+    wau_delta_1w_rel,
+    wau_delta_4w_rel,
+    ldau_delta_1w_rel,
+    ldau_delta_4w_rel,
+    mau_delta_1m_rel,
+    lmau_delta_1m_rel,
+
+    new_users_shifted,
+    new_users_part_shifted,
+    returned_d28_shifted,
+    returned_d1_shifted,
+    returned_w1_shifted,
+    returned_w2_shifted,
+    returned_w3_shifted,
+    returned_w4_shifted,
+    retention_d28_shifted,
+    retention_d1_shifted,
+    retention_w1_shifted,
+    retention_w2_shifted,
+    retention_w3_shifted,
+    retention_w4_shifted,
+
+    session_length_d,
+    session_length_w,
+    session_length_m,
+    long_session_length_d,
+    long_session_length_w,
+    long_session_length_m,
+    session_1_plus_length_d,
+    session_1_plus_length_w,
+    session_1_plus_length_m,
+
+    avg_session_1_plus_length_d,
+    avg_session_1_plus_length_w,
+    avg_session_1_plus_length_m,
+    avg_long_session_length_d,
+    avg_long_session_length_w,
+    avg_long_session_length_m,
+    avg_session_length_d,
+    avg_session_length_w,
+    avg_session_length_m,
+
+    session_1_plus_count_d,
+    session_1_plus_count_w,
+    session_1_plus_count_m,
+
+    returned_w1_independently,
+    returned_w2_independently,
+    returned_w3_independently,
+    returned_w4_independently,
+
+    retention_w1_independently_shifted,
+    retention_w2_independently_shifted,
+    retention_w3_independently_shifted,
+    retention_w4_independently_shifted,
+
+    returned_w1_independently_shifted,
+    returned_w2_independently_shifted,
+    returned_w3_independently_shifted,
+    returned_w4_independently_shifted,
+
+    new_users_shifted_d28,
+    new_users_part_shifted_d28,
+    returned_d28_shifted_d28,
+    returned_d1_shifted_d28,
+    returned_w1_shifted_d28,
+    returned_w2_shifted_d28,
+    returned_w3_shifted_d28,
+    returned_w4_shifted_d28,
+    retention_d28_shifted_d28,
+    retention_d1_shifted_d28,
+    retention_w1_shifted_d28,
+    retention_w2_shifted_d28,
+    retention_w3_shifted_d28,
+    retention_w4_shifted_d28,
+    returned_w1_independently_shifted_d28,
+    returned_w2_independently_shifted_d28,
+    returned_w3_independently_shifted_d28,
+    returned_w4_independently_shifted_d28,
+    retention_w1_independently_shifted_d28,
+    retention_w2_independently_shifted_d28,
+    retention_w3_independently_shifted_d28,
+    retention_w4_independently_shifted_d28,
+
+    retention_w1_1w_avg,
+    retention_w1_1w_avg_shifted,
+    retention_w2_1w_avg,
+    retention_w2_1w_avg_shifted,
+    retention_w3_1w_avg,
+    retention_w3_1w_avg_shifted,
+    retention_w4_1w_avg,
+    retention_w4_1w_avg_shifted,
+    retention_w1_independently_1w_avg,
+    retention_w1_independently_1w_avg_shifted,
+    retention_w2_independently_1w_avg,
+    retention_w2_independently_1w_avg_shifted,
+    retention_w3_independently_1w_avg,
+    retention_w3_independently_1w_avg_shifted,
+    retention_w4_independently_1w_avg,
+    retention_w4_independently_1w_avg_shifted,
+    retention_d28_1w_avg,
+    retention_d28_1w_avg_shifted,
+    retention_d1_1w_avg,
+    retention_d1_1w_avg_shifted,
+    retention_d1_1w_avg_shifted_d28,
+
+    retention_w1_1w_avg_shifted_d28,
+    retention_w2_1w_avg_shifted_d28,
+    retention_w3_1w_avg_shifted_d28,
+    retention_w4_1w_avg_shifted_d28,
+    retention_w1_independently_1w_avg_shifted_d28,
+    retention_w2_independently_1w_avg_shifted_d28,
+    retention_w3_independently_1w_avg_shifted_d28,
+    retention_w4_independently_1w_avg_shifted_d28,
+
+    median_session_1_plus_length_d,
+    median_session_1_plus_length_w,
+    median_session_1_plus_length_m,
+    median_long_session_length_d,
+    median_long_session_length_w,
+    median_long_session_length_m,
+    median_session_length_d,
+    median_session_length_w,
+    median_session_length_m,
+
+    tpt_tts_session_duration_sec_d,
+    tpt_tts_session_duration_sec_w,
+    tpt_tts_session_duration_sec_m,
+
+    player_tlt_sec_d,
+    player_tlt_sec_w,
+    player_tlt_sec_m,
+
+    from $wau_mau;
+
+insert into `home/paskills/stat/dialogovo_stat_current` with truncate
+select
+    fielddate,
+    skill_id,
+    skill_name,
+    app,
+    app_group,
+    category,
+    dev_type,
+
+    dau,
+    wau,
+    mau,
+    --"retention_d28",
+    --"retention_w1",
+    session_count_d,
+    session_count_w,
+    session_count_m,
+    ldau,
+    lwau,
+    lmau,
+
+    dau_1w_avg,
+    ldau_1w_avg,
+
+    --"retention_w2",
+    --"retention_w3",
+    --"retention_w4",
+
+    avg_sessions_tpt_duration_d,
+    avg_sessions_tpt_duration_w,
+    avg_sessions_tpt_duration_m,
+
+    avg_long_session_tpt_duration_d,
+    avg_long_session_tpt_duration_w,
+    avg_long_session_tpt_duration_m,
+
+    avg_plus1_session_tpt_duration_d,
+    avg_plus1_session_tpt_duration_w,
+    avg_plus1_session_tpt_duration_m,
+
+    median_sessions_tpt_duration_d,
+    median_sessions_tpt_duration_w,
+    median_sessions_tpt_duration_m,
+
+    median_long_session_tpt_duration_d,
+    median_long_session_tpt_duration_w,
+    median_long_session_tpt_duration_m,
+
+    median_plus1_session_tpt_duration_d,
+    median_plus1_session_tpt_duration_w,
+    median_plus1_session_tpt_duration_m,
+
+    sessions_tpt_duration_d,
+    sessions_tpt_duration_w,
+    sessions_tpt_duration_m,
+
+    long_session_tpt_duration_d,
+    long_session_tpt_duration_w,
+    long_session_tpt_duration_m,
+
+    avg_sessions_total_duration_d,
+    avg_sessions_total_duration_w,
+    avg_sessions_total_duration_m,
+
+    avg_long_session_total_duration_d,
+    avg_long_session_total_duration_w,
+    avg_long_session_total_duration_m,
+
+    sessions_total_duration_d,
+    sessions_total_duration_w,
+    sessions_total_duration_m,
+
+    long_session_count_d,
+    long_session_count_w,
+    long_session_count_m,
+
+    long_session_total_duration_w,
+    long_session_total_duration_d,
+    long_session_total_duration_m,
+
+    /*"new_users",
+    "new_users_part",
+    "returned_w1",
+    "returned_w2",
+    "returned_w3",
+    "returned_w4",
+    "returned_d28",*/
+
+    dau_lag_1d,
+    dau_lag_7d,
+    dau_lag_28d,
+    ldau_lag_1d,
+    ldau_lag_7d,
+    ldau_lag_28d,
+    wau_lag_1w,
+    wau_lag_4w,
+    ldau_lag_1w,
+    ldau_lag_4w,
+    mau_lag_1m,
+    lmau_lag_1m,
+
+    dau_1w_avg_lag_1d,
+    dau_1w_avg_lag_7d,
+    dau_1w_avg_lag_28d,
+    ldau_1w_avg_lag_1d,
+    ldau_1w_avg_lag_7d,
+    ldau_1w_avg_lag_28d,
+
+    dau_delta_1d,
+    dau_delta_7d,
+    dau_delta_28d,
+    ldau_delta_1d,
+    ldau_delta_7d,
+    ldau_delta_28d,
+    wau_delta_1w,
+    wau_delta_4w,
+    ldau_delta_1w,
+    ldau_delta_4w,
+    mau_delta_1m,
+    lmau_delta_1m,
+
+    dau_delta_1d_rel,
+    dau_delta_7d_rel,
+    dau_delta_28d_rel,
+    ldau_delta_1d_rel,
+    ldau_delta_7d_rel,
+    ldau_delta_28d_rel,
+    wau_delta_1w_rel,
+    wau_delta_4w_rel,
+    ldau_delta_1w_rel,
+    ldau_delta_4w_rel,
+    mau_delta_1m_rel,
+    lmau_delta_1m_rel,
+
+    new_users_shifted_d28 as new_users,
+    new_users_part_shifted_d28 as new_users_part,
+    returned_d28_shifted_d28 as returned_d28,
+    returned_d1_shifted_d28 as returned_d1,
+    returned_w1_shifted_d28 as returned_w1,
+    returned_w2_shifted_d28 as returned_w2,
+    returned_w3_shifted_d28 as returned_w3,
+    returned_w4_shifted_d28 as returned_w4,
+    retention_d28_shifted_d28 as retention_d28,
+    retention_d1_shifted_d28 as retention_d1,
+    retention_w1_shifted_d28 as retention_w1,
+    retention_w2_shifted_d28 as retention_w2,
+    retention_w3_shifted_d28 as retention_w3,
+    retention_w4_shifted_d28 as retention_w4,
+
+    returned_w1_independently_shifted_d28 as returned_w1_independently,
+    returned_w2_independently_shifted_d28 as returned_w2_independently,
+    returned_w3_independently_shifted_d28 as returned_w3_independently,
+    returned_w4_independently_shifted_d28 as returned_w4_independently,
+
+    retention_w1_independently_shifted_d28 as retention_w1_independently,
+    retention_w2_independently_shifted_d28 as retention_w2_independently,
+    retention_w3_independently_shifted_d28 as retention_w3_independently,
+    retention_w4_independently_shifted_d28 as retention_w4_independently,
+
+    new_users_shifted as new_users_latest,
+    new_users_part_shifted as new_users_part_latest,
+    returned_d28_shifted as returned_d28_latest,
+    returned_d1_shifted as returned_d1_latest,
+    returned_w1_shifted as returned_w1_latest,
+    returned_w2_shifted as returned_w2_latest,
+    returned_w3_shifted as returned_w3_latest,
+    returned_w4_shifted as returned_w4_latest,
+    retention_d28_shifted as retention_d28_latest,
+    retention_d1_shifted as retention_d1_latest,
+    retention_w1_shifted as retention_w1_latest,
+    retention_w2_shifted as retention_w2_latest,
+    retention_w3_shifted as retention_w3_latest,
+    retention_w4_shifted as retention_w4_latest,
+    returned_w1_independently_shifted as returned_w1_independently_latest,
+    returned_w2_independently_shifted as returned_w2_independently_latest,
+    returned_w3_independently_shifted as returned_w3_independently_latest,
+    returned_w4_independently_shifted as returned_w4_independently_latest,
+    retention_w1_independently_shifted as retention_w1_independently_latest,
+    retention_w2_independently_shifted as retention_w2_independently_latest,
+    retention_w3_independently_shifted as retention_w3_independently_latest,
+    retention_w4_independently_shifted as retention_w4_independently_latest,
+
+    session_length_d,
+    session_length_w,
+    session_length_m,
+    long_session_length_d,
+    long_session_length_w,
+    long_session_length_m,
+    session_1_plus_length_d,
+    session_1_plus_length_w,
+    session_1_plus_length_m,
+
+    avg_session_1_plus_length_d,
+    avg_session_1_plus_length_w,
+    avg_session_1_plus_length_m,
+    avg_long_session_length_d,
+    avg_long_session_length_w,
+    avg_long_session_length_m,
+    avg_session_length_d,
+    avg_session_length_w,
+    avg_session_length_m,
+
+    median_session_1_plus_length_d,
+    median_session_1_plus_length_w,
+    median_session_1_plus_length_m,
+    median_long_session_length_d,
+    median_long_session_length_w,
+    median_long_session_length_m,
+    median_session_length_d,
+    median_session_length_w,
+    median_session_length_m,
+
+    session_1_plus_count_d,
+    session_1_plus_count_w,
+    session_1_plus_count_m,
+
+    tpt_tts_session_duration_sec_d,
+    tpt_tts_session_duration_sec_w,
+    tpt_tts_session_duration_sec_m,
+
+    player_tlt_sec_d,
+    player_tlt_sec_w,
+    player_tlt_sec_m,
+
+    retention_d28_1w_avg_shifted as retention_d28_1w_avg_latest,
+    retention_d1_1w_avg_shifted as retention_d1_1w_avg_latest,
+    retention_w1_1w_avg_shifted as retention_w1_1w_avg_latest,
+    retention_w2_1w_avg_shifted as retention_w2_1w_avg_latest,
+    retention_w3_1w_avg_shifted as retention_w3_1w_avg_latest,
+    retention_w4_1w_avg_shifted as retention_w4_1w_avg_latest,
+
+    retention_w1_independently_1w_avg_shifted as retention_w1_independently_1w_avg_latest,
+    retention_w2_independently_1w_avg_shifted as retention_w2_independently_1w_avg_latest,
+    retention_w3_independently_1w_avg_shifted as retention_w3_independently_1w_avg_latest,
+    retention_w4_independently_1w_avg_shifted as retention_w4_independently_1w_avg_latest,
+
+    retention_d28_1w_avg_shifted_d28 as retention_d28_1w_avg,
+    retention_d1_1w_avg_shifted_d28 as retention_d1_1w_avg,
+    retention_w1_1w_avg_shifted_d28 as retention_w1_1w_avg,
+    retention_w2_1w_avg_shifted_d28 as retention_w2_1w_avg,
+    retention_w3_1w_avg_shifted_d28 as retention_w3_1w_avg,
+    retention_w4_1w_avg_shifted_d28 as retention_w4_1w_avg,
+    retention_w1_independently_1w_avg_shifted_d28 as retention_w1_independently_1w_avg,
+    retention_w2_independently_1w_avg_shifted_d28 as retention_w2_independently_1w_avg,
+    retention_w3_independently_1w_avg_shifted_d28 as retention_w3_independently_1w_avg,
+    retention_w4_independently_1w_avg_shifted_d28 as retention_w4_independently_1w_avg,
+
+from $wau_mau
+where fielddate = $to_date;
+
+-- manual protection from duplicates
+$scores = select id,
+max(score) as score,
+max_by(factors,score) as factors,
+max_by(weighted_factors,score) as weighted_factors
+from `home/paskills/store/stable/scores` as S
+group compact by id;
+
+INSERT INTO `home/paskills/stat/dialogovo_stat_current_with_score` WITH truncate
+select M.*,
+    S.score as score,
+    S.factors as factors,
+    S.weighted_factors as weighted_factors,
+from `home/paskills/stat/dialogovo_stat_current` as M
+left join $scores as S on M.skill_id = S.id;
+
+-----------------------
+--------COHORTS--------
+-----------------------
+$from_shifted = $from_date + Interval('P56D');
+
+$t = select fielddate, `uuid`,
+count(*) as session_count, app_group,
+sum(tpt_session_duration_sec) as tpt_session_duration_sec,
+min(first_day) as first_day,
+from $base
+group compact by fielddate, `uuid`, app_group;
+
+$to_cohort = ($x) -> { RETURN case
+    when $x is null or $x=0 then 'new'
+    when $x = 1 then '1d'
+    when $x <= 7 then '1w'
+    when $x <= 14 then '2w'
+    when $x <= 21 then '3w'
+    when $x <= 28 then '4w'
+    when $x <= 35 then '5w'
+    when $x <= 42 then '6w'
+    when $x <= 49 then '7w'
+    when $x <= 56 then '8w'
+    else 'other' end; };
+
+$uuid_to_cohort = select fielddate,`uuid`,app_group,
+    $to_cohort(DateTime::ToDays(fielddate-first_use_date)) as first_use_cohort,
+    $to_cohort(DateTime::ToDays(fielddate-last_use_date)) as last_use_cohort,
+    $to_cohort(DateTime::ToDays(fielddate-first_day)) as alice_first_use_cohort,
+    session_count,
+    tpt_session_duration_sec,
+from (
+    select fielddate, `uuid`, session_count, app_group,
+    first_value(fielddate) over w as first_use_date,
+    lag(fielddate,1) over w as last_use_date,
+    tpt_session_duration_sec,
+    first_day,
+    from $t
+    window w as (partition compact by `uuid`, app_group order by fielddate asc ROWS BETWEEN unbounded preceding AND CURRENT ROW)
+)
+where fielddate > $from_shifted;
+
+insert into `home/paskills/stat/dialogovo_user_cohorts` with truncate
+select fielddate, app_group as app_group,
+first_use_cohort,
+last_use_cohort,
+alice_first_use_cohort,
+count(*) as user_count,
+sum(session_count) as session_count,
+sum(tpt_session_duration_sec) as tpt_session_duration_sec,
+from $uuid_to_cohort
+-- compact may lead to overflow as we group over `uuid`
+group by fielddate, first_use_cohort, last_use_cohort,app_group, alice_first_use_cohort
+;

@@ -1,0 +1,302 @@
+package NAlice;
+
+import "alice/library/logger/proto/config.proto";
+import "alice/megamind/protos/common/data_source_type.proto";
+import "alice/megamind/library/config/protos/extensions.proto";
+import "alice/megamind/protos/common/experiments.proto";
+import "alice/protos/data/language/language.proto";
+import "infra/libs/logger/protos/config.proto";
+import "infra/libs/udp_metrics/client/config/config.proto";
+import "library/cpp/getoptpb/proto/confoption.proto";
+
+message TConfig {
+    option (NGetoptPb.Title) = "Megamind server";
+
+    message TScenarios {
+        reserved 1;
+
+        message TConfig {
+            reserved 4;
+            message TDialogManagerConfig {
+                // Maximum number of times scenario could be active sequentially. For now amount of sequential
+                // ExpectsRequest=true from scenario. -1 means infinity aka modality.
+                optional int32 MaxActivityTurns = 1 [ default = 0 ];
+                optional bool DialogHistoryAllowed = 2 [ default = false ];
+                optional int32 MaxConsequentIrrelevantResponseCount = 3 [ default = 1 ];
+                optional int32 MaxConsequentUntypedSlotRequests = 4 [ default = 1 ];
+                optional bool IsPlayerOwnerPriorityAllowed = 5 [ default = false ];
+                // 0 is inf
+                optional uint64 ActiveScenarioTimeoutSeconds = 6;
+            }
+            optional TDialogManagerConfig DialogManagerParams = 1;
+
+            // When enabled, Megamind will add a HTTP header "X-Oauth-Token" with Run/Commit/Apply requests.
+            // OAuth usage in protocol scenarios is DEPRECATED, use TVM instead.
+            optional bool EnableOAuth = 2 [ default = false ];
+
+            message THandlersConfig {
+                optional TSource Run = 1;
+                optional TSource Apply = 2;
+                optional TSource Commit = 3;
+                optional TSource Callback = 5;
+                optional TSource Continue = 6;
+            }
+
+            optional THandlersConfig HandlersConfig = 3;
+            optional bool PureSession = 5;
+            optional uint64 ScenarioSessionTimeoutSeconds = 6;
+            optional bool ReplaceScenarioNameWithPrevious = 7;
+            optional bool DisableWhisperAsCallbackOwner = 8;
+
+            message TDataSourceConditions {
+                message TDataSourceCondition {
+                    message TOnSemanticFrameCondition {
+                        optional string SemanticFrameName = 1;
+                    }
+                    message TOnUserLanguage {
+                        optional ELang Language = 1;
+                    }
+                    message TOnExperimentFlag {
+                        optional string FlagName = 1;
+                    }
+
+                    oneof Condition {
+                        TOnSemanticFrameCondition OnSemanticFrameCondition = 1;
+                        TOnUserLanguage OnUserLanguage = 2;
+                        TOnExperimentFlag OnExperimentFlag = 3;
+                    }
+                }
+
+                optional EDataSourceType DataSourceType = 1;
+                repeated TDataSourceCondition Conditions = 2;
+            }
+            repeated TDataSourceConditions ConditionalDataSources = 9;
+        }
+        // Scenario name -> config.
+        map<string, TConfig> Configs = 2;
+        // Default config is used for all scenarios with no config specified.
+        optional TConfig DefaultConfig = 3 [ (Required) = true ];
+    }
+
+    message TAppHost {
+        optional uint32 WorkerThreads = 1 [
+            (NGetoptPb.Conf).Descr = "Number of apphost worker threads",
+            (NGetoptPb.Conf).Type = "<uint32>"
+        ];
+        optional uint32 GrpcTransportThreads = 2 [
+            default = 4,
+            (NGetoptPb.Conf).Descr = "Number of apphost grpc transport threads",
+            (NGetoptPb.Conf).Type = "<uint32>"
+        ];
+        optional uint64 StreamingSessionTimeoutMs = 3 [
+            default = 60000,
+            (NGetoptPb.Conf).Descr = "AppHost streaming session timeout",
+            (NGetoptPb.Conf).Type = "<uint64>"
+        ];
+
+        optional uint32 HttpPort = 5 [
+            (NGetoptPb.Conf).Descr = "AppHost http port",
+            (NGetoptPb.Conf).Short = "p",
+            (NGetoptPb.Conf).Type = "<uint16>"
+        ];
+
+        reserved 4;
+        reserved "HttpPortOffset";
+
+        oneof UseGrpcPort {
+            uint32 GrpcPortOffset = 6 [
+                default = 3,
+                (NGetoptPb.Conf).Descr = "AppHost grpc port offset (started from HttpPort)",
+                (NGetoptPb.Conf).Type = "<uint16>"
+            ];
+            uint32 GrpcPort = 7 [
+                (NGetoptPb.Conf).Descr = "AppHost grpc port",
+                (NGetoptPb.Conf).Type = "<uint16>"
+            ];
+        };
+
+        optional uint32 AsyncWorkerThreads = 8 [
+            (NGetoptPb.Conf).Descr = "Number of apphost async worker threads",
+            (NGetoptPb.Conf).Type = "<uint32>"
+        ];
+
+        optional bool UseGrpcServiceV2 = 9 [
+            default = false,
+            (NGetoptPb.Conf).Descr = "Use new grpc service (version 2)",
+            (NGetoptPb.Conf).Type = "<bool>"
+        ];
+
+        optional bool UseMaxInProgressLimit = 10 [
+            default = true,
+            (NGetoptPb.Conf).Descr = "Use special option in apphost to limit max in progess threads to prevent deadlock",
+            (NGetoptPb.Conf).Type = "<bool>"
+        ];
+    };
+
+    message TMonService {
+        oneof UsePort {
+            uint32 PortOffset = 1 [
+                default = 1,
+                (NGetoptPb.Conf).Descr = "Monitoring port offset (if not set it uses HttpPort + 1)",
+                (NGetoptPb.Conf).Type = "<uint16>"
+            ];
+            uint32 Port = 2 [
+                (NGetoptPb.Conf).Descr = "Monitoring port (if not set it uses HttpPort + 1)",
+                (NGetoptPb.Conf).Type = "<uint16>"
+            ];
+        };
+    };
+
+    message TProxySettings {
+        required string Host = 1 [
+            (NGetoptPb.Conf).Descr = "Hostname for proxy server (all requests will be proxying if Host is specified)"
+        ];
+        required uint32 Port = 2 [
+            (NGetoptPb.Conf).Descr = "Port for proxy server",
+            (NGetoptPb.Conf).Type = "<uint16>"
+        ];
+        repeated string Headers = 3 [
+            (NGetoptPb.Conf).Descr = "Headers which will be added (or replace existing) to each request made by megamind"
+        ];
+    };
+
+    message TSource {
+        reserved 5;
+        reserved "Tvm2ClientId";
+
+        optional string Url = 1;
+        optional uint32 TimeoutMs = 2;
+        optional uint32 RetryPeriodMs = 3;
+        optional uint32 MaxAttempts = 4 [ default = 1 ];
+        optional string Quota = 6;
+        optional bool AliceFetcherNoRetry = 7 [ default = false ];
+        optional string Consumer = 8;
+        optional bool EnableFastReconnect = 9 [ default = false ];
+        optional bool OverrideHttpAdapterReqId = 10 [default = false];
+        optional uint32 MaxConnectionAttempts = 11 [ default = 1 ];
+        optional uint32 MaxConnectionAttemptMs = 12 [ default = 50 ];
+
+        reserved "TSaasSourceOptions", "SaasSourceOptions";
+        reserved 13;
+    };
+
+    message TSaasSourceOptions {
+        message TSaasQueryParams {
+            optional string Kps = 1;
+            optional string Formula = 2;
+            optional string Softness = 3;
+            optional double Threshold = 4;
+            optional string How = 5;
+        }
+
+        optional string ServiceName = 1;
+        optional TSaasQueryParams SaasQueryParams = 2;
+        optional string UnistatPrefix = 3 [default = "recommender"];
+        optional uint32 WordsCountMinInRequest = 4 [default = 0];
+
+        optional string Host = 5;
+        optional uint32 Port = 6;
+        optional uint32 TimeoutMs = 7;
+    }
+
+    message TDumpRunRequestsMode {
+        enum EFormat {
+            // Dump all scenario requests in following way:
+            //    Path constructed in following way: "OutputDirPath / <ScenarioName> / <Method> / <RequestId>"
+            //        where <Method> := run | apply | commit
+            // File is a request binary representation, one of following:
+            //     TScenarioRunRequest, TScenarioApplyRequest or TScenarioCommitRequest respectively
+            BaseFormat = 1;
+        }
+        optional bool Enabled = 1 [default = false];
+        optional string OutputDirPath = 2 [default = "dumps"];
+        optional EFormat DumpFormat = 3 [default = BaseFormat];
+    };
+
+    reserved "HttpServer", "ServiceSources", "ScenariosSources";
+    reserved 1, 6, 7, 8;
+
+    optional TAppHost AppHost = 2;
+    optional TMonService MonService = 3;
+    optional TRTLog RTLog = 4 [ (Required) = true ];
+    optional TScenarios Scenarios = 5 [ (Required) = true ];
+
+    reserved "TVM2Id", "TVM2Secret", "TVM2UpdatePeriodSec";
+    reserved 100, 101, 102;
+
+    optional string BassSkillsUrl = 104 [(Env) = "BASS_SKILLS_URL"];
+    optional string BassAvatarsHost = 105 [(Env) = "BASS_AVATARS_HOST"];
+
+    optional string NannyService = 106 [(Env) = "NANNY_SERVICE_ID"];
+    optional string ClusterType = 107 [(Env) = "NANNY_SERVICE_ID"];
+
+    optional string FormulasPath = 108 [ default = "./formulas" ];
+
+    reserved 109;
+
+    optional TProxySettings ViaProxy = 110;
+
+    optional string GeobasePath = 111 [ default = "./geodata6.bin" ];
+
+    optional bool TestMode = 112 [ default = false ];
+
+    optional string FileSensors = 113;
+
+    optional string RandomSeedSalt = 116 [ default = "" ];
+
+    // If empty then local 'scenarios' folder will be used
+    optional string ScenarioConfigsPath = 117 [default = ""];
+
+    optional TDumpRunRequestsMode DumpRunRequestsMode = 118;
+
+    optional TExperimentsProto Experiments = 119;
+
+    optional string MegamindAnalyticsLogFile = 120 [ default = "/dev/null" ];
+
+    reserved 121;
+    reserved "ShouldPingCriticalSources";
+
+    optional string MegamindProactivityLogFile = 122 [ default = "/dev/null" ];
+
+    reserved "Tvm2WaitUpdateOnStart";
+    reserved 123;
+
+    optional bool LockGeobase = 124 [ default = false ];
+
+    optional string CurrentDC = 125 [
+        (NGetoptPb.Conf).Descr = "abbr for current datacenter (sas|man|vla), can be empty"
+    ];
+
+    // A zero value means that requests will not time out
+    // Timeout will be calculated as WatchDogRequestTimeoutSeconds + Random(WatchDogRequestTimeoutSeconds).
+    optional uint32 WatchDogRequestTimeoutSeconds = 126;
+
+    reserved "TTvm2ClientConfig", "Tvm2ClientConfig", "ShouldCheckTvmCacheStatusOnPing";
+    reserved 127, 128;
+
+    optional uint32 RequestThreadsCount = 129;
+
+    optional string ClassificationConfigPath = 130;
+    optional uint64 ActiveScenarioTimeoutSeconds = 131 [default = 600];
+    optional uint64 DisabledScenarioSessionTimeoutSeconds = 132 [default = 604800]; // week
+    reserved 133;
+    reserved "VinsPreClassificationModelPath";
+    optional string PartialPreClassificationModelPath = 134 [default = "./resources/partial_preclf_model.cbm"];
+    // VinsRequestHintBlurRatio is the number of different hints for same utterance. Should be positive.
+    optional uint32 VinsRequestHintBlurRatio = 135 [default = 5];
+
+    optional bool EnableUdpMetrics = 136;
+    optional NInfra.TLoggerConfig EventLogConfig = 137;
+    optional NUdpMetrics.TSelfBalancingClientConfig StatisticsClientConfig = 138;
+
+    // If empty then local 'combinators' folder will be used
+    optional string CombinatorConfigsPath = 139;
+
+    reserved "UseDummyTvm";
+    reserved 140;
+
+    optional TSaasSourceOptions SaasSkillDiscoveryOptions = 141;
+
+    optional string UnifiedAgentUri = 142;
+    optional string UnifiedAgentLogFile = 143;
+}

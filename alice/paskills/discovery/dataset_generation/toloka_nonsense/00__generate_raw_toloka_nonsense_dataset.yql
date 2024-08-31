@@ -1,0 +1,89 @@
+USE hahn;
+PRAGMA yt.InferSchema = '1';
+
+$top_results = 5;
+$total_results = 15;
+
+$hash = ($url) -> {
+    RETURN Digest::MurMurHash($url);
+};
+
+$extract_saas_results = ($saas_results) -> {
+    RETURN Yson::ConvertTo($saas_results, ParseType(@@
+        List<
+            Struct<
+                relevance: String,
+                url: String
+            >
+        >
+    @@))
+};
+
+$__SAAS_ANSWERS_RAW = (
+    SELECT
+        Yson::LookupString(query, 'query') as query,
+        response
+    FROM
+    `//home/paskills/discovery/datasets/TolokaNonsense/raw/saas_answers`);
+
+$__SAAS_ANSWERS_FLATTEN = (
+    SELECT
+        query,
+        saas_result.relevance as relevance,
+        saas_result.url as skill_id
+    FROM $__SAAS_ANSWERS_RAW
+    FLATTEN LIST BY ($extract_saas_results(response) as saas_result));
+
+$__SAAS_ANSWERS_RANKED_BY_RELEVANCE = (
+    SELECT
+        query,
+        relevance,
+        skill_id,
+        $hash(skill_id) as query_hash,
+        ROW_NUMBER() OVER w AS skill_relevance_position
+    FROM $__SAAS_ANSWERS_FLATTEN
+    WINDOW w AS (
+        PARTITION BY query
+        ORDER BY relevance DESC
+    ));
+
+$__SAAS_ANSWERS_RANKED_BY_HASH = (
+    SELECT
+        query,
+        relevance,
+        skill_id,
+        query_hash,
+        ROW_NUMBER() OVER w AS hash_sort_position
+    FROM
+        (SELECT *
+        FROM $__SAAS_ANSWERS_RANKED_BY_RELEVANCE
+        WHERE skill_relevance_position > $top_results)
+    WINDOW w AS (
+        PARTITION BY query
+        ORDER BY query_hash DESC
+    ));
+
+$__SAAS_NONSENSE_TOTAL = (
+    SELECT
+        query,
+        skill_id
+    FROM
+        $__SAAS_ANSWERS_RANKED_BY_RELEVANCE
+    WHERE
+       skill_relevance_position <= $top_results
+    UNION ALL
+        SELECT
+            query,
+            skill_id
+        FROM
+            $__SAAS_ANSWERS_RANKED_BY_HASH
+        WHERE
+            hash_sort_position <= ($total_results - $top_results)
+);
+
+INSERT INTO `//home/paskills/discovery/datasets/TolokaNonsense/raw/all` WITH TRUNCATE
+SELECT
+    query,
+    skill_id
+FROM $__SAAS_NONSENSE_TOTAL;
+

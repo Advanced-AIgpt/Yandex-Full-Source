@@ -1,0 +1,122 @@
+package NMatrix.NNotificator;
+
+import "alice/matrix/library/config/config.proto";
+
+import "infra/yp_service_discovery/libs/sdlib/config/proto/config.proto";
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+message TPushesAndNotificationsClientSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+    optional bool MockMode = 2 [(NProtoConfig.Help) = "Mock all delivery actions (disable subway and personal cards request, dry_run mode for sup).", default = false];
+    optional bool UseOldConnectionsStorage = 3 [(NProtoConfig.Help) = "Use old connections storage.", default = false];
+}
+
+message TUserWhiteListSettings {
+    optional bool Enabled = 1 [(NProtoConfig.Help) = "Enable white list.", default = false];
+    repeated string Puids = 2 [(NProtoConfig.Help) = "List of puids."];
+}
+
+message TDeliveryServiceSettings {
+}
+
+message TDevicesServiceSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+
+    optional bool UseOldConnectionsStorage = 2 [(NProtoConfig.Help) = "Use old connections storage.", default = true];
+}
+
+message TDirectiveServiceSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+}
+
+message TGDPRServiceSettings {
+}
+
+message TLocatorServiceSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+
+    optional bool DisableYDBOperations = 2 [(NProtoConfig.Help) = "Disable YDB operations.", default = false];
+}
+
+message TSubscriptionsServiceSettings {
+}
+
+message TNotificationsServiceSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+}
+
+message TProxyServiceSettings {
+    message TSDSettings {
+        message TEndpointSetKey {
+            optional string Cluster = 1 [(NProtoConfig.Help) = "Cluster (DC)."];
+            optional string Id = 2 [(NProtoConfig.Help) = "Endpoint set's id."];
+        }
+
+        optional string LocalCluster = 1 [(NProtoConfig.Help) = "Local DC."];
+        repeated TEndpointSetKey EndpointSetKeys = 2 [(NProtoConfig.Help) = "Endpoint sets's keys."];
+        required NYP.NServiceDiscovery.TSDConfigProto SDConfig = 3 [(NProtoConfig.Help) = "Service discovery config."];
+    }
+
+    message TAddressSettings {
+        required string Host = 4 [(NProtoConfig.Help) = "Endpoint's host."];
+        required uint32 Port = 5 [(NProtoConfig.Help) = "Endpoint's port."];
+    }
+
+    message TTimeoutSettings {
+        message TRouteTimeout {
+            optional string Route = 1 [(NProtoConfig.Help) = "Route."];
+            optional string Timeout = 2 [(NProtoConfig.Help) = "Timeout."];
+        }
+
+        optional string DefaultTimeout = 1 [(NProtoConfig.Help) = "Default timeout.", default = "1s"];
+        repeated TRouteTimeout RouteTimeouts = 2 [(NProtoConfig.Help) = "Special timeouts for routes."];
+    }
+
+    oneof EndpointSettings {
+        TSDSettings SD = 1 [(NProtoConfig.Help) = "Service discrovery settings."];
+        TAddressSettings Address = 2 [(NProtoConfig.Help) = "Endpoint address."];
+    }
+
+    optional TTimeoutSettings Timeout = 3 [(NProtoConfig.Help) = "Request timeout settings."];
+    optional string DestinationServiceName = 4 [(NProtoConfig.Help) = "Destination service name."];
+
+    optional bool ProxyPingRequest = 5 [(NProtoConfig.Help) = "Proxy /ping request (only for tests, more info in ZION-291).", default = false];
+}
+
+message TUpdateConnectedClientsServiceSettings {
+    optional TYDBClientSettings YDBClient = 1 [(NProtoConfig.Help) = "YDB client options."];
+
+    optional bool DisableYDBOperationsForDiffUpdates = 2 [(NProtoConfig.Help) = "Disable YDB operations for diff updates.", default = false];
+    optional bool DisableYDBOperationsForFullStateUpdates = 3 [(NProtoConfig.Help) = "Disable YDB operations for full state updates.", default = false];
+    optional bool DisableYDBOperationsForDirectivesSelects = 4 [(NProtoConfig.Help) = "Disable YDB operations for directives selects.", default = false];
+}
+
+message TUpdateDeviceEnvironmentServiceSettings {
+}
+
+message TApplicationSettings {
+    required TServerSettings Server = 1 [(NProtoConfig.Help) = "Server options."];
+    optional TLoggerSettings Log = 2 [(NProtoConfig.Help) = "Logger options."];
+    optional TRtLogSettings RtLog = 3 [(NProtoConfig.Help) = "RtLog options."];
+    required TNehSettings Neh = 4 [(NProtoConfig.Help) = "Neh options."];
+    required TYDBClientCommonSettings YDBClientCommon = 5 [(NProtoConfig.Help) = "YDB client common options."];
+    optional TIoTClientSettings IoTClient = 6 [(NProtoConfig.Help) = "IoT client options."];
+    optional TPushesAndNotificationsClientSettings PushesAndNotificationsClient = 7 [(NProtoConfig.Help) = "Pushes and notifications client options."];
+    optional TSubwayClientSettings SubwayClient = 8 [(NProtoConfig.Help) = "Subway client options."];
+    optional TTvmClientSettings TvmClient = 9 [(NProtoConfig.Help) = "Tvm client options."];
+    optional TUserWhiteListSettings UserWhiteList = 10 [(NProtoConfig.Help) = "User white list options."];
+    optional bool LockAllMemory = 11 [(NProtoConfig.Help) = "Lock all memory - current and future.", default = true];
+
+
+    optional TDeliveryServiceSettings DeliveryService = 12 [(NProtoConfig.Help) = "Delivery service options."];
+    optional TDevicesServiceSettings DevicesService = 13 [(NProtoConfig.Help) = "Devices service options."];
+    optional TDirectiveServiceSettings DirectiveService = 14 [(NProtoConfig.Help) = "Directive service options."];
+    optional TGDPRServiceSettings GDPRService = 15 [(NProtoConfig.Help) = "GDPR service options."];
+    optional TLocatorServiceSettings LocatorService = 16 [(NProtoConfig.Help) = "Locator service options."];
+    optional TNotificationsServiceSettings NotificationsService = 17 [(NProtoConfig.Help) = "Notifications service options."];
+    optional TProxyServiceSettings ProxyService = 18 [(NProtoConfig.Help) = "Proxy service options."];
+    optional TSubscriptionsServiceSettings SubscriptionsService = 19 [(NProtoConfig.Help) = "Subscriptions service options."];
+    optional TUpdateConnectedClientsServiceSettings UpdateConnectedClientsService = 20 [(NProtoConfig.Help) = "UpdateConnectedClients service options."];
+    optional TUpdateDeviceEnvironmentServiceSettings UpdateDeviceEnvironmentService = 21 [(NProtoConfig.Help) = "UpdateDeviceEnvironment service options."];
+}

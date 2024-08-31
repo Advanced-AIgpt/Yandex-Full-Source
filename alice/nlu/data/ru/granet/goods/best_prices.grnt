@@ -1,0 +1,139 @@
+import: common/adjectives.grnt
+import: common/commands.grnt
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/questions.grnt
+import: common/verbs.grnt
+
+form alice.goods.best_prices.tagger:
+    enable_alice_tagger: true
+    enable_granet_parser: false
+    slots:
+        request:
+            type: string
+            concatenate_strings: true
+ 
+form alice.goods.best_prices.classifier:
+    root:
+        $Root
+
+        %force_negative
+        $Negative
+            
+    filler:
+        $Filler
+
+form alice.goods.best_prices:
+    slots:
+        request:
+            type: string
+            source: $Request
+
+    root:
+        $Root
+
+        %force_negative
+        $Negative
+
+    filler:
+        $Filler
+
+$Root:
+    [$Common.Search* $Where* $Common.ToBuy* $Common.Best* $BestPrice+ $Request?]
+
+$Where:
+    %lemma
+    $Common.QuestionWhere
+    $Common.At $Common.ConjunctionThat магазин
+
+$BestPrice:
+    %lemma
+    бюджетно
+    бюджетный
+    [бюджетная цена]
+    [выгодная цена]
+    [выгоднее купить]
+    [выгодно купить]
+    [выгодное предложение]
+    выгодно
+    выгодный
+    дешевле
+    дешевле всего
+    дешевое
+    дешевый
+    [дешевый вариант]
+    [дешевое предложение]
+    [дешевая цена]
+    [лучшая цена]
+    недорого
+    [недорогая цена]
+    [низкая цена]
+    [низкие цены]
+    по $Common.Best цене
+    по дешевой цене
+    по бюджетной цене
+    подешевле
+
+$Filler:
+    $nonsense
+    $Common.Filler
+    $Common.ToWant
+    $Common.WayToCallAlice
+    $Common.At? $Common.Now
+    %lemma
+    $Common.At? ($Common.PronounThis | данный)* (время)+
+    в интернет магазине
+    в интернете
+    интернет
+    можно
+    онлайн
+    сайт
+    самый
+    товар
+
+$Request:
+    .+
+    %negative
+    $RequestFiller
+
+$RequestFiller:
+    $Common.Filler
+    $Common.QuestionWhere
+    $Common.ConjunctionIf
+    $Common.PronounMe
+    $Common.PronounYou
+    $Common.PronounThis
+    $Common.PronounThat
+    $Common.PronounMyself
+    $Common.PronounPossessive3Person
+    $Common.Search
+    $Common.Something
+    $Common.Speak
+    $RequestFillerCustomWords
+
+$RequestFillerCustomWords:
+    %lemma
+    %enable_synonyms all
+    а
+    дешевый
+    купить
+    недорогой
+    сколько стоит
+    у
+    цена
+
+$Negative:
+    .* $Common.QuestionHow+ [правильно* $Common.ToSpell+] .*
+    %lemma
+    .* банк .*
+    .* банковский вклад .*
+    .* букмекерская компания .*
+    .* курс валюты .*
+    .* курс доллара .*
+    .* курс евро .*
+    .* кредит .*
+    .* инвестиции .*
+    .* ставки на спорт .*
+

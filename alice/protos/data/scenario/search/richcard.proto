@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package NAlice.NData;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/search";
+option java_package = "ru.yandex.alice.protos.data.scenario.search";
+
+//
+// TODO: Need to move some common objects from music/player.proto and video/gallery.proto to scenario/objects
+//
+
+import "alice/protos/data/scenario/objects/books.proto";
+import "alice/protos/data/scenario/objects/companies.proto";
+import "alice/protos/data/scenario/objects/image.proto";
+import "alice/protos/data/scenario/objects/music.proto";
+import "alice/protos/data/scenario/objects/person.proto";
+import "alice/protos/data/scenario/objects/places.proto";
+import "alice/protos/data/scenario/objects/text.proto";
+import "alice/protos/data/scenario/objects/video.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TSearchRichCardData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // Заголовок ответа
+    message THeader {
+        // Основной текст заголовка
+        string Text = 1 [json_name = "text", (NYT.column_name) = "text"];
+        // Вспомогательный текст заголовка, пишется на второй строке серым цветом
+        string ExtraText = 2 [json_name = "extra_text", (NYT.column_name) = "extra_text"];
+        // Поисковый запрос, который использовался для получения ответа
+        string SearchUrl = 3 [json_name = "search_url", (NYT.column_name) = "search_url"];
+        // Источник ответа (википедия, ...)
+        string Url = 4 [json_name = "url", (NYT.column_name) = "url"];
+        // Выделенное название хоста, с которого взят ответ
+        string Hostname = 5 [json_name = "hostname", (NYT.column_name) = "hostname"];
+        // Заголовок страницы хоста, с которого взят ответ
+        string Title = 6 [json_name = "title", (NYT.column_name) = "title"];
+        // Вспопогательная картинка перед ответом в заголовке. Может отсутствовать
+        TSingleImage.TImageRef Image = 7 [json_name = "image", (NYT.column_name) = "image"];
+        // Значение рейтинга (для заведений, достопримечательностей, etc)
+        string Rating = 8 [json_name = "rating", (NYT.column_name) = "rating"];
+        // Второй вспомогательный текст, пишется под ExtraText для ряда ответов поиска
+        string ExtraText2 = 9 [json_name = "extra_text2", (NYT.column_name) = "extra_text2"];
+    }
+
+    message TBlock {
+
+        message TSection {
+            // Zero-based порядок следования секций в блоке (необходим, так как array в json может быть неупорядочен)
+            // Рендер может использовать это поле, а может и собрать секции в своем порядке в соответствии с внутренней логикой
+            int32 Order = 1 [json_name = "order", (NYT.column_name) = "order"];
+            // Статус видимости секции. Невидимая секция не отображается, но может иметь коллбеки.
+            bool Hidden = 2 [json_name = "hidden", (NYT.column_name) = "hidden"];
+            // Один из протобафов для отображения данных конкретной секции. Протобаф определяет тип данной секции
+            oneof Section {
+                option (NYT.variant_field_name) = "section";
+                // Простой абзац текста, содержит основную фразу и дополнительный текст. Опционально - картинка
+                TSimpleText Text = 3 [json_name = "text", (NYT.column_name) = "text"];
+                // Список "табличных" данных (фактов, ...) в формате "текст" - "текст"
+                TFactList FactList = 4 [json_name = "fact_list", (NYT.column_name) = "fact_list"];
+                // Скроллируемая галлерея изображений
+                TImageGallery Gallery = 5 [json_name = "gallery", (NYT.column_name) = "gallery"];
+                // Альбомы исполнителя или группы
+                // Персоны
+                TPersons Persons = 9 [json_name = "persons", (NYT.column_name) = "persons"];
+                // Достопримечательности, геоместа и т.п.
+                TGeoPlaces GeoPlaces = 10 [json_name = "geo_places", (NYT.column_name) = "geo_places"];
+                // Книги
+                TBooks Books = 11 [json_name = "books", (NYT.column_name) = "books"];
+                // Галлерея клипов. Функционально похожа на TGallery, но с функциями видео.
+                TVideoGallery VideoClips = 12 [json_name = "video_clips", (NYT.column_name) = "video_clips"];
+                // Галлерея фильмов. От клипов отличается более подробной информацией, рейтингом и т.п., хотя шарят общую структуру
+                TVideoGallery VideoMovies = 13 [json_name = "video_movies", (NYT.column_name) = "video_movies"];
+                // Группы исполнителей
+                TMusicBands MusicBands = 14 [json_name = "music_bands", (NYT.column_name) = "music_bands"];
+                // Альбомы исполнителя или группы
+                TMusicAlbums MusicAlbums = 15 [json_name = "music_albums", (NYT.column_name) = "music_albums"];
+                // Треки исполнителя или группы
+                TMusicTracks MusicTracks = 16 [json_name = "music_tracks", (NYT.column_name) = "music_tracks"];
+                // Организации
+                TCompanies Companies = 17 [json_name = "companies", (NYT.column_name) = "companies"];
+            }
+            reserved 6; reserved "Clips";
+            reserved 7; reserved "Movies";
+            reserved 8; reserved "Albums";
+            // Вспомогательные директивы и инструкции, которые описывают поведение станции
+            // TODO - этот раздел не завершен, тут могут быть обработчики ивентов на
+            // - эвент "клик пользователя по названию блока в панель навигации"
+            // - эвент "момент появления блока на экране (если общая карточка достаточно длинная)"
+            // - эвент "момент исчезания блока с экрана"
+        }
+
+        // Описание структуры блока
+        enum EBlockType {
+            Custom = 0;         // Блок имеет неизвестную структуру или содержит несколько принципиально разных секций
+            Main = 1;           // Блок с основной информацией по ответу. Обычно идет самым первым, содержит несколько секций
+            Gallery = 2;        // Блок с графическими данными (галлерея)
+            Tracks = 3;         // Блок с треками исполнителей
+            Movie = 4;          // Блок с фильмами
+            Albums = 5;         // Блок с музыкальными альбомами
+            Info = 6;           // Вспомогательный информационный блок
+            Suggest = 7;        // Блок с саджестами
+            SeeAlso = 8;        // Релативная информация по ответу
+            Persons = 9;        // Блок с описанием людей, релативных к запросу
+            Places = 10;        // Блок с описанием местоположений (POI), релативных к данному запросу
+            Books = 11;         // Список книг
+            Clips = 12;         // Блок с клипами
+            Band = 13;          // Музыкальные группы
+            Companies = 14;     // Компании, формы и другие организации
+            Software = 15;      // Игры, программное обеспечение
+                                // ... список будет расширяться
+        }
+        // Основной заголовок блока. Может быть "", в этом случае имя заголовка не пишется.
+        string Title = 1 [json_name = "title", (NYT.column_name) = "title"];
+        // Заголовок блока, который используется в панели навигации. Обычно совпадает с Title или представляет собой его короткую версию
+        // Может быть "", в этом случае в навигации этот блок не отображается
+        string TitleNavigation = 2 [json_name = "title_navigation", (NYT.column_name) = "title_navigation"];
+        // Zero-based порядок следования блоков (необходим, так как array в json может быть неупорядочен)
+        // Рендер может использовать это поле, а может и собрать блоки в своем порядке в соответствии с внутренней логикой
+        int32 Order = 3 [json_name = "order", (NYT.column_name) = "order"];
+        // Тип блока
+        EBlockType BlockType = 4 [json_name = "block_type", (NYT.column_name) = "block_type"];
+        // Статус видимости блока. Невидимый блок не отображается, но может иметь коллбеки (см ниже)
+        bool Hidden = 5 [json_name = "hidden", (NYT.column_name) = "hidden"];
+        // Список секций, которые включены в этот блок
+        repeated TSection Sections = 6 [json_name = "sections", (NYT.column_name) = "sections"];
+        // Вспомогательные директивы и инструкции, которые описывают поведение станции
+        // TODO - этот раздел не завершен, тут могут быть обработчики ивентов на
+        // - эвент "клик пользователя по названию блока в панель навигации"
+        // - эвент "момент появления блока на экране (если общая карточка достаточно длинная)"
+        // - эвент "момент исчезания блока с экрана"
+        // Возможно, блок может содержать и доп. данные, например, возможность сделать collapse на весь блок (свернуть)
+    }
+
+    // Общий тип карточки, по решению сценария или результатам ответа поиска
+    string CardType = 1 [json_name = "card_type", (NYT.column_name) = "card_type"];
+    // Данные заголовка
+    THeader Header = 2 [json_name = "header", (NYT.column_name) = "header"];
+    // Данные всех блоков
+    repeated TBlock Blocks = 3 [json_name = "blocks", (NYT.column_name) = "blocks"];
+    // Исходный запрос пользователя. Это поле может быть пустым, если ответ сценария пришел от коллбека
+    string Question = 4 [json_name = "question", (NYT.column_name) = "question"];
+}

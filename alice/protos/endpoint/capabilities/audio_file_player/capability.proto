@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/audio_file_player;audiofileplayerpb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "AudioFilePlayerCapabilitiesProto";
+
+import "alice/protos/data/channel/channel.proto";
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/extensions/extensions.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TAudioFilePlayerCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = AudioFilePlayerCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    enum EStoredSound {
+        UnknownSound = 0;
+        CallRinging = 1;
+        CallEndedNannyWarning = 2;
+    }
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated EStoredSound StoredSounds = 1 [json_name = "stored_sounds", (NYT.column_name) = "stored_sounds"];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    // directives
+    message TLocalAudioFilePlayDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "local_audio_file_play";
+        option (DirectiveType) = LocalAudioFilePlayDirectiveType;
+
+
+        EStoredSound StoredSound = 1 [json_name = "stored_sound", (NYT.column_name) = "stored_sound"];
+        EDirectiveChannel Channel = 2 [json_name = "channel", (NYT.column_name) = "channel"];
+        bool Looped = 3 [json_name = "looped", (NYT.column_name) = "looped"];
+    }
+
+    message TLocalAudioFileStopDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "local_audio_file_stop";
+        option (DirectiveType) = LocalAudioFileStopDirectiveType;
+
+
+        EStoredSound StoredSound = 1 [json_name = "stored_sound", (NYT.column_name) = "stored_sound"];
+        EDirectiveChannel Channel = 2 [json_name = "channel", (NYT.column_name) = "channel"];
+    }
+}

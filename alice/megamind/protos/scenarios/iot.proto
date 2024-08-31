@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios.iot";
+option java_outer_classname = "IotNluResult";
+
+message TIotEntity {
+    message TExtra {
+        repeated string Ids = 1;
+        repeated bool IsSynonym = 2;
+        repeated bool IsCloseVariation = 3;
+        bool IsExact = 4;
+    }
+
+    reserved 1;
+    reserved "Type";
+
+    string Value = 2;  // значение, ассоциированное с сущностью; например, id комнаты/устройства/группы
+    string Text = 3;   // кусок исходного текста, соответствующий данной сущности
+    reserved 4;
+    reserved "Key";    // та вариация имени сущности, которая нашлась в тексте (возможно, нашёлся её синоним или лемма)
+    int32 Start = 5;
+    int32 End = 6;
+    string TypeStr = 7;
+    TExtra Extra = 8;
+}
+
+message TBegemotIotNluResult {
+    enum EHypothesesType {
+        USER_INFO_BASED = 0;
+        EXTENDED_USER_INFO_BASED = 1;
+        DEMO_BASED = 2;
+    }
+
+    message THypothesis {
+        message TAction {
+            string Type = 1;
+            string Instance = 2;
+            string Relative = 3;
+            oneof Value {
+                string StrValue = 4;
+                int32 IntValue = 5;
+                bool BoolValue = 6;
+            }
+            string Unit = 7;
+        }
+
+        message TQuery {
+            string Type = 1;
+            string Instance = 2;
+            string Target = 3;
+        }
+
+        message TNlg {
+            repeated string Variants = 1 [json_name = "Variants"];
+        }
+
+        oneof Content {
+            TAction Action = 1;
+            TQuery Query = 2;
+        }
+
+        repeated string DevicesIds = 3;
+        repeated string RoomsIds = 4;
+        repeated string GroupsIds = 5;
+
+        reserved 6;
+        reserved "Datetime";
+
+        message TDateTime {
+            message TTimeUnits {
+                int32 Value = 1;
+                bool IsRelative = 2;
+            }
+
+            enum EWeekday {
+                W_NONE = 0;
+                W_MONDAY = 1;
+                W_TUESDAY = 2;
+                W_WEDNESDAY = 3;
+                W_THURSDAY = 4;
+                W_FRIDAY = 5;
+                W_SATURDAY = 6;
+                W_SUNDAY = 7;
+            }
+
+            enum EPeriod {
+                P_NONE = 0;
+                P_AM = 1;
+                P_PM = 2;
+            }
+
+            TTimeUnits Years = 1;
+            TTimeUnits Months = 2;
+            TTimeUnits Weeks = 3;
+            EWeekday Weekday = 4;
+            TTimeUnits Days = 5;
+            TTimeUnits Hours = 6;
+            TTimeUnits Minutes = 7;
+            TTimeUnits Seconds = 8;
+            EPeriod Period = 9;
+        }
+
+        message TDateTimeRange {
+            THypothesis.TDateTime Start = 1;
+            THypothesis.TDateTime End = 2;
+        }
+
+        oneof DateTime {
+            THypothesis.TDateTime ConcreteDateTime = 11 [json_name = "ConcreteDateTime"];
+            THypothesis.TDateTimeRange DateTimeRange = 12 [json_name = "DateTimeRange"];
+        }
+        string ScenarioId = 7 [json_name = "ScenarioId"];
+
+        repeated TIotEntity RawEntities = 8 [json_name = "RawEntities"];
+        TNlg Nlg = 9 [json_name = "Nlg"];
+        int32 Id = 10 [json_name = "Id"];
+
+        repeated string HouseholdIds = 13;
+    }
+
+    reserved "Hypotheses";
+    reserved 1;
+    EHypothesesType HypothesesType = 2 [json_name = "HypothesesType"];
+
+    repeated THypothesis TypedHypotheses = 3 [json_name = "TypedHypotheses"];
+}

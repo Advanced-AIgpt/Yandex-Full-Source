@@ -1,0 +1,83 @@
+import:
+    common/filler.grnt
+    common/commands.grnt
+    food/mc_menu.grnt
+    food/common.grnt
+
+filler:
+    $nonsense
+    $Common.Filler
+    в
+    из
+
+form alice.food.cart.clear_cart:
+    # Очисть корзину / Удали всё
+    lemma: true
+    root:
+        $ClearCart
+
+form alice.food.cart.remove_item:
+    # Убери пирожок
+    slots:
+        item_name:
+            source: $ItemTextSure; $ItemTextWeak
+            type: custom.food.mc_item_name
+        item_text:
+            source: $ItemTextSure; $ItemTextWeak
+            type: string
+    lemma: true
+    root:
+        $Prefix* $RemoveSure [$FromCart? $ItemTextWeak]
+        $Prefix* [$RemoveWeak $Cart? $ItemTextSure]
+        %force_negative
+        $ClearCart
+    $Prefix:
+        не
+        нет
+        да нет
+        не то
+        неправильно
+
+$ItemTextSure:
+    $custom.food.mc_item_name
+
+$ItemTextWeak:
+    $custom.food.mc_item_name
+    .+
+
+$RemoveSure:
+    удали
+    удалить
+    удалять
+    убери
+
+$RemoveWeak:
+    не нужно
+    не надо
+    отмени
+
+$FromCart:
+    из $Cart
+    в $Cart
+
+$ClearCart:
+    [$Clear+ ($Cart|$All)+]
+    [$Clear+ всю $Cart]
+
+$Clear:
+    очисть
+    очисти
+    очищать
+    очистить
+    удали
+    удалить
+    удалять
+    убери
+    сбрось
+
+$All:
+    всё
+    всё что у меня
+    все позиции
+    все блюда
+    все товары

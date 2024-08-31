@@ -1,0 +1,169 @@
+use hahn;
+
+pragma yt.Pool='paskills';
+pragma yson.DisableStrict = 'true';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma OrderedColumns;
+
+$today = CurrentUtcDate();
+$to = cast($today as String);
+--$from = cast($today - Interval("P30D") as String);
+--$from_date = cast('2020-08-01' as Date);
+$from_date = $today;
+$to_date = cast($to as Date);
+
+$from_minus_month = cast($from_date - Interval('P30D') as String);
+
+$app_log_mapping = AsDict(
+    ('browser_beta', 'mobile_browser'),
+    ('search_app_beta', 'search_app'),
+    ('browser_alpha', 'mobile_browser'),
+    ('quasar', 'quasar'),
+    ('launcher', 'launcher'),
+    ('auto', 'auto'),
+    ('yandex_phone', 'yandex_phone'),
+    ('browser_prod', 'mobile_browser'),
+    ('other', 'other'),
+    ('elariwatch', 'elariwatch'),
+    ('search_app_prod', 'search_app'),
+    ('tr_navigator', 'navigator'),
+    ('stroka', 'desktop_browser'),
+    ('music_app_prod', 'music'),
+    ('yabro_beta', 'desktop_browser'),
+    ('navigator', 'navigator'),
+    ('small_smart_speakers', 'small_smart_speakers'),
+    ('yabro_prod', 'desktop_browser')
+);
+
+$app_group = ($app) -> {
+    RETURN case
+                when $app in ('quasar', 'small_smart_speakers') then 'all_speakers'
+                when $app in ('search_app','mobile_browser','desktop_browser','search_app_prod','search_app_beta', 'browser_alpha', 'browser_beta', 'browser_prod', 'yabro_beta', 'yabro_prod') then 'with_screen'
+                when $app in ('auto','navigator') then 'in_car'
+                else 'other'
+            end;
+};
+
+-- generate dates from max_of($t+i,$from_date) to min_of($to, $t+$delta)
+$generate_dates = ($t, $delta) -> { RETURN ListMap(ListFromRange(
+        --0,
+        unwrap(max_of(max_of(DateTime::ToDays($from_date - $t), 0), 0)),
+        unwrap(min_of(max_of(DateTime::ToDays($to_date - $t), 0)+1, $delta))
+    ),
+    ($x) -> { RETURN $t + DateTime::IntervalFromDays(cast($x as Int16)); });
+};
+
+$all_uuids = SELECT `uuid`, fielddate, app,
+--cohort, is_new, platform, device, user_id,
+--$req_in_session(session) as reqs_in_session,
+count_if(input_type == 'voice') as voice_requests,
+count_if(input_type == 'click') as click_requests,
+count_if(input_type == 'text') as text_requests,
+count_if(input_type == 'push') as push_requests,
+count(*) as total_reqs, 
+count(distinct session_id) as sessions_cnt
+FROM range('home/alice/dialog/prepared_logs_expboxes',$from_minus_month, $to)
+group compact by `uuid`, cast(fielddate as Date) as fielddate, $app_log_mapping[app]??app as app
+--group compact by `uuid`, fielddate, /*app,*/ $app_log_mapping[app]??app as app
+;
+
+$base =
+select app, mau_fielddate, fielddate as orig_fielddate, `uuid`,--$app_group(app) as app_group,
+        --cohort, is_new, platform, version, device, user_id,
+        mau_fielddate == fielddate as for_dau,
+        mau_fielddate - fielddate < Interval('P7D') as for_wau,
+        mau_fielddate - fielddate < Interval('P30D') as for_mau,
+        voice_requests,
+        text_requests,
+        click_requests,
+        push_requests,
+        total_reqs,
+        sessions_cnt,
+from $all_uuids
+flatten by ($generate_dates(fielddate, 30) as mau_fielddate);
+
+$by_uuid = select mau_fielddate as fielddate, app, `uuid`,-- $app_group(app) as app_group
+bool_or(for_dau)??false as for_dau,
+bool_or(for_wau)??false as for_wau,
+bool_or(for_mau)??false as for_mau,
+
+sum_if(voice_requests,for_dau)??0 as voice_requests_for_dau,
+sum_if(voice_requests,for_wau)??0 as voice_requests_for_wau,
+sum_if(voice_requests,for_mau)??0 as voice_requests_for_mau,
+
+sum_if(text_requests,for_dau)??0 as text_requests_for_dau,
+sum_if(text_requests,for_wau)??0 as text_requests_for_wau,
+sum_if(text_requests,for_mau)??0 as text_requests_for_mau,
+
+sum_if(click_requests,for_dau)??0 as click_requests_for_dau,
+sum_if(click_requests,for_wau)??0 as click_requests_for_wau,
+sum_if(click_requests,for_mau)??0 as click_requests_for_mau,
+
+sum_if(push_requests,for_dau)??0 as push_requests_for_dau,
+sum_if(push_requests,for_wau)??0 as push_requests_for_wau,
+sum_if(push_requests,for_mau)??0 as push_requests_for_mau,
+
+sum_if(total_reqs,for_dau)??0 as total_reqs_for_dau,
+sum_if(total_reqs,for_wau)??0 as total_reqs_for_wau,
+sum_if(total_reqs,for_mau)??0 as total_reqs_for_mau,
+
+sum_if(sessions_cnt, for_dau)??0 as sessions_cnt_dau,
+sum_if(sessions_cnt, for_wau)??0 as sessions_cnt_wau,
+sum_if(sessions_cnt, for_mau)??0 as sessions_cnt_mau,
+
+sum_if(sessions_cnt, for_dau and total_reqs<=1)??0 as sessions_one_cnt_dau,
+sum_if(sessions_cnt, for_wau and total_reqs<=1)??0 as sessions_one_cnt_wau,
+sum_if(sessions_cnt, for_mau and total_reqs<=1)??0 as sessions_one_cnt_mau,
+
+--sum_if(duration,for_dau) as duration_for_dau,
+--sum_if(duration,for_wau) as duration_for_wau,
+--sum_if(duration,for_mau) as duration_for_mau,
+
+from $base
+group compact by mau_fielddate, `uuid`, app;
+
+$cube = select fielddate, 
+app, 
+unwrap($app_group(app)) as app_group,
+count_if(for_dau) as dau, count_if(for_wau) as wau, count_if(for_mau) as mau,
+
+unwrap(sum(voice_requests_for_dau)) as voice_requests_for_dau,
+unwrap(sum(voice_requests_for_wau)) as voice_requests_for_wau,
+unwrap(sum(voice_requests_for_mau)) as voice_requests_for_mau,
+
+unwrap(sum(text_requests_for_dau))  as text_requests_for_dau,
+unwrap(sum(text_requests_for_wau))  as text_requests_for_wau,
+unwrap(sum(text_requests_for_mau))  as text_requests_for_mau,
+
+unwrap(sum(click_requests_for_dau)) as click_requests_for_dau,
+unwrap(sum(click_requests_for_wau)) as click_requests_for_wau,
+unwrap(sum(click_requests_for_mau)) as click_requests_for_mau,
+
+unwrap(sum(push_requests_for_dau))  as push_requests_for_dau,
+unwrap(sum(push_requests_for_wau))  as push_requests_for_wau,
+unwrap(sum(push_requests_for_mau))  as push_requests_for_mau,
+
+unwrap(sum(total_reqs_for_dau)) as total_reqs_for_dau,
+unwrap(sum(total_reqs_for_wau)) as total_reqs_for_wau,
+unwrap(sum(total_reqs_for_mau)) as total_reqs_for_mau,
+
+unwrap(sum(sessions_cnt_dau)) as sessions_cnt_dau,
+unwrap(sum(sessions_cnt_wau)) as sessions_cnt_wau,
+unwrap(sum(sessions_cnt_mau)) as sessions_cnt_mau,
+
+unwrap(sum(sessions_one_cnt_dau)) as sessions_one_cnt_dau,
+unwrap(sum(sessions_one_cnt_wau)) as sessions_one_cnt_wau,
+unwrap(sum(sessions_one_cnt_mau)) as sessions_one_cnt_mau,
+
+--sum(duration_for_dau) as duration_for_dau,
+--sum(duration_for_wau) as duration_for_wau,
+--sum(duration_for_mau) as duration_for_mau,
+from $by_uuid
+where fielddate between $from_date and $to_date
+group by unwrap(fielddate) as fielddate, unwrap(app) as app;
+
+insert into `home/paskills/stat/alice_dau_wau_mau` WITH TRUNCATE
+select * from $cube
+union all
+select * from `home/paskills/stat/alice_dau_wau_mau`
+where fielddate not in (select distinct fielddate from $cube);

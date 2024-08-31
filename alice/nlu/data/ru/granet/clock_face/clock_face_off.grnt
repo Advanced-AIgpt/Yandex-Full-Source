@@ -1,0 +1,124 @@
+import: clock_face/common.grnt
+import: common/adverbs.grnt
+import: common/commands.grnt
+import: common/verbs.grnt
+
+form alice.clock_face_control.turn_off.ifexp.bg_exp_enable_clock_face_turn_off_granet:
+    lemma: true
+    is_fixlist: true
+    freshness: 2
+
+    slots:
+        time_preposition:
+            source: $ClockFace.TimePreposition
+            type: clock_face.time_preposition
+            matching_type: exact
+        time:
+            source:
+                $ClockFace.SlotTime
+                $ClockFace.UncertainTime
+            type:
+                typeparser.time
+                sys.time
+                sys.units_time
+                clock_face.custom_time
+            matching_type: exact
+        date:
+            source: $sys.date; $sys.weekdays
+            type:
+                sys.weekdays
+                sys.date
+        day_part:
+            source: $ClockFace.DayPart
+            type: clock_face.day_part
+            matching_type: exact
+
+    root:
+        [$Common.Lets* $TurnOff+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [$Common.Stop+ $Common.Display+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [($Common.No $Common.Display)+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+        [($Common.ToWant|$ClockFace.Do)+ (чтоб|чтобы) $TurnOffReflex+ $ClockFace.ClockComplex+ $ClockFace.Delay* $OptionalPart*]
+
+
+    filler: $Filler
+
+    $TurnOff:
+        %lemma
+        $Common.TurnOff
+        $Common.Hide
+        гаси
+        погаси
+        загаси
+        потуши
+        закрой
+        офф
+        тормози
+        %negative
+        выключаешься
+        отключаешься
+
+    $Filler:
+        $ClockFace.CustomFiller
+        $Common.From
+        чертовы
+        ужасные
+
+    $Distract:
+        %lemma
+        %enable_synonyms all
+        мешают
+        отвлекают
+        раздражают
+        раздражающие
+        отвлекающие
+
+    $Cant:
+        %lemma
+        %enable_synonyms all
+        не дают
+        не могу
+        не получается
+
+    $DontLike:
+        %lemma
+        %enable_synonyms all
+        не нравится
+        не интересные
+
+    $Action:
+        %lemma
+        %enable_synonyms all
+        $Common.ToSleep
+        работать
+        сосредоточиться
+
+    $Brightly:
+        %lemma
+        ярко
+        яркий
+
+    $TurnOffReflex:
+        %lemma
+        %enable_synonyms all
+        выключилось
+        погасло
+        убралось
+        скрылось
+        не горели
+
+    $TimeToTurnOff:
+        [пора? ($Common.ToSleep|$Common.TurnOff<g:|inf> свет)]
+
+    $AdditionalIntent:
+        [$Common.Very* $Brightly]
+        [$Common.Very* $Distract $Action?]
+        [$Common.Very* $DontLike]
+        [$Cant $Action]
+        $TimeToTurnOff
+        (чтоб|чтобы) $Common.No $Distract $Action?
+        (чтоб|чтобы) $ClockFace.ClockComplex? $TurnOffReflex
+
+    $OptionalPart:
+        $ClockFace.OptionalPart
+        $AdditionalIntent
+

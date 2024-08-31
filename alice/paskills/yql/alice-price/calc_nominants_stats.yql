@@ -1,0 +1,134 @@
+use hahn;
+
+
+PRAGMA yt.Pool = 'paskills';
+
+$from = '2020-07-14';
+$to = '2020-07-31';
+
+--$to_date = cast($to as Date);
+$from_date = cast($from as Date);
+
+$skills = select
+    ToDict(aggregate_list(AsTuple(id, name)))
+from `//home/paskills/skills/stable` where channel = 'aliceSkill';
+
+$b = select T.* from range(`home/paskills/sessions`, $from, $to)  as T
+join (
+    select skill_id, min(fielddate) as fielddate, `uuid` from range(`home/paskills/sessions`, $from, $to)
+    where activation_source_type = 'StoreAlicePriceCandidate' group by skill_id, `uuid`
+) as B using (skill_id, `uuid`)
+where T.fielddate >= B.fielddate;
+
+
+$base = select skill_id, fielddate, category, `uuid`, is_long_session, skill_session_duration_sec, cast(tpt_session_duration_sec as Double) as tpt_session_duration_sec,
+in_session_req_cnt, cohort, cast(first_day as date) as first_day, activation_source_type
+from $b;
+
+$base_by_user = select skill_id, category, `uuid`,
+min(first_day) as first_day,
+cast(count_if(activation_source_type != 'StoreAlicePriceCandidate') as Double) as returned_sessions,
+cast(count(distinct fielddate) as Double) as days_with_session,
+cast(count(*) as Double) as user_session_count_d,
+cast(count_if(is_long_session) as Double) as user_long_session_count_d,
+cast(count_if(in_session_req_cnt > 1) as Double) as session_1_plus_count_d,
+
+cast(sum(skill_session_duration_sec) as Double) as user_session_duration_d,
+cast(sum_if(skill_session_duration_sec, is_long_session) as Double) as user_long_session_duration_d,
+sum(tpt_session_duration_sec) as user_session_tpt_duration_d,
+sum_if(tpt_session_duration_sec, is_long_session) as user_long_session_tpt_duration_d,
+sum_if(tpt_session_duration_sec, in_session_req_cnt > 1) as user_plus_1_session_tpt_duration_d,
+
+cast(sum(in_session_req_cnt) as Double) as session_length_d,
+cast(sum_if(in_session_req_cnt, is_long_session) as Double) as long_session_length_d,
+cast(sum_if(in_session_req_cnt, in_session_req_cnt > 1) as Double) as session_1_plus_length_d,
+
+median(tpt_session_duration_sec) as median_single_session_duration,
+avg(tpt_session_duration_sec) as avg_single_session_duration,
+
+from $base
+group compact by skill_id, category, `uuid`;
+
+$p1 = '95';
+$p = unwrap(cast($p1 as Double)/100);
+
+select skill_id, category, DictLookup($skills, skill_id) as skill_name,
+
+median(user_session_tpt_duration_d) * count(`uuid`)/(sum(count(`uuid`)) over w) as score,
+
+-- main metrics
+count(`uuid`) as users,
+--count_if(first_day <= $from_date) as new_alice_users,
+100*count_if(first_day <= $from_date)/cast(count(`uuid`) as Float) as new_users_pcnt,
+
+sum(user_session_count_d) as session_cnt,
+100*sum(user_long_session_count_d)/cast(sum(user_session_count_d) as Float) as long_session_pcnt,
+
+PERCENTILE(returned_sessions, $p) as percentile_returned_sessions,
+median(user_session_tpt_duration_d) as median_session_tpt_duration,
+percentile(user_session_tpt_duration_d, $p) as percentile_session_tpt_duration,
+median(user_long_session_count_d) as median_long_sessions_per_user,
+median(session_1_plus_length_d) as median_session_1_plus_length,
+
+------------------------------------------------------
+--------- all other metrics---------------------------
+------------------------------------------------------
+100*sum(session_1_plus_count_d)/cast(sum(user_session_count_d) as Float) as session_plus_1_pcnt,
+
+sum(user_long_session_count_d) as long_session_cnt,
+sum(session_1_plus_count_d) as plus_1_session_cnt,
+
+avg(days_with_session) as avg_days_with_session,
+median(days_with_session) as median_days_with_session,
+PERCENTILE(days_with_session, $p) as percentile_days_with_session,
+max(days_with_session) as max_days_with_session,
+
+avg(returned_sessions) as avg_returned_sessions,
+median(returned_sessions) as median_returned_sessions,
+--PERCENTILE(returned_sessions, $p) as percentile_returned_sessions,
+max(returned_sessions) as max_returned_sessions,
+
+avg(user_session_count_d) as avg_sessions_per_user,
+median(user_session_count_d) as median_sessions_per_user,
+PERCENTILE(user_session_count_d, $p) as percentile_sessions_per_user,
+max(user_session_count_d) as max_sessions_per_user,
+
+avg(user_long_session_count_d) as avg_long_sessions_per_user,
+--median(user_long_session_count_d) as median_long_sessions_per_user,
+PERCENTILE(user_long_session_count_d, $p) as percentile_long_sessions_per_user,
+max(user_long_session_count_d) as max_long_sessions_per_user,
+
+avg(user_session_tpt_duration_d) as avg_session_tpt_duration,
+--median(user_session_tpt_duration_d) as median_session_tpt_duration,
+--percentile(user_session_tpt_duration_d, $p) as percentile_session_tpt_duration,
+max(user_session_tpt_duration_d) as max_session_tpt_duration,
+
+avg(user_long_session_tpt_duration_d) as avg_long_session_tpt_duration,
+median(user_long_session_tpt_duration_d) as median_long_session_tpt_duration,
+percentile(user_long_session_tpt_duration_d, $p) as percentile_long_session_tpt_duration,
+max(user_long_session_tpt_duration_d) as max_long_session_tpt_duration,
+
+avg(user_plus_1_session_tpt_duration_d) as avg_session_plus_1_tpt_duration,
+median(user_plus_1_session_tpt_duration_d) as median_session_plus_1_tpt_duration,
+percentile(user_plus_1_session_tpt_duration_d, $p) as percentile_session_plus_1_tpt_duration,
+max(user_plus_1_session_tpt_duration_d) as max_session_plus_1_tpt_duration,
+
+avg(session_length_d) as avg_session_length,
+median(session_length_d) as median_session_length,
+percentile(session_length_d, $p) as percentile_session_length,
+max(session_length_d) as max_session_length,
+
+avg(session_1_plus_length_d) as avg_session_1_plus_length,
+--median(session_1_plus_length_d) as median_session_1_plus_length,
+percentile(session_1_plus_length_d, $p) as percentile_session_1_plus_length,
+max(session_1_plus_length_d) as max_session_1_plus_length,
+
+median(median_single_session_duration) as median_single_session_duration,
+avg(median_single_session_duration) as avg_median_single_session_duration,
+avg(avg_single_session_duration) as avg_single_session_duration,
+
+from $base_by_user
+
+group compact by skill_id, category
+window w as ()
+order by score desc;

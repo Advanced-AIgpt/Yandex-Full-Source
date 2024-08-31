@@ -1,0 +1,15 @@
+PROTO_LIBRARY()
+SET(PROTOC_TRANSITIVE_HEADERS "no")
+
+OWNER(g:megamind)
+
+EXCLUDE_TAGS(GO_PROTO)
+
+PEERDIR(
+)
+
+SRCS(
+    embedding.proto
+)
+
+END()

@@ -1,0 +1,53 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+
+form personal_assistant.scenarios.alarm_cancel:
+    slots:
+        date:
+            source:
+                $sys.date
+                $sys.weekdays
+
+            type:
+                sys.date
+                sys.weekdays
+        time:
+            source: $sys.time
+
+            type: sys.time
+        alarm_id:
+            source:
+                $sys.num
+                $custom.selection
+
+            type:
+                sys.num
+                custom.selection
+    root:
+        [$Cancel $custom.selection? $Alarm ((на|в)? $sys.time|(на|в)? ($sys.date|$sys.weekdays))*]
+        [(на? $sys.time|на? ($sys.date|$sys.weekdays)) $Alarm (больше? $NotNeeded)]
+        [не буди меня? ($sys.date|$sys.weekdays|с утра|вечером)]
+        (отмена $custom.selection будильников)
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        $Common.PronounMe
+        %force_negative
+        $custom.selection
+
+    $Alarm:
+        %lemma
+        будильник
+
+    $NotNeeded:
+        %lemma
+        не нужен
+        не буди
+
+    $Cancel:
+        $Common.CancelRemoveReset
+        $Common.Remove

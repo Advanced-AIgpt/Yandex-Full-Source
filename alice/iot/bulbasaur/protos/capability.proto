@@ -1,0 +1,266 @@
+syntax = "proto3";
+
+package NAlice.NIoT;
+
+option go_package = "a.yandex-team.ru/alice/iot/bulbasaur/protos";
+
+message Capability {
+    CapabilityType Type = 1;
+    bool Retrievable = 2;
+    double LastUpdated = 3;
+
+    oneof Parameters {
+        ColorSettingCapabilityParameters CSCParameters = 4;
+        CustomButtonCapabilityParameters CBCParameters = 5;
+        ModeCapabilityParameters MCParameters = 6;
+        OnOffCapabilityParameters OOCParameters = 7;
+        RangeCapabilityParameters RCParameters = 8;
+        ToggleCapabilityParameters TCParameters = 9;
+        QuasarServerActionCapabilityParameters QSACParameters = 16;
+        QuasarCapabilityParameters QCParameters = 19;
+        VideoStreamCapabilityParameters VSCParameters = 21;
+    }
+
+    oneof State {
+        ColorSettingCapabilityState CSCState = 10;
+        CustomButtonCapabilityState CBCState = 11;
+        ModeCapabilityState MCState = 12;
+        OnOffCapabilityState OOCState = 13;
+        RangeCapabilityState RCState = 14;
+        ToggleCapabilityState TCState = 15;
+        QuasarServerActionCapabilityState QSACState = 17;
+        QuasarCapabilityState QCState = 20;
+        VideoStreamCapabilityState VSCState = 22;
+    }
+    bool Reportable = 18;
+}
+
+message ColorSettingCapabilityParameters {
+    ColorModel ColorModel = 1;
+    TemperatureKCapabilityParameters TemperatureK = 2;
+    ColorSceneParameters ColorScene = 3;
+}
+
+message ColorSettingCapabilityState {
+    string Instance = 1;
+    oneof Value {
+        int32 TemperatureK = 2;
+        int32 RGB = 3;
+        HSV HSV = 4;
+        string ColorSceneID = 5;
+    }
+}
+
+message CustomButtonCapabilityParameters {
+    string Instance = 1;
+    repeated string InstanceNames = 2;
+}
+
+message CustomButtonCapabilityState {
+    string Instance = 1;
+    bool Value = 2;
+}
+
+message ModeCapabilityParameters {
+    string Instance = 1;
+    repeated Mode Modes = 2;
+}
+
+message ModeCapabilityState {
+    string Instance = 1;
+    string Value = 2;
+}
+
+message OnOffCapabilityParameters {
+    bool Split = 1;
+}
+
+message OnOffCapabilityState {
+    string Instance = 1;
+    bool Value = 2;
+    bool Relative = 3;
+}
+
+message QuasarServerActionCapabilityParameters {
+    string Instance = 1;
+}
+
+message QuasarServerActionCapabilityState {
+    string Instance = 1;
+    string Value = 2;
+}
+
+message QuasarCapabilityParameters {
+    string Instance = 1;
+}
+
+message VideoStreamCapabilityParameters {
+    repeated string Protocols = 1;
+}
+
+message QuasarCapabilityState {
+    message MusicPlayValue {
+        message MusicPlayObject {
+            string Id = 1;
+            string Type = 2;
+            string Name = 3;
+        }
+
+        oneof Value {
+            MusicPlayObject Object = 1;
+            string SearchText = 2;
+        }
+
+        bool PlayInBackground = 3;
+    }
+
+    message NewsValue {
+        string Topic = 1;
+        string Provider = 2;
+        bool PlayInBackground = 3;
+    }
+
+    message VolumeValue {
+        int32 Value = 1;
+        bool Relative = 2;
+    }
+
+    message WeatherValue {
+        message Location {
+            double Longitude = 1;
+            double Latitude = 2;
+            string Address = 3;
+            string ShortAddress = 4;
+        }
+
+        message HouseholdInfo {
+            string Id = 1;
+            string Name = 2;
+        }
+
+        Location Where = 1;
+        HouseholdInfo Household = 2;
+        reserved 3;
+        reserved "Value";
+    }
+
+    message SoundPlayValue {
+        string Sound = 1;
+    }
+
+    message StopEverythingValue {
+        reserved 1;
+        reserved "Value";
+    }
+
+    message TTSValue {
+        string Text = 1;
+    }
+
+    message AliceShowValue {
+    }
+
+    string Instance = 1;
+    oneof Value {
+        SoundPlayValue SoundPlay = 2;
+        StopEverythingValue StopEverything = 3;
+        NewsValue News = 4;
+        MusicPlayValue MusicPlay = 5;
+        VolumeValue Volume = 6;
+        WeatherValue Weather = 7;
+        TTSValue TTS = 8;
+        AliceShowValue AliceShow = 9;
+    }
+}
+
+message VideoStreamCapabilityState {
+    message VideoStreamCapabilityValue {
+        string Protocol = 1;
+        string StreamURL = 2;
+        // unix timestamp in seconds
+        uint64 ExpirationTime = 3;
+        repeated string Protocols = 4;
+    }
+
+    string Instance = 1;
+    VideoStreamCapabilityValue Value = 2;
+}
+
+message RangeCapabilityParameters {
+    string Instance = 1;
+    string Unit = 2;
+    bool RandomAccess = 3;
+    bool Looped = 4;
+    Range Range = 5;
+}
+
+message RangeCapabilityState {
+    string Instance = 1;
+    double Value = 2;
+    Relative Relative = 3;
+}
+
+message ToggleCapabilityParameters {
+    string Instance = 1;
+}
+
+message ToggleCapabilityState {
+    string Instance = 1;
+    bool Value = 2;
+}
+
+message TemperatureKCapabilityParameters {
+    int32 Min = 1;
+    int32 Max = 2;
+}
+
+message HSV {
+    int32 H = 1;
+    int32 S = 2;
+    int32 V = 3;
+}
+
+message Mode {
+    string Name = 1;
+    string Value = 2;
+}
+
+message Range {
+    double Min = 1;
+    double Max = 2;
+    double Precision = 3;
+}
+
+message ColorModel {
+    ColorModelType ColorModelType = 1;
+}
+
+message ColorSceneParameters {
+    repeated ColorScene Scenes = 1;
+}
+
+message ColorScene {
+    string ID = 1;
+    string Name = 2;
+}
+
+message Relative {
+    bool Relative = 1;
+}
+
+enum CapabilityType {
+    OnOffCapabilityType = 0;
+    ColorSettingCapabilityType = 1;
+    ModeCapabilityType = 2;
+    RangeCapabilityType = 3;
+    ToggleCapabilityType = 4;
+    CustomButtonCapabilityType = 5;
+    QuasarServerActionCapabilityType = 6;
+    QuasarCapabilityType = 7;
+    VideoStreamCapabilityType = 8;
+}
+
+enum ColorModelType {
+    HsvColorModel = 0;
+    RgbColorModel = 1;
+}

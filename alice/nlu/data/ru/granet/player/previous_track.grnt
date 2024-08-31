@@ -1,0 +1,214 @@
+import:
+    common/commands.grnt
+    common/filler.grnt
+    common/prepositions.grnt
+    player/common.grnt
+    common/scenarios.grnt
+
+
+form personal_assistant.scenarios.player.previous_track:
+    slots:
+        player_type:
+            type:
+                custom.player_type
+                string
+            source:
+                $PlayerType
+    root:
+        .* [$PreviousStrict+ $PlayerType+ $Action+ ($Back|$SmallFiller)*]
+        $Common.LeftFiller* [($PreviousStrict|$Back)+ ($Action|$PlayerType|$PlayerTypeUnknown|$WideFiller)*]
+        $Common.LeftFiller* [$Action+ $PreviousWeak+ ($Back|$PlayerType|$PlayerTypeUnknown|$SmallFiller|$AFewMomentsAgo)*]
+        $Common.LeftFiller* [$Phrase $WideFiller*]
+
+        %negative
+        $NegativePhrase
+
+        $Action:
+            $Common.Repeat
+            $Common.ReturnTo
+            $Open
+            $Rewind
+
+
+$ThatOneWhich:
+    %lemma
+    (это|то|этот|тот|который|только|что)* (который|(тот|то) что)+
+
+$AFewMomentsAgo:
+    [совсем? вот?] (только что|только? сейчас|недавно)
+
+$WasBeingPlayed:
+    [ты (мне|нам|ей|ему|им)? (играла|проигрывала|включила|включала|пела|воспроизвела|воспроизводила) $AFewMomentsAgo*]
+    [(я|мы) (слушал|слушала|слушали|прослушивал|прослушивала|прослушивали) $AFewMomentsAgo*]
+    %lemma
+    (играл|включал|пел|шел|воспроизводился|прослушивался|звучал|слушал)
+    $Was (включен|запущен|в эфире|на плеере)?
+
+    %negative
+    %exact
+    (играет|включена|поет|поется|идёт|воспроизводится|прослушивается|звучит)
+    (включить|играть|петь|идти|воспроизводить|воспроизводиться|звучать)
+
+$Was:
+    %exact
+    (был|была|было|были)
+
+$PreviousStrict:
+    %lemma
+    прошлый
+    прошлое
+    прежний
+    предыдущий
+    $Common.Before $Common.PronounThis
+    $ThatOneWhich [($WasBeingPlayed|$Common.Before $Common.PronounThis|раньше)+ ($Common.PronounThis|который|$AFewMomentsAgo)*]
+    [$PlayerType+ ($ThatOneWhich $Was) $AFewMomentsAgo*]
+
+    %negative
+    $ThatOneWhich $Was
+
+$PreviousWeak:
+    $PreviousStrict
+    $ThatOneWhich $Was
+    что [($WasBeingPlayed|$Common.Before $Common.PronounThis)+ ($Common.PronounThis|который)*]
+
+$Open:
+    %lemma
+    открой
+    вруби
+    поставь
+    поставить
+    запускай
+    запусти
+    промотай
+    мотни
+    включи
+    включай
+    воспроизведи
+    переключи
+    играй
+    слушать
+    смотреть
+    сделай
+    ставь
+    давай
+    верни
+    вернись
+    поменяй
+    перемотай
+    дай
+    перейди
+    верни-ка
+    повтори
+    возврати
+    пролистни
+    играй
+    сыграй
+    иди
+
+$Back:
+    верни
+    %lemma
+    назад
+    обратно
+    предыдущий
+    прежний
+    прошлый
+
+$SmallFiller:
+    $Common.Filler
+    снова
+    заново
+    $Common.OneMoreTime
+
+$WideFiller:
+    $SmallFiller
+    яндекс
+    я
+    к
+    у
+    с
+    а
+    мне
+    тебя
+    вот
+    все
+    робот
+    да
+    нет
+    ну
+    на
+    он
+    она
+    его
+    ее
+    этот
+    эту
+    это
+    этой
+    этого
+    этим
+    тот
+    ту
+    другой
+    другую
+    то
+    только
+    той
+    сейчас
+    еще
+    еще раз
+    ну-ка
+    внимательно
+    слушай
+    можно
+    можешь
+    быстро
+    быстрее
+    скорее
+    была
+    нравится
+    раньше
+    раз
+    начала
+    что
+    стоп
+    везде
+    снова
+    опять
+    повтор
+    сказала
+    сказал
+    музыкальный
+    исполнению
+    полностью
+    весь
+    пред
+    говорю
+    вторую
+
+$Phrase:
+    вернись
+    предыдущая сказка
+    предыдущую сказку
+    давай предыдущую сказку
+    расскажи предыдущую сказку
+    включи предыдущую сказку
+    поставь предыдущую сказку
+    верни предыдущую сказку
+    верни прежнюю сказку
+    прежнюю сказку верни
+    прежнюю сказку давай
+    прежнюю сказку расскажи
+    включи предыдущий звук
+    поставь предыдущий звук
+    верни предыдущий звук
+    включи предыдущие звуки
+    поставь предыдущие звуки
+    верни предыдущие звуки
+    предыдущие звуки
+    включи предыдущий шум
+    поставь предыдущий шум
+    верни предыдущий шум
+
+$NegativePhrase:
+    верни музыку

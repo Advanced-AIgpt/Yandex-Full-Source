@@ -1,0 +1,338 @@
+{% nlgimport "alice/hollywood/library/scenarios/food/nlg/cart.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/food/nlg/cart.nlg" import
+  render_cart,
+  render_quantity_female,
+  render_cart_items,
+  render_cart_items_text, 
+  render_unknown_items_text,
+  render_unknown_items_voice,
+  render_unavailable_items_text,
+  render_unavailable_items_voice
+%}
+
+{# ==== Fallback ==== #}
+
+{% phrase fallback_common %}
+  Извините, я вас не поняла.
+{% endphrase %}
+
+{% phrase fallback_what_you_wish %}
+  Не очень поняла. Что будем заказывать?
+{% endphrase %}
+
+{% phrase fallback_something_else %}
+  Не очень поняла. Добавить что-нибудь в корзину?
+{% endphrase %}
+
+{% phrase fallback_keep_old_cart %}
+  Не очень поняла вас. Продолжим оформлять заказ?
+{% endphrase %}
+
+{% phrase fallback_begin_new_cart %}
+  Хм, чтобы сделать заказ, скажи мне: «Алиса, закажи картошку фри в Макдоналдсе».
+{% endphrase %}
+
+{% phrase fallback_form_order %}
+  Не поняла - повторите, пожалуйста. Что-то ещё?
+{% endphrase %}
+
+{% phrase fallback_confirm_order %}
+  Не расслышала что вы сказали, оформляем заказ?
+{% endphrase %}
+
+# Should be unreachable with redirect_by_link flag, because with this flag on, we go to app instantly in case of any troubles
+# Hence, we do not use separate go_to_app stage and its fallback fallback_go_to_app
+{% phrase fallback_go_to_app %}
+  Извините, я вас не поняла. Продолжить заказ в телефоне?
+{% endphrase %}
+
+{# ==== Internal error ==== #}
+
+{% phrase nlg_internal_error %}
+  Произошла ошибка в сценарии еды.
+{% endphrase %}
+
+{# ==== Start ==== #}
+
+{% phrase nlg_no_response_from_eda %}
+  Мне не хватает данных, чтобы оформить заказ.
+  {% if context.redirect_by_link %}
+    Добавьте информацию в приложении.
+  {% else %}
+    Зайдите в приложение.
+  {% endif %}
+{% endphrase %}
+
+{% phrase nlg_mcdonalds_not_found %}
+  Все Макдональдсы слишком далеко от вас. Не могу сделать заказ. Может вам рецепт шарлотки рассказать? :)
+{% endphrase %}
+
+{% macro render_how_to_order() %}
+  Чтобы сделать заказ, скажите, например: «Алиса, закажи чизбургер и колу».
+  Что будем заказывать?
+{% endmacro %}
+
+{% phrase nlg_order_from_mcdonalds %}
+  Заказ будет доставлен из ближайшего Макдональдса.
+{% endphrase %}
+
+{% phrase nlg_how_to_order_outside %}
+  {{ render_how_to_order() }}
+{% endphrase %}
+
+{% phrase nlg_how_to_order_inside %}
+  {{ render_how_to_order() }}
+{% endphrase %}
+
+{% phrase nlg_start_onboarding %}
+  {{ render_how_to_order() }}
+{% endphrase %}
+
+{% phrase nlg_start_onboarding_light %}
+  {{ render_how_to_order() }}
+{% endphrase %}
+
+{% phrase nlg_what_you_wish %}
+  Что закажем?
+{% endphrase %}
+
+{% phrase nlg_what_you_wish_light %}
+  Что закажем?
+{% endphrase %}
+
+{% phrase nlg_ok_what_you_wish %}
+  Хорошо. Что будем заказывать?
+{% endphrase %}
+
+{% phrase nlg_keep_old_cart %}
+  {% if context.redirect_by_link %}
+    {% voice %} В вашей корзине уже есть заказ. Продолжим?{% endvoice %}
+    {% text %}
+      В корзине:\n
+      {{ render_cart_items_text(context.cart.items) }}
+      Продолжим?
+    {% endtext %}
+  {% else %}
+    В вашей корзине уже есть заказ:\n
+    {{ render_cart_items(context.cart.items) }}
+    Продолжим?
+  {% endif %}
+{% endphrase %}
+
+{% phrase nlg_begin_new_cart %}
+  Хорошо. Сделаете новый заказ?
+{% endphrase %}
+
+{# ==== Cart add ==== #}
+
+{% macro render_unknown_items(context) %}
+  {% if context.unknown_items %}
+    {% if context.redirect_by_link %}
+      {% voice %} Не могу найти в меню некоторые блюда {% endvoice %}
+      {% text %}
+        Не могу найти в меню: \n
+        {{ render_unknown_items_text(context.unknown_items) }}
+      {% endtext %}
+    {% else %}
+      Не могу найти в меню: \n
+      {% text %}
+        {{ render_unknown_items_text(context.unknown_items) }}
+      {% endtext %}
+      {% voice %}
+        {{ render_unknown_items_voice(context.unknown_items) }}
+      {% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_unavailable_items(context) %}
+  {% if context.unavailable_items %}
+    {% if context.redirect_by_link %}
+      {% voice %} Сейчас в Макдональдсе нет некоторых блюд {% endvoice %}
+      {% text %}
+      Сейчас в Макдональдсе нет:\n
+        {{ render_unavailable_items_text(context.unavailable_items) }}
+      {% endtext %}
+    {% else %}
+      Сейчас в Макдональдсе нет:\n
+      {% text %}
+        {{ render_unavailable_items_text(context.unavailable_items) }}
+      {% endtext %}
+      {% voice %}
+        {{ render_unavailable_items_voice(context.unavailable_items) }}
+      {% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_failed_items(context) %}
+  {{ render_unknown_items(context) }}
+  {{ render_unavailable_items(context) }}
+{% endmacro %}
+
+{% macro render_cart_suggest_order(context) %}
+  {% if context.redirect_by_link %}
+    {% voice %} Вот какие блюда в вашей корзине. Заказываем? {% endvoice %}
+    {% text %}
+      В корзине:\n
+      {{ render_cart_items_text(context.cart.items) }}
+      {{ render_unavailable_items(context) }}
+      Сумма вашего заказа {{ context.subtotal }} р.\n
+      Заказываем?
+    {% endtext %}
+  {% else %}
+    В корзине:\n
+    {{ render_cart_items(context.cart.items) }}
+    {{ render_unavailable_items(context) }}
+    Сумма вашего заказа {{ context.subtotal }} р.\n
+    Заказываем?
+  {% endif %}
+{% endmacro %}
+
+{% phrase nlg_cart_add_first_items %}
+  {{ render_failed_items(context) }}
+  Что-то ещё?
+{% endphrase %}
+
+{% phrase nlg_cart_add_new_items %}
+  {{ render_failed_items(context) }}
+  Что ещё вы хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_cart_resume_order %}
+  Что-нибудь ещё?
+{% endphrase %}
+
+{% phrase nlg_cart_add_unavailable %}
+  {{ render_failed_items(context) }}
+  Заказать что-нибудь ещё?
+{% endphrase %}
+
+{% phrase nlg_cart_add_unknown %}
+  {{ render_failed_items(context) }}
+  Может продолжить заказ в телефоне?
+{% endphrase %}
+
+{% phrase nlg_cart_add_unknown_go_to_app %}
+  {{ render_failed_items(context) }}
+  {% voice %} Сейчас открою Яндекс Еду, продолжите заказ там. {% endvoice %}
+  {% text %} Сейчас открою Яндекс.Еду, продолжите заказ там. {% endtext %}
+{% endphrase %}
+
+{# ==== Remove item ==== #}
+
+{% phrase nlg_remove_item_from_empty_cart %}
+  Корзина уже пустая. Что хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_remove_item_not_found %}
+  Не могу найти «{{ context.item_to_remove|inflect('acc') }}» в вашей корзине.
+{% endphrase %}
+
+{% phrase nlg_remove_item_ok_last_item %}
+  Удалила «{{ context.removed_item }}».\n
+  Корзина пуста. Что хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_remove_item_ok %}
+  Удалила «{{ context.removed_item }}».\n
+  Сумма вашего заказа теперь {{ context.subtotal }} р.\n
+  Заказать что-нибудь ещё?
+{% endphrase %}
+
+{# ==== Cart clear ==== #}
+
+{% phrase nlg_cart_clear_empty %}
+  Корзина уже пустая. Что хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_cart_clear_ok %}
+  Ок, корзина пуста. Что хотите заказать?
+{% endphrase %}
+
+{# ==== Cart show ==== #}
+
+{% phrase nlg_cart_show_empty %}
+  В вашей корзине ничего нет. Что хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_cart_show_outdated %}
+  Блюд из вашей корзины больше нет в меню. Что хотите заказать?
+{% endphrase %}
+
+{% phrase nlg_cart_show_ok %}
+  {{ render_cart_suggest_order(context) }}
+{% endphrase %}
+
+{# ==== Last order ==== #}
+
+{% phrase nlg_last_order_not_found %}
+  Последних заказов нет. Хотите сделать новый заказ?
+{% endphrase %}
+
+{% phrase nlg_last_order_too_far %}
+  Последних заказов нет. Хотите сделать новый заказ?
+{% endphrase %}
+
+{% phrase nlg_last_order_content %}
+  {% if context.redirect_by_link %}
+    {% voice %} Последний раз вы заказывали в {{ context.place.name }} вот такие блюда. Закажем снова? {% endvoice %}
+    {% text %}
+      Последний раз вы заказывали в {{ context.place.name }}. вот такие блюда:
+      {{ render_cart_items_text(context.cart.items) }}
+      Сумма вашего заказа {{ context.subtotal }} р.\n
+      Заказываем?
+    {% endtext %}
+  {% else %}
+    Последний раз вы заказывали в {{ context.place.name }}. В корзине:
+    {{ render_cart_items(context.cart.items) }}
+    Сумма вашего заказа {{ context.subtotal }} р.\n
+    Заказываем?
+  {% endif %}
+{% endphrase %}
+
+{# ==== Other ==== #}
+
+{% phrase nlg_order_details %}
+  {{ render_cart_suggest_order(context) }}
+{% endphrase %}
+
+{% phrase nlg_cart_was_pushed_to_app %}
+  {% if context.redirect_by_link %}
+    {% text %} Сейчас открою Яндекс.Еду, чтобы мы могли завершить заказ там. {% endtext %}
+    {% voice %} Сейчас открою Яндекс Еду, чтобы мы могли завершить заказ там. {% endvoice %}
+  {% else %}
+    Отправила вам пуш в приложении Яндекса. Завершите заказ там.
+  {% endif %}
+{% endphrase %}
+
+{% phrase nlg_order_checkout_push %}
+  {% if context.redirect_by_link %}
+    {% text %} Осталось совсем чуть-чуть. Откройте Яндекс.Еду и оплатите заказ. {% endtext %}
+    {% voice %} Осталось совсем чуть-чуть. Откройте Яндекс Еду и оплатите заказ. {% endvoice %}
+  {% else %}
+    {% text %} Откройте Яндекс.Еду для оплаты. Прислала вам ссылку в телефон.  {% endtext %}
+    {% voice %} Откройте Яндекс Еду для оплаты. Прислала вам ссылку в телефон.  {% endvoice %}
+  {% endif %}
+{% endphrase %}
+
+{% macro order_decline() %}
+  Ок. Если захотите, сможем завершить заказ в другой раз.
+{% endmacro %}
+
+{% phrase nlg_form_order_decline %}
+  {{ order_decline() }}
+{% endphrase %}
+
+{% phrase nlg_confirm_order_decline %}
+  {{ order_decline() }}
+{% endphrase %}
+
+{% phrase nlg_reset_scenario_ok %}
+  Хорошо.
+{% endphrase %}
+
+{% phrase nlg_cancel_order %}
+  Отменила заказ.
+{% endphrase %}

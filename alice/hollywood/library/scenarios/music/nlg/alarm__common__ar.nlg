@@ -1,0 +1,150 @@
+{% ext_from "alice/hollywood/library/common_nlg/macros_ar.nlg" import inability %}
+
+{#
+{% macro render_alarm_time(date, time, time_preposition='لمدة') -%}
+  {% if date %}
+    {% if date.weekdays %}
+      {{ date | render_weekday_type }}
+    {% elif date.days == 1 and date.days_relative and time and not time.get('hours') and not time.get('minutes') %}
+      لليوم
+    {% else %}
+      {% set d = date | render_datetime_raw %}
+      لمدة {% vc %}{{ d.voice }}{% evc %}{% tx %}{{ d.text }}{% etx %}
+    {% endif %}
+    {% if time %}
+      {% set t = time | alarm_time_format(case='acc') %}
+      في {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+    {% endif %}
+  {% elif time %}
+    {% set t = time | alarm_time_format(case='acc') %}
+    {{ time_preposition }} {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_alarm_list(alarm_list) %}
+  {% for alarm in alarm_list %}
+    {% vc %}رقم {{ loop.index }}{% evc %}{% tx %}{{ loop.index }}{% etx %}.
+    {{ render_alarm_time(alarm.date, alarm.time) }}
+    {% if not loop.last %}
+      \n{% vc %}-{% evc %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro set_sound_phrase() %}
+  {% chooseline %}
+    "أليسا، ضعي موسيقى مرحة على المنبه"
+    "أليسا، أيقظيني على أغنية هوا يا هوا"
+    "أليسا، اضبطي حسين الجسمي على المنبه"
+  {% endchooseline %}
+{% endmacro %}
+#}
+
+{% macro stoit() %}
+  مضبوط
+{% endmacro %}
+
+{% macro stoyat() %}
+  قف مكانك
+{% endmacro %}
+
+{% macro alarm_stoit() %}
+  {% chooseitem %}
+    تم تعيين على المنبه
+  {% or %}
+    ستوقظك
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro alarm_stoyat() %}
+  {% chooseitem %}
+    تم تعيين على المنبه
+  {% or %}
+    سيوقظك
+  {% endchooseitem %}
+{% endmacro %}
+
+{#
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    حالياً أنا لا أستطيع ضبط المنبه في هذه الساعات. مضحك أليس كذلك. لكنني سأتعلم قريباً.
+    سأتعلم قريباً كيف أضبط المنبه في هذا الوقت. أعدك!
+  {% endchooseline %}
+  # Я пока не умею. Можно попросить маму или папу громко петь с утра. {% tx %}Ха-ха{% etx %}{% vc %}ха ха{% evc %}!
+{% endmacro %}
+
+{% macro render_error(code, date=None, time=None) -%}
+  {% if code == 'no_alarms_available' %}
+    {% if date or time %}
+      ليس لديك منبهات معينة على هذا الوقت.
+    {% else %}
+      {% chooseline %}
+        ليس لديك منبهات معينة.
+        أنت لم تطلب مني إيقاظك.
+      {% endchooseline %}
+    {% endif %}
+  {% elif code == 'unsupported_operation' %}
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      {{ inability() }}
+    {% endif %}
+  {% elif code == 'too_many_alarms' %}
+    تم ضبط 25 منبهاً. لا أستطيع أكثر من ذلك.
+  {% else %}
+    حصل خطأ ما، لما لا نحاول فيما بعد؟
+  {% endif %}
+{%- endmacro %}
+
+{% macro ask_time() %}
+  على أي وقت أعين المنبه؟
+{% endmacro %}
+
+{comment used for music tags and radio error rendering comment}
+{% macro is_one_of_specified_intents(form_names) -%}
+  {% if form.raw_form.name in form_names -%}
+    True
+  {%- endif %}
+{%- endmacro %}
+{% macro is_specified_intent(form_name) -%}
+  {{ is_one_of_specified_intents([form_name]) }}
+{%- endmacro %}
+
+{% macro is_alarm_what_sound_is_set_intent() -%}
+  {{ is_specified_intent('personal_assistant.scenarios.alarm_what_sound_is_set') }}
+{%- endmacro %}
+
+{% macro is_alarm_set_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_sound',
+                                  'personal_assistant.scenarios.alarm_ask_sound']) }}
+{%- endmacro %}
+
+{% macro is_alarm_set_with_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_with_sound',
+                                  'personal_assistant.scenarios.alarm_set_with_sound__ellipsis']) }}
+{%- endmacro %}
+
+{% phrase render_error__alarmerror %}
+  {{ render_error(context.error.data.code, date=form.date, time=form.time) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__set_alarm %}
+  تعيين المنبه على {{ (context.alarm__set_alarm.data.time | alarm_time_format(case='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__alarm__set_alarm %}
+  تعيين المنبه على {{ (context.alarm__set_alarm.data.time | alarm_time_format(case='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__show_alarms %}
+  مشاهدة جميع المنبهات
+{% endphrase %}
+
+{% phrase render_suggest_uri__alarm__show_alarms %}
+  {{ context.alarm__show_alarms.data.uri }}
+{% endphrase %}
+
+{% phrase ask__time %}
+  {{ ask_time() }}
+{% endphrase %}
+#}

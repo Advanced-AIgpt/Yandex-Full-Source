@@ -1,0 +1,82 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/questions.grnt
+import: sound/set_level.grnt
+import: volume/commands.grnt
+
+form personal_assistant.scenarios.alarm_sound_set_level:
+    lemma: true
+    slots:
+        level:
+            type:
+                custom.volume_setting
+                sys.num
+                sys.float
+                custom.number
+            source:
+                $OldRoot.Level
+                $OldRoot.VolumeDegree
+                $OldRoot.LevelEnum
+                $OldRoot.Root
+                $NewRoot.SmallNum
+                $NewRoot.Maximum
+                $NewRoot.Minimum
+                $NewRoot.SureLoud
+                $NewRoot.SureQuiet
+                $NewRoot.SureMiddle
+    root:
+        [$Volume.Alarm $Set? $Volume.Preposition? ($OldRoot.Level | $OldRoot.VolumeDegree | $OldRoot.LevelEnum | $OldRoot.Root | $NewRoot.SmallNum | $NewRoot.Maximum | $NewRoot.Minimum | $NewRoot.SureLoud | $NewRoot.SureQuiet | $NewRoot.SureMiddle) $Percents?]
+        [$Alarm $SetLevel $Set? $Volume.Preposition? ($OldRoot.Level | $OldRoot.VolumeDegree | $OldRoot.LevelEnum | $OldRoot.Root | $NewRoot.SmallNum | $NewRoot.Maximum | $NewRoot.Minimum | $NewRoot.SureLoud | $NewRoot.SureQuiet | $NewRoot.SureMiddle) $Percents?]
+        [$Alarm $SetLevel? $Set? $Volume.Preposition? ($NewRoot.Maximum | $NewRoot.Minimum | $NewRoot.SureLoud | $NewRoot.SureQuiet | $NewRoot.SureMiddle) $Percents?]
+        [$How? $Volume.Alarm $Set]
+        %weight 0.01
+        [$How? $Alarm $SetLevel $Set ($NewRoot.Louder | $NewRoot.Increase | $NewRoot.Decrease | $NewRoot.Quiter)?]
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.Lets
+        $Common.WayToCallAlice
+        так? чтобы
+        баллов
+        только
+        всегда
+        сразу
+
+    $Alarm:
+        %lemma
+        будильник
+        для будильника
+        у будильника
+        на будильнике
+        %lemma off
+        на всех будильниках по утрам
+        на всех будильниках
+        всех будильников
+        всех будильников по утрам
+
+    $SetLevel:
+        %lemma
+        звонил
+        играл
+        на? звук
+        (нарастающая|максимальная)? громкость
+        максимальный? уровень громкости?
+
+    $Percents:
+        %lemma
+        процент
+
+    $Set:
+        $Volume.Set
+        %lemma
+        измени
+        прибавь
+        добавь
+        увеличь
+        надо сделать
+        выстави
+
+    $How:
+        $Common.Tell* $Common.QuestionHow+

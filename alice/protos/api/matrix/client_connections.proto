@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+import "alice/protos/api/matrix/technical_push.proto";
+import "alice/protos/api/matrix/user_device.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/matrix";
+
+package NMatrix.NApi;
+
+message TUniproxyEndpoint {
+    string Ip = 1;
+    uint32 Port = 2;
+}
+
+message TClientStateChange {
+    enum EAction {
+        CONNECT = 0;
+        DISCONNECT = 1;
+    }
+
+    EAction Action = 1;
+    TUserDeviceInfo UserDeviceInfo = 2;
+}
+
+message TClientsDiff {
+    repeated TClientStateChange ClientStateChanges = 1;
+}
+
+message TClientsFullInfo {
+    repeated TUserDeviceInfo Clients = 1;
+}
+
+message TUpdateConnectedClientsRequest {
+    TUniproxyEndpoint UniproxyEndpoint = 1;
+
+    // Some monotonic timestamp.
+    // If we have already accepted request with timestamp X and UniproxyEndpoint Y,
+    // all requests from UniproxyEndpoint Y with timestamp less than X will be ignored.
+    uint64 MonotonicTimestamp = 2;
+
+    // Clients shard id inside specific uniproxy instance.
+    uint64 ShardId = 6;
+
+    // Clients diff from previous request
+    TClientsDiff ClientsDiff = 3;
+
+    // Full state of current connections
+    // If present, first we apply ClientsDiff, then check that there are no diff
+    // between database and this info
+    // If we have diff, then we overwrite info in database with this info (and look at our alerts :) )
+    //
+    // In fact this field works as sanity check that we didn't lose anything
+    // and as correction in some corner cases (non-graceful uniproxy shutdown for example)
+    TClientsFullInfo ClientsFullInfo = 4;
+
+    bool AllConnectionsDroppedOnShutdown = 5;
+}
+
+message TUpdateConnectedClientsResponse {
+    message TTechnicalPushesForUserDevice {
+        TUserDeviceIdentifier UserDeviceIdentifier = 1;
+        repeated TTechnicalPush TechnicalPushes = 2;
+    }
+
+    repeated TTechnicalPushesForUserDevice TechnicalPushesForUserDevices = 1;
+}
+

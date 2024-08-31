@@ -1,0 +1,51 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+
+{% macro ask_where() %}
+  {% chooseline %}
+    في أي مدينة؟
+    أين بالضبط؟
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro render_time(dt) %}
+  {{ dt | human_time }}
+{% endmacro %}
+
+
+{% phrase render_result %}
+  {% set time_result = context.form.time_result %}
+  {% set dt = datetime(year=time_result['year'], month=time_result['month'], day=time_result['day'], hour=time_result['hour'], minute=time_result['min']) %}
+  {% set city_prepcase = "" %}
+  {% if context.form.where and context.form.where != "nearby" %}
+    {% if context.form.time_location.city_prepcase or context.form.time_location.city_cases.preposition and context.form.time_location.city_cases.prepositional %}
+      {% if context.form.time_location.city_prepcase %}
+        {% set city_prepcase = context.form.time_location.city_prepcase %}
+      {% else %}
+        {% set city_prepcase = context.form.time_location.city_cases.preposition + ' ' + context.form.time_location.city_cases.prepositional %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% chooseitem 0.5 %}
+    {{city_prepcase | capitalize_first}}
+  {% or 0.5 %}
+    الآن {{city_prepcase}}
+  {% endchooseitem %}
+
+  {{ render_time(dt) }}
+  {% if city_prepcase %}
+    , {{ dt | format_weekday }}, {% vc %}{{ '#nom' }}{% evc %} {{ dt.day }} {{ dt | human_month('gen') }}
+  {% endif %}
+  .
+{% endphrase %}
+
+
+{% phrase render_error__notimezone %}
+  {{ ask_where() }}
+{% endphrase %}
+
+
+{% phrase render_error__nousergeo %}
+  {{ ask_where() }}
+{% endphrase %}

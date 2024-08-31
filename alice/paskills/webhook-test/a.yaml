@@ -1,0 +1,40 @@
+service: yandexdialogs2
+title: Тестовый Навык "Олег Дулин"
+ci:
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags: CI_TESTWEBHOOK
+
+  actions:
+    per-commit:
+      flow: per-commit-flow
+      triggers:
+        - on: commit
+  flows:
+    per-commit-flow:
+      title: Per commit into trunk
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/paskills/webhook-test/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "trunk-${context.version_info.full}"
+
+        release-to-priemka:
+          title: Deploy to testing
+          task: common/nanny/update_service
+          stage: testing
+          needs: build
+          input:
+            config:
+              service_id: paskills-test-webhook
+              docker_image: "paskills/webhook-test-universal:trunk-${context.version_info.full}"

@@ -1,0 +1,171 @@
+import: news/smi.grnt
+import: news/rubric.grnt
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+
+form personal_assistant.scenarios.get_news__postroll_answer:
+    slots:
+        Answer:
+            type: custom.answer
+            source: $Answer
+        Topic:
+            type: custom.news_topic
+            source: $Smi|$Rubric
+    root:
+        $Root
+    filler:
+        $Filler
+
+$Root:
+    [$Positive? $SetUp  $Common.ToWant? $Get? $Topic $News? $NextTime?]
+    [$Positive? $SetUp? $Common.ToWant  $Get? $Topic $News  $NextTime?]
+    [$Positive? $SetUp? $Common.ToWant  $Get? $Smi   $News? $NextTime?]
+    [$Positive? $SetUp? $Common.ToWant? $Get? $Topic $News  $NextTime  $TurnOn?]
+    [$Positive? $SetUp? $Common.ToWant? $Get? $Smi   $News? $NextTime  $TurnOn?]
+    [$SetUp? $Answer]
+
+    %type "custom.answer"
+
+    %value "yes"
+    $SetUp
+
+    %value "no"
+    не $SetUp
+
+    %negative
+    [давай сыграем .*]
+    [давай поиграем .*]
+    [давай болтать .*]
+    [давай поболтаем .*]
+    [давай поговорим .*]
+    [давай погадаем .*]
+    [давай играть .*]
+    [еще .*]
+
+$Answer:
+    %type "custom.answer"
+
+    %value "yes"
+    $Positive .*
+    источник
+    рубрику
+
+    %value "no"
+    $Negative .*
+    .? .? Спасибо .? .? Но .*
+
+$Get:
+    получать
+    слушать
+    читать
+
+$Positive:
+    да
+    давай
+    какие есть варианты
+    окей
+    хочу
+    хотел
+
+$Negative:
+    нет
+    не хочу
+    не надо
+    не интересно
+    не
+    %lemma
+    оставить
+
+$Topic:
+    $Rubric
+    $Smi
+
+$News:
+    %lemma
+    Новости
+
+$SetUp:
+    измени
+    измените
+    изменить
+    назначай
+    назначь
+    назначить
+    настрой
+    настройте
+    настроить
+    определи
+    определим
+    определить
+    подписаться
+    подпишись
+    подпишитесь
+    поменяй
+    поменяйте
+    поменять
+    поставь
+    поставьте
+    поставить
+    смени
+    смените
+    сменить
+    укажи
+    укажите
+    указать
+    установи
+    установите
+    установить
+
+$TurnOn:
+    включи
+    включите
+    включить
+    расскажи
+
+$NextTime:
+    в будущем
+    в следующий раз
+    теперь
+
+$Filler:
+    $Common.Lets
+    $Common.PronounMe
+    $Common.PronounThis
+    $Common.WayToCallAlice
+    %lemma
+    а
+    бы
+    было
+    да
+    дефолту
+    до
+    за
+    и
+    или
+    интересны
+    источник
+    же
+    желательно
+    как
+    любимый
+    на
+    неплохо
+    ну
+    о
+    от
+    оставить
+    по
+    пожалуйста
+    прослушивать
+    рубрика
+    с
+    слушать
+    слышать
+    спасибо
+    так
+    такое
+    теперь
+    только
+    умолчанию

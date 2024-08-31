@@ -1,0 +1,66 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+
+{% macro open_gallery() %}
+  {% if context.attentions.get('empty_search_gallery') %}
+    {% chooseline %}
+      Извините, ничего не нашлось.
+      Я не могу ничего посоветовать с такими параметрами.
+    {% endchooseline %}
+  {% elif context.attentions.get('did_not_understand') %}
+    Извините, я вас не поняла.
+  {% else %}
+    {% if context.attentions.get('no_tv') %}
+      {% chooseline %}
+        Могу порекомендовать вам такие фильмы: {{ context.plain_text_recommendations }}.
+        Что вы думаете про такие фильмы: {{ context.plain_text_recommendations }}?
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Смотрите, что я нашла.
+        Могу посоветовать такие фильмы.
+        Как насчет таких фильмов?
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro ask_about() %}
+  {% chooseline %}
+    О чём вы хотите посмотреть?
+    Про что вы хотите смотреть?
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro ask_film_genre() %}
+  {% chooseline %}
+    Вы можете уточнить жанр, который вас интересует.
+    Возможно, вас интересует фильм в определенном жанре?
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro ask_country() %}
+  {% chooseline %}
+    Фильмы какой страны вам хотелось бы посмотреть?
+    Возможно, вам хочется посмотреть фильм какой-то определенной страны?
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro ask_release_date() %}
+  {% chooseline %}
+    Фильмы какого года вас интересуют?
+    Возможно, вы хотите фильмы определенных годов?
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ open_gallery() }}
+  {% if context.attentions.get('recommendation_ask_about') %}
+    {{ ask_about() }}
+  {% elif context.attentions.get('recommendation_ask_film_genre') %}
+    {{ ask_film_genre() }}
+  {% elif context.attentions.get('recommendation_ask_country') %}
+    {{ ask_country() }}
+  {% elif context.attentions.get('recommendation_ask_release_date') %}
+    {{ ask_release_date() }}
+  {% endif %}
+{% endphrase %}

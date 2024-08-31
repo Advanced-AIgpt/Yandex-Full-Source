@@ -1,0 +1,123 @@
+import:
+    common/filler.grnt
+    common/commands.grnt
+    quasar/video_common.grnt
+    video_command/change_track.grnt
+
+form alice.mordovia_video_selection:
+    lemma: true
+    slots:
+        action:
+            type:
+                custom.video_selection_action
+                string
+            source: $ActionSlot
+        audio_language:
+            type:
+                custom.audio
+                string
+            source: $AudioEnum
+        subtitle_language:
+            type:
+                custom.subtitles
+                string
+            source: $SubtitlesEnum
+        video_index:
+            type:
+                fst.num
+            source: $VideoNumber
+        video_item:
+            type:
+                device.video_gallery
+                string
+            source:
+                $VideoGalleryEntity
+
+    root:
+        $Root
+$Root:
+    [$Action $Item? $VideoName $AudioEnum? $SubtitlesEnum? $UnimportantWords+?]
+    [$Action? $Item? $Number? $VideoNumber $AudioEnum? $SubtitlesEnum? $UnimportantWords+?]
+    [$Action $TvChannelItem $VideoName]
+    [$Action? $TvChannelItem $Number $VideoNumber]
+    %negative
+    [$ActionExtended? $Item $UltraHD]
+
+$VideoGalleryEntity:
+    $ner.device.video_gallery
+    .+
+
+$VideoName:
+    $VideoGalleryEntity
+    sys.films_100_750
+
+$Number:
+    вариант
+    номер
+    номера
+    под номером
+    цифру
+
+$VideoNumber:
+    $fst.num
+
+$Item:
+    видео
+    кино
+    клип
+    мультик
+    мультфильм
+    ролик
+    фильм
+    концерт
+    видеоклип
+    видеоролик
+    видос
+    видосик
+    кинофильм
+    кинчик
+    музыкальный клип
+    мульт
+    мультсериал
+    передачу
+    ролик
+    сериал
+    сериала
+    сериальчик
+    серии
+    серию
+    серия
+
+$TvChannelItem:
+    канал
+
+$ActionExtended:
+    $Action ка?
+
+$Four:
+    4
+    четыре
+
+$LetterK:
+    к
+    ка
+    k
+
+$UltraHD:
+    $Four $LetterK
+
+$UnimportantWords:
+    к
+    ка
+
+filler:
+    $nonsense
+    $Common.Filler
+    на
+    в
+    с
+    у
+    про
+    %negative
+    ка
+    к

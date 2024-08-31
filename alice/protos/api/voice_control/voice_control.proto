@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/api/voice_control";
+option java_package = "ru.yandex.alice.protos.api.voicecontrol";
+option java_multiple_files = true;
+
+import "mapreduce/yt/interface/protos/extension.proto";
+import "google/protobuf/struct.proto";
+import "alice/megamind/protos/common/conditional_action.proto";
+import "alice/protos/data/external_entity_description.proto";
+
+// JSON with such schema is used in div-json extension
+message TVoiceControl {
+    repeated TActivationCondition ActivationConditions = 1 [json_name = "activation_conditions", (NYT.column_name) = "activation_conditions"];
+    repeated TConditionalAction Actions = 2 [json_name = "actions", (NYT.column_name) = "actions"];
+    repeated NAlice.NData.TExternalEntityDescription ExternalEntitiesDescriptions = 3 [json_name = "external_entities_descriptions", (NYT.column_name) = "external_entities_descriptions"];
+}
+
+// GRPC has binary protobuf response so we need to use Struct for Actions and ExternalEntitiesDescriptions for forward compatibility.
+// Otherwise we need a client release to use newly defined TSF.
+// Client hass to populate corresponding json fields of SpeechKitRequest with data from this Structs
+// After migration to protobuf in the whole stack (client, proxy, mm, scenario) we will be able to drop this and use binary TVoiceControl in all places, including div-json via binary representation
+message TUnstructuredVoiceControl {
+    repeated TActivationCondition ActivationConditions = 1 [json_name = "activation_conditions", (NYT.column_name) = "activation_conditions"];
+
+    // MessageToStruct(TConditionalAction)
+    repeated google.protobuf.Struct Actions = 2 [json_name = "actions", (NYT.column_name) = "actions"];
+    // MessageToStruct(TExternalEntitiesDescriptions)
+    repeated google.protobuf.Struct ExternalEntitiesDescriptions = 3 [json_name = "external_entities_descriptions", (NYT.column_name) = "external_entities_descriptions"];
+}
+
+message TActivationCondition {
+    oneof ConditionType {
+        TVisibleCondition VisibleCondition = 1 [json_name = "visible_condition", (NYT.column_name) = "visible_condition"];
+        // someday we may want to activate if control was ever seen for a given share
+        //TSeenCondition SeenCondition = 2;
+    }
+}
+
+message TVisibleCondition {
+    // Condition is true if visible part share is more than defined in condition
+    // 0 < VisibleShare <= 1
+    double VisibleShare = 1 [json_name = "visible_share", (NYT.column_name) = "visible_share"];
+}

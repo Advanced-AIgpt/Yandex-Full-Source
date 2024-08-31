@@ -1,0 +1,46 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+
+$between = ($value, $l, $r) -> {
+    RETURN $l <= $value AND $value < $r;
+};
+
+$choose = ($query, $l, $r) -> {
+    $hash = Digest::MurMurHash($query) % 100;
+    RETURN $between($hash, $l, $r);
+};
+
+$__RAW = (
+    SELECT
+        query,
+        "NO" as answer,
+        skill_id
+    FROM `//home/paskills/discovery/datasets/TolokaNonsense/raw/all`
+);
+
+$__TRAIN = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50)
+);
+
+$__VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 75)
+);
+
+$__TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 75, 100)
+);
+
+INSERT INTO `//home/paskills/discovery/datasets/TolokaNonsense/split/train` WITH TRUNCATE
+SELECT * FROM $__TRAIN;
+
+INSERT INTO `//home/paskills/discovery/datasets/TolokaNonsense/split/test` WITH TRUNCATE
+SELECT * FROM $__TEST;
+
+INSERT INTO `//home/paskills/discovery/datasets/TolokaNonsense/split/valid` WITH TRUNCATE
+SELECT * FROM $__VALID;

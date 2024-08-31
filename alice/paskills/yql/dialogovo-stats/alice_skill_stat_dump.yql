@@ -1,0 +1,22 @@
+use hahn;
+
+-- open
+-- https://stat.yandex-team.ru/_api/report/dump/VoiceTech/alexslinka/alice_skills?scale=d
+-- to create a dump in statface format
+
+insert into `//home/paskills/stat/alice_skill_stat_dump` with truncate
+-- dates are stored as seconds in UTC (-3 hours)
+select unwrap(cast(DateTime::FromSeconds(cast(fielddate as UInt32)) + Interval('PT3H') as Date)) as fielddate,
+unwrap(category) as category,
+unwrap(channel) as channel,
+unwrap(developertype) as developertype,
+unwrap(cast(onair as Bool)) as onair,
+unwrap(surface) as surface,
+unwrap(skills) as skills,
+from `//home/statface/dumps/1596889716118413056_1baac7c39f2084ed/data__daily`
+where category != '_total_'
+and channel != '_total_'
+and developertype != '_total_'
+and developername = '_total_'
+and onair != '_total_'
+and surface != '_total_';

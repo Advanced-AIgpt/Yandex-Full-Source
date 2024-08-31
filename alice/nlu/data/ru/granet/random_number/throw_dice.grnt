@@ -1,0 +1,358 @@
+import: random_number/common.grnt
+
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/questions.grnt
+
+form alice.throw_dice:
+    slots:
+        # Число кубиков, которые надо бросить
+        num_dices:
+            type: sys.num
+            source: $NumDices
+                    # $Dice может давать отсылку к числу кубиков.
+                    # конфликты типа "брось 2 кубик" решаются на уровне сценария (max{num_dices}).
+                    $Dice
+        # Число граней на кубике
+        num_edges:
+            type: sys.num
+            source: $NumEdges
+                    $CustomEdges
+        # Сколько раз надо кинуть кубики
+        num_throw:
+            type: sys.num
+            source: $ThrowCount
+        # Тип игры
+        game_type:
+            type: custom.game
+            source: $Game
+
+    root:
+        %lemma
+        # основной вариант
+        [$Common.Play* $Again* $CommonPrepositions? $Common.Throw+ $Dices $EdgeCount? $ThrowCount? $Ending*]
+        # поддержка "два шестигранных кубика", "два по 6 граней кубики" и т.п.
+        [$Common.Play* $Again* $CommonPrepositions? $Common.Throw+ [$NumDices? $Dice $EdgeCount] $ThrowCount? $Ending*]
+        # Вариант с указанием "шестигранник" или "процентник" может быть без указания слова "кубик"
+        [$Common.Play* $Again* $CommonPrepositions? $Common.Throw+ [$NumDices? $CustomEdges] $ThrowCount? $Ending*]
+        %force_negative
+        [.* $NegativeRequestsDice]
+        как [$Common.Throw+ $Dices]
+
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+        $Common.ToWant
+        $Common.Lets
+        $Common.PronounMe
+        $nonsense
+        $AdditionalFillerDice
+
+#
+# Указание количества кубиков
+# Кубик, кубики, 5 костей и прочие варианты
+#
+$Dices:
+    $NumDices? $Dice
+
+$NumDices:
+    $sys.num
+
+#
+# Сколько раз бросить кубики
+# 2 раза, однократно и пр.
+#
+$ThrowCount:
+    %lemma
+    %type sys.num
+    $sys.num (раз|ход) подряд?
+    $sys.num штук
+    %value 1
+    однократно
+    %value 2
+    двукратно
+    двухкратно
+
+#
+# Сколько граней на кубике
+# С 6 гранями, восемнадцатигранник и проч.
+#
+$EdgeCount:
+    $NumEdges $Edge
+    $CustomEdges
+    # версия "брось кубик на 'семь'
+    (на|по|c) $NumEdges $Edge?
+    # версия "брось кубик от одного до 'шести'
+    от? $One и? до $NumEdges
+    $NumEdges $NumEdges? из (одного|единицы)
+
+$One:
+    %type sys.num
+    %value 1
+    %lemma
+    один
+    одного
+    единица
+    1
+
+$Edge:
+    %lemma
+    грань
+    сторон
+
+$NumEdges:
+    $sys.num
+    # TODO Hack to read "восьмью" (this value is not accepted by $sys.num)
+    %value 8
+    восьмью
+
+$CustomEdges:
+    %lemma
+    %type sys.num
+    %value 2
+    двугранный
+    двугранник
+    двуxгранный
+    двуxграненный
+    двуxграневый
+    %value 4
+    четырехгранный
+    четырехгранник
+    четырехзначный
+    четырехграненный
+    четырехграневый
+    %value 6
+    шестигранный
+    шестигранник
+    шестизначный
+    шестиграненный
+    шестиграневый
+    %value 8
+    восьмигранный
+    восьмигранник
+    восьмизначный
+    восьмиграненный
+    восьмиграневый
+    %value 10
+    десятигранный
+    десятигранник
+    десятизначный
+    десятиграненный
+    десятиграневый
+    %value 12
+    двенадцатигранный
+    двенадцатигранник
+    двенадцатизначный
+    двенадцатиграненный
+    двенадцатиграневый
+    %value 18
+    восемнадцатигранный
+    восемнадцатигранник
+    восемнадцатизначный
+    восемьнадцатиграненный
+    восемьнадцатиграневый
+    %value 20
+    двадцатигранный
+    двадцатигранник
+    двадцатизначный
+    двадцатиграненный
+    двадцатиграневый
+    %value 100
+    стогранный
+    стогранные
+    стогранник
+    стозначный
+    процентный
+    процентник
+    стограненый
+    стограневый
+    %value 120
+    стодвадцатигранный
+    стодвадцатигранник
+    стодвадцатизначный
+    стодвадцатиграненный
+    стодвадцатиграневый
+
+# Список доступных игр
+# В случае, если в сценарии не указано число кубиков, но есть идентификатор игры,
+# сценарий автоматически подберет правильные кубики для этого типа
+# Список игр будет расширяться в будущем
+# TODO: https://ru.wikipedia.org/w/index.php?title=Категория:Настольные_игры_по_алфавиту
+# TODO: https://market.yandex.ru/catalog--nastolnye-igry-i-golovolomki/70929
+# TODO: https://paste.yandex-team.ru/6528736
+$Game:
+    %lemma
+    %type custom.game
+    %value "backgammon"
+    нард
+    (длинные | короткие)? нарды
+    %value "monopoly"
+    монополия
+    НЭП
+    менеджер
+    бизнесмен
+    %value "millionaire"
+    миллионер
+    %value "manchkin"
+    манчкин
+    %value "ekivoki"
+    экивоки
+    %value "zodiak"
+    астрономические шахматы
+    зодиак
+    %value "imperium"
+    империум
+    %value "zong"
+    зонт
+    зонг
+    зонк
+    зонка # для "зонка"
+    song
+    zong
+    %value "majong"
+    маджонг
+    %value "computer_games"
+    zoom
+    зума
+    зельда
+    %value "activity"
+    activity
+    активити
+    %value "dice"
+    кости
+    %value "goblin_dice"
+    гоблинские кости
+    %value "dice5"
+    покер на костях
+    %value "dice4"
+    четыре кубика
+    %value "alias"
+    элиас
+    элиос
+    элис
+    %value "domino"
+    домино
+    %value "kazino"
+    казино
+    %value "capital"
+    бизнес
+    капитал
+    %value "3cats"
+    три кота
+    %value "cluedo"
+    клуэдо
+    cluedo
+    %value "lotto"
+    лото
+    лотто
+    русское лото
+    %value "monster"
+    приключения монстрика
+    монстрик
+    %value "dungeons&dragons"
+    днд
+    dungeons and dragons
+    %value "steppuzzle"
+    step puzzle
+    %value "geodom"
+    геодом путешествие
+    %value "default"
+    ходилка бродилка?
+    #
+    # список карточных игр, к которым неприменимы кубики
+    #
+    %value "card_games"
+    кубарем по галактике
+    roll for the galaxy
+    ролл для галактики
+    bang
+    банг
+    бэнг
+    тысяча
+    1000
+    nut
+    nuts
+    орех
+    орешек
+    путь героя
+    покорение марса
+    остров сокровищ
+    цура
+    цуро
+    tsuro
+    чикаго
+    однажды в чикаго
+    хитрый лис
+    коварный лис
+    #
+    # Игры в категории TODO (неизвестно или неотсортировано)
+    #
+    %value "todo"
+    маленькая хозяйка
+    сокровища фараона
+    тик так бум
+
+#
+# Additional filters for $Ending
+#
+$TellMe:
+    $Common.Speak $Common.PronounMe?
+    $Common.Tell $Common.PronounMe?
+    $Common.Search $Common.PronounMe?
+
+$Digit:
+    %lemma
+    очки
+    очков
+    цифра
+    число
+    номер
+    результат
+    сумма
+
+$PronounMe:
+    $Common.PronounMe
+    у меня
+
+$HowMuch:
+    %lemma
+    [$Common.QuestionHowMuch? $PronounMe? $Common.QuestionWhat? $Digit? (выпало|выпадет|осталось|будет|получилось)?]
+
+$Check:
+    проверить
+    угадать
+    вычислить
+    узнать
+
+$ToCheck:
+    уровень интеллекта
+    свои знания
+    $HowMuch
+    насколько ты умный
+    какая выпадет цифра
+    мою интуицию
+    мою удачу
+    насколько ты умная
+
+$Ending:
+    %lemma
+    мы (наш|свой) потеряли
+    посмотри что там
+    на стол
+    продолжить? (сходить|сделать ход|играть|играем|поиграем|сыграем) в? игру? $Game?
+    (для|из)? (игра|игры)? в? $Game?
+    по? правилам? (игра|игры)? в? $Game?
+    $Common.QuestionHow? в игре? $Game
+    которые используются в? игре? $Game
+    хочу испытать удачу
+    (начинаем|продолжаем) игру $Game?
+    теперь? (твоя|наша) очередь
+    $TellMe? $HowMuch
+    (помоги мне)? сделать? (ставку|выбор)?
+    на (следующий|новый) (ход|раунд)
+    (твой|мой) ход
+    кому водить
+    # по видимому, используют кубик чтобы выбирать вопросы из карточек (?)
+    я? мог? $Check ($ToCheck|$HowMuch)

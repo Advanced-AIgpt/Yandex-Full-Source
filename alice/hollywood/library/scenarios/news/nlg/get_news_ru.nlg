@@ -1,0 +1,286 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/intents_ru.nlg" import tts_pause %}
+
+{% from "alice/hollywood/library/scenarios/news/nlg/get_news_ru__phrases.nlg" import choose_concrete_news_source_if_want, choose_news_source_if_you_want, choose_more_news_suggest, choose_news_source_push, choose_specific_news_source, dont_want_choose_news_source, get_conclusion_text_for_personal, get_conclusion_text_default, get_introduction_text_for_personal, get_introduction_text_for_smi, get_introduction_text_for_wizard, get_onboarding_text_part, get_onboarding_text_full, get_introduction_text_default, get_news_ended_text, more_news_promo_text_before, more_news_promo_text_after, source_not_found, send_push_with_link, continue_news_after_handoff %}
+{% nlgimport "alice/hollywood/library/scenarios/news/nlg/get_news_ru__cards.nlg" %}
+
+{% macro init_ns(ns) %}
+  {% set ns.has_promo_before = false %}
+  {% set ns.has_promo_after = false %}
+
+  {# Flag used in tests to filter intro and ending prhases #}
+  {% set ns.no_promo = req_info.experiments.get('alice_news_no_promo') or context.attentions.get('news_continuous_request') %}
+{% endmacro %}
+
+{% macro replace_vertical_bars(text) %}
+  {{ text.replace('|', ',') }}
+{% endmacro %}
+
+
+{% macro render_full_article_voice(article) %}
+  {% set have_title = not article.get('skip_title') %}
+  {% if have_title %}
+    {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+  {% endif %}
+  {% if article.snippet %}
+    {% if have_title %}
+      {{ tts_pause(500) }}
+    {% endif %}
+    {% voice %}{{ replace_vertical_bars(article.snippet) }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_article_text(article) %}
+  {% text %}{{ article.text }}.{% endtext %}
+{% endmacro %}
+
+{% macro render_short_article_voice(article) %}
+  {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+{% endmacro %}
+
+{% macro render_station_short_news(news) %}
+  {% if context.fixlist.block_mode == "intro" and news | length > 0 %}
+    {{ render_short_article_text(news[0]) }}
+  {% elif context.fixlist.block_mode == "ending" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "news_item" %}
+    {{ render_short_article_text(news[context.fixlist.block_news_item_idx]) }}
+    {{ render_short_article_voice(news[context.fixlist.block_news_item_idx]) }}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode %}
+    {% for article in news[:-1] %}
+      {{ render_short_article_text(article) }}
+      {% text %} \n\n {% endtext %}
+      {{ render_short_article_voice(article) }}
+      {% voice %} \n\n {% endvoice %}
+      {{ render_pause_between_stories() }}
+    {% endfor %}
+    {{ render_short_article_text(news[-1]) }}
+    {{ render_short_article_voice(news[-1]) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_pause_between_stories() %}
+  {% if (not context.is_smart_speaker and not req_info.experiments.get('alice_news_pause_sound')) or req_info.experiments.get('alice_news_no_pause_sound') %}
+    {{ tts_pause(1000) }}
+  {% else %}
+    {{ tts_pause(500) }}
+    {% if req_info.experiments.get('news_pause_pampam_sound') %}
+      {% voice %}<speaker audio="pampam.opus">{% endvoice %}
+    {% else %}
+      {% voice %}<speaker audio="between_news.opus">{% endvoice %}
+    {% endif %}
+    {{ tts_pause(500) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_news(news) %}
+  {% if context.fixlist.block_mode == "intro" and news | length > 0 %}
+    {{ render_short_article_text(news[0]) }}
+  {% elif context.fixlist.block_mode == "ending" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "ending_should_listen" and news | length > 0 %}
+    {{ render_short_article_text(news[-1]) }}
+  {% elif context.fixlist.block_mode == "news_item" %}
+    {{ render_short_article_text(news[context.fixlist.block_news_item_idx]) }}
+    {{ render_full_article_voice(news[context.fixlist.block_news_item_idx]) }}
+    {% if context.fixlist.block_news_item_idx < (news | length) - 1 %}
+      {{ tts_pause(1000) }}
+    {% endif%}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode %}
+    {% for article in news[:-1] %}
+      {{ render_short_article_text(article) }}
+      {% text %} \n\n {% endtext %}
+      {{ render_full_article_voice(article) }}
+      {% voice %} \n\n {% endvoice %}
+      {{ render_pause_between_stories() }}
+    {% endfor %}
+    {{ render_short_article_text(news[-1]) }}
+    {{ render_full_article_voice(news[-1]) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_intro() %}
+  {% if form.news.smi %}
+    {% if form.news.onboarding_mode %}
+      {{ render_onboarding() }}
+    {% else %}
+      {% voice %}{{ get_introduction_text_for_smi(form.news.smi) }}{% endvoice %}
+    {% endif %}
+  {% elif context.attentions.get('wizard_response') %}
+    {% voice %}{{ get_introduction_text_for_wizard() }}{% endvoice %}
+  {% else %}
+    {{ render_alice_introduction() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_onboarding() %}
+  {% if form.news.onboarding_mode == 'full' %}
+    {% voice %}{{ get_onboarding_text_full(form.news.smi) }}{% endvoice %}
+  {% elif form.news.onboarding_mode == 'part' %}
+    {% voice %}{{ get_onboarding_text_part(form.news.smi) }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_alice_introduction() %}
+  {% if context.attentions.get('personal_news') %}
+    {% voice %}{{ get_introduction_text_for_personal() }}{% endvoice %}
+  {% else %}
+    {% voice %}{{ get_introduction_text_default() }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_after_promo(ns) %}
+  {% if form.news.post_news_mode == 'news_change_source_postroll_mode' and not form.news.onboarding_mode %}
+    {{ tts_pause(1000) }}
+    {% if context.fixlist.topic %}
+      {% voice %}{{ choose_concrete_news_source_if_want(context.fixlist.topic) }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ choose_news_source_if_you_want() }}{% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_ending(ns) %}
+  {% if not form.news.post_news_mode %}
+    {{ tts_pause(1000) }}
+    {% if context.attentions.get('personal_news') %}
+      {% voice %}{{ get_conclusion_text_for_personal() }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ get_conclusion_text_default() }}{% endvoice %}
+    {% endif %}
+  {% elif not (ns.no_promo or ns.has_promo_before) %}
+    {{ render_after_promo(ns) }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_postroll_negative_response %}
+  {{ dont_want_choose_news_source() }}
+{% endphrase %}
+
+{% phrase render_postroll_response %}
+  {{ choose_news_source_push() }}
+{% endphrase %}
+
+{% phrase render_postroll_unknown_source_response %}
+  {{ source_not_found() }}
+{% endphrase %}
+
+{% phrase render_postroll_new_source_set %}
+  {{ choose_specific_news_source(context.source) }}
+{% endphrase %}
+
+{% phrase render_postroll_error %}
+  Я попробовала отправить вам пуш, но у меня не получилось. Что-то пошло не так.
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set ns = namespace() %}
+  {% do init_ns(ns) %}
+
+  {% if form.news.speaker_speed %}
+    {% voice %}<speaker speed="{{ form.news.speaker_speed }}">{% endvoice %}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode or context.fixlist.block_mode == "intro"%}
+    {% if context.voice_has_intro_and_ending %}
+      {{ render_result_intro() }}
+      {% if not context.fixlist.block_mode or req_info.experiments.get('news_block_pause') %}
+        {{ tts_pause(1000) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% if req_info.experiments.get('alice_station_short_news') %}
+    {{ render_station_short_news(form.news.news) }}
+  {% else %}
+    {{ render_news(form.news.news) }}
+  {% endif %}
+
+  {% if not context.fixlist.block_mode or context.fixlist.block_mode == "ending"%}
+    {% if context.voice_has_intro_and_ending %}
+      {{ render_result_ending(ns) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__get_news__details %}
+  {{ form.news.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__details %}
+  Открыть Новости
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__more %}
+  {{ choose_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__more %}
+  {{ choose_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__settings%}
+  Настроить новости
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__settings %}
+  Настроить новости
+{% endphrase %}
+
+{% phrase render_error__nonews %}
+  {% set ns = namespace() %}
+  {% do init_ns(ns) %}
+
+  {% if context.attentions.get('news_ended') %}
+    {{ get_news_ended_text() }}
+  {% elif context.attentions.get('rubric_response') %}
+    Чтобы слушать новости, попросите меня рассказать новости из конкретного источника или выберите его в настройках.
+    Для этого скажите мне в приложении Яндекс: Алиса, настрой новости.
+  {% else %}
+    К сожалению, я не смогла найти новостей по данному запросу.
+  {% endif %}
+
+{% endphrase %}
+
+{% phrase render_suggest_caption__news_settings %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__news_settings %}
+  {% set info = namespace() %}
+  {% set info.nav = form.search_results['nav'] if form.search_results and 'nav' in form.search_results else None %}
+  {% set info.nav_url = info.nav['url'] if info.nav else None %}
+  {{ info.nav_url }}
+{% endphrase %}
+
+{% phrase render_search_app_news_settings %}
+  {% text %}
+    Настройка новостей Алисы
+  {% endtext %}
+  {% voice %}
+    Открываю
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_news_settings_without_auth %}
+  {% text %}
+    Для настройки новостей нужно войти в аккаунт Яндекс
+  {% endtext %}
+  {% voice %}
+    Для настройки новостей нужно войти в аккаунт Яндекс
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_error__system %}
+  К сожалению, я не смогла найти новостей по данному запросу.
+{% endphrase %}
+
+{% phrase render_news_more_info %}
+  {{ send_push_with_link() }}
+  {{ tts_pause(500) }}
+  {{ continue_news_after_handoff() }}
+{% endphrase %}

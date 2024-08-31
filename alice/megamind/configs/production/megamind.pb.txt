@@ -1,0 +1,968 @@
+AppHost {
+    WorkerThreads: 50
+    AsyncWorkerThreads: 80
+    GrpcTransportThreads: 4
+    HttpPort: 80
+}
+MonService {
+    PortOffset: 1
+}
+RTLog {
+    Async: true
+    FlushPeriodSecs: 1
+    ServiceName: "megamind"
+    FileStatCheckPeriodSecs: 1
+    Level: LogInfo
+    UseNewCompression: true
+    UnifiedAgentUri: "localhost:86"
+    UnifiedAgentLogFile: "/logs/unified_agent_client.err"
+}
+
+Scenarios {
+    DefaultConfig {
+        DialogManagerParams {
+            MaxActivityTurns: 0
+            ActiveScenarioTimeoutSeconds: 600
+        }
+        HandlersConfig {
+            Run {
+                TimeoutMs: 300
+                MaxAttempts: 1
+                MaxConnectionAttempts: 2
+            }
+            Callback {
+                TimeoutMs: 300
+                MaxAttempts: 1
+                MaxConnectionAttempts: 2
+            }
+            Apply {
+                TimeoutMs: 300
+                MaxAttempts: 1
+                MaxConnectionAttempts: 2
+            }
+            Commit {
+                TimeoutMs: 300
+                MaxAttempts: 1
+                MaxConnectionAttempts: 2
+            }
+            Continue {
+                TimeoutMs: 300
+                MaxAttempts: 1
+                MaxConnectionAttempts: 2
+            }
+        }
+        ScenarioSessionTimeoutSeconds: 0
+    }
+    Configs [
+        {
+            key: "Afisha"
+            value: {
+                HandlersConfig {
+                    Run {
+                        MaxConnectionAttempts: 5
+                        TimeoutMs: 3500
+                    }
+                }
+            }
+        },
+        {
+            key: "Alarm"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 2340
+                    }
+                }
+            }
+        },
+        {
+            key: "AliceShow"
+            value: {
+                DisableWhisperAsCallbackOwner: true
+            }
+        },
+        {
+            key: "Contacts"
+            value: {
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/CENTAUR-623
+                HandlersConfig {
+                    Run {
+                        MaxConnectionAttempts: 5
+                    }
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxConnectionAttempts: 5
+                    }
+                }
+            }
+        },
+        {
+            key: "Dialogovo"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                    IsPlayerOwnerPriorityAllowed: true
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 300
+                        RetryPeriodMs: 50
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 5
+                    }
+                    Continue {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 5
+                    }
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 5
+                    }
+                }
+            }
+        },
+        {
+            key: "DialogovoB2b"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                    IsPlayerOwnerPriorityAllowed: true
+                }
+                HandlersConfig {
+                    Run {
+                        MaxConnectionAttempts: 5
+                    }
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 5
+                    }
+                }
+            }
+        },
+        {
+            key: "DriveOrder"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 2
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000 # увеличили для беты, вернуть в SERP-137657
+                        RetryPeriodMs: 300
+                        MaxAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 4000
+                        MaxAttempts: 1
+                    }
+                }
+            }
+        },
+        {
+            key: "Food"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-2258
+                HandlersConfig {
+                    Run {
+                        # TODO(samoylovboris) Make /continue handle
+                        TimeoutMs: 2500
+                    }
+                    Commit {
+                        TimeoutMs: 2500
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "GeneralConversation"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                    DialogHistoryAllowed: true
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000
+                        RetryPeriodMs: 500
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                    Continue {
+                        TimeoutMs: 4000
+                        RetryPeriodMs: 2000
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "GeneralConversationHeavy"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                    DialogHistoryAllowed: true
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000
+                    }
+                    Continue {
+                        TimeoutMs: 4000
+                        RetryPeriodMs: 1000
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "GeneralConversationTr"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                    DialogHistoryAllowed: true
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000
+                        RetryPeriodMs: 500
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "HollywoodMusic"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 2
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1049
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1600
+                        RetryPeriodMs: 700
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 2200
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Continue {
+                        TimeoutMs: 2200
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Commit {
+                        TimeoutMs: 1500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "HollywoodHardcodedMusic"
+            value: {
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1049
+                HandlersConfig {
+                    Run {
+                        EnableFastReconnect: true
+                        TimeoutMs: 2200
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "IoT"
+            value: {
+                HandlersConfig {
+                    Apply {
+                        TimeoutMs: 5000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "IoTScenarios"
+            value: {
+                HandlersConfig {
+                    Apply {
+                        TimeoutMs: 5000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "IoTVoiceDiscovery"
+            value: {
+                HandlersConfig {
+                    Continue {
+                        TimeoutMs: 1000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "MarketHowMuch"
+            value: {
+                HandlersConfig {
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "MarketOrdersStatus"
+            value: {
+                HandlersConfig {
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Search"
+            value: {
+                HandlersConfig {
+                    Commit {
+                        TimeoutMs: 1500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "TestScenario"
+            value: {
+                ConditionalDataSources [
+                    {
+                        DataSourceType: WEB_SEARCH_RENDERRER
+                        Conditions [
+                            {
+                                OnSemanticFrameCondition {
+                                    SemanticFrameName: "personal_assistant.scenarios.bluetooth_on"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            key: "TimeCapsule"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 40
+                }
+            }
+        },
+        {
+            key: "TransformFace"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                }
+                HandlersConfig {
+                    Continue {
+                        TimeoutMs: 3000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Video"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1200
+                        RetryPeriodMs: 800
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                    Callback {
+                        TimeoutMs: 1200
+                        RetryPeriodMs: 1000
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 400
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Commit {
+                        TimeoutMs: 1500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+                ConditionalDataSources [
+                    {
+                        DataSourceType: WEB_SEARCH_DOCS
+                        Conditions [
+                            {
+                                OnExperimentFlag {
+                                    FlagName: "video_use_web_search"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        DataSourceType: WEB_SEARCH_DOCS_RIGHT
+                        Conditions [
+                            {
+                                OnExperimentFlag {
+                                    FlagName: "video_use_web_search"
+                                }
+                            }
+                        ]
+                    }
+                ]               
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1050
+            }
+        },
+        {
+            key: "TvMain"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 2600
+                    }
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1050
+            }
+        },
+        {
+            key: "VideoCommand"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1500
+                        RetryPeriodMs: 1000
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 700
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1050
+            }
+        },
+        {
+            key: "VideoTrailer"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 500
+                        RetryPeriodMs: 250
+                        MaxAttempts: 2
+                        MaxConnectionAttempts: 2
+                    }
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1050
+            }
+        },
+        {
+            key: "VideoMusicalClips"
+            value: {
+                HandlersConfig {
+                    Run {
+                        EnableFastReconnect: true
+                        TimeoutMs: 300
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Continue {
+                        TimeoutMs: 2000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-1050
+            }
+        },
+        {
+            key: "Covid19"
+            value: {
+                HandlersConfig {
+                    Callback {
+                        TimeoutMs: 2000
+                        MaxConnectionAttempts: 2
+                    }
+                    Run {
+                        TimeoutMs: 2000
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "FindPoiTr"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 800
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ShowRouteTr"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 900
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ImageWhatIsThis"
+            value: {
+                HandlersConfig {
+                    Continue {
+                        TimeoutMs: 3000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Vins"
+            value: {
+                EnableOAuth: true,
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Callback {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Continue {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Commit {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "GetTime"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 700
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "MusicWhatIsPlaying"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1400
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Reminders"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "MordoviaVideoSelection"
+            value: {
+                EnableOAuth: true # DEPRECATED VH-11976
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 900
+                        MaxAttempts: 1
+                        EnableFastReconnect: true
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ShowTvChannelsGallery"
+            value: {
+                EnableOAuth: true # DEPRECATED VH-11976
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1800
+                        MaxAttempts: 1
+                        EnableFastReconnect: true
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "VideoPlayConcert"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 2
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 1000
+                        MaxAttempts: 1
+                        EnableFastReconnect: true
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "VideoRater"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: -1
+                }
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 500
+                        MaxAttempts: 1
+                        EnableFastReconnect: true
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Miles"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+                HandlersConfig {
+                    Commit {
+                        TimeoutMs: 5000
+                        MaxConnectionAttempts: 2
+                    }
+                    Run {
+                        TimeoutMs: 500
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "MailCiao"
+            value: {
+                HandlersConfig {
+                    Commit {
+                        TimeoutMs: 3000
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ShowTraffic"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 700 # it will be decreased after https://st.yandex-team.ru/MEGAMIND-1980
+                        MaxAttempts: 2
+                        RetryPeriodMs: 200
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ShowTrafficBass"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 700 # it will be decreased after https://st.yandex-team.ru/MEGAMIND-1980
+                    }
+                }
+            }
+        },
+        {
+            key: "Weather"
+            value: {
+                HandlersConfig {
+                    Run {
+                        # FIXME(sparkle): set precise timeout after this task - https://st.yandex-team.ru/MEGAMIND-2024 (take from AppHost realtime metrics)
+                        TimeoutMs: 1300
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ExternalSkillFlashBriefing"
+            value: {
+                HandlersConfig {
+                    Run {
+                        MaxConnectionAttempts: 5
+                    }
+                    Commit {
+                        MaxConnectionAttempts: 5
+                    }
+                }
+            }
+        },
+        {
+            key: "ExternalSkillRecipes"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+                HandlersConfig {
+                    Run {
+                        MaxConnectionAttempts: 5
+                    }
+                    Commit {
+                        MaxConnectionAttempts: 5
+                    }
+                }
+            }
+        },
+        {
+            key: "DiskMyPhotos"
+            value: {
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 750  # https://st.yandex-team.ru/MEGAMIND-1960#5f7d9c5d77b1101344d2b194
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Repeat"
+            value: {
+                DialogManagerParams {
+                    DialogHistoryAllowed: true
+                },
+                PureSession: true,
+                ReplaceScenarioNameWithPrevious: true
+            }
+        },
+        {
+            key: "Route"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 2
+                }
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-2750
+                HandlersConfig {
+                    Run {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Apply {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Callback {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Continue {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                    Commit {
+                        TimeoutMs: 3500
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "SubscriptionsManager"
+            value: {
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/DIALOG-7379
+                HandlersConfig {
+                    Continue {
+                        TimeoutMs: 1600
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "Voiceprint"
+            value: {
+                EnableOAuth: true # DEPRECATED: https://st.yandex-team.ru/MEGAMIND-3229
+                DialogManagerParams {
+                    MaxActivityTurns: 13
+                    ActiveScenarioTimeoutSeconds: 120
+                }
+                HandlersConfig {
+                    Apply {
+                        TimeoutMs: 1375
+                        MaxAttempts: 1
+                        MaxConnectionAttempts: 2
+                    }
+                }
+            }
+        },
+        {
+            key: "ZenSearch"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+            }
+        },
+        {
+            key: "Goods"
+            value: {
+                DialogManagerParams {
+                    MaxActivityTurns: 1
+                }
+            }
+        }
+    ]
+}
+
+MegamindAnalyticsLogFile: "/logs/current-megamind-analytics-log"
+
+BassAvatarsHost: "http://avatars.mds.yandex.net"
+
+MegamindProactivityLogFile: "/logs/current-megamind-proactivity-log"
+
+LockGeobase: true
+
+WatchDogRequestTimeoutSeconds: 240
+
+RequestThreadsCount: 10
+
+EnableUdpMetrics: true
+
+StatisticsClientConfig {
+    SDConfig {
+        Host: "sd.yandex.net"
+        Port: 8081
+        UpdateFrequency: "10s"
+        ConnectTimeout: "100ms"
+        RequestTimeout: "1s"
+        ClientName: "megamind"
+        CacheDir: "sd_cache"
+    },
+    EndpointSetKeys [
+        {
+            Cluster: "sas"
+            Id: "udp-click-metrics"
+        },
+        {
+            Cluster: "man"
+            Id: "udp-click-metrics"
+        },
+        {
+            Cluster: "vla"
+            Id: "udp-click-metrics"
+        }
+    ],
+    EndpointSetManagerLoggerConfig {
+        Path: "/logs/current-sdlib-eventlog"
+        Level: "INFO"
+        QueueSize: 100
+    }
+}
+
+EventLogConfig {
+    Backend: FILE
+    Path: "/logs/current-eventlog-udp"
+    Level: "INFO"
+}
+
+FormulasPath: "./resources/formulas"
+GeobasePath: "./resources/geodata6.bin"
+
+SaasSkillDiscoveryOptions {
+    ServiceName: "alisa_skills"
+    SaasQueryParams {
+        Kps : "105"
+        Formula: "fml_2019_04_29_mse"
+        Softness: "0"
+        Threshold: 107775728
+    }
+    Host: "saas-searchproxy.yandex.net"
+    Port: 17000
+    TimeoutMs: 300
+}
+
+UnifiedAgentUri: "localhost:87"
+UnifiedAgentLogFile: "/logs/unified_agent_megamind_client.err"

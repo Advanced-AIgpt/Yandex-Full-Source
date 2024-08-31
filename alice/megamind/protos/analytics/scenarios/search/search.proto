@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package NAlice.NSearch;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/analytics/scenarios/search";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TSearchFact {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string Source = 1 [json_name = "source", (NYT.column_name) = "source"];
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text"];
+    string Url = 3 [json_name = "url", (NYT.column_name) = "url"];
+    string Title = 4 [json_name = "title", (NYT.column_name) = "title"];
+}
+
+message TSearchGenericInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TDataSourceType {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // Путь источника (обычно `snippet/full` или `important/construct`)
+        string Parent = 1 [json_name = "parent", (NYT.column_name) = "parent"];
+        // Значения поля "type"
+        string Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+        // Значения поля "subtype"
+        string Subtype = 3 [json_name = "subtype", (NYT.column_name) = "subtype"];
+        // Значения поля "template"
+        string Template = 4 [json_name = "template", (NYT.column_name) = "template"];
+    }
+    // Описание свойств объектного ответа
+    repeated TDataSourceType DataSourceDocs = 1 [json_name = "data_source_doc", (NYT.column_name) = "data_source_doc"];
+    // Описание свойств фактового ответа
+    repeated TDataSourceType DataSourceWizplaces = 2 [json_name = "data_source_wizplaces", (NYT.column_name) = "data_source_wizplaces"];
+    // Поисковый процессор, который выиграл в формировании ответа ("", если управление ушло в старый non-centaur сценарий)
+    // Возможные варианты: https://a.yandex-team.ru/search?search=%20ISearchProcessor%5C(,%5Ealice%2Fhollywood%2Flibrary%2Fscenarios%2Fsearch%2Fscenes%2Fprocessors%2F.*,,arcadia,,500&repo=arcadia
+    reserved 3; reserved "WinnnerProcessor";
+    string Winner = 4 [json_name = "winner", (NYT.column_name) = "winner"];
+    // Картинка, которая была найдена в фактовом ответе (при ее наличии)
+    string ImageFactoid = 5 [json_name = "image_factoid", (NYT.column_name) = "image_factoid"];
+    // Картинка, которая была найдена в объектном ответе
+    string ImageObjectAnswer = 6 [json_name = "image_object_answer", (NYT.column_name) = "image_object_answer"];
+    // Картинка, которая была найдена следи дополнительных изображений datasource
+    string ImageOther = 7 [json_name = "image_other", (NYT.column_name) = "image_other"];
+}

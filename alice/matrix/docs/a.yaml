@@ -1,0 +1,103 @@
+title: Alice.Matrix (docs)
+service: speechkit_ops_alice_notificator
+
+ci:
+  secret: sec-01fwnh9m1kpzq1jwkaxnwmbvew
+  runtime:
+    sandbox:
+      owner: BASS
+
+  actions:
+    deploy-pr-docs:
+      title: Deploy matrix docs for pr
+      flow: deploy-pr-docs
+      triggers:
+        - on: pr
+
+    docs-pr-spell-check:
+      title: Matrix docs pr spell check
+      flow: docs-pr-spell-check
+      triggers:
+        - on: pr
+
+  releases:
+    release-docs:
+      title: Release matrix docs
+      flow: release-docs
+      auto: true
+      filters:
+      - abs-paths:
+        - build/platform/yfm
+        - alice/matrix/docs/**
+
+        # DOCS_INCLUDE_SOURCES
+        - alice/matrix/notificator/configs/subscriptions.json
+        - alice/matrix/notificator/tools/ydb_scripts/matrix_notificator_init.ydb
+        - alice/matrix/scheduler/library/services/scheduler/protos/service.proto
+        - alice/matrix/scheduler/tools/ydb_scripts/matrix_scheduler_init.ydb
+        - alice/matrix/worker/tools/ydb_scripts/matrix_worker_init.ydb
+        - alice/protos/api/matrix/action.proto
+        - alice/protos/api/matrix/scheduled_action.proto
+        - alice/protos/api/matrix/scheduler_api.proto
+
+      stages:
+      - id: build
+        title: Build
+        displace: true
+      - id: testing
+        title: Testing
+        displace: true
+      - id: stable
+        title: Stable
+
+  flows:
+    deploy-pr-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          input:
+            targets: alice/matrix/docs
+            arcanum_review_id: ${context.launch_pull_request_info.pull_request.id}
+            notify: true
+
+    docs-pr-spell-check:
+      jobs:
+        run-spell-check:
+          title: Spell check
+          task: junk/guschin/speller
+          attempts: 1
+          input:
+            config:
+              pr_id: ${context.launch_pull_request_info.pull_request.id}
+              post_comment: true
+            arcanum_token:
+              key: ci.token
+              uuid: sec-01fwnh9m1kpzq1jwkaxnwmbvew
+
+    release-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          stage: build
+          input:
+            targets: alice/matrix/docs
+
+        release-to-testing:
+          title: Release docs to testing
+          task: common/docs/release
+          needs: deploy
+          stage: testing
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: testing
+
+        release-to-stable:
+          title: Release docs to stable
+          task: common/docs/release
+          needs: release-to-testing
+          stage: stable
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: production

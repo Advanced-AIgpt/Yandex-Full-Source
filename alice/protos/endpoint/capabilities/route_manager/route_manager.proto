@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/route_manager;routemanagercapabilitiespb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "RouteManagerCapabilitiesProto";
+
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/extensions/extensions.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TRouteManagerCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = RouteManagerCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum TRoute {
+            UnknownRoute = 0;
+            Stopped = 1;
+            Stopping = 2;
+            Moving = 3;
+            WaitingPassenger = 4;
+            Finished = 5;
+        }
+
+        enum TLayout {
+            UnknownLayout = 0;
+            Map = 1;
+            Ride = 2;
+        }
+
+        TRoute Route = 1 [json_name = "route", (NYT.column_name) = "route"];
+        TLayout Layout = 2 [json_name = "layout", (NYT.column_name) = "layout"];
+    }
+
+    // directives
+    message TStartDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "route_manager_start_directive";
+        option (DirectiveType) = StartRouteManagerDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TStopDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "route_manager_stop_directive";
+        option (DirectiveType) = StopRouteManagerDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TShowDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "route_manager_show_directive";
+        option (DirectiveType) = ShowRouteManagerDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TContinueDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        option (SpeechKitName) = "route_manager_continue_directive";
+        option (DirectiveType) = ContinueRouteManagerDirectiveType;
+
+        string Name = 1000 [json_name = "name", (NYT.column_name) = "name"];
+    }
+}
+
+

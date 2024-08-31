@@ -1,0 +1,94 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" import render_error, format_time %}
+
+{% macro render_compact_confirmation() %}
+  {% chooseline %}
+    حسناً
+    أوكي
+    فهمت
+    جاهزة
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__need_confirmation') %}
+  {% elif context.attentions.get('timer__already_set') %}
+    تم تشغيل المؤقت، هل أبدله؟
+  {% elif context.data.specification == "sleep" %}
+    {% if context.attentions.get('timer__abs_time') %}
+      {{ render_compact_confirmation() }}. سأطفئه في {{ format_time(context.data.time, absolute=True) }}.
+    {% else %}
+      {{ render_compact_confirmation() }}. سأطفئه خلال {{ format_time(context.data.time) }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      حسناً. {{ format_time(context.data.time, case='nom') }}. بدأ العد!
+    {# {% or %}
+      تم. خلال {{ format_time(context.data.time) }} سأزمر لك. #}
+    {% or %}
+      لقد ضبطت المؤقت {{ format_time(context.data.time) }}.
+    {% or %}
+      جاهزة. {{ format_time(context.data.time, case='nom') }}. سأبدأ العد.
+    {% or %}
+      حسناً. {{ format_time(context.data.time, case='nom') }}. بدأ العد.
+    {% endchooseitem %}
+  {% endif %}
+{% endphrase %}
+
+{% macro timer_hint() %}
+  {% set minutes = range(5,20) | random %}
+  {% set seconds = range(5,20) | random %}
+  {% chooseitem %}
+    لكي أضبط المؤقت قل مثلاً،" اضبطي المنبه على {{ minutes }} دقيقة {{ seconds }} ثانية".
+  {% or %}
+    لتشغيل المؤقت قل مثلاً، "عيني المؤقت على {{ seconds }} ثانية".
+  {% or %}
+    لتعيين الوقت قل مثل، "عيني {{ minutes }} دقائق".
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase ask__time %}
+  {% if form.specification == "sleep" %}
+    على أي وقت يجب ضبط مؤقت النوم
+  {% else %}
+    على أي وقت يجب ضبط المؤقت
+  {% endif %}?
+{% endphrase %}
+
+{% phrase ask__sleep_time %}
+  {% chooseline %}
+    من فضلك، كرر، متى علي أن أطفئه؟
+    لقد تشتت، كرر، متى علي أن أطفئيه؟
+    آخ. لقد تشتت. كرر. متى يجب أن أطفئه؟
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'not_supported' %}
+    {% if context.is_elari_watch %}
+      سأتعلم كيف أفعل ذلك قريباً. سيمر الوقت كالبرق.
+    {% else %}
+      {% chooseitem %}
+        لا أستطيع ضبط الوقت حالياً. لكنني سأتعلم حتماً.
+      {% or %}
+        لا أستطيع تعيين المؤقت حالياً. لكن هذا الوضع مؤقت.
+      {% or %}
+        لا أستطيع حالياً تعيين المؤقت على هذا الجهاز. لكنني سأتعلم يوماً ما.
+      {% endchooseitem %}
+    {% endif %}
+  {% elif context.error.data.code == 'bad_arguments' or context.error.data.code == 'time_exceeds_limit' %}
+    {% if context.time %}
+      أستطيع تعيين المؤقت لمدة حتى 24 ساعة.
+    {% else %}
+      {{ timer_hint() }}
+    {% endif %}
+  {% elif context.error.data.code == 'setting_failed' %}
+    لم أستطيع تعيين المؤقت ستضطر إلى تعيينه بنفسك.
+  {% elif context.error.data.code == 'too_many_timers' %}
+    هناك 25 مؤقتاً مضبوط الآن. لا أستطيع أكثر من ذلك.
+  {% else %}
+    {% if not context.attentions.get('timer__need_confirmation') %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

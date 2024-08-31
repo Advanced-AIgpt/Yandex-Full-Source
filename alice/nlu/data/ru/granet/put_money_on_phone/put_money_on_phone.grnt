@@ -1,0 +1,140 @@
+import:
+    common/adverbs.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/persons.grnt
+    common/prepositions.grnt
+    common/pronouns.grnt
+    common/verbs.grnt
+
+form alice.put_money_on_phone:
+    root:
+        $RootOptionalAmount
+        %force_positive # Приоритет разбора с $Amount выше, чем без (чтобы $PhoneNumber не перехватывал $Amount)
+        $RootWithAmount
+    filler:
+        $Common.Filler
+        $Common.WayToCallAlice
+        $nonsense
+        %lemma
+        $Common.From $Common.PronounMe* (банковской | кредитной | дебетовой)* (карточки | карты | кредитки | банка)
+        $Common.From
+        $Common.PronounMe
+        $Common.PronounMyself
+        $Common.PronounThis
+        $Common.Little
+        $Common.Now
+        $Person
+        побольше
+
+    slots:
+        amount:
+            source: $Amount
+            type: sys.num
+        phone_number:
+            source: $PhoneNumber
+            type: string
+    $RootWithAmount:
+        [$Send+ ($To* $Amount)+ $Money* $ToPhone+]
+        [$SendWithInfinitive+ ($To* $Amount $Money*)+ $Money+ $ToPhone+]
+    $RootOptionalAmount:
+        [$Send+ ($To* $Amount)* $Money+ $ToPhone+]
+        [пополни $Phone+]
+    $Send:
+        $SendImperative
+        (можешь | можно) (пожалуйста)* $SendWithInfinitive
+    $SendImperative:
+        %enable_synonyms all
+        переведи
+        отправь
+        отошли
+        перешли
+        закинь
+        положи
+        пополни
+        перекинь
+        переправь
+        положь
+        скинь
+    $SendWithInfinitive:
+        $Common.ToSend
+        %lemma
+        $SendImperative
+        перевести
+        закинуть
+        положить
+        пополнить
+    $Amount:
+        $sys.num
+        $AmountSpecial
+    $AmountSpecial:
+        %type sys.num
+
+        %value 10
+        червонец
+
+        %value 100
+        сотка
+        сотку
+        соточка
+        соточку
+
+        %value 500
+        пятихатка
+        пятихатку
+
+        %value 1000
+        тыща
+        тыщу
+        косарь
+        касарь
+    $Money:
+        %enable_synonyms all
+        $Common.TheRuble
+        %lemma
+        деньги
+        баксы
+        баксов
+        финансы
+        рублики
+        бабло
+        денежка
+        денежку
+    $ToPhone:
+        $To* $Phone+ ($ToPhoneNumber)?
+        $ToPhoneNumber
+    $ToPhoneNumber:
+        ($To | (номер | $MobilePhone))+ $PhoneNumber
+    $Phone:
+        $MobilePhone
+
+        %lemma
+        номер
+        (номер | счет | баланс)+ ($MobilePhone)+
+        (номер | счет | баланс)+ $To+ $MobilePhone
+        (номер | счет | баланс)* в? (мтс | мегафон | ((тинькоф | тиньков) мобайл) | билайн | йота | йоту | ёта | ёту | теле 2 | теле два)+
+        симка
+        симку
+        симкарта
+        симкарту
+        сим-карта
+        сим-карту
+    $Person:
+        %lemma
+        $Common.PersonsAll
+        $sys.fio.name
+        $sys.fio.surname
+        $sys.fio.patronym
+    $MobilePhone:
+        %lemma
+        телефон
+        мобильный
+        мобильник
+        мобила
+        мобилу
+    $PhoneNumber:
+        (плюс)* $sys.num+
+        плюс .+
+    $To:
+        $Common.To
+        на

@@ -1,0 +1,11 @@
+RECURSE(
+    begemot_evaluator
+    common
+    convert_vins
+    create_batch
+    dump_lang
+    granet
+    neural
+    sample
+    vins
+)

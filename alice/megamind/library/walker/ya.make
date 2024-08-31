@@ -1,0 +1,94 @@
+LIBRARY()
+
+OWNER(g:megamind)
+
+PEERDIR(
+    alice/bass/libs/fetcher
+    alice/library/analytics/common
+    alice/library/experiments
+    alice/library/frame
+    alice/library/json
+    alice/library/logger
+    alice/library/metrics
+    alice/library/network
+    alice/library/proto
+    alice/library/scenarios/data_sources
+    alice/library/typed_frame
+    alice/library/util
+    alice/library/version
+    alice/library/video_common
+    alice/megamind/library/analytics
+    alice/megamind/library/apphost_request
+    alice/megamind/library/begemot
+    alice/megamind/library/classifiers
+    alice/megamind/library/classifiers/features
+    alice/megamind/library/common
+    alice/megamind/library/context
+    alice/megamind/library/experiments
+    alice/megamind/library/globalctx
+    alice/megamind/library/misspell
+    alice/megamind/library/models/directives
+    alice/megamind/library/modifiers
+    alice/megamind/library/new_modifiers
+    alice/megamind/library/proactivity/common
+    alice/megamind/library/proactivity/postroll
+    alice/megamind/library/request
+    alice/megamind/library/request/event
+    alice/megamind/library/request_composite/client
+    alice/megamind/library/requestctx
+    alice/megamind/library/response
+    alice/megamind/library/scenarios/defs
+    alice/megamind/library/scenarios/helpers
+    alice/megamind/library/scenarios/helpers/interface
+    alice/megamind/library/scenarios/interface
+    alice/megamind/library/scenarios/protocol
+    alice/megamind/library/scenarios/registry
+    alice/megamind/library/scenarios/registry/interface
+    alice/megamind/library/search
+    alice/megamind/library/sensors
+    alice/megamind/library/serializers
+    alice/megamind/library/session
+    alice/megamind/library/sources
+    alice/megamind/library/speechkit
+    alice/megamind/library/stage_wrappers
+    alice/megamind/library/util
+    alice/megamind/library/vins
+    alice/megamind/protos/common
+    alice/megamind/protos/modifiers
+    alice/megamind/protos/partials_pre
+    alice/megamind/protos/proactivity
+    alice/megamind/protos/quality_storage
+    alice/megamind/protos/scenarios
+    alice/megamind/protos/speechkit
+    alice/nlg/library/nlg_renderer
+    alice/protos/endpoint/capabilities/opening_sensor
+    alice/protos/endpoint/events
+    kernel/factor_storage
+    library/cpp/http/misc
+    library/cpp/iterator
+    library/cpp/json
+    library/cpp/langs
+)
+
+SRCS(
+    combinator_utils.cpp
+    event_count.cpp
+    exception.cpp
+    response.cpp
+    response_visitor.cpp
+    request_frame_to_scenario_matcher.cpp
+    requestctx.cpp
+    scenario.cpp
+    scenario_visitor.cpp
+    source_response_holder.cpp
+    talkien.cpp
+    walker.cpp
+)
+
+GENERATE_ENUM_SERIALIZATION(walker.h)
+
+GENERATE_ENUM_SERIALIZATION(requestctx.h)
+
+END()
+
+RECURSE_FOR_TESTS(ut)

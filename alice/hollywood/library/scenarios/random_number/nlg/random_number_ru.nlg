@@ -1,0 +1,141 @@
+{#               #}
+{# RANDOM NUMBER #}
+{#               #}
+{% phrase render_result %}
+  {% set lowbound = context.LowerBound | int %}
+  {% if context.LowerBound == context.UpperBound %}
+    {% chooseline %}
+      Вот это вопрос. Число {{ context.Value }}.
+      Вы меня озадачили. Число {{ context.Value }}.
+      Число {{ context.Value }}. Не благодарите.
+      Ну хорошо. Число {{ context.Value }}.
+    {% endchooseline %}
+  {% elif lowbound > 1073741824 %} {# 0x40000000 #}
+    {% chooseline %}
+      Слишком большое число для меня, увы.
+      Надеюсь, число Пи вы не будете спрашивать?
+      Слишком большое число, не могу загадать.
+    {% endchooseline %}
+  {% else %}
+    {% voice %}
+      <speaker audio="rolling-dice.opus"/>.sil<[100]>
+    {% endvoice %}
+    {% chooseline %}
+      Число {{ context.Value }}.
+      {{ context.Value }}.
+      Выпало число {{ context.Value }}.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{#            #}
+{# THROW DICE #}
+{#            #}
+
+{# macro dice_count #}
+{# count (int) - число кубиков #}
+{# add_gen (bool) - true, если надо добавить #gen для голоса #}
+{% macro dice_count(count, add_gen) %}
+  {% if add_gen %}
+    {% voice %}
+      {{ '#gen' }}
+    {% endvoice %}
+    {% set case = 'gen' %}
+  {% else %}
+    {% set case = 'nom' %}
+  {% endif %}
+  {{ context.DiceCount }}
+  {{ 'кубик' | pluralize(count, case) }}
+{% endmacro %}
+
+{# macro score_count #}
+{# count (int) - число очков #}
+{% macro score_count(count) %}
+  {{ count }}
+  {{ 'очко' | pluralize(count, 'nom') }}
+{% endmacro %}
+
+{# macro enum_numbers #}
+{% macro enum_numbers() %}
+  {% text %}
+    {% for number in context.Values %}
+      {% if loop.first %}
+        {{ number }}
+      {% else %}
+        {% if loop.last %}
+          и
+        {% else %}
+          ,
+        {% endif %}
+        {{ number }}
+      {% endif %}
+    {% endfor %}
+    ,
+  {% endtext %}
+  {% voice %}
+    {# для голоса просто указываем список чисел в именительном падеже без запятых и иных местоимений #}
+    {% for number in context.Values %}
+      {{ '#nom' }} {{ number }}.
+    {% endfor %}
+  {% endvoice %}
+{% endmacro %}
+
+{% phrase dice_result %}
+  {% voice %}
+    <speaker audio="rolling-dice.opus"/>.sil<[100]>
+  {% endvoice %}
+  {% if context.DiceCount == 1 %}
+    {% if context.NewSession %}
+      {% chooseline %}
+        Бросила. Выпало
+        Кидаю. Готово: число
+        Пожалуйста: число
+        Кубик брошен. Число
+        Ставки сделаны, кубик брошен. Выпало
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Бросила. Выпало
+        Кидаю. Готово: число
+        Пожалуйста: число
+        Кубик брошен. Число
+      {% endchooseline %}
+    {% endif %}  
+    {{ context.Sum }}.
+  {% else %}
+    {% if context.NewSession %}
+      {% chooseitem %}
+        Выпало {{ enum_numbers() }} сумма очков {{ context.Sum }}.
+      {% or %}
+        Бросила. {{ enum_numbers() }} в сумме {{ score_count(context.Sum) }}.
+      {% endchooseitem %}
+    {% else %}
+      {% chooseitem %}
+        {{ enum_numbers() }} сумма {{ context.Sum }}.
+      {% or %}
+        {{ enum_numbers() }} в сумме {{ context.Sum }}.
+      {% endchooseitem %}
+    {% endif %}  
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  Извините, я не поняла. Скажите еще раз?
+{% endphrase %}
+
+{% phrase wrong_dice_count %}
+  Извините, я могу кинуть от одного и до десяти кубиков.
+{% endphrase %}
+
+{% phrase to_many_edges %}
+  {% chooseline %}
+    {{ context.EdgeCount }} {{ 'грань' | pluralize(context.EdgeCount, 'nom') }}? У меня столько нет.
+    Это в какой вселенной столько граней? У меня такого кубика нет.
+    Слишком много граней для одного кубика.
+    У меня такого кубика нет, все вопросы к Рубику.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase dont_know_game %}
+  Извините, я не знаю такую игру. Вы можете попросить меня кинуть один или несколько кубиков.
+{% endphrase %}

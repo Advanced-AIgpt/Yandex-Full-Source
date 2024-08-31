@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/alarm;alarmpb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "AlarmProto";
+
+import "google/protobuf/descriptor.proto";
+
+import "alice/protos/data/scenario/alarm/alarm.proto";
+
+import "alice/protos/endpoint/capability.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TAlarmCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = AlarmCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        repeated NAlice.NData.TAlarm Alarms = 1 [json_name = "alarms", (NYT.column_name) = "alarms"];
+    }
+
+    // directives
+    message TAlarmAddDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (DirectiveType) = AlarmAddDirectiveType;
+
+        repeated NAlice.NData.TAlarm Alarms = 1 [json_name = "alarms", (NYT.column_name) = "alarms"];
+    }
+
+    message TAlarmRemoveDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (DirectiveType) = AlarmRemoveDirectiveType;
+
+        repeated string AlarmIds = 1 [json_name = "alarm_ids", (NYT.column_name) = "alarm_ids"];
+    }
+
+    message TAlarmUpdateDirective {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (DirectiveType) = AlarmUpdateDirectiveType;
+
+        repeated NAlice.NData.TAlarm Alarms = 1 [json_name = "alarms", (NYT.column_name) = "alarms"];
+    }
+}

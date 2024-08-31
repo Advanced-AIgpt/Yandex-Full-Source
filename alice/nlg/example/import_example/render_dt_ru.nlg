@@ -1,0 +1,78 @@
+{% ext_from "alice/nlg/example/check_lib/datetime_exports_ru.nlg" import create_date, get_year, dt_1995 %}
+{% ext_import "alice/nlg/example/check_lib/exports_ru.nlg" as exports %}
+{% ext_nlgimport "alice/nlg/example/check_lib/date_phrases_ru.nlg" %}
+{% ext_nlgimport "alice/nlg/example/check_lib/simple_top_ru.nlg" %}
+
+{% from "alice/nlg/example/import_example/inner_lib_ru.nlg" import dt_2008, get_time, print_list_and_dict %}
+
+{% macro render_datetime(date) %}
+    {{ date.year }}
+    {{ date.month }}
+    {{ date.day }}
+    {{ date.hour }}
+    {{ date.minute }}
+    {{ date.second }}
+    {{ date.microsecond }}
+    {{ date.tzinfo }}
+    {{ date | human_month }}
+    {{ date | format_weekday }}
+{% endmacro %}
+
+{% macro print_data(keys_list=["orange", "apple"], printed_dict={"apple": 2, "orange": [3,7]}) %}
+    {{ keys_list | string }}
+    {% for key in keys_list %}
+        {{ printed_dict.get(key) | string }}
+    {% endfor %}
+{% endmacro %}
+
+{% phrase inner_macros_usage %}
+    {{ print_data(["Пн", "Вт"], {"Пн": 1, "Вт":2}) }};
+    {{ print_data() }};
+    {{ print_list_and_dict() }};
+    {{ render_datetime(dt_2008) }};
+{% endphrase %}
+
+{% phrase try %}
+    {% set dt = timestamp_to_datetime(3543) %}
+    сегодня
+    {{ get_time(dt) }}
+    {{ get_year(dt) }}
+{% endphrase %}
+
+{% phrase external_global %}
+    импортированный модуль всё ещё должен писать {{ exports.bar() }}
+{% endphrase %}
+
+{% phrase external_global_strict %}
+    {{ render_datetime(dt_1995) }}
+{% endphrase %}
+
+{% phrase call_external_num_string_values %}
+    {{ create_date(1917, 11, 7) }};
+    {{ create_date(1917, 11, 7, pattern="%d.%m.%Y") }};
+    {{ create_date(1917, 11, 7, pattern="%H:%M %Y-%m-%d") }};
+    {{ create_date(1961, 4, 12, 9, 7, pattern="%Y-%m-%d %H:%M") }};
+    {{ create_date(1961, 4, 12, 9, 7) }};
+    {{ create_date(2020, 4, 1, 11, 48, 7, "%H:%M:%S %d.%m.%Y") }};
+{% endphrase %}
+
+{% phrase call_external_list_dict_values %}
+    {{ exports.print_list_and_dict(["melon", "apple", "orange"]) }};
+    {{ exports.print_list_and_dict(["Sa", "We", "Fr", "Tu"], {"Mo": 1, "Tu": 2, "We": 3, "Th": 4, "Fr": 5, "Sa": 6, "Su": 7}) }};
+    {{ exports.print_list_and_dict() }};
+    {{ exports.print_list_and_dict(printed_dict={"apple": ["Tu", [4, 8, 3]], "orange": [14, 4]}) }};
+    {{ exports.print_list_and_dict(["weekdays", "months"], {"weekdays": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], "months": {"Jan": 31}}) }};
+    {{ exports.print_list_and_dict(["Пн", "Вт"], {"Пн": 1, "Вт":2}) }};
+{% endphrase %}
+
+{% phrase call_external_range_values %}
+    {{ exports.print_range() }}
+{% endphrase %}
+
+{% phrase print_external_defaults %}
+    {{ exports.print_defaults() }}
+{% endphrase %}
+
+{% phrase print_empty_list_and_dict %}
+    {{ exports.print_empty_defaults() }}
+{% endphrase %}

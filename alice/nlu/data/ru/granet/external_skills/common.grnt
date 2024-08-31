@@ -1,0 +1,354 @@
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+
+$Game:
+    %lemma
+    игра
+$Chat:
+    чат
+$Skill:
+    %lemma
+    навык
+    способность
+    функция
+    $Chat
+$SkillOrGame:
+    $Skill
+    $Game
+$Start:
+    %lemma
+    активируй
+    включи
+    включай
+    вруби
+    врубай
+    выбери
+    вызови
+    запусти
+    запустите
+    начать
+    открой
+    запуск
+    поставь
+    войди
+    войти
+    вход
+    воспроизведи
+    воспроизведение
+    включи воспроизведение
+    загрузи
+$LetsTalkWith:
+    поговорим (с|про)
+    я хочу поговорить (с|про)
+$PlayPreposition:
+    в
+    во
+    с
+    со
+$Play:
+    %exact
+    играй $PlayPreposition
+    играть
+    играем
+    поиграть
+    поиграем
+    поиграешь
+    поиграй $PlayPreposition
+    сыграть
+    сыграем
+    сыгранем
+    сыграй $PlayPreposition
+$V:
+    в
+    во
+$StartSkill:
+    ($Start|$Play)+ $SkillOrGame
+    $Play+ $V?
+    $Start+ $Game $V
+    $Start+ $Skill
+    $LetsTalkWith
+$ActivationPhrase:
+    %cover_fillers
+    .+
+$PronounOrName:
+    $Common.Pronoun3Person
+    $Common.PronounMe
+    $sys.fio.name
+    %exact
+    вы
+    никто
+    ты
+$Wont:
+    не буду
+    не будет
+    не хочу
+    не хочет
+    ненавижу
+$WontPlayFiller:
+    больше
+    теперь
+$WontPlay:
+    (потому что)? $PronounOrName $WontPlayFiller? $Wont играть .*
+$NotSkill:
+    %exact
+    бесплатно
+    дота
+    доту
+    вулкан
+    игру? майнкрафт
+    игру? роблокс
+    игру? престолов
+    мультик
+    онлайн
+    плей маркет
+    плеймаркет
+    гонки
+$StartNotSkill:
+    [$Start $NotSkill] .*
+    ($Start|$Play) $V? $NotSkill .*
+    $NotSkill $Play .*
+$Any:
+    %lemma
+    какой-то
+    какой то
+    какую то игру
+    какую-нибудь
+    какую нибудь
+    твою
+    во что
+    что-нибудь
+    что нибудь
+    что-то
+    что то
+$Other:
+    другую
+$PlayAnyGame:
+    $Play $Game
+    [$Play $V? $Any $Game?]
+    [$Play $V $Other $Game]
+    $Start $Game+
+    [$Any $Play] .*
+    [$Play $V? $Game]
+$Dont:
+    %exact
+    не надо ничего?
+    %lemma
+    не включай
+    не запускай
+$DontStart:
+    $Dont $Start .*
+    $PronounOrName? $Dont .*
+$StopSkill:
+    закончить $SkillOrGame .*
+    хватит играть? .*
+    выйди .*
+    пока .*
+$What:
+    %lemma
+    какие
+    что
+$Can:
+    знаешь
+    умеешь
+    можешь
+$Will:
+    можно
+    будем
+    будешь
+$WhatGamesCanYouPlay:
+    [$What $Game? $PronounOrName? $Can $Play]
+    [$PronounOrName $Can $Play]
+    [$V $What [$PronounOrName $Game?] $Can $Play] .*
+    $V $What $PronounOrName $Can $Play .*
+    [$V $What $Game? $Will $Play] .*
+    [$What $Game есть] .*
+    ($Start|$Play) $V? $Game для .*
+    $Will? $Play $V?
+    [$Play $Can]
+    $Play
+    $Play $V? $Any $Game?
+    $Play $V $Game?
+    ($Start|$IWant) $Play
+    [$PronounOrName $Play $Common.ToWant]
+    [$Continue $Play]
+$FixlistNameBloggerSecrets:
+    %lemma
+    секреты блогеров
+$IWant:
+    [$Common.PronounMe+ $Common.ToWant]
+    хочу
+$Continue:
+    продолжи
+    продолжим
+    дальше
+$Say:
+    скажи
+    расскажи
+    рассказывать
+    говори
+    поговорить
+$FixlistBloggerSecrets:
+    [$Say $FixlistNameBloggerSecrets] .*
+    ($Start|$Continue|$IWant) $FixlistNameBloggerSecrets
+$FixlistNameRiddle:
+    %lemma
+    загадка
+$Guess:
+    %lemma
+    гадать
+    загадать
+    задавать
+    разгадывать
+    порассказываем
+$FixlistRiddle:
+    $Start $FixlistNameRiddle .*
+    $V? $FixlistNameRiddle $Play .*
+    [$Guess $FixlistNameRiddle] .*
+    $Guess $PronounOrName $FixlistNameRiddle
+# названия игр, которые редко встречаются в неигровых запросах
+$FixlistNameGames:
+    %lemma
+    да милорд
+    гадание по книгам
+    камень ножницы бумага
+    верю не верю
+    викторина пандарина
+    викторина вопросы с друзьями
+    квест выйти из комнаты
+    лабиринт страха
+    магический шар
+    мудрый учитель
+    твистер
+    угадай актера
+    угадай персонажа
+    угадай животное
+    угадай песню
+    фантастический квест
+    футбольная игра
+    шар судьбы
+    быстрее выше сильнее
+# названия игр, которые часто встречаются в неигровых запросах
+$FixlistNameTooGeneralGames:
+    %exact
+    слова
+    города
+    загадки
+    что лучше
+    что раньше
+$FixlistNameAnyGame:
+    $FixlistNameGames
+    $FixlistNameTooGeneralGames
+$FixlistQuest:
+    квест
+$FixlistBookDivination:
+    погадаем # активационное имя "Гадания по книгам" из игрового онбординга
+$Lets:
+    давай
+$FixlistGames:
+    $V $FixlistNameGames .*
+    $V? $FixlistNameAnyGame ($Play|$Start) .*
+    $V? [$Game $Start? $FixlistNameAnyGame] .*
+    $Start $FixlistNameAnyGame .*
+    $IWant $V? $FixlistNameAnyGame $Play
+    $IWant $Game $FixlistNameAnyGame
+    хочу игру в $FixlistNameAnyGame
+    $Continue $Game? $FixlistNameAnyGame
+    $Play $V $FixlistNameTooGeneralGames
+    $FixlistBookDivination
+    $Lets $V $FixlistNameAnyGame .*
+$YesLetsPlay:
+    да? давай $Play
+    да давай? $Play
+$Like:
+    %lemma
+    любить
+$DoYouLikeGames:
+    $PronounOrName? $Like $Play $V? $Game? .*
+    $PronounOrName? $Like $Game
+$AllSkills:
+    все $Skill $Start?
+    покажи? все $Skill .+
+$Music:
+    %lemma
+    музыка
+    песня
+    радио
+$PlayMusic:
+    $Play $Music .*
+    сыграй .*
+$LetsTalkWithYou:
+    давай поболтаем .*
+    давай поговорим с тобой .*
+    давай с тобой поговорим .*
+# названия навыков, по которым происходит активация VINS без префикса
+$FreeStandingSkillName:
+    быстрее выше сильнее
+    угадай персонажа
+    тост
+    верю не верю
+    найди лишнее
+    игра в города
+    камень ножницы бумага
+    да милорд
+$Covid:
+    коронавирус
+    короновирус
+    корона вирус
+    ковид
+$Skills.Filler:
+    $Common.Filler
+    $Common.WayToCallAlice
+    а
+    бесплатно
+    будем
+    вдвоем
+    вместе
+    во
+    вы
+    голосовой
+    да
+    дай
+    давайте
+    давай лучше
+    дальше
+    еще
+    еще раз
+    заново
+    знаешь
+    или
+    как
+    квест
+    короче
+    лучше
+    на
+    нам
+    новый
+    мне
+    можно
+    может
+    мы
+    о
+    ой
+    опять
+    про
+    просто
+    проста
+    посмотрим
+    с
+    с ней
+    с тобой
+    свой
+    со мной
+    спасибо
+    так
+    твой
+    там
+    ты
+    что
+    это
+    хорошо
+    хоть
+    я
+    яндекс
+    wow

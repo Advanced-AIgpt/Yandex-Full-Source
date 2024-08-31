@@ -1,0 +1,256 @@
+service: alice_billing
+title: Alice Billing
+ci:
+  autocheck:
+    fast-targets:
+      - alice/paskills/billing
+
+  release-title-source: release
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+
+  releases:
+    release_paskills_billing:
+      title: Alice billing release
+      flow: alice-billing-release-flow
+      auto: false
+      start-version: 100
+      branches:
+        pattern: releases/alice/paskills/billing/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: testing
+          title: Testing
+        - id: stable
+          title: Release to stable
+
+  flows:
+    alice-billing-release-flow:
+      title: Alice Billing Release flow
+      jobs:
+        build_docker:
+          task: common/arcadia/ya_package_2
+          title: Build paskill billing docker
+          stage: build
+          input:
+            packages: alice/paskills/billing/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            resource_type: PASKILLS_BILLING_BINARY
+            build_type: release
+            build_system: semi_distbuild
+            custom_version: "stable-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}-r${context.target_commit.revision.number}"
+            requirements:
+              sandbox:
+                platform: linux
+
+        create-release-ticket:
+          title: Create ticket in ALICERELEASE
+          task: common/tracker/create_issue
+          stage: testing
+          needs: build_docker
+          input:
+            config:
+              secret:
+                key: st.token
+              link:
+                queues:
+                  - PASKILLS
+                  - ALICE
+            rules:
+              on_duplicate: UPDATE
+            template:
+              type: Задача
+              summary: Релиз Alisa PASkills Billing ${context.version_info.major}
+              queue: ALICERELEASE
+              fixVersion: paskills_billing ${context.version_info.major}
+              tags:
+                - paskills_billing
+                - release_number_${context.version_info.major}
+              description: |
+                [((${context.ci_url} Release URL))]
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+            update_template:
+              comment: |
+                Новые тикеты и коммиты в ((${context.ci_url} ${context.title}))
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+        release-billing-to-rc:
+          title: Deploy to testing
+          task: common/nanny/update_service
+          stage: testing
+          needs: create-release-ticket
+          input:
+            config:
+              service_id: billing_rc
+              docker_image: "paskills/quasar-billing:stable-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}-r${context.target_commit.revision.number}"
+        update-release-ticket:
+          title: Comment ticket with "Deployed to rc"
+          task: common/tracker/update_issue
+          stage: testing
+          needs: release-billing-to-rc
+          input:
+            config:
+              secret:
+                key: st.token
+            update_template:
+              comment: |
+                Сервис выложен на ((https://nanny.yandex-team.ru/ui/#/services/catalog/billing_rc release candidate))
+
+        # Release to production
+        start-prepare:
+          title: Start prepare
+          task: dummy
+          stage: stable
+          needs:
+            - update-release-ticket
+          manual:
+            enabled: true
+            prompt: Release to stable?
+
+        prepare-on-sas:
+          title: Prepare on SAS
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: paskills_billing_sas
+              target_status: PREPARED
+              docker_image: "paskills/quasar-billing:stable-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}-r${context.target_commit.revision.number}"
+        #prepare-on-man:
+        #  title: Prepare on MAN
+        #  task: common/nanny/update_service
+        #  needs:
+        #    - start-prepare
+        #  stage: stable
+        #  input:
+        #    config:
+        #      service_id: paskills_billing_man
+        #      target_status: PREPARED
+        #      docker_image: "paskills/quasar-billing:stable-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}-r${context.target_commit.revision.number}"
+        prepare-on-vla:
+          title: Prepare VLA
+          task: common/nanny/update_service
+          needs:
+            - start-prepare
+          stage: stable
+          input:
+            config:
+              service_id: paskills_billing_vla
+              target_status: PREPARED
+              docker_image: "paskills/quasar-billing:stable-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}-r${context.target_commit.revision.number}"
+
+        start-activate-sas:
+          title: Start activate
+          task: dummy
+          stage: stable
+          needs:
+            - prepare-on-vla
+            - prepare-on-sas
+            #- prepare-on-man
+          manual:
+            enabled: true
+            prompt: Activate SAS?
+
+        activate-sas:
+          title: Activate SAS
+          task: common/nanny/set_snapshot_state
+          needs:
+            - start-activate-sas
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: paskills_billing_sas
+
+        start-activate-man-vla:
+          title: Start activate VLA
+          task: dummy
+          stage: stable
+          needs:
+            - activate-sas
+          manual:
+            enabled: true
+            prompt: Activate VLA?
+
+        #activate-man:
+        #  title: Activate MAN
+        #  task: common/nanny/set_snapshot_state
+        #  needs:
+        #    - start-activate-man-vla
+        #  stage: stable
+        #  input:
+        #    config:
+        #      target_status: ACTIVE
+        #      snapshot:
+        #        service_id: paskills_billing_man
+
+        activate-vla:
+          title: Activate VLA
+          task: common/nanny/set_snapshot_state
+          needs:
+            - start-activate-man-vla
+          stage: stable
+          input:
+            config:
+              target_status: ACTIVE
+              snapshot:
+                service_id: paskills_billing_vla
+        update-ticket-released:
+          title: Comment ticket with "Release deployed"
+          task: common/tracker/update_issue
+          stage: stable
+          needs: activate-vla
+          input:
+            config:
+              secret:
+                key: st.token
+            update_template:
+              comment: |
+                Релиз выложен на stable
+        close-release-ticket:
+          title: Закрытие релизного тикета
+          task: common/tracker/transit_issue
+          stage: stable
+          needs:
+            - update-ticket-released
+          input:
+            transition:
+              status: closed
+              resolution: fixed
+            update_template:
+              comment: |
+                Релиз завершён: ${context.version_info.full}
+
+arcanum:
+  review:
+    groups:
+      - name: "developers_group"
+        roles:
+          - "smarttv:@id=38"
+    override_policy: "override"
+    rules:
+      - reviewers:
+          - name: "developers_group"
+            ship: 1
+            assign: 2

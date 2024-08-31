@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/property";
+option java_package = "ru.yandex.alice.megamind.protos.property";
+option java_outer_classname = "IotProfile";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TIotProfile {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TItem {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+    }
+
+    message TDevice {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        string Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+        string RoomId = 4 [json_name = "room_id", (NYT.column_name) = "room_id"];
+        repeated TItem Groups = 5 [json_name = "groups", (NYT.column_name) = "groups"];
+        repeated TCapability Capabilities = 6 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+        string AnalyticsType = 7 [json_name = "analytics_type", (NYT.column_name) = "analytics_type"];
+        uint64 Created = 8 [json_name = "created", (NYT.column_name) = "created"]; // таймстемп создания в секундах
+    }
+
+    message TCapability {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TMode {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Value = 1 [json_name = "value", (NYT.column_name) = "value"];
+            repeated string Names = 2 [json_name = "names", (NYT.column_name) = "names"];
+        }
+
+        message TCustomButtonCapabilityParameters {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            string Instance = 2 [json_name = "instance", (NYT.column_name) = "instance"];
+            repeated string InstanceNames = 4 [json_name = "instance_names", (NYT.column_name) = "instance_names"];
+        };
+
+        string Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        string Instance = 2 [json_name = "instance", (NYT.column_name) = "instance"];
+        repeated string InstanceNames = 3 [json_name = "instance_names", (NYT.column_name) = "instance_names"];
+        repeated TMode Modes = 4 [json_name = "modes", (NYT.column_name) = "modes"];
+        string AnalyticsName = 5 [json_name = "analytics_name", (NYT.column_name) = "analytics_name"];
+        repeated string Values = 6 [json_name = "values", (NYT.column_name) = "values"];
+        TCustomButtonCapabilityParameters Parameters = 7 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    }
+
+
+    message TScenarioWithTriggers {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        string Id = 1 [json_name = "id", (NYT.column_name) = "id"];
+        string Name = 2 [json_name = "name", (NYT.column_name) = "name"];
+        repeated TScenarioTrigger Triggers = 3 [json_name = "triggers", (NYT.column_name) = "triggers"];
+    }
+
+    message TScenarioTrigger {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        EScenarioTriggerType TriggerType = 1 [json_name = "type", (NYT.column_name) = "type"];
+        oneof Value {
+            string VoiceTriggerPhrase = 2 [json_name = "phrase", (NYT.column_name) = "phrase"];
+            string TimerTriggerTimestamp = 3 [json_name = "time", (NYT.column_name) = "time"];
+        }
+    }
+
+    enum EScenarioTriggerType {
+        UnknownTriggerType = 0;
+        VoiceScenarioTriggerType = 1;
+        TimerScenarioTriggerType = 2;
+    }
+
+    repeated TItem Groups = 1 [json_name = "groups", (NYT.column_name) = "groups"];
+    repeated TItem Scenarios = 2 [json_name = "scenarios", (NYT.column_name) = "scenarios"];
+    repeated TItem Rooms = 3 [json_name = "rooms", (NYT.column_name) = "rooms"];
+    repeated TItem Colors = 4 [json_name = "colors", (NYT.column_name) = "colors"];
+    repeated TDevice Devices = 5 [json_name = "devices", (NYT.column_name) = "devices"];
+    repeated TCapability Capabilities = 6 [json_name = "capabilities", (NYT.column_name) = "capabilities"];
+    repeated TScenarioWithTriggers ScenariosWithTriggers = 7 [json_name = "scenarios_with_triggers", (NYT.column_name) = "scenarios_with_triggers"];
+}

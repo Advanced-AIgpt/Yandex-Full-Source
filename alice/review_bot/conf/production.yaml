@@ -1,0 +1,40 @@
+core:
+    log_level: INFO
+    state_backend: 'alice.review_bot.lib.mongo:mongodb'
+    state_config:
+        mongo_hosts: 'man-qr3anqznmtc7qzs1.db.yandex.net:27018,sas-jxvpdl8idjuaort6.db.yandex.net:27018,vla-3y88hex1g2ysbywy.db.yandex.net:27018'
+        database: review_bot
+        user: review_bot_user
+        password_env: YBOT_MONGO_PASSWORD
+
+
+ybot.modules.telegram:
+    token_env: YBOT_TELEGRAM_TOKEN
+    connection_pool: 20
+
+
+ybot.modules.ping: {}
+
+
+ybot.modules.backdoor:
+    port: 5002
+
+
+alice.review_bot.lib.review:
+    arcanum_token_env: YBOT_ARCANUM_TOKEN
+
+
+alice.review_bot.lib.startrek:
+    startrek_token_env: 'YBOT_ST_TOKEN'
+
+
+ybot.modules.cron:
+    tz: Europe/Moscow
+    schedule:
+    -
+        conf: '30 12 * * 1-5'
+        emit: alice.review_bot.lib.review.whats_new
+
+    -
+        conf: '1 * * * *'
+        emit: alice.review_bot.lib.review.update

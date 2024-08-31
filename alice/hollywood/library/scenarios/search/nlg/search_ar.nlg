@@ -1,0 +1,431 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search_factoid_div_cards_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/wizards/images/images_search_gallery_div1_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/serp_gallery__ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/skill_discovery/skill_discovery_ar.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ar.nlg" import showing_search_results_not_supported, opening_sites_or_apps_not_supported, nothing_found, render_serp_invitation_message, render_serp_caption %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" import get_search_info, render_factoid_or_object, render_search_images_invitation_message %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" import ask_confirmation_on_road %}
+
+{% macro render_navigator_warning() %}
+  يمكنني البحث عن هذا على ياندكس أو في الخرائط.
+{% endmacro %}
+
+{% macro render_auto_warning() %}
+  اعذرني، لكنني لا أستطيع الآن.
+{% endmacro %}
+
+{% macro render_navigation_results(navigation_results, default_tts=true) %}
+  {% if navigation_results %}
+    {% text %}
+      {% if navigation_results.text %}
+        {{ navigation_results.text | capitalize_first }}
+      {% elif navigation_results.tts %}
+        {{ navigation_results.tts | capitalize_first }}
+      {% elif navigation_results.text_name %}
+        سأقوم بفتح {{ navigation_results.text_name }}
+      {% else %}
+        سأقوم بفتح
+      {% endif %}
+    {% endtext %}
+    {% voice %}
+      {% if default_tts or not navigation_results.tts %}
+        سأقوم بفتح
+      {% else %}
+        {{ navigation_results.tts | capitalize_first }}
+      {% endif %}
+    {% endvoice %}
+  {% else %}
+    سأقوم بفتح
+  {% endif %}
+{% endmacro %}
+
+{% macro render_web_search_push() %}
+  {% chooseline %}
+    أرسلت لك رسالة فيها المزيد من المعلومات.
+    أرسلت لك رسالة لكي تستطيع دراسة السؤال بنفسك.
+    أرسلت الرابط مع المعلومات، تفقد!
+    أرسلت لك الرابط عن الموضوع، تفقد!
+    المزيد من المعلومات - على الرابط، تم إرساله!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_web_search_push_pp_reminder() %}
+  {% chooseline %}
+    أرسلت لك رسالة فيها المزيد من المعلومات. لكي تقرأها ادخل على تطبيق ياندكس.
+    أرسلت إشعاراً، سنتابع في تطبيق ياندكس، افتحه.
+    أرسلت لك رسالة لكي تدرس السؤال بنفسك. لتقرأها ادخل على تطبيق ياندكس.
+    أرسلت الرابط مع المعلومات، للمتابعة افتح تطبيق ياندكس.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo() %}
+  {% set accent %} {%vc%} <[accented]> {%evc%} {% endset %}
+  {% chooseline %}
+    هل تريد قراءة المزيد من التفاصيل على هاتفك؟ فقط قل
+    <segment>أتريد {{ accent }}، أن أرسل لك نتائج البحث على هاتفك؟
+تبي {{ accent }}، أرسلك نتايج البحث على هاتفك؟</segment>
+    <segment>إذا أردت {{ accent }}، أستطيع أن أرسل الرابط مع نتائج البحث إلى هاتفك.
+إذا تبي {{ accent }}، أقدر أرسلك الرابط مع نتايج البحث لهاتفك.</segment>
+    أتريد المزيد من التفاصيل؟ فقط اطلب مني إرسالها إلى الهاتف
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo_long() %}
+  {% chooseline %}
+    بالمناسبة، إذا لم أتمكن من العثور على إجابة لسؤالك، يمكنني أن أرسل لك رابطاً إلى هاتفك حتى تتمكن من العثور عليه بنفسك
+    بالمناسبة، يمكنني أن أرسل لك رسالةً إلى هاتفك لكي تتمكن من العثور على الجواب بنفسك بسهولة.
+    على ذكر ذلك، أحياناً لا أعرف الإجابة على سؤال، لذلك تعلمت الآن إرسال إشعارات إلى الهاتف لكي تتمكن من إيجاد الإجابة على ياندكس
+    خبر عاجل، تعلمت إرسال رابط إلى الهاتف لتتمكن من العثور على الإجابة بنفسك. فماذا لو لم أستطيع ذلك فجأة، فقد يحدث ذلك
+    بالمناسبة، إذا كنت تريد أن ترى جميع النتائج المتعلقة بهذا الموضوع ، يمكنني أن أرسل لك رابطاً إلى الهاتف
+    بالمناسبة، إذا أردت الانتقال إلى الموقع يمكنني إرسال رابط لك على الهاتف
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo_no_answer() %}
+  {% set accent %} {%vc%} <[accented]> {%evc%} {% endset %}
+  {% chooseline %}
+    لا يمكنني الاختصار بكلمتين.
+    لا يمكن الإيضاح ببساطة هكذا.
+    هذا سؤال صعب لا يمكن حله بسرعة.
+  {% endchooseline %}
+  {% chooseline %}
+    <segment>أتريد {{ accent }}، أن أرسل لك نتائج البحث على هاتفك؟
+تبي {{ accent }}، أرسلك نتايج البحث على هاتفك؟</segment>
+    إن أردت {{ accent }}، يمكنني إرسال رابط بنتائج البحث إلى هاتفك.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_web_search_push_no_answer() %}
+  {% chooseline %}
+    أخ، حدث خطأ ما. رجاءً حاول مرة أخرى.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not context.is_smart_speaker and not context.is_legatus and not context.is_navigator and not context.is_auto and not context.is_elari_watch %}
+    {% if info.afisha_url %}
+      {{ info.afisha_url }}
+    {% elif info.kinopoisk_url %}
+      {{ info.kinopoisk_url }}
+    {% elif info.translate_url %}
+      {{ info.translate_url }}
+    {% elif info.music_url %}
+      {{ info.music_url }}
+    {% elif info.market_url %}
+      {{ info.market_url }}
+    {% elif info.rasp_url %}
+      {{ info.rasp_url }}
+    {% elif info.avia_url %}
+      {{ info.avia_url }}
+    {% elif info.tv_url %}
+      {{ info.tv_url }}
+    {% elif info.auto_url %}
+      {{ info.auto_url }}
+    {% elif info.realty_url %}
+      {{ info.realty_url }}
+    {% elif info.nav_url %}
+      {{ info.nav_url }}
+    {% elif info.serp_search_url and not info.factoid_text and not info.calculator and not info.pre_rendered_card and not "skills_discovery" in context.attention %}
+      {{ info.serp_search_url }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if info.pre_rendered_card %}
+    {% text %} {{ info.pre_rendered_card['text'] }} {% endtext %}
+    {% voice %} {{ info.pre_rendered_card['tts'] or info.pre_rendered_card['text'] }} {% endvoice %}
+  {% elif info.afisha_url %}
+    {% chooseline %}
+      لنشاهد الإعلان مباشرة لكي لا نضيع الوقت.
+      أقترح أن نذهب إلى الإعلان مباشرة.
+      لنذهب مباشرة إلى الإعلان.
+    {% endchooseline %}
+  {% elif info.kinopoisk_url %}
+    {% chooseline %}
+      يبدو أن السؤال عن فيلم. لنذهب مباشرة إلى بحث الأفلام.
+      عندما يكون السؤال عن فيلم أذهبُ مباشرة إلى بحث الأفلام .
+      يمكننا الذهاب إلى بحث الأفلام مباشرة. ستجد هناك تقييمات ومراجعات.
+    {% endchooseline %}
+  {% elif info.translate_url %}
+    {% chooseline %}
+      أعتقد أن مترجم.ياندكس هو الأفضل للترجمة.
+      ليت مي سبيك فروم ماي هارت: دعنا نذهب إلى مترجم.ياندكس. الترجمة هناك أسهل.
+    {% endchooseline %}
+  {% elif info.music_url %}
+    {% chooseline %}
+      إذا أردت الاستماع إلى موسيقى لنذهب مباشرة إلى موسيقى.ياندكس الأمر هناك أسهل.
+      أمتع شيء أن نستمع إلى الموسيقى على موسيقى.ياندكس، لنذهب هناك.
+      للاستماع إلى الموسيقى ينبغي الذهاب إلى موسيقى.ياندكس.
+      يمكننا الذهاب مباشرة إلى موسيقى.ياندكس.
+    {% endchooseline %}
+  {% elif info.market_url %}
+    {% chooseline %}
+      لنوفر بعض الثواني ولنبحث مباشرة على ماركت.ياندكس. هذا هو رأي.
+      أسرع شيء أن نبحث ونشتري البضاعة على ماركت. ستجد هناك تعليقات أيضاً.
+    {% endchooseline %}
+  {% elif info.rasp_url %}
+    {% chooseline %}
+      أعتقد أنه من الأنسب مشاهدة مواعيد النقل العام على مواعيد.ياندكس. سأقوم بالفتح.
+      تحتاج إلى مواعيد النقل العام؟ لدى ياندكس هذه الخدمة. لنرى هناك.
+      القطارات السريعة والحافلات هذه خدمة من مواعيد.ياندكس. ناهيك عن السكك الحديدية. دعنا نرى.
+    {% endchooseline %}
+  {% elif info.avia_url %}
+    {% chooseline %}
+      فقط أدر المفتاح ولننطلق. توجد على ياندكس خدمة خاصة للبحث عن التذاكر. لنبحث هناك.
+      لنبحث عن هذا على تذاكرطيران.ياندكس، يمكن العثور على أية تذاكر هناك. سأقوم بالفتح.
+      دعنا نبحث على تذاكرطيران.ياندكس. يمكن العثور على تذاكر رخيصة هناك. سأقوم بالفتح.
+    {% endchooseline %}
+  {% elif info.tv_url %}
+    {% chooseline %}
+      أقترح أن لا تبحث عن شيء بل نذهب مباشرة إلى البرنامج التلفزيوني.
+    {% endchooseline %}
+  {% elif info.auto_url %}
+    {% chooseline %}
+      أعتقد أنه إذا أردت شراء أو بيع سيارة، لا يوجد شيء أفضل من Auto.Ru. لنذهب هناك مباشرة.
+    {% endchooseline %}
+  {% elif info.realty_url %}
+    {% chooseline %}
+      إذا كنت مهتماً بالعقارات نستطيع الذهاب مباشرة إلى خدمة ياندكس الخاصة برأي هناك أنسب.
+    {% endchooseline %}
+  {% elif info.calculator %}
+    {% if info.calculator == 'inf' %}
+      إلى اللانهائية.
+    {% elif info.calculator == '-inf' %}
+      أقل من اللامتناهية.
+    {% else %}
+      {% voice %}
+        {% if 'e' in info.calculator %}
+          هذا هو الجواب
+        {% else %}
+          {{ info.calculator }}
+        {% endif %}
+      {% endvoice %}
+      {% text %}
+        {{ info.calculator }}
+      {% endtext %}
+    {% endif %}
+  {% elif info.nav_url %}
+    {% if "ask_confirmation" in context.attentions %}
+      {{ ask_confirmation_on_road(info) }}
+    {% elif "unsupported_feature" in context.attentions %}
+      {{ opening_sites_or_apps_not_supported(info, "simple_open_link" in context.attentions, "send_push" in context.attentions) }}
+    {% else %}
+      {{ render_navigation_results(info.nav, false) }}
+    {% endif %}
+  {% elif info.factoid_text or info.factoid_tts %}
+    {{ render_factoid_or_object(info.factoid_text, info.factoid_hostname, info.factoid_tts, info.factoid_voice_info, info.factoid_child_search, info.related_query, context.is_smart_speaker or context.is_legatus or context.is_auto or context.is_elari_watch, 'factoid_recipe_preroll' in context.attentions) }}
+    {% if (context.is_smart_speaker or context.is_legatus) and "handoff_promo" in context.attentions and not info.related_query %}
+      {{ render_handoff_promo() }}
+    {% elif (context.is_smart_speaker or context.is_legatus) and "handoff_promo_long" in context.attentions and not info.related_query %}
+      {{ render_handoff_promo_long() }}
+    {% endif %}
+  {% elif "skills_discovery" in context.attentions %}
+    # Do nothing in this case, text_card + div_card have already done the job
+  {% else %}
+    {% if (context.is_smart_speaker or context.is_legatus) and "search__nothing_found_with_handoff" in context.attentions %}
+      {{ render_handoff_promo_no_answer() }}
+    {% elif "search__nothing_found" in context.attentions %}
+      {{ nothing_found() }}
+    {% else %}
+      {% if (context.is_smart_speaker or context.is_legatus) and "search__push_sent" in context.attentions %}
+        {{ render_web_search_push() }}
+      {% elif (context.is_smart_speaker or context.is_legatus) and "search__push_sent_pp_reminder" in context.attentions %}
+        {{ render_web_search_push_pp_reminder() }}
+      {% elif (context.is_smart_speaker or context.is_legatus) and "search__push_not_sent" in context.attentions %}
+        {{ render_web_search_push_no_answer() }}
+      {% elif context.is_smart_speaker or context.is_legatus or context.is_elari_watch %}
+        {{ showing_search_results_not_supported() }}
+      {% elif "ask_confirmation" in context.attentions %}
+        {{ ask_confirmation_on_road(info) }}
+      {% elif context.is_auto %}
+        {{ render_auto_warning() }}
+      {% elif "search_images" in context.attentions %}
+        {{ render_search_images_invitation_message() }}
+      {% else %}
+        {{ render_serp_invitation_message() }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase search__skills_discovery %}
+  حسناً. إليك من يمكنه مساعدتك:
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__serp %}
+  {{ render_serp_caption() }}
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__serp %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.serp_search_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__factoid_src %}
+  فتح المصدر
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__factoid_src %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if info.factoid_url %}
+    {{ info.factoid_url }}
+  {% elif info.object_url %}
+    {{ info.object_url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__nav %}
+  فتح
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__nav %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.nav_url or info.factoid_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__phone_call %}
+  اتصال
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__phone_call %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.factoid_phone_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__afisha %}
+  فتح الإعلان
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__afisha %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.afisha_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__kinopoisk %}
+  فتح بحث الأفلام
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__kinopoisk %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.kinopoisk_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__translate %}
+  فتح المترجم
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__translate %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.translate_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__music %}
+  فتح موسيقى.ياندكس
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__music %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.music_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__musicplayer %}
+  فتح موسيقى.ياندكس
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__musicplayer %}
+  {{ context.search__musicplayer.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__market %}
+  فتح ماركت
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__market %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.market_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__rasp %}
+  فتح مواعيد.ياندكس
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__rasp %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.rasp_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__avia %}
+  فتح تذاكرطيران.ياندكس
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__avia %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.avia_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__tv %}
+  فتح برامج التلفزيون
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__tv %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.tv_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__auto %}
+  فتح Auto.Ru
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__auto %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.auto_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__realty %}
+  فتح عقارات.ياندكس
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__realty %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.realty_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__show_on_map %}
+  البحث على الخريطة
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__show_on_map %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.map_search_url.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__see_also %}
+  {{ context.search__see_also.data.query }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__search__see_also %}
+  {{ context.search__see_also.data.query }}
+{% endphrase %}

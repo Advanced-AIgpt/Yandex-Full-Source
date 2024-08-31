@@ -1,0 +1,15 @@
+PROTO_LIBRARY(kronstadt-protos)
+SET(PROTOC_TRANSITIVE_HEADERS "no")
+
+OWNER(g:paskills)
+
+SRCS(
+    apply_args.proto
+)
+
+PEERDIR()
+
+EXCLUDE_TAGS(GO_PROTO PY3_PROTO PY_PROTO)
+
+END()
+

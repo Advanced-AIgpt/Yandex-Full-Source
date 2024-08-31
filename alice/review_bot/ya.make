@@ -1,0 +1,5 @@
+RECURSE(
+    bin
+    ybot
+    lib
+)

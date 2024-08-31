@@ -1,0 +1,96 @@
+http_server:
+  listen_addr: :8080
+  shutdown_timeout: 5s
+
+logging:
+  log_level: debug
+
+solomon:
+  performance:
+    prefix: perf
+    refresh_interval: 5s
+  router:
+    prefix: handlers
+  dialogs:
+    prefix: dialogs
+  upstreams:
+    prefix: upstreams
+    tag_name: upstream
+    tags:
+      default: paskills
+      paskills-b2b: paskills-b2b
+      iot: iot
+      dialogovo: dialogovo
+
+tvm:
+  port: 18080
+  src_alias: steelix
+
+blackbox:
+  tvm_id: 222
+  url: http://blackbox.yandex.net
+
+dialogs:
+  tvm_alias: paskills
+  url: https://dialogs.alice.yandex.net/api
+
+proxy:
+  oauth:
+    client_id: c473ca268cd749d3a8371351a8f2bcbd
+    client_id_b2b: b300a11339614d7a8024c469fa9cf501
+  upstream:
+    default:
+      auth_type: tvm
+      tvm_alias: paskills
+      url: https://dialogs.alice.yandex.net/api
+      rewrites:
+        - from: ^/api/
+          to: /public/
+    paskills-b2b:
+      auth_type: headers_and_tvm
+      tvm_alias: paskills-b2b
+      url: https://dialogs.alice.yandex.net/b2b
+      rewrites:
+        - from: ^/b2b/api/public/
+          to: /public/
+    bulbasaur:
+      auth_type: tvm
+      tvm_alias: bulbasaur
+      url: http://iot.quasar.yandex.net
+      rewrites:
+        - from: ^/api/v1/skills/([^/]+)/callback/push-discovery
+          to: /v1.0/push/skills/$1/discovery
+        - from: ^/api/v1/skills/([^/]+)/callback
+          to: /v1.0/callback/skills/$1
+    iot-api:
+      auth_type: headers
+      url: http://iot.quasar.yandex.net
+      rewrites:
+        - from: ^/iot/api/v1.0/
+          to: /api/v1.0/
+        - from: ^/v1.0/
+          to: /api/v1.0/
+    dialogovo:
+      auth_type: tvm
+      tvm_alias: dialogovo
+      url: https://dialogovo.alice.yandex.net
+      rewrites:
+        - from: ^/api/v1/(.+)$
+          to: /external/v1/$1
+logbroker:
+  enabled: false
+  requests_percent: 0
+  partition_count: 2
+  ack_timeout: 5s
+  collect_metrics_interval: 2s
+  tvm_dest: 2001059 # https://logbroker.yandex-team.ru/docs/concepts/security
+  writer_template:
+    database: /Root
+    topic: /alice-iot/dev/steelix-callbacks
+    endpoint: lbkx.logbroker.yandex.net
+    port: 2135
+    client_timeout: 5s
+    max_memory: 8388608
+    retry_on_failure: true
+
+

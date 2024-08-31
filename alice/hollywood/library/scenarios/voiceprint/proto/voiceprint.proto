@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package NAlice.NHollywood.NVoiceprint;
+
+import "alice/megamind/protos/common/frame.proto";
+import "alice/protos/data/scenario/voiceprint/personalization_data.proto";
+
+message TVoiceprintEnrollState {
+    enum EStage {
+        NotStarted = 0;
+        Intro = 1;
+        WaitUsername = 2;
+        WaitReady = 3;
+        Collect = 4;
+        Complete = 5;
+        Finish = 6;
+    }
+
+    // deprecated. Use NAlice.NData.NVoiceprint.EGender
+    enum EGender {
+        Undefined = 0;
+        Male = 1;
+        Female = 2;
+    }
+
+    EStage CurrentStage = 1;
+    string Uid = 2;
+    string PersId = 3;
+    repeated string RequestIds = 4;
+    string UserName = 5;
+    EGender Gender = 6;     // deprecated. Use GenderMementoReady
+    uint32 PhrasesCount = 7;
+    string GuestPuid = 8;
+    bool IsBioCapabilitySupported = 9;
+    NAlice.NData.NVoiceprint.EGender GenderMementoReady = 10 [json_name = "gender_memento_ready"];
+}
+
+message TVoiceprintRemoveState {
+    enum EStage {
+        NotStarted = 0;
+        WaitConfirm = 1;
+        Finish = 2;
+    }
+
+    EStage CurrentStage = 1;
+    string Uid = 2;
+    string PersId = 3;
+    string UserName = 4;
+    bool IsBioCapabilitySupported = 5;
+}
+
+message TVoiceprintSetMyNameState {
+    string UserName = 1;
+    string OldUserName = 2;
+    string OwnerUid = 3;
+    string GuestUid = 4;
+    string PersId = 5 [json_name = "pers_id"];
+}
+
+message TVoiceprintState {
+    reserved 1; reserved "Slots";
+    reserved 2; reserved "CurrentStage";
+    reserved 3; reserved "Uid";
+    reserved 4; reserved "PersId";
+    reserved 5; reserved "ReqestIds";
+    reserved 6; reserved "UserName";
+    reserved 7; reserved "Gender";
+    reserved 8; reserved "GuestId";
+    reserved 9; reserved "PhrasesCount";
+    reserved 10; reserved "GuestPuid";
+
+    TVoiceprintEnrollState VoiceprintEnrollState = 11;
+    TVoiceprintRemoveState VoiceprintRemoveState = 12;
+    TVoiceprintSetMyNameState VoiceprintSetMyNameState = 13;
+
+    bool IsEnrollmentSuggested = 100;
+}

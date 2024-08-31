@@ -1,0 +1,114 @@
+LIBRARY()
+
+OWNER(
+    amullanurov
+    akhruslan
+    vitvlkv
+    pazus
+    g:hollywood
+    g:alice
+)
+
+PEERDIR(
+    alice/bass/libs/client
+    alice/hollywood/library/biometry
+    alice/hollywood/library/crypto
+    alice/hollywood/library/framework
+    alice/hollywood/library/bass_adapter
+    alice/hollywood/library/datasync_adapter
+    alice/hollywood/library/environment_state
+    alice/hollywood/library/frame_redirect
+    alice/hollywood/library/metrics
+    alice/hollywood/library/multiroom
+    alice/hollywood/library/music
+    alice/hollywood/library/phrases
+    alice/hollywood/library/player_features
+    alice/hollywood/library/registry
+    alice/hollywood/library/resources
+    alice/hollywood/library/scenarios/music/analytics_info
+    alice/hollywood/library/scenarios/music/biometry
+    alice/hollywood/library/scenarios/music/cache
+    alice/hollywood/library/scenarios/music/centaur
+    alice/hollywood/library/scenarios/music/fairy_tales
+    alice/hollywood/library/scenarios/music/generative
+    alice/hollywood/library/scenarios/music/handles
+    alice/hollywood/library/scenarios/music/music_backend_api
+    alice/hollywood/library/scenarios/music/music_backend_api/content_id
+    alice/hollywood/library/scenarios/music/music_backend_api/music_queue
+    alice/hollywood/library/scenarios/music/music_sdk_handles
+    alice/hollywood/library/scenarios/music/nlg
+    alice/hollywood/library/scenarios/music/proto
+    alice/hollywood/library/scenarios/music/requests_helper
+    alice/hollywood/library/scenarios/music/s3_animations
+    alice/hollywood/library/scenarios/music/scene
+    alice/hollywood/library/sound
+    alice/hollywood/library/tags
+    alice/library/analytics/common
+    alice/library/experiments
+    alice/library/json
+    alice/library/logger
+    alice/library/metrics
+    alice/library/music
+    alice/library/apphost_request
+    alice/megamind/library/util
+    alice/megamind/protos/property
+    alice/megamind/protos/scenarios
+    alice/memento/proto
+    alice/nlu/libs/request_normalizer
+    alice/protos/api/matrix
+    alice/protos/data
+    kernel/alice/music_scenario/web_url_canonizer/lib
+    library/cpp/http/io
+    library/cpp/json
+    library/cpp/string_utils/base64
+    library/cpp/timezone_conversion
+)
+
+JOIN_SRCS_GLOBAL(
+    all.cpp
+    apply_prepare_handle.cpp
+    apply_render_handle.cpp
+    audio_player_commands.cpp
+    commands.cpp
+    commit_prepare_handle.cpp
+    commit_render_handle.cpp
+    common.cpp
+    continue_prepare_handle.cpp
+    continue_render_handle.cpp
+    continue_thin_client_render_handle.cpp
+    fast_data.cpp
+    music.cpp
+    hardcoded_commit_prepare.cpp
+    hardcoded_commit_render.cpp
+    hardcoded_prepare.cpp
+    hardcoded_render.cpp
+    intents.cpp
+    music_catalog_prepare_handle.cpp
+    music_commit_async_render.cpp
+    music_play_anaphora.cpp
+    music_player_commands.cpp
+    onboarding.cpp
+    run_render_handle.cpp
+)
+
+GENERATE_ENUM_SERIALIZATION(intents.h)
+
+END()
+
+RECURSE_FOR_TESTS(
+    biometry/ut
+    cache/ut
+    handles/run_prepare/ut
+    it
+    it2
+    it2_music_client
+    it_grpc
+    music_backend_api/ut
+    music_request_builder/ut
+    music_sdk_handles
+    nlg/ut
+    requests_helper/ut
+    scene/fm_radio/ut
+    show_view_builder/ut
+    ut
+)

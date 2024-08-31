@@ -1,0 +1,61 @@
+{% nlgimport "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/music/nlg/player__common__ru.nlg" import render_supported_only_on_music with context %}
+{% from "alice/hollywood/library/scenarios/music/nlg/music__common__ru.nlg" import render_repeated_skip with context %}
+
+{% macro dislike_confirm() %}
+  {% if context.attentions.get('unknown_music') %}
+    {% chooseline %}
+      Не могу понять какую песню дизлайкать.
+      Я бы с радостью, но не знаю какую песню дизлайкать.
+    {% endchooseline %}
+  {% elif context.is_generative %}
+    {% chooseitem %}
+      Поняла, сейчас алгоритмы напишут что-то другое.
+    {% or %}
+      {% text %}
+        Окей, алгоритмы Нейромузыки уже учли ваш дизлайк.
+      {% endtext %}
+      {% voice %}
+        Окей, алгоритмы Нейро музыки уже учли ваш дизлайк.
+      {% endvoice %}
+    {% or %}
+      {% text %}
+        О вкусах не спорят. Попрошу Нейромузыку подстроиться под ваш.
+      {% endtext %}
+      {% voice %}
+        О вкусах не спорят. Попрошу Нейро музыку подстроиться под ваш.
+      {% endvoice %}
+    {% endchooseitem %}
+  {% elif context.is_fm_radio %}
+    {{ render_supported_only_on_music() }}
+  {% elif context.is_shot %}
+    Поставила дизлайк.
+  {% else %}
+    {% chooseline %}
+      Дизлайк принят.
+      Хорошо, ставлю дизлайк.
+      Окей, не буду такое ставить.
+      Поняла. Больше не включу.
+      Нет проблем, поставила дизлайк.
+    {% endchooseline %}
+  {% endif %}
+  {{ render_repeated_skip() }}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('biometry_guest') %}
+    {% if context.user_name is not none %}
+      {% chooseitem 1 %}
+        Извините, но главный диджей тут — {{ context.user_name | capitalize }}.
+      {% or 1 %}
+        Воспитанный бот принимает дизлайки только от своего человека. Извините.
+      {% or 1 %}
+        Я бы поставила дизлайк, но только если {{ context.user_name | capitalize }} попросит.
+      {% endchooseitem %}
+    {% else %}
+      Воспитанный бот принимает дизлайки только от своего человека. Извините.
+    {% endif %}
+  {% else %}
+    {{ dislike_confirm() }}  # TODO(vitvlkv): Support do_authorized(dislike_confirm())
+  {% endif %}
+{% endphrase %}

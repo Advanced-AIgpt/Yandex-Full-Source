@@ -1,0 +1,315 @@
+FROM_SANDBOX(
+    2959378308
+    RENAME
+    alice_scenarios_get_weather_wind/model.pb
+    alice_scenarios_get_weather_wind/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/alice.scenarios.get_weather_wind/model.pb
+    ${PREFIX}zeliboba_models/alice.scenarios.get_weather_wind/model_description.json
+)
+
+FROM_SANDBOX(
+    2959382973
+    RENAME
+    personal_assistant_scenarios_alarm_cancel/model.pb
+    personal_assistant_scenarios_alarm_cancel/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_cancel/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_cancel/model_description.json
+)
+
+FROM_SANDBOX(
+    2959385100
+    RENAME
+    personal_assistant_scenarios_alarm_set/model.pb
+    personal_assistant_scenarios_alarm_set/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_set/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_set/model_description.json
+)
+
+FROM_SANDBOX(
+    2959387466
+    RENAME
+    personal_assistant_scenarios_alarm_show/model.pb
+    personal_assistant_scenarios_alarm_show/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_show/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_show/model_description.json
+)
+
+FROM_SANDBOX(
+    2959391614
+    RENAME
+    personal_assistant_scenarios_alarm_stop_playing/model.pb
+    personal_assistant_scenarios_alarm_stop_playing/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_stop_playing/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_stop_playing/model_description.json
+)
+
+FROM_SANDBOX(
+    2959394789
+    RENAME
+    personal_assistant_scenarios_get_weather/model.pb
+    personal_assistant_scenarios_get_weather/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.get_weather/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.get_weather/model_description.json
+)
+
+FROM_SANDBOX(
+    2959397835
+    RENAME
+    personal_assistant_scenarios_music_play/model.pb
+    personal_assistant_scenarios_music_play/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.music_play/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.music_play/model_description.json
+)
+
+FROM_SANDBOX(
+    2959411466
+    RENAME
+    personal_assistant_scenarios_player_continue/model.pb
+    personal_assistant_scenarios_player_continue/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.continue/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.continue/model_description.json
+)
+
+FROM_SANDBOX(
+    2959415373
+    RENAME
+    personal_assistant_scenarios_player_next_track/model.pb
+    personal_assistant_scenarios_player_next_track/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.next_track/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.next_track/model_description.json
+)
+
+FROM_SANDBOX(
+    2959427666
+    RENAME
+    personal_assistant_scenarios_player_pause/model.pb
+    personal_assistant_scenarios_player_pause/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.pause/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.pause/model_description.json
+)
+
+FROM_SANDBOX(
+    2959434223
+    RENAME
+    personal_assistant_scenarios_player_previous_track/model.pb
+    personal_assistant_scenarios_player_previous_track/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.previous_track/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.previous_track/model_description.json
+)
+
+FROM_SANDBOX(
+    2959442295
+    RENAME
+    personal_assistant_scenarios_player_replay/model.pb
+    personal_assistant_scenarios_player_replay/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.replay/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.replay/model_description.json
+)
+
+FROM_SANDBOX(
+    2959449211
+    RENAME
+    personal_assistant_scenarios_player_rewind/model.pb
+    personal_assistant_scenarios_player_rewind/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.rewind/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.rewind/model_description.json
+)
+
+FROM_SANDBOX(
+    2959455405
+    RENAME
+    personal_assistant_scenarios_sound_get_level/model.pb
+    personal_assistant_scenarios_sound_get_level/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.get_level/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.get_level/model_description.json
+)
+
+FROM_SANDBOX(
+    2959461514
+    RENAME
+    personal_assistant_scenarios_sound_louder/model.pb
+    personal_assistant_scenarios_sound_louder/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.louder/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.louder/model_description.json
+)
+
+FROM_SANDBOX(
+    2959470677
+    RENAME
+    personal_assistant_scenarios_sound_mute/model.pb
+    personal_assistant_scenarios_sound_mute/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.mute/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.mute/model_description.json
+)
+
+FROM_SANDBOX(
+    2959474870
+    RENAME
+    personal_assistant_scenarios_sound_quiter/model.pb
+    personal_assistant_scenarios_sound_quiter/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.quiter/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.quiter/model_description.json
+)
+
+FROM_SANDBOX(
+    2959480952
+    RENAME
+    personal_assistant_scenarios_sound_set_level/model.pb
+    personal_assistant_scenarios_sound_set_level/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.set_level/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.set_level/model_description.json
+)
+
+FROM_SANDBOX(
+    2959486038
+    RENAME
+    personal_assistant_scenarios_sound_unmute/model.pb
+    personal_assistant_scenarios_sound_unmute/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.unmute/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.unmute/model_description.json
+)
+
+FROM_SANDBOX(
+    2959517512
+    RENAME
+    personal_assistant_scenarios_timer_cancel/model.pb
+    personal_assistant_scenarios_timer_cancel/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_cancel/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_cancel/model_description.json
+)
+
+FROM_SANDBOX(
+    2959523217
+    RENAME
+    personal_assistant_scenarios_timer_how_long/model.pb
+    personal_assistant_scenarios_timer_how_long/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_how_long/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_how_long/model_description.json
+)
+
+FROM_SANDBOX(
+    2959530047
+    RENAME
+    personal_assistant_scenarios_timer_pause/model.pb
+    personal_assistant_scenarios_timer_pause/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_pause/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_pause/model_description.json
+)
+
+FROM_SANDBOX(
+    2959536539
+    RENAME
+    personal_assistant_scenarios_timer_resume/model.pb
+    personal_assistant_scenarios_timer_resume/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_resume/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_resume/model_description.json
+)
+
+FROM_SANDBOX(
+    2959542321
+    RENAME
+    personal_assistant_scenarios_timer_set/model.pb
+    personal_assistant_scenarios_timer_set/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_set/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_set/model_description.json
+)
+
+FROM_SANDBOX(
+    2959549485
+    RENAME
+    personal_assistant_scenarios_timer_show/model.pb
+    personal_assistant_scenarios_timer_show/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_show/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_show/model_description.json
+)
+
+FROM_SANDBOX(
+    2959557454
+    RENAME
+    personal_assistant_scenarios_timer_stop_playing/model.pb
+    personal_assistant_scenarios_timer_stop_playing/model_description.json
+    OUT
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_stop_playing/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_stop_playing/model_description.json
+)
+
+SET(
+    MODEL_FILES
+    ${PREFIX}zeliboba_models/alice.scenarios.get_weather_wind/model.pb
+    ${PREFIX}zeliboba_models/alice.scenarios.get_weather_wind/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_cancel/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_cancel/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_set/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_set/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_show/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_show/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_stop_playing/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.alarm_stop_playing/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.get_weather/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.get_weather/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.music_play/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.music_play/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.continue/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.continue/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.next_track/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.next_track/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.pause/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.pause/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.previous_track/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.previous_track/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.replay/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.replay/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.rewind/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.player.rewind/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.get_level/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.get_level/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.louder/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.louder/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.mute/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.mute/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.quiter/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.quiter/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.set_level/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.set_level/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.unmute/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.sound.unmute/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_cancel/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_cancel/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_how_long/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_how_long/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_pause/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_pause/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_resume/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_resume/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_set/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_set/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_show/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_show/model_description.json
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_stop_playing/model.pb
+    ${PREFIX}zeliboba_models/personal_assistant.scenarios.timer_stop_playing/model_description.json
+)

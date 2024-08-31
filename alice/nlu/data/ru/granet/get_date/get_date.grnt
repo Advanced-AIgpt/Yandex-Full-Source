@@ -1,0 +1,69 @@
+import: get_date/common.grnt
+
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/questions.grnt
+import: common/surfaces.grnt
+import: common/tense.grnt
+
+form personal_assistant.scenarios.get_date:
+    slots:
+        calendar_date:
+            type:
+                  sys.datetime
+                  custom.date_delta
+            source:
+                  $CalendarDate
+                  $CalendarDate2
+        where:
+            matching_type: overlap
+            type:
+                  GeoAddr.Address
+                  sys.geo
+            source: $Where
+        query_target:
+            type: user.target_format
+            source: $QueryTarget
+                    $QueryTargetNum
+        tense:
+            type: custom.tense_verb
+            source: $Common.Tense
+        numeric_date:
+            type: sys.num
+            source: $NumericDate
+
+    root:
+        %lemma
+        # запросы с обязательным $QuestionWhatWhen + $QueryTarget
+        [$Common.Tell? $QuestionWhatWhen+ $QueryTarget+ $CalendarDate* $Common.Tense? $Where?]
+        # запросы с $CalendarDate + $QueryTarget
+        [$Common.Tell? $QuestionWhatWhen? $QueryTarget+ $CalendarDate+ $Common.Tense? $Where?]
+        # запросы с двумя и более $CalendarDate и остальными опциональными вопросами
+        [$Common.Tell? $QuestionWhatWhen? $QueryTarget* $CalendarDate2 $CalendarDate+ $Common.Tense? $Where?]
+        # обязательный $Common.Tell + $QueryTarget
+        [$Common.Tell $QuestionWhatWhen? $QueryTarget+ $CalendarDate* $Common.Tense? $Where?]
+        # запросы типа "15 это какой день недели" (15 не матчится как sys.date)
+        # Вместо QueryTarget используется QueryTargetNum, чтобы отсчеь вопросы типа "Скажи число два"
+        [$Common.Tell? $QuestionWhatWhen? $QueryTargetNum $NumericDate $Common.Tense? $Where?]
+        # запросы типа "сегодня 12 или 13".
+        # Для отсекания вредных вариантов типа "'сегодня' в '14':'20'" один из чисел sys.num, но второй должно классифицироваться как дата
+        # Таким образом "сегодня 12 или 13" не попадает в правило, а "сегодня 12 или 13 число" - попадает
+        [$Common.Tell? $QuestionWhatWhen? $QueryTargetNum? $NumericDate $CalendarDate2 $CalendarDate+ $Common.Tense? $Where?]
+
+        # Игнорируем любые запросы, в которых присутствуют отсылки к праздникам и другим событиям
+        %force_negative
+        [.* $NegativeRequests]
+        # запросы, в которых присутствуют интерваы дат
+        $Common.From? $CalendarDate $Common.To $CalendarDate
+
+    filler:
+        $AdditionalFiller
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.SmartDevice
+        $Common.WayToCallAlice
+        $QuestionAsk
+        $nonsense
+        # Только здесь, чтобы не влияло на ellipsis
+        не

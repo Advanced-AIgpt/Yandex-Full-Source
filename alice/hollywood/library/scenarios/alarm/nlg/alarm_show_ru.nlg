@@ -1,0 +1,54 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/alarm__common_ru.nlg" import render_error, render_alarm_time, render_alarm_list with context %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('alarm__is_android') %}
+    {% chooseline %}
+      Хорошо, открываю список будильников.
+      Вот список будильников.
+      Хорошо, посмотрим на ваши будильники.
+    {% endchooseline %}
+  {% else %}
+    {% if context.data.available_alarms %}
+      {% if context.data.available_alarms|length == 1 %}
+        У вас установлен будильник {{ render_alarm_time(context.data.available_alarms[0].date, context.data.available_alarms[0].time) }}.
+      {% else %}
+        {% if context.date %}
+          Сейчас установлено несколько будильников на
+          {% if context.date.weekdays and context.date.weekdays|length > 1 %}
+            эти даты:
+          {% else %}
+            эту дату:
+          {% endif %}
+        {% elif context.time %}
+          Сейчас установлено несколько будильников на это время:
+        {% else %}
+          У вас установлены следующие будильники:
+        {% endif %}
+        \n{% vc %}-{% evc %}
+        {{ render_alarm_list(context.data.available_alarms) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase bad_arguments %}
+  Я могу поставить будильник на ближайшие 24 часа. А еще могу поставить повторяющийся будильник на выбранный день недели.
+{% endphrase %}
+
+{% phrase no_alarms %}
+  {% if context.data.date or context.data.weekdays %}
+    У вас нет установленных будильников на эту дату.
+  {% elif context.data.time %}
+    У вас нет установленных будильников на это время.
+  {% else %}
+    {% chooseline %}
+      У вас нет установленных будильников.
+      Вы меня не просили вас разбудить.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase not_supported %}
+    Я так пока не умею.
+{% endphrase %}

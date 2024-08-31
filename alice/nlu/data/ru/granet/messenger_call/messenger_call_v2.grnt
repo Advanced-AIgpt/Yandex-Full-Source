@@ -1,0 +1,306 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/nouns.grnt
+import: messenger_call/call_targets_v2.grnt
+import: messenger_call/common_v2.grnt
+
+form alice.messenger_call.can_you_call:
+    lemma:true
+    root:
+        $CanYouCall
+    filler:
+        туда
+        $Filler
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+
+form alice.messenger_call.call_to_operator:
+    root:
+        $CallToOperator
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+        $Common.Now
+        $Common.PronounMe
+        $Common.PronounYou
+        у
+        их
+        как
+        консультация
+
+form alice.messenger_call.call_to:
+    slots:
+        household:
+            source: $House
+            type: user.iot.household
+        room:
+            source: $Room
+            type: user.iot.room
+        unknown_room:
+            source: $UnknownRoom
+            type: user.iot.demo.room
+        device:
+            source: $Device
+            type: user.iot.device
+        device_type:
+            source: $DeviceType
+            type: custom.device_type
+        emergency:
+            source: $Emergency
+            type: custom.emergency
+        other:
+            source: $Name | $FrequentRelatives | $FrequentOrganizations | $FrequentPersonTargets | $WildcardCallTarget | $WildcardCallTargetShort | $PhoneNumber
+            type: string
+        can_you_call:
+            source: $CanYouCall
+            type: string
+    root:
+        %lemma
+        $Common.LeftFiller* $CallToRootWithoutFillers
+        $Common.LeftFiller* $CallToRootWithoutInnerFillers
+        $Common.LeftFiller* $CallToRootWithFillers
+
+        %force_negative
+        .* $Negative .*
+        $NegativeExact
+
+    filler:
+        $nonsense
+        $Filler
+        $Common.Filler
+        $Common.WayToCallAlice
+
+$Negative:
+    $Common.PronounThis* $Common.TheAlbum+
+    $Common.PronounThis* $Common.TheArtist+
+    $Common.PronounThis* $Common.TheMusic+
+    $Common.PronounThis* $Common.ThePlaylist+
+    $Common.PronounThis* $Common.TheTrack+
+    %lemma
+    не надо
+    не $CallRequest
+    такси
+    позвони мне позвони
+    $VideoLocal
+    включи
+    включите
+    выключи
+    выключите
+    (на|за|последний|твой) звонок
+    звонок (на|с) (урок|урока|перемену|перемены)
+    напомни
+    напомнить
+    напоминание
+    скачать
+    (на|с|по) $Language
+    .* купить наберу
+
+$NegativeExact:
+    [(вызови|вызвать|вызов) (девочку|девочек)]
+    [набери мой номер]
+    [звонок $sys.num]
+    [(вызовите|вызови) акушерку]
+    номер один
+    просто позвони
+    я набираю номер твой
+
+$Language:
+    %lemma
+    английски
+    английский
+    немецки
+    немецкий
+    латински
+    латинский
+    испански
+    испанский
+    украински
+    украинский
+    китайски
+    китайский
+    японски
+    японский
+
+$VideoLocal:
+    %lemma
+    видос
+    кино
+    кинчик
+    киношка
+    киношку
+    фильм
+    ролик
+    клип
+    видеоролик
+    мультик
+    мультфильм
+    серия
+    серию
+    сериал
+    эпизод
+    ютуб
+
+$CallToRootWithoutFillers:
+    $LocalFillers:
+        %fillers off
+        пожалуйста
+        в
+        на
+    $Fast:
+        %fillers off
+        срочно
+        быстро
+        быстрее
+    %fillers off
+    %anchor_to_begin
+    %anchor_to_end
+    $Common.WayToCallAlice? [как? $Fast $Emergency $LocalFillers*]
+    $Common.WayToCallAlice? [как? ($CallRequest|набор|але) $Fast? $Emergency $LocalFillers*]
+
+$CallToRootWithoutInnerFillers:
+    %fillers off
+    $Common.PronounMe? $Want? (чтобы $Common.PronounYou)? $CallVerbShotList+ (в|на)? $WildcardCallTarget $ByPhone?
+    [$Want? $CallVerbShotList+ (в|на)? (контакт|телефон|номер)? $WildcardCallTargetShort $ByPhone?]
+
+    %force_negative
+    .* как .*
+
+$CallToRootWithFillers:
+    $Want? $CallRequest $Emergency $ByPhone?
+    [$Want? $CallRequest+ $AnyPreciseCallTarget $ByPhone?] .*
+    [$Want? $CallNabrat $AnyPreciseCallTarget $ByPhone?] номер
+    .* [$CallRequest+ $AnyPreciseCallTarget $ByPhone?]
+    $Want? $CallRequest $ByPhone?
+    $CanYouCall $ByPhone?
+
+    %force_negative
+    .* как .*
+
+$ByPhone:
+    телефонным (звонком|разговором)
+    по телефону
+
+$ByMessenger:
+    $Messenger:
+        ватсап|ватсапу
+        телеграмм|телеграм|телеграмму|телегрему
+        вайбер|вайберу
+        яндекс? (мессенджер|мессенджеру)
+    (в|через|на)? $ByMessenger.Messenger
+
+$CanYouCall:
+    $LocalFillers:
+        %fillers off
+        %lemma
+        пожалуйста
+    $CallPhoneNumber:
+        %fillers off
+        [$Want? $CallRequest+ $PhoneNumberTarget $ByPhone? $LocalFillers*]
+
+    $CanYou $CallVerbShotList $AnyPreciseCallTarget?
+    [$CallVerbShotList $AnyPreciseCallTarget? $ByMessenger]
+    $CallPhoneNumber
+
+$CanYou:
+    [ты? умеешь]
+
+$CallRequest:
+    [$Want? ($CallVerb|$CallNabrat)]
+    (не $Common.Can)? $Find $DeviceCallTarget? и? ($CallVerb|$CallNabrat) на? $Common.Pronoun3Person?
+
+$CallToOperator:
+    .* [$Want? $Help* ($CallVerb|$Call|$ExtraCallVerbs|$Talk|$Show)+ (на|в|с|со)? $Phone? $Operator] .*
+    .* [$Want $Help* $Operator] .*
+    $CallVerb помощь
+    [$Want? $Talk (с|у)? $Operator]
+    $OperatorSingle
+
+    $Operator:
+        $Inner:
+            %lemma
+            обслуживание
+            специалист
+            менеджер
+            (люди|человек) который управляет
+            $OperatorSingle
+        $Inner+ такси?
+
+    $OperatorSingle:
+        $Inner:
+            %lemma
+            колл центр
+            оператор
+            диспетчер
+            техническая поддержка
+            техподдержка
+            поддержка
+            служба техподдержки
+            служба поддержки клиентов?
+            сервисная служба
+        $Inner+ такси?
+
+    $Talk:
+        говорить
+        поговорить
+        проконсультироваться
+
+    $Help:
+        %lemma
+        $Common.Help
+        ошибка
+        помощь
+        проблема|проблемы
+        help
+
+    $Issue:
+        %lemma
+        help
+        попал в (дтп|аварию)
+        проблемы с парковкой
+        [едем не туда]
+        что то пошло? не так
+        что то сломалось
+        [остановил дпс]
+        чп
+        дтп
+        [в машине (неполадки|что то сломалось)]
+        [(машина|автомобиль|такси) едет (не туда|не в том направлении)]
+        [маршрут (неверный|неправильный|не правильный)]
+
+    $Show:
+        %lemma
+        выведи (на экран)?
+        включи
+
+    $ExtraCallVerbs:
+        %lemma
+        связаться
+        соединиться
+        обратиться
+        пожаловаться
+
+    $Want:
+        %lemma
+        хочу|хотим
+        нужно|нужна|нужен|надо
+        необходим|необходима|необходимо
+        попрошу
+        прошу
+        дай номер
+
+    $Negatives:
+        %lemma
+        .* дискотека авария .*
+        .* (оператор связи|мтс|теле|билайн|мегафон|беру|банк|$entity_search.org) .*
+        .* не нужен .*
+        .* откуда .*
+        .* диспетчер задач .*
+        .* какому специалисту .*
+        %force_negative
+        .* (такси|гибдд|гаи|дпс) .*
+
+    %force_negative
+    $Negatives

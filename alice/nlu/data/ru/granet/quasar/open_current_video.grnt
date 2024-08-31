@@ -1,0 +1,182 @@
+import: common/filler.grnt
+import: quasar/video_common.grnt
+import: video_command/change_track.grnt
+
+form personal_assistant.scenarios.quasar.open_current_video:
+    enable_alice_tagger: false
+    slots:
+        action:
+            type:
+                custom.video_selection_action
+                video_action # DEPRECATED
+                custom.video_action
+                string
+            source: 
+                $ActionSlot
+                $ActionPlayWide
+        audio_language:
+            type:
+                custom.audio
+                video_language # DEPRECATED
+                custom.video_language
+                string
+            source: $AudioEnum
+        browser_video_gallery:
+            type:
+                browser_video_gallery # DEPRECATED
+                custom.browser_video_gallery
+        content_provider:
+            type:
+                video_provider # DEPRECATED
+                custom.video_provider
+                string
+            source: $custom.video_provider
+        content_type:
+            type:
+                video_content_type # DEPRECATED
+                custom.video_content_type
+        country:
+            type:
+                geo_adjective # DEPRECATED
+                custom.geo_adjective
+                string
+        episode:
+            type:
+                video_episode # DEPRECATED
+                custom.video_episode
+                num # DEPRECATED
+                fst.num
+            source: $EpisodeSlot
+        film_genre:
+            type:
+                video_film_genre # DEPRECATED
+                custom.video_film_genre            
+        free:
+            type:
+                video_free # DEPRECATED
+                custom.video_free
+        new:
+            type:
+                video_new # DEPRECATED
+                custom.video_new
+        release_date:
+            type:
+                year_adjective # DEPRECATED
+                custom.year_adjective
+                date # DEPRECATED
+                fst.date
+                num # DEPRECATED
+                fst.num
+        screen:
+            type:
+                quasar_video_screen # DEPRECATED
+                custom.quasar_video_screen
+        search_text:
+            type:
+                string
+        season:
+            type:
+                video_season # DEPRECATED
+                custom.video_season
+                num # DEPRECATED
+                fst.num
+            source: $SeasonSlot
+        subtitle_language:
+            type:
+                custom.subtitles
+                video_language # DEPRECATED
+                custom.video_language
+                string
+            source: $SubtitlesEnum
+        top:
+            type:
+                video_top # DEPRECATED
+                custom.video_top
+        video_result:
+            type:
+                video_result # DEPRECATED
+                custom.video_result
+    root:
+        [$EpisodeOrSeason $ChangeTrackTotal*]
+        [((это|этот|эту) $Video) $ChangeTrackTotal*]
+        [$Item $OnProvider $ChangeTrackTotal*]
+        [$ActionTotal $Item? $OnProvider? $ChangeTrackTotal*]
+        [$ActionTotal $AboutItem? $OnProvider? $ChangeTrackTotal*]
+        [$Find $ActionTotal? $AboutItem? $OnProvider $ChangeTrackTotal*]
+
+        %negative
+        [$Find (сериал|фильм) $OnProvider]
+
+$AboutItem:
+    $About? $Item
+
+$Item:
+    (его|её|нём|ней|$Video)* $EpisodeOrSeason
+    $Video
+    его|него|нём
+    это|этот|эту
+
+$EpisodeOrSeason:
+    весь $Season
+    из $Season
+    (с|со)? ($Season $Episode? | $Episode $Season?)
+
+$Episode:
+    %lemma
+    самый? $EpisodeSlot $EpisodeDict
+    $EpisodeDict (самый|номер|под номером)? $EpisodeSlot
+
+$EpisodeSlot:
+    $custom.video_episode
+    $fst.num
+
+$EpisodeDict:
+    серия
+    серию
+    серии
+    эпизод
+    эпизода
+    выпуск
+    выпуска
+    часть
+    части
+
+$Season:
+    %lemma
+    самый? $SeasonSlot $SeasonDict
+    $SeasonDict (самый|номер|под номером)? $SeasonSlot
+
+$SeasonSlot:
+    $custom.video_season
+    $fst.num
+
+$SeasonDict:
+    сезон
+    сезона
+
+$Video:
+    (это|этот|эту|этом|этого)? $VideoDict
+
+$ActionPlayWide:
+    %type "custom.video_selection_action"
+    %value "play"
+    валяй
+    включайся
+    врубайся
+    запускайся
+
+$ActionTotal:
+    $Action
+    $ActionPlayWide
+
+$ChangeTrackTotal:
+    %lemma
+    $AudioEnum
+    $SubtitlesEnum
+
+filler:
+    $nonsense
+    $Common.Filler
+    хорошо|ладно|вот|так|окей|да|то
+    мне|нам|снова|давай|нужно|его|её|можно|можешь
+    на|в|с|у|к

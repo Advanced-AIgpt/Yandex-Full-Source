@@ -1,0 +1,68 @@
+GO_LIBRARY()
+
+OWNER(g:alice_iot)
+
+SRCS(
+    background_image.go
+    capability.go
+    colors.go
+    const.go
+    device.go
+    device_v3.go
+    error.go
+    event.go
+    favorite.go
+    geosuggest.go
+    group.go
+    helpers.go
+    history.go
+    household.go
+    network.go
+    property.go
+    quasar.go
+    render_info.go
+    room.go
+    scenario.go
+    scenario_v3.go
+    settings.go
+    sharing.go
+    skill.go
+    sorting.go
+    stereopair.go
+    suggestions.go
+    tandem.go
+    type.go
+    user_storage.go
+    validation.go
+)
+
+GO_TEST_SRCS(
+    capability_test.go
+    const_test.go
+    device_test.go
+    device_v2_test.go
+    device_v3_test.go
+    favorite_test.go
+    geosuggest_test.go
+    group_test.go
+    history_test.go
+    household_test.go
+    network_test.go
+    property_test.go
+    render_info_test.go
+    room_test.go
+    scenario_test.go
+    scenario_v3_test.go
+    sharing_test.go
+    skill_test.go
+    sorting_test.go
+    stereopair_test.go
+    suggestions_test.go
+    tandem_test.go
+    type_test.go
+    user_storage_test.go
+)
+
+END()
+
+RECURSE(gotest)

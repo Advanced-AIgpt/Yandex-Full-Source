@@ -1,0 +1,60 @@
+LIBRARY()
+
+OWNER(
+    olegator
+    g:megamind
+)
+
+PEERDIR(
+    alice/library/client
+    alice/library/experiments
+    alice/library/factors
+    alice/library/music
+    alice/library/response_similarity
+    alice/library/search
+    alice/library/video_common
+    alice/megamind/library/context
+    alice/megamind/library/experiments
+    alice/megamind/library/kv_saas
+    alice/megamind/library/classifiers/formulas
+    alice/megamind/library/scenarios/defs
+    alice/megamind/library/scenarios/features
+    alice/megamind/library/search
+    alice/megamind/protos/quality_storage
+    alice/megamind/protos/scenarios
+    alice/megamind/protos/speechkit
+    kernel/alice/asr_factors_info
+    kernel/alice/begemot_nlu_factors_info/fill_factors
+    kernel/alice/begemot_query_factors_info
+    kernel/alice/device_state_factors_info
+    kernel/alice/direct_scenario_factors_info/fill_factors
+    kernel/alice/gc_scenario_factors_info/fill_factors
+    kernel/alice/music_scenario_factors_info/fill_factors
+    kernel/alice/query_tokens_factors_info
+    kernel/alice/search_scenario_factors_info/fill_factors
+    kernel/alice/video_scenario/fill_factors/video_scenario
+    kernel/begemot_query_factors_info/fill_factors
+    kernel/factor_storage
+    library/cpp/scheme
+    library/cpp/string_utils/base64
+    library/cpp/string_utils/levenshtein_diff
+    library/cpp/string_utils/url
+    search/web/blender/factors_info
+    search/web/util/sources
+)
+
+SRCS(
+    asr_features.cpp
+    calcers.cpp
+    current_screen_features.cpp
+    device_state_features.cpp
+    logging.cpp
+    query_tokens_features.cpp
+    search_hosts_features.cpp
+)
+
+END()
+
+RECURSE_FOR_TESTS(
+    ut
+)

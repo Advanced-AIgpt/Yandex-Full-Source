@@ -1,0 +1,9 @@
+RECURSE(
+    div1
+    div2
+    example
+    fantasy
+    library
+    runtime
+    tool
+)

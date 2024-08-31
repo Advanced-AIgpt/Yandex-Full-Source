@@ -1,0 +1,106 @@
+use hahn;
+
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yt.Pool = 'paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+pragma yson.DisableStrict = 'true';
+
+$target_folder = 'home/paskills/stat/moderation/negative-reviews-by-day';
+
+$parse_date = ($str) -> {
+    RETURN cast(DateTime::MakeDate(DateTime::ParseIso8601($str)) as Date);
+};
+
+-- $from = CAST('2021-06-09' as Date);
+$from = SELECT max(CAST(substring(Path,Length($target_folder) + 1u) as Date))
+       FROM folder($target_folder)
+       WHERE Type = 'table';
+$to = Unwrap(CurrentUtcDate());
+
+
+DEFINE ACTION $insert_negative_reviews_stat($date) AS
+    $target_path = $target_folder || '/' || CAST($date AS String);
+
+    $items_list = (
+        SELECT
+            $parse_date(TableName()) AS fielddate,
+            DictItems(
+                Yson::ConvertToBoolDict(
+                    output.additional
+                )
+            ) AS items,
+            'organizationChat' as channel
+        FROM
+            RANGE(`home/paskills/moderation/stable/chat_responses`)
+        WHERE
+            $parse_date(TableName()) = $date
+            AND
+            output.additional IS NOT NULL
+        UNION ALL
+        SELECT
+            $parse_date(TableName()) AS fielddate,
+            DictItems(
+                Yson::ConvertToBoolDict(
+                    output.additional
+                ),
+            ) AS items,
+            'aliceSkill' as channel
+        FROM
+            RANGE(`home/paskills/moderation/stable/responses`)
+        WHERE
+            $parse_date(TableName()) = $date
+            AND
+            output.additional IS NOT NULL
+    );
+    --SELECT * FROM $items_list;
+
+    $keys_flat = (
+        SELECT
+            fielddate,
+            item.0 as key,
+            channel
+        FROM
+            $items_list
+        FLATTEN BY
+            items AS item
+        WHERE item.1 == true);
+    SELECT * FROM $keys_flat;
+
+    $keys_grouped = (
+        SELECT
+            channel,
+            fielddate,
+            key,
+            COUNT(*) as count
+        FROM
+            $keys_flat
+        GROUP COMPACT BY channel, fielddate, key);
+    SELECT * FROM $keys_grouped;
+
+    INSERT INTO $target_path WITH TRUNCATE
+        SELECT
+            channel,
+            fielddate,
+            key,
+        SUM(count) AS count
+        FROM
+            $keys_grouped
+        GROUP COMPACT BY fielddate, channel, key;
+
+    COMMIT;
+    DISCARD select Ensure(count(distinct fielddate),
+        count(distinct fielddate)<=1,
+        'Multiple fielddate values present in '||$target_path||' cnt='||cast(count(distinct fielddate) as String)||', values: '||(ListConcat(ListMap(aggregate_list_distinct(fielddate), ($x) -> {return cast($x as String); }))??'none'))
+    FROM $target_path;
+END DEFINE;
+
+$range = ListFromRange(1, DateTime::ToDays(Unwrap($to - $from)));
+$shift_back_by_days = ($days_count) -> {
+    RETURN Unwrap(
+        $to - $days_count * Interval("P1D"),
+        "Failed to shift today back by " || CAST($days_count AS String) || " days"
+    );
+};
+$dates = (SELECT ListSortAsc(ListMap($range, $shift_back_by_days)));
+SELECT $dates;
+EVALUATE FOR $date IN $dates DO $insert_negative_reviews_stat($date);

@@ -1,0 +1,78 @@
+USE hahn;
+PRAGMA udf("libalice_matrix_udf.so");
+PRAGMA yt.MaxRowWeight = "128M";
+
+$matrix_scheduler = "//home/logfeller/logs/matrix-scheduler-prod-eventlog/1d";
+$matrix_worker = "//home/logfeller/logs/matrix-worker-prod-eventlog/1d";
+$from = "2022-05-26";
+$to = "2022-05-26";
+
+-- Also you can use a 5min stream
+-- However, lag of 5min stream is 5 - 15 minutes,
+-- so if you want to get logs from 20:00, you need to use range 20:00 - 20:20
+-- to be completely sure that the logs will be found
+-- $matrix_scheduler = "//home/logfeller/logs/matrix-scheduler-prod-eventlog/stream/5min";
+-- $matrix_worker = "//home/logfeller/logs/matrix-worker-prod-eventlog/stream/5min";
+-- $from = "2022-04-25T13:00:00";
+-- $to = "2022-04-25T14:00:00";
+
+$limit_events = 100;
+
+$action_id = "chegoryu-test-p";
+$action_guid = "52185c5-c734d03f-5709ad0a-7c749ec9";
+-- $action_guid = NULL;
+
+$expected_is_null_or_equal_to_actual = ($actual, $expected) -> {
+    RETURN $expected IS NULL OR $actual == $expected;
+};
+
+$event_filter = ($event) -> {
+    $event_yson = Yson::Parse(MatrixEventLog::GetYsonRepr($event));
+
+    $current_action_id = Yson::YPath($event_yson, "/EventBody/Fields/ActionId");
+    $current_action_guid = Yson::YPath($event_yson, "/EventBody/Fields/ActionGuid");
+    RETURN
+        -- Event has action id and action guid
+        $current_action_id IS NOT NULL AND
+        $current_action_guid IS NOT NULL AND
+
+        $expected_is_null_or_equal_to_actual(Yson::ConvertToString($current_action_id), $action_id) AND
+        $expected_is_null_or_equal_to_actual(Yson::ConvertToString($current_action_guid), $action_guid)
+    ;
+};
+
+$is_important_common_event = ($event) -> {
+    return MatrixEventLog::GetName($event) IN [
+        "MatrixWorkerSyncStarted",
+    ];
+};
+
+DEFINE SUBQUERY $select_frames($event_filter) AS
+    SELECT
+        source_uri,
+        frame_id,
+        MatrixEventLog::GetEvents(MatrixEventLog::ParseFrame(frame)) AS events
+    FROM (
+        SELECT * FROM range($matrix_scheduler, $from, $to)
+        UNION ALL
+        SELECT * FROM range($matrix_worker, $from, $to)
+    )
+    WHERE ListHasItems(
+        ListFilter(
+            MatrixEventLog::GetEvents(MatrixEventLog::ParseFrame(frame)),
+            $event_filter
+        )
+    )
+END DEFINE;
+
+SELECT
+    DateTime::FromMicroseconds(MatrixEventLog::GetTimestamp(events)) AS event_timestamp,
+    source_uri,
+    frame_id,
+    MatrixEventLog::GetName(events) AS event_name,
+    Yson::SerializePretty(Yson::YPath(Yson::Parse(MatrixEventLog::GetYsonRepr(events)), "/EventBody/Fields")) AS event_pretty
+FROM $select_frames($event_filter)
+FLATTEN LIST BY events
+WHERE $event_filter(events) OR $is_important_common_event(events)
+ORDER BY event_timestamp, source_uri, frame_id
+LIMIT $limit_events;

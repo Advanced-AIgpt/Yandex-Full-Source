@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package NAlice.NHollywoodFw.NVideo;
+
+import "google/protobuf/wrappers.proto";
+
+import "alice/protos/data/search_result/tv_search_result.proto";
+import "alice/protos/data/tv/carousel.proto";
+import "alice/protos/data/video/video.proto";
+
+message TVideoSearchResultArgs {
+    string SearchText = 1;
+    TTvSearchResultData SearchResultData = 2;
+    bool IsPorn = 3;
+}
+
+message TShowViewSceneData {
+    string WebviewUrl = 1;
+}
+
+message TBassProxySceneArgs {
+    enum TRequestType {
+        RUN = 0;
+        CONTINUE = 1;
+        APPLY = 2;
+        COMMIT = 3;
+    }
+
+    TRequestType RequestType = 1;
+}
+
+message TCardDetailSceneArgs {
+    string Path = 1;
+}
+
+message TVideoVhArgs {
+    string ProviderItemId = 1;
+    string ContentType = 2;
+    bool HasSeason = 3;
+    uint32 Season = 4;
+    bool HasEpisode = 5;
+    uint32 Episode = 6;
+}
+
+message TVideoPlaySceneArgs {
+
+    message TAdditionalVhPlayerData {
+        string Payload = 1;
+        uint32 StartAt = 2;
+        string SessionToken = 3;
+        google.protobuf.StringValue AudioLanguage = 4;
+        google.protobuf.StringValue SubtitlesLanguage = 5;
+        bool HasActiveLicenses = 6;
+    }
+
+    TVideoItem VideoItem = 1;
+    oneof Result {
+        TAdditionalVhPlayerData AdditionalVhPlayerData = 2;
+        bool NoSuchSeason = 3;
+        bool NoSuchEpisode = 4;
+    }
+    TVideoItem TvShowItem = 5;
+}
+
+message TVideoDetailsScreenArgs {
+    TVideoItem VideoItem = 1;
+    oneof Warn {
+        bool OnlyWarn = 2;
+        bool WarnNoSuchSeason = 3;
+        bool WarnNoSuchEpisode = 4;
+    }
+}
+
+message TPreselectedInfo {
+    string Intent = 1;
+    float Confidence = 2;
+}
+
+message TOpenItemSceneArgs {
+    oneof Item {
+        NTv.TCarouselItemWrapper CarouselItem = 1;
+        TShowViewSceneData ShowViewSceneData = 2;
+        TVideoItem VideoItem = 3; // for backward compatibility
+    }
+
+    TPreselectedInfo PreselectedInfo = 10;
+}
+
+message TNotSupportedSceneArgs {
+}
+
+message TNoTvPluggedSceneArgs {
+}
+
+message TRenderIrrelevant {
+}

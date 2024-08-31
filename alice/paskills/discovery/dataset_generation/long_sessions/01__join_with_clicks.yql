@@ -1,0 +1,119 @@
+USE hahn;
+
+$SESSIONS_DIR    = ("//home/paskills/discovery/datasets/long-sessions");
+$CLICKS_DIR      = ("//home/paskills/discovery/datasets/clicks");
+$LONG_CLICKS_DIR = ("//home/paskills/discovery/datasets/long-clicks");
+$MAX_TABLE_NUM_TO_PROCESS = 30;
+
+DEFINE ACTION $CALC_LONG_CLICKS($date) AS
+    $sessions_table = ($SESSIONS_DIR || "/" || $date);
+    $clicks_table = ($CLICKS_DIR || "/" || $date);
+    $long_clicks_table = ($LONG_CLICKS_DIR || "/" || $date);
+    
+    $__sessions = (
+        SELECT
+            CAST(has_errors AS Bool) as has_errors,
+            CAST(is_long_session AS Bool) as is_long_session,
+            query_number,
+            session_id,
+            skill_id,
+            `uuid`,
+        FROM $sessions_table
+    );
+    
+    $__clicks = (
+        SELECT
+            -- clicks,
+            relevant_skills as shown_skills,
+            request_id as show__req_id,
+            session_id,
+            utterance_text,
+            `uuid`,
+            skill.0 as skill_id,
+            skill.1 as click__req_id,
+        FROM $clicks_table
+        FLATTEN LIST BY (clicks as skill)
+        WHERE
+            skill.0 IN relevant_skills
+    );
+    
+    $__joined = (
+        SELECT
+            *
+        FROM
+            ANY $__clicks as clicks
+        LEFT JOIN
+            ANY $__sessions as sessions
+        USING (`uuid`, `session_id`, `skill_id`)
+    );
+    
+    -- SELECT * FROM $__joined LIMIT 10;
+    
+    INSERT INTO $long_clicks_table WITH TRUNCATE 
+    SELECT *
+    FROM $__joined
+    ;
+    
+    $__pairs = (
+        SELECT
+            utterance_text,
+            skill_id,
+            COUNT_IF(is_long_session) as long_sessions,
+            COUNT(*) as all_sessions,
+            Aggregate_List(AsStruct(
+                is_long_session as is_long_session,
+                query_number as query_number,
+                session_id as session_id,
+            )) as entries
+        FROM
+            $__joined
+        GROUP BY
+            utterance_text, skill_id
+    );
+    
+    
+    SELECT
+        $date as `date`,
+        COUNT(*) as unique_pairs,
+    FROM $__pairs
+    ;
+END DEFINE;
+
+
+$__sessions_tables = (
+    select TableName(Path) as Name
+    from FOLDER($SESSIONS_DIR)
+    WHERE Type = "table"
+);
+
+$__clicks_tables = (
+    select TableName(Path) as Name
+    from FOLDER($CLICKS_DIR)
+    WHERE Type = "table"
+);
+
+$__long_clicks_tables = (
+    select TableName(Path) as Name
+    from FOLDER($LONG_CLICKS_DIR)
+    WHERE Type = "table"
+);
+
+$__long_clicks_tables__to_calc = (
+    select AGGREGATE_LIST(Name)
+    from (
+        SELECT sessions.Name as Name
+        FROM $__sessions_tables as sessions
+        INNER JOIN $__clicks_tables as clicks
+        ON (sessions.Name == clicks.Name)
+        LEFT ONLY JOIN $__long_clicks_tables as long_clicks
+        ON (sessions.Name == long_clicks.Name)
+        ORDER BY Name DESC
+        LIMIT $MAX_TABLE_NUM_TO_PROCESS
+    )
+);
+
+SELECT $__long_clicks_tables__to_calc;
+
+-- DO $CALC_LONG_CLICKS("2019-11-11");
+
+EVALUATE FOR $date in $__long_clicks_tables__to_calc DO $CALC_LONG_CLICKS($date);

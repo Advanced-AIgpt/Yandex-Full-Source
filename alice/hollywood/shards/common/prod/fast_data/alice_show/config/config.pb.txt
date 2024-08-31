@@ -1,0 +1,560 @@
+Config {
+    InitialVertex: "initial"
+    Graph {
+        key: "initial"
+        value {
+            EntryActions {
+                Actions: ["postroll_feedback"]
+            }
+            Choice: First
+            Transitions {
+                TargetVertex: "show_with_music"
+                Tags: "music"
+            }
+            Transitions {
+                TargetVertex: "show_without_music"
+            }
+        }
+    }
+    Graph {
+        key: "show_with_music"
+        value {
+            Transitions {
+                TargetVertex: "morning_show"
+                Weight {
+                    Expression: "State.DayPart.Value == \"Morning\" && State.Age.Value == \"Adult\""
+                }
+            }
+            Transitions {
+                TargetVertex: "children_show"
+                Weight {
+                    Expression: "State.DayPart.Value == \"Morning\" && State.Age.Value == \"Children\""
+                }
+            }
+            Transitions {
+                TargetVertex: "evening_show"
+                Weight {
+                    Expression: "State.DayPart.Value == \"Evening\" && State.Age.Value == \"Adult\""
+                }
+            }
+            Transitions {
+                TargetVertex: "good_night_show"
+                Weight {
+                    Expression: "State.DayPart.Value == \"Night\" || (State.DayPart.Value == \"Evening\" && State.Age.Value == \"Children\")"
+                }
+            }
+        }
+    }
+    Graph {
+        key: "morning_show"
+        value {
+            EntryActions {
+                Actions: ["jingle", "greeting", "choose_news", "time", "weather"]
+            }
+            Choice: First
+            Transitions {
+                TargetVertex: "news_motivate"
+                Flags: "hw_alice_show_motivate"
+                Tags: "news"
+            }
+            Transitions {
+                TargetVertex: "news"
+                Tags: "news"
+            }
+            Transitions {
+                TargetVertex: "hardcoded_show"
+            }
+        }
+    }
+    Graph {
+        key: "news"
+        value {
+            EntryActions {
+                Actions: ["news", "convert", "joke"]
+            }
+            Transitions {
+                TargetVertex: "hardcoded_show"
+            }
+        }
+    }
+    Graph {
+        key: "news_motivate"
+        value {
+            EntryActions {
+                Actions: ["motivate", "news_without_music", "convert_without_music", "music", "motivate", "joke"]
+            }
+            Transitions {
+                TargetVertex: "hardcoded_show"
+            }
+        }
+    }
+    Graph {
+        key: "good_night_show"
+        value {
+            Choice: First
+            Transitions {
+                TargetVertex: "pillow_show"
+                Weight {
+                    Expression: "State.Age.Value == \"Children\""
+                }
+            }
+            Transitions {
+                TargetVertex: "plain_good_night_show"
+            }
+        }
+    }
+    Graph {
+        key: "hardcoded_show"
+        value {
+            EntryActions {
+                Actions: ["hardcoded_show"]
+            }
+        }
+    }
+    Graph {
+        key: "evening_show"
+        value {
+            EntryActions {
+                Actions: ["greeting", "choose_news", "time", "weather_for_tomorrow", "news", "convert", "joke", "hardcoded_show"]
+            }
+        }
+    }
+    Graph {
+        key: "children_show"
+        value {
+            EntryActions {
+                Actions: ["hardcoded_show"]
+            }
+        }
+    }
+    Graph {
+        key: "pillow_show"
+        value {
+            EntryActions {
+                Actions: ["pillow_show"]
+            }
+        }
+    }
+    Graph {
+        key: "plain_good_night_show"
+        value {
+            EntryActions {
+                Actions: ["night_playlist"]
+            }
+        }
+    }
+    Graph {
+        key: "show_without_music"
+        value {
+            Choice: First
+            Transitions {
+                TargetVertex: "morning_show_without_music"
+                Tags: ["morning", "adult"]
+            }
+            Transitions {
+                TargetVertex: "evening_show_without_music"
+                Tags: ["evening", "adult"]
+            }
+        }
+    }
+    Graph {
+        key: "morning_show_without_music"
+        value {
+            EntryActions {
+                Actions: ["greeting", "choose_news", "time", "weather", "news_without_music", "convert_without_music", "fm_radio"]
+            }
+        }
+    }
+    Graph {
+        key: "evening_show_without_music"
+        value {
+            EntryActions {
+                Actions: ["greeting", "choose_news", "time", "weather_for_tomorrow", "news_without_music", "convert_without_music", "fm_radio"]
+            }
+        }
+    }
+
+    Actions {
+        key: "postroll_feedback"
+        value {
+            Tags: "after_postroll"
+            ActionParts {
+                PhraseId: "postroll_feedback"
+                ImageId: "happy"
+                HaveContent {
+                    value: false
+                }
+            }
+        }
+    }
+    Actions {
+        key: "greeting"
+        value {
+            ActionParts {
+                PhraseId: "greeting"
+                AppendPhrases: "push_notice"
+                ImageId: "happy"
+            }
+            NextHardcodedShowIndex: 1
+        }
+    }
+    Actions {
+        key: "choose_news"
+        value {
+            Flags: ["hw_enable_alice_show_interactivity"]
+            Tags: "news"
+            ActionParts {
+                PhraseId: "news_suggest"
+                Modifiers: "suggest_news"
+                NluHints {
+                    FrameName: "alice.proactivity.confirm"
+                }
+                NluHints {
+                    FrameName: "alice.proactivity.decline"
+                }
+                ImageId: "neutral"
+                Listen: true
+            }
+            ActionParts {
+                Modifiers: "suggest_news_feedback"
+                HaveContent {
+                    value: false
+                }
+            }
+        }
+    }
+    Actions {
+        key: "time"
+        value {
+            ActionParts {
+                Purpose: "show_time"
+                SemanticFrame {
+                    GetTimeSemanticFrame {
+                        Where {
+                            SpecialLocationValue: "nearest"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Actions {
+        key: "weather"
+        value {
+            ActionParts {
+                PhraseId: "weather_intro"
+                ImageId: "happy"
+                Purpose: "show_weather"
+                SemanticFrame {
+                    WeatherSemanticFrame {
+                    }
+                }
+            }
+            NextHardcodedShowIndex: 2
+        }
+    }
+    Actions {
+        key: "weather_for_tomorrow"
+        value {
+            ActionParts {
+                PhraseId: "weather_intro"
+                ImageId: "happy"
+                Purpose: "show_weather"
+                SemanticFrame {
+                    WeatherSemanticFrame {
+                        When {
+                            DateTimeValue: "{\"days\":1,\"days_relative\":true}"
+                        }
+                    }
+                }
+            }
+            NextHardcodedShowIndex: 2
+        }
+    }
+    Actions {
+        key: "news"
+        value {
+            Tags: "news"
+            ActionParts {
+                PhraseId: "news_intro"
+                AppendPhrases: "news_settings_reminder"
+                ImageId: "news"
+                Modifiers: "news_phrase"
+                UsePart: "news"
+            }
+            ActionParts {
+                UsePart: "music"
+            }
+            ActionParts {
+                UsePart: "news"
+            }
+            ActionParts {
+                UsePart: "music"
+            }
+            ActionParts {
+                UsePart: "news"
+            }
+            NextHardcodedShowIndex: 3
+        }
+    }
+    Actions {
+        key: "news_without_music"
+        value {
+            Tags: "news"
+            ActionParts {
+                PhraseId: "news_intro"
+                AppendPhrases: "news_settings_reminder"
+                ImageId: "news"
+                Modifiers: "news_phrase"
+                UsePart: "news"
+            }
+            ActionParts {
+                UsePart: "news"
+            }
+            ActionParts {
+                UsePart: "news"
+            }
+        }
+    }
+    Actions {
+        key: "joke"
+        value {
+            ActionParts {
+                UsePart: "music"
+                PhraseId: "joke"
+            }
+            NextHardcodedShowIndex: 4
+        }
+    }
+    Actions {
+        key: "hardcoded_show"
+        value {
+            Stop: true
+            ActionParts {
+                Purpose: "run_hardcoded_morning_show"
+                SemanticFrame {
+                    HardcodedMorningShowSemanticFrame {
+                        Offset {
+                        }
+                        NextTrackIndex {
+                        }
+                    }
+                }
+                Modifiers: "set_hardcoded_show_slots"
+            }
+        }
+    }
+    Actions {
+        key: "night_playlist"
+        value {
+            Stop: true
+            ActionParts {
+                Purpose: "run_playlist"
+                SemanticFrame {
+                    MusicPlaySemanticFrame {
+                        DisableAutoflow {
+                            BoolValue: true
+                        }
+                        DisableNlg {
+                            BoolValue: true
+                        }
+                        ObjectId {
+                        }
+                        ObjectType {
+                            EnumValue: Playlist
+                        }
+                    }
+                }
+                Modifiers: "set_night_playlist_slots"
+            }
+        }
+    }
+    Actions {
+        key: "pillow_show"
+        value {
+            Stop: true
+            ActionParts {
+                Purpose: "run_playlist"
+                SemanticFrame {
+                    MusicPlaySemanticFrame {
+                        DisableAutoflow {
+                            BoolValue: true
+                        }
+                        ObjectId {
+                            StringValue: "17277367"
+                        }
+                        ObjectType {
+                            EnumValue: Album
+                        }
+                        Offset {
+                            OffsetValue: "saved_progress"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Actions {
+        key: "jingle"
+        value {
+            Flags: "hw_enable_alice_show_jingle"
+            ActionParts {
+                PhraseId: "jingle__morning_show_entrance_20211210"
+                ImageId: "happy"
+            }
+        }
+    }
+    Actions {
+        key: "fm_radio"
+        value {
+            ActionParts {
+                PhraseId: "fm_radio_intro"
+                ImageId: "neutral"
+                SemanticFrame {
+                    RadioPlaySemanticFrame {
+                        DisableNlg {
+                            BoolValue: true
+                        }
+                    }
+                }
+            }
+            Stop: true
+        }
+    }
+    Actions {
+        key: "convert"
+        value {
+            Condition {
+                Expression: "State.SelectedNewsProvider.NewsSource == \"6e24a5bb-yandeks-novost\" && State.SelectedNewsProvider.Rubric == \"__mixed_news__\""
+            }
+            ActionParts {
+                UsePart: "music"
+            }
+            ActionParts {
+                UsePart: "convert_USD"
+            }
+            ActionParts {
+                UsePart: "convert_EUR"
+            }
+        }
+    }
+    Actions {
+        key: "convert_without_music"
+        value {
+            Condition {
+                Expression: "State.SelectedNewsProvider.NewsSource == \"6e24a5bb-yandeks-novost\" && State.SelectedNewsProvider.Rubric == \"__mixed_news__\""
+            }
+            ActionParts {
+                UsePart: "convert_USD"
+            }
+            ActionParts {
+                UsePart: "convert_EUR"
+            }
+        }
+    }
+    Actions {
+        key: "motivate"
+        value {
+            ActionParts {
+                UsePart: "music"
+                PhraseId: "motivate"
+            }
+        }
+    }
+    Actions {
+        key: "music"
+        value {
+            ActionParts {
+                UsePart: "music"
+            }
+        }
+    }
+
+    Parts {
+        key: "news"
+        value {
+            Modifiers: "news_part"
+            Purpose: "show_news"
+            SemanticFrame {
+                NewsSemanticFrame {
+                    Provider {
+                        NewsProviderValue {
+                        }
+                    }
+                    MaxCount {
+                        NumValue: 1
+                    }
+                    SkipIntroAndEnding {
+                        BoolValue: true
+                    }
+                    DisableVoiceButtons {
+                        BoolValue: true
+                    }
+                    SingleNews {
+                        BoolValue: true
+                    }
+                }
+            }
+        }
+    }
+    Parts {
+        key: "music"
+        value {
+            PhraseId: "music_intro"
+            ImageId: "happy"
+            Purpose: "play_track"
+            SemanticFrame {
+                MusicPlaySemanticFrame {
+                    SpecialPlaylist {
+                    }
+                    TrackOffsetIndex {
+                    }
+                    PlaySingleTrack {
+                        BoolValue: true
+                    }
+                    DisableAutoflow {
+                        BoolValue: true
+                    }
+                    DisableHistory {
+                        BoolValue: true
+                    }
+                    DisableNlg {
+                        BoolValue: true
+                    }
+                    DisableMultiroom {
+                        BoolValue: true
+                    }
+                }
+            }
+            Modifiers: "next_track"
+        }
+    }
+    Parts {
+        key: "convert_USD"
+        value {
+            PhraseId: "convert_USD"
+            ImageId: "neutral"
+            SemanticFrame {
+                ConvertSemanticFrame {
+                    TypeFrom {
+                        CurrencyValue: "USD"
+                    }
+                }
+            }
+        }
+    }
+    Parts {
+        key: "convert_EUR"
+        value {
+            PhraseId: "convert_EUR"
+            ImageId: "neutral"
+            SemanticFrame {
+                ConvertSemanticFrame {
+                    TypeFrom {
+                        CurrencyValue: "EUR"
+                    }
+                }
+            }
+        }
+    }
+}

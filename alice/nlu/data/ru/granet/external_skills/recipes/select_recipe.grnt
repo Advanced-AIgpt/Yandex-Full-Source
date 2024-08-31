@@ -1,0 +1,153 @@
+import: common/filler.grnt
+        common/questions.grnt
+        external_skills/recipes/common.grnt
+        external_skills/recipes/entities/ingredient.grnt
+        external_skills/recipes/entities/recipe.grnt
+        external_skills/recipes/entities/recipe_tag.grnt
+        external_skills/recipes/onboarding.grnt
+
+form alice.recipes.select_recipe:
+    slots:
+        recipe:
+            source: $Recipe
+            type: Recipe
+        recipe_wildcard:
+            source: $RecipeWildcard
+            type: string
+    root:
+        ($HowToMakeOrCook|$Want|$FindOrTeach) $Recipe
+        [($HowToMakeOrCook|$Want|$FindOrTeach)? $MakeOrCookImper $Recipe]
+        [$FindOrTeach? $MakeOrCookImper? $RecipeWordWithSynonims+ $Recipe]
+        [$RecipeWordWithSynonims $Recipe]
+
+        # wildcard matchers
+        [($HowToCook|$Want|$FindOrTeach)+ $RecipeWord $CookImper?] $RecipeOrWildcard
+        [($HowToCook|$Want|$FindOrTeach)+ $RecipeWord? $CookImper] $RecipeOrWildcard
+        $CookImper $RecipeOrWildcard $RecipeWordWithSynonims?
+        $RecipeWord $CookImper? $RecipeOrWildcard
+
+        %negative
+        [($HowToMakeOrCook|$Want|$FindOrTeach)? $MakeOrCookImper $Ingredient]
+        $Recommend $RecipeWord
+        печи .*
+        блин $Make
+        $DontWant $RecipeWordWithSynonims .*
+    filler:
+        $Filler
+
+form alice.recipes.select_recipe.ellipsis:
+    slots:
+        recipe:
+            source: $Recipe
+            type:
+                Recipe
+    root:
+        $Recipe .*
+    filler:
+        %lemma
+        $Filler
+        $ActionVerb<g:sg,imper,2p|pl,imper,2p|pl,imper,1p|inf>
+        $RecipeWordWithSynonims
+        $Want
+
+$Filler:
+    $Common.WayToCallAlice
+    $Common.LeftFiller
+    $Common.Filler
+    $ner.nonsense
+    $Say
+    $CanYou
+    $Easy
+    всеми
+    давай
+    далее
+    и
+    как
+    меня
+    мне
+    начать
+    начинать
+    онлайн
+    подробностями
+    подскажешь
+    пожалуйста
+    поможешь
+    поэтапно
+    поэтапный
+    при помощи
+    простой
+    пункт
+    с
+    с помощью
+    с тобой
+    с фото
+    самый
+    сделай
+    следующий
+    со
+    ты
+    чего
+    %lemma
+    вкусный
+    вместе
+    для
+    именно
+    ингредиенты
+    каждый
+    какие
+    классический
+    настоящего
+    легкий
+    простой
+    нужно
+    нужны
+    по
+    подробный
+    помощи
+    после
+    пошагово
+    пошаговый
+    правильно
+    правильный
+    продукты
+    с картинками
+    слово
+    хорошего
+    что
+    шаг
+    это
+    $FromBlogger+
+    $BloggerName+
+    $RecipeAdjective
+
+$RecipeOrWildcard:
+    $Recipe
+    $RecipeWildcard
+$CookImper:
+    $Cook<g:sg,imper,2p|pl,imper,2p|pl,imper,1p|inf>
+    (в|по|с)? $Cooking
+$MakeOrCookImper:
+    $CookImper
+    $Make<g:sg,imper,2p|pl,imper,2p|pl,imper,1p|inf>
+$MakeOrCook
+$HowToCook:
+    $How $Cook
+$HowToMakeOrCook:
+    $How ($Make|$Cook)
+$Make:
+    сделать
+    делать
+$Want:
+    %lemma
+    хочу
+    давай
+$DontWant:
+    не ($Want|нужен)
+$How:
+    $Common.QuestionHow+ ($Make|$CookImper)
+    начнем
+$RecipeWildcard:
+    .+
+$CanYou:
+    умеешь
+    знаешь

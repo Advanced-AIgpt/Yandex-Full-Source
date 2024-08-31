@@ -1,0 +1,20 @@
+SET(
+    AR_ENTITY_FILES
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/action_request.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/ambient_sound.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/day_part.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/expected_change.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/player_type.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/prec_type.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/selection.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/special_location.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/activity.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/content_type.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/epoch.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/genre.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/mood.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/need_similar.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/novelty.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/personality.json
+    ${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/ar-entities/music_ex/special_playlist.json    
+)

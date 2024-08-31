@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG" monitorInterval="30">
+
+    <Properties>
+        <Property name="JSON_LOG_PATTERN">{ "timestamp": "%date{yyyy-MM-dd'T'HH:mm:ss.SSSZ}", "thread": "%thread", "level": "%level", "logger": "%logger", "requestId": "%replace{%X{request_id}}{^$}{NA}", "message": "%enc{%message}{JSON}", "stacktrace": "%enc{%throwable}{JSON}"}%n</Property>
+    </Properties>
+
+    <Appenders>
+        <UnifiedAgent name="UnifiedAgentLog" host="localhost" port="12500" messageMetaEnabled="true">
+            <AgentProperty name="SharedSecretKey" value="DEPLOY_LOGS_SECRET" sourceType="ENV"/>
+            <AgentProperty name="MaxInflightBytes" value="20971520"/>
+            <AgentProperty name="GrpcMaxMessageSize" value="2097152"/>
+            <AgentProperty name="GrcpReconnectDelay" value="PT1S"/>
+            <AgentProperty name="CloseTimeout" value="PT5S"/>
+            <AgentProperty name="MaxStackTraceDepth" value="10000"/>
+            <SessionMetaItem name="deploy_box" value="DEPLOY_BOX_ID" sourceType="ENV"/>
+            <SessionMetaItem name="deploy_workload" value="DEPLOY_WORKLOAD_ID" sourceType="ENV"/>
+            <SessionMetaItem name="deploy_container_id" value="DEPLOY_CONTAINER_ID" sourceType="ENV"/>
+            <SessionMetaItem name="deploy_logger_name" value="service.log"/>
+        </UnifiedAgent>
+
+        <Console name="ConsoleAppender" target="SYSTEM_OUT" follow="true">
+            <PatternLayout pattern="${JSON_LOG_PATTERN}"/>
+
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+        <Console name="ErrConsoleAppender" target="SYSTEM_ERR" follow="true">
+            <!--<PatternLayout pattern="${JSON_LOG_PATTERN}"/>-->
+            <JsonLayout compact="true" eventEol="true"/>
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+    </Appenders>
+
+
+    <Loggers>
+
+        <AsyncLogger name="ru.yandex.alice.paskills.my_alice" level="info"/>
+
+        <AsyncRoot level="info">
+            <AppenderRef ref="UnifiedAgentLog"/>
+            <AppenderRef ref="ConsoleAppender"/>
+        </AsyncRoot>
+
+    </Loggers>
+
+</Configuration>

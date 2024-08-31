@@ -1,0 +1,51 @@
+import: common/filler.grnt
+import: weather/common.grnt
+
+form personal_assistant.scenarios.get_weather_nowcast__ellipsis:
+    slots:
+        prec_type_asked:
+            type: custom.prec_type
+            source: $PrecType
+        expected_change:
+            type:
+                custom.expected_change
+                string
+            source: $ExpectedChange
+        when:
+            type:
+                sys.datetime_range
+                sys.datetime
+            source: $When
+        day_part:
+            type: custom.day_part
+            source: $DayPart
+        where:
+            matching_type: overlap
+            type:
+                sys.geo
+                string
+            source: $Where|$UnknownWhere|$StrictWhere|$StrictUnknownWhere
+    root:
+        $Root
+
+        %negative
+        $SingleWeatherWords
+        $StrictUnknownWhere
+
+        %force_negative
+        [.* $NoMatchHandcrafted]
+
+$Root:
+    [$TellMe* $ExpectedChange* $WhenResolver $StrictWhereResolver? $DayPartResolver?]
+    [$TellMe* $ExpectedChange* $WhenResolver? $StrictWhereResolver $DayPartResolver?]
+    [$TellMe* $ExpectedChange* $WhenResolver? $StrictWhereResolver? $DayPartResolver]
+
+    [$TellMe+ $ExpectedChange (капать | лить | моросить)]
+
+filler:
+    $Common.Filler
+    $Common.LeftFiller
+    $Common.WayToCallAlice
+    $nonsense
+    $WeatherFiller
+    $EllipsisFiller

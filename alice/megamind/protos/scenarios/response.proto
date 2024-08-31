@@ -1,0 +1,542 @@
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+option go_package = "a.yandex-team.ru/alice/megamind/protos/scenarios";
+option java_package = "ru.yandex.alice.megamind.protos.scenarios";
+option java_outer_classname = "ResponseProto";
+
+import "alice/megamind/protos/common/conditional_action.proto";
+import "alice/megamind/protos/common/content_properties.proto";
+import "alice/megamind/protos/common/directives_execution_policy.proto";
+import "alice/protos/div/div2card.proto";
+import "alice/megamind/protos/common/frame.proto";
+import "alice/megamind/protos/common/response_error_message.proto";
+import "alice/megamind/protos/scenarios/action_space.proto";
+import "alice/megamind/protos/scenarios/analytics_info.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+import "alice/megamind/protos/scenarios/frame.proto";
+import "alice/megamind/protos/scenarios/stack_engine.proto";
+import "alice/megamind/protos/scenarios/user_info.proto";
+
+import "alice/megamind/protos/scenarios/features/gc.proto";
+import "alice/megamind/protos/scenarios/features/music.proto";
+import "alice/megamind/protos/scenarios/features/search.proto";
+import "alice/megamind/protos/scenarios/features/vins.proto";
+
+import "alice/library/video_common/protos/features.proto";
+
+import "alice/protos/api/rpc/status.proto";
+import "alice/protos/data/contextual_data.proto";
+import "alice/protos/data/external_entity_description.proto";
+import "alice/protos/data/scenario/data.proto";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/descriptor.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+// Option used to specify fields that should be translated if polyglot modifier is enabled
+extend google.protobuf.FieldOptions {
+    bool ApplyPolyglot = 57433;
+}
+
+// List of directives to be executed at the client.
+message TDirectiveList {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // All of the directives to be executed at the client.
+    repeated TDirective List = 1 [json_name = "list", (NYT.column_name) = "list"];
+}
+
+// Action that should be taken when user interacts with the response
+// (e.g. chooses a button or a card to activate).
+//
+// Actions can be directives (one or several at once), or sending a predefined
+// frame to Uniproxy.
+message TFrameAction {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved 56788;
+
+    // Description (hint) of the way scenario expects user to react
+    // to the response. This allows the scenario to be more flexible
+    // and react to phrases that don't make a lot of sense by themselves, but
+    // can be interpreted easily in the context of the response. E.g. utterance
+    // "Louder." after music has been turned on is obviously aimed at the music
+    // scenario.
+    //
+    // The hint can be specified as a specific phrase or a semantic frame that should be added to the analysis of this particular request.
+    TFrameNluHint NluHint = 1 [json_name = "nlu_hint", (NYT.column_name) = "nlu_hint"];
+
+    // Possible effects of the action.
+    //
+    // Action can also result in "no effect", but this usage is particular
+    // to internal Hollywood implementation.
+    oneof Effect {
+        // List of directives that should be the result of the action.
+        //
+        // If the only directive needed is callback, use the `Callback`
+        // field.
+        TDirectiveList Directives = 2 [json_name = "directives", (NYT.column_name) = "directives"];
+
+        // Frame that should be sent as a user utterance.
+        TSemanticFrame Frame = 3 [json_name = "frame", (NYT.column_name) = "frame", deprecated = true]; // use ParsedUtterance instead
+
+        // Callback to Megamind (the directive name and a payload to be sent
+        // to scenarios as is).
+        TCallbackDirective Callback = 4 [json_name = "callback", (NYT.column_name) = "callback"];
+
+        // Frame that should be sent with an utterance it is assumed to correspond to.
+        TParsedUtterance ParsedUtterance = 6 [json_name = "parsed_utterance", (NYT.column_name) = "parsed_utterance"];
+    }
+
+    reserved 5; // TTypedSemanticFrame TypedSemanticFrame = 5 [json_name = "typed_semantic_frame"];
+}
+
+// Properties of the layout for the GUI response to the user.
+//
+// todo: better name?
+message TLayout {
+    // Simple text buttons provided by the scenario according to its logic.
+    message TButton {
+        // Not used. Only TActionButton can be themed.
+        message TTheme {
+            string ImageUrl = 1 [json_name = "image_url"];
+        }
+
+        // Text for the button.
+        string Title = 1 [json_name = "title", (ApplyPolyglot) = true];
+
+        reserved 2; // repeated TDirective Directives = 2 [json_name = "directives", deprecated = true];
+
+        // ID of the action that corresponds to the TFrameAction, which should
+        // be associated with the button (see the FrameActions field).
+        string ActionId = 3 [json_name = "action_id"];
+
+        // Deprecated. Only TActionButton can be themed.
+        TTheme Theme = 4 [json_name = "theme", deprecated = true];
+    }
+
+    // Actions suggested to the user.
+    message TSuggest {
+        // Button with a picture, used only for suggest.
+        message TActionButton {
+            message TTheme {
+                // URL of the picture to use for the button.
+                string ImageUrl = 1 [json_name = "image_url"];
+            }
+
+            // Text for the button.
+            string Title = 1 [json_name = "title", (ApplyPolyglot) = true];
+
+            // ID of the action that corresponds to the TFrameAction, which should
+            // be associated with the button (see the FrameActions field).
+            string ActionId = 2 [json_name = "action_id"];
+
+            // If a theme is specified, then suggest type is `themed_action`.
+            TTheme Theme = 3 [json_name = "theme"];
+        }
+
+        // Button with a suggest to search for a query. Sends a request
+        // to the search scenario.
+        message TSearchButton {
+            string Title = 1 [json_name = "title", (ApplyPolyglot) = true];
+            string Query = 2 [json_name = "query", (ApplyPolyglot) = true];
+            // TODO: add nlu hints
+        }
+
+        // One of the possible suggested action buttons.
+        oneof Action {
+            TActionButton ActionButton = 1 [json_name = "action_button"];
+            TSearchButton SearchButton = 2 [json_name = "search_button"];
+        }
+    }
+
+    // Simple response: text with buttons at the bottom.
+    message TTextWithButtons {
+        // Text to display.
+        string Text = 1 [json_name = "text", (ApplyPolyglot) = true];
+
+        // Buttons to show to the user.
+        repeated TButton Buttons = 2 [json_name = "buttons"];
+    }
+    message TCard {
+        // Div cards v2 extended format.
+        message TDiv2Card {
+            // The standard body of the card, as described in the docs.
+            google.protobuf.Struct Body = 1 [json_name = "body"];
+
+            // Whether
+            bool HideBorders = 2 [json_name = "hide_borders"];
+
+            // Text when draw template is impossible.
+            string Text = 3 [json_name = "text", (NYT.column_name) = "text"];
+        }
+        oneof Card {
+            // Plain text.
+            string Text = 1 [json_name = "text", (ApplyPolyglot) = true];
+
+            // Plain text followed by simple buttons.
+            TTextWithButtons TextWithButtons = 2 [json_name = "text_with_buttons"];
+
+            // JSON representation of a div card v1 that must conform
+            // to the with following structure:
+            // {
+            //   "background": ...
+            //   "states": ...
+            // }
+            //
+            // About the 1 version of div cards, see wiki: https://wiki.yandex-team.ru/assistant/alicekit/divnaja-dokumentacija/#strukturajsonsdivami
+            google.protobuf.Struct DivCard = 3 [json_name = "div_card"];
+
+            // Deprecated. Previous implementation of the div card v2;
+            // use Div2CardExtended.
+            google.protobuf.Struct Div2Card = 4 [json_name = "div2_card", deprecated = true];
+
+            // Div cards v2. They may be only partially supported on the client,
+            // so test your cards thoroughly.
+            //
+            // Docs: https://doc.yandex-team.ru/divkit/overview/concepts/about.html
+            // TODO(@akastornov): remove MEGAMIND-2380
+            TDiv2Card Div2CardExtended = 5 [json_name = "div2_card_extended", deprecated = true];
+
+            // Temporary helper field
+            // TODO(@akastornov): rename to Div2CardExtended MEGAMIND-2380
+            NAlice.TDiv2Card Div2CardExtendedNew = 6 [json_name = "div2_card_extended_new"];
+        }
+    }
+    // Desription for all the cards that need to be displayed as the response.
+    //
+    // The order of cards in the scenario response determines the display order
+    // on the device.
+    repeated TCard Cards = 1 [json_name = "cards"];
+
+    // Voice response with all of the needed TTS markup.
+    //
+    // TODO: add a doc link.
+    string OutputSpeech = 2 [json_name = "output_speech", (ApplyPolyglot) = true];
+
+    // Whether Alice should continue listening for the next command after
+    // giving this response.
+    bool ShouldListen = 3 [json_name = "should_listen"];
+
+    // Deprecated. Use SuggestButtons instead.
+    repeated TButton Suggests = 4 [json_name = "suggests", deprecated = true];
+
+    // Directives to be executed on the device.
+    repeated TDirective Directives = 5 [json_name = "directives"];
+
+    // Deprecated. Use corresponding fields from ContentProperties instead.
+    bool ContainsSensitiveData = 6 [json_name = "contains_sensitive_data", deprecated = true];
+
+    // Div cards templates which can be reused in individual cards.
+    //
+    // See https://doc.yandex-team.ru/divkit/overview/concepts/templates.html
+    google.protobuf.Struct Div2Templates = 7 [json_name = "div2_templates"];
+
+    // Buttons for search suggests or themed action suggests.
+    repeated TSuggest SuggestButtons = 8 [json_name = "suggest_buttons"];
+
+    EDirectivesExecutionPolicy DirectivesExecutionPolicy = 9 [json_name = "directives_execution_policy"];
+
+    // Content properties provide an information about layout from scenario's point of view
+    // For example, if layout contains personal or sensitive data that should not be logged,
+    // this information should be provided in content properties
+    NAlice.TContentProperties ContentProperties = 10 [json_name = "content_properties"];
+
+    // Div2 palette allows to change color schemes of div cards.
+    google.protobuf.Struct Div2Palette = 11 [json_name = "div2_palette", (NYT.column_name) = "div2_palette"];
+}
+
+message TGrpcResponse {
+    // Payload for the given Grpc service/method handler. Must correspond to the type in the GRPC-API specification.
+    google.protobuf.Any Payload = 1 [json_name = "payload"];
+}
+
+// The body of the response to send back to the user.
+message TScenarioResponseBody {
+
+    // Alice supports two different kinds of requests: Standard and Grpc. 
+    // Standard request (Voice/Text Speechkit request and others) suppose Layout as response meaning, 
+    //      containing directives, tts, text and other "commands" for client to execute.
+    //      Client's Speechkit must executed listed directives, pronounse voice, display tts and suggests.
+    //      Layout is "Command pattern" serialization object
+    //
+    // Grpc Response is pure data response (like HTTP handler). There is no "Command" behaviour expected.
+    // The client knows when to call Grpc handlers and the GRPC service specification determines the response type for the given GRPC method.
+    oneof Response {
+        // Response for client: buttons, cards, voice and directives etc.
+        TLayout Layout = 1 [json_name = "layout"];
+
+        // Response for grpc request with data only
+        TGrpcResponse GrpcResponse = 17 [json_name = "grpc_response"];
+    }
+
+    // The frame that should become active if the response is actually sent
+    // to the user. Can include requests to Megamind to fill specific slots.
+    // See docs for details: https://docs.yandex-team.ru/alice-scenarios/frames
+    //
+    // the0: maybe rename to Frame
+    TSemanticFrame SemanticFrame = 2 [json_name = "semantic_frame"];
+
+    // Data that Megamind should send back to the scenario if the next command
+    // from the user matches one of the scenario's frames.
+    //
+    // Although a lot of the context can be structured as a TSemanticFrame,
+    // some scenarios may prefer to process data in more depth on their end.
+    // See docs for details: https://docs.yandex-team.ru/alice-scenarios/frames
+    google.protobuf.Any State = 3 [json_name = "state"];
+
+    // Data for analytics system that monitors Alice and deployed scenarios.
+    // For details, see https://a.yandex-team.ru/arc/trunk/arcadia/alice/megamind/protos/scenarios/analytics_info.proto
+    TAnalyticsInfo AnalyticsInfo = 4 [json_name = "analytics_info"];
+
+    // TODO(the0): remove when every scenario moved to FrameActions
+    // map<string, TAction> Actions = 6 [json_name = "actions", deprecated=true]; // Keys are slugs that are used to reference to the actions from buttons, cards etc.
+    reserved 6;
+    reserved "Actions";
+
+    // Whether the scenario is expecting another command from the user after
+    // this response is delivered. Affects all requests
+    //
+    // Can be true even when TLayout.ShouldListen is false, because the next
+    // command can be sent in the text form.
+    bool ExpectsRequest = 7 [json_name = "expects_request"];
+
+    // Mapping of slug strings onto actions that are made available to the user
+    // through cards, buttons etc.
+    //
+    // TODO(the0): rename to 'Actions' when Actions field is removed
+    map<string, TFrameAction> FrameActions = 8 [json_name = "frame_actions"];
+
+    TStackEngine StackEngine = 9 [json_name = "stack_engine"];
+    reserved 10; // TTypedSemanticFrame Frame = 10 [json_name = "frame"];
+    repeated TClientEntity Entities = 11 [json_name = "entities"];
+
+    repeated TServerDirective ServerDirectives = 12;
+
+    // Mapping from ActionSpaceId to corresponding ActionSpace
+    map<string, TActionSpace> ActionSpaces = 13;
+
+    // Structured machine readable scenario data
+    // One scenario can return any data type - no hard binding
+    NAlice.NData.TScenarioData ScenarioData = 14  [json_name = "scenario_data", (NYT.column_name) = "scenario_data"];
+
+    // Information about response sematics for further pipeline stages
+    NAlice.NData.TContextualData ContextualData = 15 [json_name = "contextual_data", (NYT.column_name) = "contextual_data"];
+
+    // Mapping from ConditionalActionId to corresponding ConditionalAction
+    map<string, TConditionalAction> ConditionalActions = 16 [json_name = "conditional_actions", (NYT.column_name) = "conditional_actions"];
+
+    // Describes relevant scenario error for client.
+    TResponseErrorMessage ResponseErrorMessage = 18 [json_name = "response_error_message", (NYT.column_name) = "response_error_message"];
+
+    // These entities will be sent to the client as a directive
+    // Client can use it in request to fill begemot request with client entities
+    repeated NData.TExternalEntityDescription ExternalEntitiesDescription = 19 [json_name = "external_entities_description", (NYT.column_name) = "external_entities_description"];
+}
+
+
+
+// Response for when the scenario encounters an error. The error is only
+// logged, not relayed to the user.
+message TScenarioError {
+    // Description of the error.
+    string Message = 1 [json_name = "message"];
+
+    // Arbitrary type that can be used to cluster errors for the scenario.
+    string Type = 2 [json_name = "type"];
+}
+
+// Response structure for the `/run` resource.
+//
+// See docs for description of nuances of the response structure and variations:
+// https://docs.yandex-team.ru/docs/alice-scenarios/megamind/protocol
+message TScenarioRunResponse {
+    // Description of the features of the response
+    // todo(g-kostin): move to different file
+    message TFeatures {
+        // Should be `true`, if the scenario considers itself irrelevant for
+        // the user's request.
+        //
+        // The flag must be accompanied by `ResponseBody` which gives some sort
+        // of feedback to the user, otherwise the response is going to be
+        // marked as invalid (invalid responses block the scenario version
+        // from being released to production).
+        bool IsIrrelevant = 1 [json_name = "is_irrelevant"];
+
+        // Intent declaration for older (VINS) scenarios.
+        string Intent = 4 [json_name = "intent"];
+
+        // Common player features, should be filled if scenario works with any kind of client player
+        message TPlayerFeatures {
+            // Should be `true` if scenario tries to use player which is already occupied by it
+            // Player meta from device_state should be used to determine this fact, player could be paused
+            bool RestorePlayer = 1 [json_name = "restore_player"];
+
+            // How much time has passed since player HAS STARTED PLAYBACK (yes, the field was mistakenly named).
+            // Field `LastPlayTimestamp` from player's device_state should be used to determine this fact.
+            // NOTE: `RestorePlayer` feature should be `true`.
+            // NOTE: Use client time (not server time) as 'now' when calculating this features.
+            uint32 SecondsSincePause = 2 [json_name = "seconds_since_pause"];
+        }
+
+        TPlayerFeatures PlayerFeatures = 9 [json_name = "player_features"];
+
+        // Features that are implemented by scenarios to be analyzed by the postclassifier. Features are usually useful when offline testing shows
+        // that existing scenarios degrade in quality when the new scenario is
+        // added.
+        //
+        // New features should be discussed with olegator@
+        oneof Features {
+            TMusicFeatures MusicFeatures = 2 [json_name = "music_features"];
+            NAlice.NVideoCommon.TVideoFeatures VideoFeatures = 3 [json_name = "video_features"];
+            // Please, be careful when adding new fields (tag 4 exists)
+            TVinsFeatures VinsFeatures = 5 [json_name = "vins_features"];
+            TSearchFeatures SearchFeatures = 6 [json_name = "search_features"];
+            TGCFeatures GCFeatures = 10 [json_name = "gc_features"];
+        }
+
+        reserved 7, 8;
+
+        // Can be 'true' if scenario does not want to be considered as active/modal in postclassification stage
+        // and refresh scenario activity turn count
+        bool IgnoresExpectedRequest = 11 [json_name = "ignores_expected_request"];
+    }
+
+    // Features are the only way to communicate with the postclassifier,
+    // and the only information to use for ranking scenarios that respond
+    // with ApplyArguments and ContinueArguments.
+    TFeatures Features = 1 [json_name = "features"];
+
+    // Response structure to be used if `/commit` should be called after `/run`.
+    message TCommitCandidate {
+        // Body of the response to the user.
+        TScenarioResponseBody ResponseBody = 1 [json_name = "response_body"];
+
+        // Arguments for the `/commit` call, if it's going to be made.
+        google.protobuf.Any Arguments = 2 [json_name = "arguments"];
+    }
+
+    oneof Response {
+        // Body of the response that should be told or shown to the user.
+        TScenarioResponseBody ResponseBody = 2 [json_name = "response_body"];
+
+        // Response for the case when after the win in scenario ranking Megamind
+        // should request `/commit` to perform a side effect.
+        TCommitCandidate CommitCandidate = 3 [json_name = "commit_candidate"];
+
+        // Response for the case when after the win in scenario ranking Megamind
+        // should request `/apply` to perform a side effect.
+        google.protobuf.Any ApplyArguments = 4 [json_name = "apply_arguments"];
+
+        // Response for the case when there was an unexpected error processing
+        // the `/run` request.
+        TScenarioError Error = 5 [json_name = "error"];
+
+        // Response for the case when after the win in scenario ranking Megamind
+        // should request `/continue` to finalize the response body.
+        google.protobuf.Any ContinueArguments = 9 [json_name = "continue_arguments"];
+    }
+
+    // Properties that reflect information about the user for analytics.
+    NScenarios.TUserInfo UserInfo = 7 [json_name = "user_info"];
+
+    // Version of the scenario backend that is responding to the particular
+    // `/run` request.
+    //
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 8 [json_name = "version"];
+
+
+    reserved 6;
+    reserved "CombineIntent";
+}
+
+// Response structure for the `/apply` resource (response delayed by a side
+// effect).
+//
+// See docs for description of nuances of the response structure and variations:
+// https://docs.yandex-team.ru/docs/alice-scenarios/megamind/protocol
+message TScenarioApplyResponse {
+    oneof Response {
+        // Body of the response that should be told or shown to the user.
+        TScenarioResponseBody ResponseBody = 1 [json_name = "response"];
+
+        // Response in the case there was an unexpected error when performing the side effect.
+        TScenarioError Error = 2 [json_name = "error"];
+    }
+
+    // Version of the scenario backend that is responding to the particular
+    // `/apply` request.
+    //
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 3 [json_name = "version"];
+}
+
+// Response structure for the `/commit` resource that should perform
+// the side effect implied in the request.
+//
+// See docs for description of nuances of the response structure and variations:
+// https://docs.yandex-team.ru/docs/alice-scenarios/megamind/protocol
+message TScenarioCommitResponse {
+    // Empty field, which signifies that the side effect was performed
+    // successfully.
+    message TSuccess {
+    }
+
+    oneof Response {
+        // Side effect was performed according to plan.
+        TSuccess Success = 1 [json_name = "success"];
+
+        // Response in the case there was an unexpected error when performing
+        // the side effect.
+        TScenarioError Error = 2 [json_name = "error"];
+    }
+
+    // Version of the scenario backend that is responding to the particular
+    // `/commit` request.
+    //
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 3 [json_name = "version"];
+}
+
+message TScenarioContinueResponse {
+    oneof Response {
+        // Body of the response that should be told or shown to the user.
+        TScenarioResponseBody ResponseBody = 1 [json_name = "response"];
+
+        // Response for the case when there was an unexpected error processing
+        // the `/continue` request.
+        TScenarioError Error = 2 [json_name = "error"];
+    }
+
+    // Version of the scenario backend that is responding to the particular
+    // `/continue` request.
+    //
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 3 [json_name = "version"];
+}
+
+message TScenarioRpcResponse {
+    oneof Response {
+        google.protobuf.Any ResponseBody = 1 [json_name = "response_body"];
+        NRpc.TStatus Error = 2 [json_name = "error"];
+    }
+
+    // Data for analytics system that monitors Alice and deployed scenarios.
+    // For details, see https://a.yandex-team.ru/arc/trunk/arcadia/alice/megamind/protos/scenarios/analytics_info.proto
+    TAnalyticsInfo AnalyticsInfo = 3 [json_name = "analytics_info"];
+
+    repeated TServerDirective ServerDirectives = 4 [json_name = "server_directives"];
+
+    // If the backend is developed within Arcadia, the most straightforward way
+    // to come up with a version is to use the code revision number.
+    string Version = 5 [json_name = "version", (NYT.column_name) = "version"];
+}

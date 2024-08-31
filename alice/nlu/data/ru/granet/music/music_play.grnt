@@ -1,0 +1,1199 @@
+import: common/commands.grnt
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/location.grnt
+import: common/nouns.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/questions.grnt
+import: common/quit.grnt
+import: common/surfaces.grnt
+import: music/commands.grnt
+import: player/commands.grnt
+import: player/dislike.grnt
+import: player/like.grnt
+
+form personal_assistant.scenarios.music_play:
+    enable_alice_tagger: true
+    slots:
+        action_request:
+            type:
+                custom.music.action_request
+                action_request # DEPRECATED
+                custom.action_request
+            source: $ActionPlay
+        missing_type:
+            type: custom.music.missing_type
+            source: $MissingType
+        decline:
+            type: string
+            source: $Decline
+        stream:
+            type: custom.music.stream
+            source: $MyWave; $StreamNameEnum
+        generative_station:
+            type: custom.music.generative_station
+            source: $GenerativeStationEnum; $GenerativeActivityStationEnum; $GenerativeLuckyStationEnum
+        special_playlist:
+            type:
+                custom.music.special_playlist
+                special_playlist # DEPRECATED
+                custom.special_playlist
+            source: $RewindPlaylistEnum
+        offset:
+            type:
+                offset # DEPRECATED
+                custom.offset
+            source:
+                $custom.offset
+        repeat:
+            type:
+                repeat # DEPRECATED
+                custom.repeat
+                string
+            source:
+                $custom.repeat
+        order:
+            type:
+                order # DEPRECATED
+                custom.order
+            source:
+                $custom.order
+        location:
+            type:
+                user.iot.room
+                user.iot.group
+                user.iot.device
+                user.iot.multiroom_all_devices
+            source:
+                $user.iot.room
+                $user.iot.group
+                $user.iot.device
+                $user.iot.multiroom_all_devices
+        # slots filled only by tagger
+        activity:
+            type:
+                activity # DEPRECATED
+                custom.activity
+        epoch:
+            type:
+                epoch # DEPRECATED
+                custom.epoch
+        genre:
+            type:
+                genre # DEPRECATED
+                custom.genre
+        mood:
+            type:
+                mood # DEPRECATED
+                custom.mood
+        need_similar:
+            type:
+                need_similar # DEPRECATED
+                custom.need_similar
+        novelty:
+            type:
+                novelty # DEPRECATED
+                custom.novelty
+        language:
+            type:
+                language # DEPRECATED
+                custom.language
+        personality:
+            type:
+                personality # DEPRECATED
+                custom.personality
+        playlist:
+            type:
+                string
+        search_text:
+            # NOTE(the0): string value concatenation support is expected in the music scenario
+            type:
+                hardcoded_music # DEPRECATED
+                custom.hardcoded_music
+                string
+            concatenate_strings: true
+        vocal:
+            type:
+                vocal # DEPRECATED
+                custom.vocal
+    root:
+        $RadioStream
+        [$Common.Play+ $MissingType]
+        $Decline
+        $RewindPlaylistEnum
+        $GenerativeMusic
+        %negative
+        [$Common.Play+ $MissingType] $Common.WayToCallAlice
+        [$Common.TheMusic+ (чтобы+ $Common.ToSleep+)+]
+    filler:
+        $Common.About
+        $Common.ConjunctionThen
+        $Common.Musical
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.TheMusic
+        $Common.WayToCallAlice
+        а
+        для
+        из
+        но
+        пожалуйста
+        у
+        чтобы
+
+form personal_assistant.scenarios.music_play.ifexp.bg_alice_music_like:
+    enable_alice_tagger: true
+    slots:
+        action_request:
+            type:
+                custom.music.action_request
+                action_request # DEPRECATED
+                custom.action_request
+            source: $ActionPlay; $ActionLike; $ActionDislike
+        missing_type:
+            type:
+                custom.music.missing_type
+                string
+            source: $MissingType
+        decline:
+            type: string
+            source: $Decline
+        stream:
+            type: custom.music.stream
+            source: $MyWave; $StreamNameEnum
+        genre:
+            type:
+                genre # DEPRECATED
+                custom.genre
+            source: $custom.genre
+        search_text:
+            # NOTE(the0): string value concatenation support is expected in the music scenario
+            type:
+                hardcoded_music # DEPRECATED
+                custom.hardcoded_music
+                string
+            concatenate_strings: true
+            source: $SearchText
+        generative_station:
+            type: custom.music.generative_station
+            source: $GenerativeStationEnum; $GenerativeActivityStationEnum; $GenerativeLuckyStationEnum
+        special_playlist:
+            type:
+                special_playlist # DEPRECATED
+                custom.music.special_playlist
+                custom.special_playlist
+            source: $RewindPlaylistEnum
+        order:
+            type:
+                order # DEPRECATED
+                custom.order
+            source: $custom.order
+        offset:
+            type:
+                offset # DEPRECATED
+                custom.offset
+            source: $custom.offset
+        repeat:
+            type:
+                repeat # DEPRECATED
+                custom.repeat
+                string
+            source:
+                $custom.repeat
+        location:
+            type:
+                user.iot.room
+                user.iot.group
+                user.iot.device
+                user.iot.multiroom_all_devices
+            source:
+                $user.iot.room
+                $user.iot.group
+                $user.iot.device
+                $user.iot.multiroom_all_devices
+
+        # slots filled only by tagger
+        activity:
+            type:
+                activity # DEPRECATED
+                custom.activity
+        epoch:
+            type:
+                epoch # DEPRECATED
+                custom.epoch
+        mood:
+            type:
+                mood # DEPRECATED
+                custom.mood
+        need_similar:
+            type:
+                need_similar # DEPRECATED
+                custom.need_similar
+        novelty:
+            type:
+                novelty # DEPRECATED
+                custom.novelty
+        language:
+            type:
+                language # DEPRECATED
+                custom.language
+        personality:
+            type:
+                personality # DEPRECATED
+                custom.personality
+        playlist:
+            type:
+                string
+        vocal:
+            type:
+                vocal # DEPRECATED
+                custom.vocal
+    root:
+        $RadioStream
+        [$ActionPlay+ $MissingType]
+        $SearchFiller* $LeftLikeFilter* [$SearchFiller* $ActionLikeDislike+ $MusicWithGenre+]
+        # Specific order to avoid some false positives
+        $SearchFiller* $LeftLikeFilter* $SearchFiller* $ActionLikeDislike+ $SearchFiller* $SearchText+ $SearchFiller*
+        $Decline
+        $RewindPlaylistEnum
+        $GenerativeMusic
+        %force_negative
+        $Dislike.RootPhrase+
+        $Like.RootPhrase+
+        [$ActionPlay+ $MissingType] $Common.WayToCallAlice
+        [$Common.TheMusic+ (чтобы+ $Common.ToSleep+)+]
+        [(любишь|любит)+ .*]
+    filler:
+        $Common.About
+        $Common.ConjunctionThen
+        $Common.Musical
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.TheMusic
+        $Common.WayToCallAlice
+        а
+        для
+        из
+        но
+        пожалуйста
+        у
+        чтобы
+
+form personal_assistant.scenarios.music_play.ifexp.bg_enable_ambient_sounds_in_music:
+    enable_alice_tagger: true
+    slots:
+        action_request:
+            type:
+                custom.music.action_request
+                action_request # DEPRECATED
+                custom.action_request
+            source: $ActionPlay
+        ambient_sound:
+            type:
+                custom.ambient_sound
+                string
+        missing_type:
+            type: custom.music.missing_type
+            source: $MissingType
+        decline:
+            type: string
+            source: $Decline
+        stream:
+            type: custom.music.stream
+            source: $MyWave; $StreamNameEnum
+        generative_station:
+            type: custom.music.generative_station
+            source: $GenerativeStationEnum; $GenerativeActivityStationEnum; $GenerativeLuckyStationEnum
+        special_playlist:
+            type:
+                custom.music.special_playlist
+                special_playlist # DEPRECATED
+                custom.special_playlist
+            source: $RewindPlaylistEnum
+        offset:
+            type:
+                offset # DEPRECATED
+                custom.offset
+            source:
+                $custom.offset
+        repeat:
+            type:
+                repeat # DEPRECATED
+                custom.repeat
+                string
+            source:
+                $custom.repeat
+        order:
+            type:
+                order # DEPRECATED
+                custom.order
+            source:
+                $custom.order
+        location:
+            type:
+                user.iot.room
+                user.iot.group
+                user.iot.device
+                user.iot.multiroom_all_devices
+            source:
+                $user.iot.room
+                $user.iot.group
+                $user.iot.device
+                $user.iot.multiroom_all_devices
+        # slots filled only by tagger
+        activity:
+            type:
+                activity # DEPRECATED
+                custom.activity
+        epoch:
+            type:
+                epoch # DEPRECATED
+                custom.epoch
+        genre:
+            type:
+                genre # DEPRECATED
+                custom.genre
+        mood:
+            type:
+                mood # DEPRECATED
+                custom.mood
+        need_similar:
+            type:
+                need_similar # DEPRECATED
+                custom.need_similar
+        novelty:
+            type:
+                novelty # DEPRECATED
+                custom.novelty
+        language:
+            type:
+                language # DEPRECATED
+                custom.language
+        personality:
+            type:
+                personality # DEPRECATED
+                custom.personality
+        playlist:
+            type:
+                string
+        search_text:
+            # NOTE(the0): string value concatenation support is expected in the music scenario
+            type:
+                hardcoded_music # DEPRECATED
+                custom.hardcoded_music
+                string
+            concatenate_strings: true
+        vocal:
+            type:
+                vocal # DEPRECATED
+                custom.vocal
+    root:
+        $RadioStream
+        [$Common.Play+ $MissingType]
+        $Decline
+        $RewindPlaylistEnum
+        $GenerativeMusic
+        %negative
+        [$Common.Play+ $MissingType] алиса
+    filler:
+        $Common.About
+        $Common.ConjunctionThen
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.WayToCallAlice
+        пожалуйста
+        чтобы|для
+
+
+$LeftLikeFilter:
+    $Common.LeftFiller
+    $Common.PronounMe
+    $Common.WayToCallAlice
+    в общем
+    вообще
+    запомни
+    можешь запомнить
+    пожалуй
+    чтобы? чтоб? $Common.PronounYou? запомнила что?
+    %negative
+    $Common.Tell* $Common.PronounMe* $Common.PronounYou+
+
+$SearchFiller:
+    $AnyMusic
+    $Common.At
+    $Common.Filler
+    $Common.Now
+    $Common.SmartDevice
+    $nonsense
+    %lemma
+    аналогичные
+    большинство
+    в
+    все
+    исполнение
+    многие
+    новые
+    особенно
+    от
+    поздние
+    последние
+    похожие
+    ранние
+    самые
+    современные
+
+$MissingType:
+    %type "custom.music.missing_type"
+
+    %value "Track"
+    песню
+    трек
+    композицию
+
+    %value "Artist"
+    группу
+    исполнителя
+
+    %value "Album"
+    альбом
+
+    %negative
+    песни
+    треки
+    композиции
+    группы
+    исполнителей
+    альбомы
+
+$Decline:
+    $Inner:
+        %lemma
+        %enable_synonyms all
+        %disable_synonyms synset
+        $Common.CancelRemoveReset
+        $Common.Decline
+        $Common.DontWant
+        $Common.Exit
+        $Common.IAmDone
+        $Common.Later
+        $Common.LetsDoSomethingElse
+        $Common.No $Common.Play
+        $Common.No $Common.PlayAudio
+        $Common.No $Liked
+        $Common.No возможность
+        $Common.No времени
+        $Common.No желание
+        $Common.No задавай
+        $Common.No интересуйся
+        $Common.No настроение
+        $Common.No спрашивай
+        $Common.Pause
+        $Common.Stop
+        $Common.ToGo+ $Common.At+ $sys.swear+
+        $Common.ToGo+ $Common.PronounYou+
+        занят
+        некогда
+        никакой
+        ничего
+    $Filler:
+        $AnyMusic
+        $Common.About
+        $Common.At
+        $Common.ConjunctionThen
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.Lets
+        $Common.Little
+        $Common.Now
+        $Common.PlayAudio
+        $Common.PlayGame
+        $Common.PronounPossessive3Person
+        $Common.PronounYou
+        $Common.SmartSpeaker
+        $Common.Tell
+        $Common.ToListen
+        $Common.TurnOff
+        $Common.With
+        %lemma
+        больше
+        быть
+        будет
+        вопрос
+        игра
+        от
+        очень
+        пока
+        показать
+        предложение
+        совсем
+        тема
+
+    [$Inner+ $Filler*]
+
+    %force_negative
+    $Filler* ($Common.Stop|$Common.Exit)+ $Common.DontWant+ $Filler*
+    $Filler* (не|$Common.DontWant)+ ($Common.Stop|$Common.Exit)+ $Filler*
+    [чтобы+ $Common.ToSleep+ $Filler*]
+
+$RadioStream:
+    [$ActionPlay+ $Common.Location* ([$Stream+ $StreamFiller*] $StreamNameEnum) $StreamFiller*]
+    [$ActionPlay* $Common.Location* $Stream* $MyWave $StreamFiller*]
+
+$MyWave:
+    %lemma
+    %type "custom.music.stream"
+
+    %value "user:onyourwave"
+    [мою волну]
+    мою станцию
+    поток дня
+
+$Stream:
+    %lemma
+    радио
+    радиостанция
+    станция
+    радиопоток
+    поток
+    аудиопоток
+    волна
+
+$StreamFiller:
+    $Common.Filler
+    %lemma
+    на
+    мой
+    персональная
+    личная
+    персонализированный
+    рекомендации
+    рекомендательный
+    музыка
+    музыкальный
+
+$StreamNameEnum:
+    %lemma
+    %type "custom.music.stream"
+
+    %value "user:onyourwave"
+    лучшее
+
+    %value "personal:recent-tracks"
+    новое
+    новинки
+
+    %value "personal:never-heard"
+    незнакомое
+    неизвестное
+    открытия
+
+    %value "personal:missed-likes"
+    забытое
+    забытая
+    флешбек
+    флэшбек
+    флешбэк
+    флэшбэк
+    флеш бек
+    флэш бек
+    флеш бэк
+    флэш бэк
+    flashback
+    flash back
+
+    %value "personal:collection"
+    любимое
+    коллекция
+
+    %value "personal:hits"
+    популярное
+    хиты
+
+$ActionPlay:
+    %lemma
+    %type "custom.music.action_request"
+    %value "autoplay"
+    $Common.Play
+    $Common.PlayAudio
+
+$MusicItem:
+    $Common.TheAlbum
+    $Common.TheArtist
+    $Common.ThePlaylist
+    $Common.TheTrack
+    $Music.Genre
+
+$AnyMusic:
+    $Common.Musical
+    $Common.TheMusic
+    $MusicItem
+
+$Regularly:
+    %lemma
+    (чаще | больше) (всего | всех)?
+    в основном
+    в последнее время
+    обычно
+    постоянно
+    регулярно
+
+$ActionLike:
+    %type "custom.music.action_request"
+    %value "like"
+
+    $Common.TheLike
+    $Player.DoLike
+    $Player.ILike
+    [$Liked+ $MusicItem+]
+    [$Regularly+ $Common.PlayAudio+]
+    [($Common.PronounMe|$Regularly)+ ($Liked|любитель|обожатель|поклонник|фанат)+]
+    [($Player.Add|$Player.Save)+ в+ $Liked+]
+    люблю
+    обожаю
+    тащусь
+    фанатею
+    %lemma
+    [(зовут|звать)+ $AnyMusic* $Liked+]
+
+$ActionDislike:
+    %type "custom.music.action_request"
+    %value "dislike"
+
+    $Player.Dislike
+    я не люблю
+    я? [никогда? больше?] не хочу [никогда? больше?] (слушать|слышать)
+
+$ActionLikeDislikeFiller:
+    $Common.At
+    $Common.QuestionWhat
+    $Player.Save
+    $Regularly
+    [$Common.PlayAudio+ $Common.PronounThis*]
+    %lemma
+    вот
+    из
+    очень
+    самый
+
+$ActionLikeDislike:
+    [($ActionLike | $ActionDislike)+ $ActionLikeDislikeFiller*]
+
+$MusicWithGenre:
+    %lemma
+    [$SearchFiller* $Music.Genre* авторский* такой* и* или* либо* же* для* $custom.genre+ как* вроде* (похожий на)*]
+    %negative
+    %weight 100000000
+    группа кино
+
+$SearchText:
+    ($Common.TheAlbum|$Common.TheArtist|трек|песня|песню)* .+
+    %negative
+    %weight 100000000
+    $Inner:
+        $ActionLikeDislike
+        $AnyMusic
+        $Common.About
+        $Common.ConjunctionThen
+        $Common.Filler
+        $Common.No
+        $Common.Now
+        $Common.Play
+        $Common.PlayAudio
+        $Common.PlayGame
+        $Common.PronounMe
+        $Common.PronounPossessive3Person
+        $Common.PronounThis
+        $Common.PronounYou
+        $Common.Search
+        $Common.Set
+        $Common.Tell
+        $Common.WayToCallAlice
+        $Common.Yes
+        $Decline
+        композиции .+
+        музыку .+
+        песни .+
+        треки .+
+        %lemma
+        fm
+        баскетбол
+        бегать
+        блюдо
+        болтать
+        волейбол
+        вот
+        вперемешку
+        город
+        гулять
+        девушка
+        делать
+        дождь
+        дочь
+        дружить
+        еда
+        есть
+        жена
+        женщина
+        животное
+        заниматься
+        занятие
+        зима
+        игра .?
+        игрушка .?
+        или
+        имя .?
+        киска
+        кого
+        контакты
+        конфеты
+        кошечка
+        кошка
+        лепить
+        лето
+        либо
+        литература
+        люди
+        майнкрафт
+        мама
+        мамочка
+        математика
+        мать
+        милости
+        мир
+        мороженое
+        муж
+        мужчина
+        мультик .?
+        мультфильм .?
+        нибудь
+        обнимать
+        общаться
+        оптимизм
+        осадки
+        отец
+        папа
+        папочка
+        парень
+        персонаж .?
+        пианино
+        пиццу
+        плавать
+        повтор
+        погода
+        порядок
+        прыгать
+        путешествовать
+        путин
+        работать
+        радио
+        разговаривать
+        ребенок
+        репит
+        ржать
+        рисовать
+        рисунок
+        русский язык?
+        с
+        сказки
+        сладкое
+        случайный
+        снег
+        собака
+        собачка
+        спать
+        спорить
+        спорт
+        стихи
+        стихотворения
+        сын
+        сюрприз
+        такой
+        танец
+        танцевать
+        урок .?
+        учиться
+        фамилия .?
+        физика
+        физкультура
+        фильм .?
+        фм
+        фортепиано
+        фраза
+        футбол
+        цвет .?
+        целовать
+        человек .?
+        читать
+        что
+        чудо
+        шоу
+    $Inner+
+
+$Generative:
+    %lemma
+    генеративная
+    нейронная
+    нейро
+    нейромузыка
+    нейромелодия
+
+$Music:
+    %lemma
+    песня
+    песенка
+    произведение
+    музыка
+    музычка
+    музло
+    музон
+    композиция
+    трек
+    трэк
+    хит
+    мелодия
+    запись
+    рингтон
+
+$GenerativeFiller:
+    $Common.Filler
+
+    %lemma
+    был
+    можешь
+    можно
+    смог
+    фон
+    на фон
+    фоновый
+    который
+    под которую
+    какую-нибудь
+    какую нибудь
+    что-нибудь
+    что нибудь
+    разный
+    динамик
+    сначала
+    потом
+
+$GenerativeActivityFiller:
+    %lemma
+    занятий
+    занятия
+    заниматься
+    заняться
+    позаниматься
+
+$ActionPlayGenerative:
+    %lemma
+    $ActionPlay
+    сделай
+    найди
+    хочу
+    нужна
+
+$GenerativeMusic:
+    %lemma
+
+    $GenerativeLuckyStationEnum
+    [$GenerativeFiller* $GenerativeActivityFiller* $Common.Location* $GenerativeStationEnum* $GenerativeActivityStationEnum+ $ActionPlayGenerative* $Generative+ $Music+]
+    [$GenerativeFiller* $GenerativeActivityFiller* $Common.Location* $GenerativeStationEnum* $GenerativeActivityStationEnum+ $ActionPlayGenerative* (нейромузыка|нейромелодия)+]
+
+    [$GenerativeFiller* $Common.Location* $GenerativeStationEnum+ $ActionPlayGenerative* $Generative+ $Music+]
+    [$GenerativeFiller* $Common.Location* $GenerativeStationEnum+ $ActionPlayGenerative* (нейромузыка|нейромелодия)+]
+
+$GenerativeLuckyStationEnum:
+    %type "custom.music.generative_station"
+    %value "generative:lucky"
+
+    %lemma
+    [$GenerativeFiller* $Common.Location* $ActionPlayGenerative* $Generative+ $Music+]
+    [$GenerativeFiller* $Common.Location* $ActionPlayGenerative* (нейромузыка|нейромелодия)+]
+
+$GenerativeActivityStationEnum:
+    %lemma
+    %type "custom.music.generative_station"
+
+    %value "generative:energy"
+    пробежка
+    пробежек
+    бег
+    бегать
+    беговая
+    побегать
+    забег
+    кросс
+    марафон
+    спринт
+
+    кача
+    качаться
+    спорт
+    в спортзале
+    спортзала
+    спортивная
+    спортивненький
+    спортивный
+    тренажерок
+    тренировка
+    тренировок
+    фитнес
+    тренироваться
+    упражнения
+    воркаут
+    зарядка
+    разминка
+
+    танец
+    танцы
+    танецевальную
+    танцевать
+    потанцевать
+    плясать
+    плясовую
+    пляска
+    выплясывать
+
+    %value "generative:relax"
+    медитация
+    медитирование
+    медитативная
+    медитировать
+    помедитировать
+    йога
+
+    %value "generative:focus"
+    учеба
+    учебную
+    уроки
+    учиться
+    уроки
+    [делать уроки]
+    изучение
+    ботать
+    чтение
+    читать
+    почитать
+    готовки
+
+$GenerativeStationEnum:
+    %lemma
+    %type "custom.music.generative_station"
+
+    %value "generative:energy"
+    бодрая
+    бодрость
+    бодрящий
+    энергичный
+    быстрая
+    динамичный
+
+    водить
+    скутер
+    мотоцикл
+    езды
+    машину
+    машина
+    мотоцикла
+    дорожный
+    путешествие
+    путешествий
+    путешествовать
+    тачка
+    автомобиль
+    вождение
+    водить
+    ехать
+    поездка
+    рулить
+    гонять
+
+    %value "generative:relax"
+    покой
+    спокойный
+    спокойствие
+    успокаивавший
+    успокаиваемый
+    успокаивающий
+    успокаивающийся
+    успокоения
+    успокоительный
+    успокоиться
+    антистресс
+    [против стресса]
+    [снятие стресса]
+    от стресса
+    сон
+    сонный
+    уснуть
+    заснуть
+    засыпать
+    sleep
+    вечер
+    вечерний
+    спать
+    поспать
+    медленный
+
+    отдых
+    расслабление
+    расслабивший
+    расслабленный
+    расслаблявший
+    расслаблявшийся
+    расслабляемый
+    расслабляющий
+    релакс
+    релаксация
+
+    %value "generative:focus"
+    эффективный
+    нейтральный
+    [хорошее настроение]
+    [заряженная* позитив]
+    позитивная
+    веселая
+    счастливая
+    радостная
+    вдохновение
+    вдохновиться
+    вдохновление
+    вдохновляющий
+
+    фокус
+    фокусировка
+    сфокусироваться
+    сосредоточение
+    сосредоточиться
+
+    работа
+    работать
+    рабочий
+    рабочее
+    поработать
+    пахать
+    впахивать
+    труд
+    трудовая
+    трудиться
+
+    фон
+    фоновый
+    дело
+    делать
+    сделать
+    продуктивную
+    продуктивность
+    [настроиться на* работу]
+
+    концентрация
+    концентрироваться
+    сконцентрироваться
+
+$RewindFiller:
+    $Common.Filler
+
+    %lemma
+    музыка
+    мою|мой|моё|мое
+    персональный
+    персонализированный
+    рекомендации
+    рекомендательный
+    топ
+
+    %negative
+    здравствуй
+
+$Playlist:
+    %lemma
+    плейлист
+    подборка
+    подборочка
+    треклист
+    список песен
+    набор песен
+
+$Rewind:
+    %lemma
+    перемотка
+
+$Kids:
+    %lemma
+    детская
+    дети
+    ребенок
+    для детей
+    для ребенка
+
+$Summer:
+    %lemma
+    летний
+    летнее
+    летняя
+    лето
+
+$NewYear:
+    %lemma
+    новогодняя
+    [на новый год]
+
+$Year2019:
+    2019
+    20 19
+    19
+
+$Year2020:
+    2020
+    20 20
+    20
+
+$Year2021:
+    2021
+    20 21
+    21
+
+$RewindOptions:
+    $RewindFiller*
+    $custom.order*
+    $Common.Location*
+    $custom.repeat*
+    $custom.offset*
+
+$RewindPlaylistEnum:
+    %lemma
+    %type "custom.music.special_playlist"
+
+    %value "rewind10"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* большая+]
+
+    %value "summer_top"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $Summer+ $Year2020+]
+    [$RewindOptions* $ActionPlay* $Rewind* $Playlist+ $Summer+ $Year2020+]
+
+    %value "summer_top_2021"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $Summer+ $Year2021+]
+    [$RewindOptions* $ActionPlay* $Rewind* $Playlist+ $Summer+ $Year2021+]
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $Summer+ $Year2021*]  # летнюю перемотку
+
+    %value "year_top_2019"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $NewYear* $Year2019+]
+    [$RewindOptions* $ActionPlay* $Rewind* $Playlist+ $NewYear* (мой $Year2019)+]
+
+    %value "rewind20"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $NewYear* $Year2020+]
+    [$RewindOptions* $ActionPlay* $Rewind* $Playlist+ $NewYear* (мой $Year2020)+]
+
+    %value "rewind21"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $NewYear* $Year2021+]
+    [$RewindOptions* $ActionPlay* $Rewind* $Playlist+ $NewYear* (мой $Year2021)+]
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $NewYear+ $Year2021*]  # новогоднюю перемотку
+    [$RewindOptions* $ActionPlay+ $Rewind+ $Playlist* $NewYear* $Year2021*]  # включи перемотку
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist+ $NewYear* $Year2021*]  # плейлист перемотка
+
+    %value "kids_rewind"
+    [$RewindOptions* $ActionPlay* $Rewind+ $Playlist* $Kids+]

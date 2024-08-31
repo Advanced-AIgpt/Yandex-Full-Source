@@ -1,0 +1,237 @@
+{% macro onboarding_instruction() %}
+  В следующий раз, когда увидите, что индикатор колонки загорелся зеленым, и услышите звук, просто спросите меня «Алиса, что нового?».
+{% endmacro %}
+
+{% macro render_notification_message(notification) %}
+  Новое уведомление.
+  {{ notification }}
+  {% if context.add_onboarding %}
+    {{ onboarding_instruction() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_one_notification(notification) %}
+  {% voice %}
+    {{ render_notification_message(notification.voice) }}
+  {% endvoice %}
+  {% text %}
+    {{ render_notification_message(notification.text) }}
+  {% endtext %}
+{% endmacro %}
+
+{% macro render_read_notifications_intro(count) %}
+  {% if count % 10 == 1 and count % 100 != 11 %}
+    {% if count == 1 %}
+      У вас одно новое уведомление.
+    {% else %}
+      {% set count_phrase %}
+        {% voice %}
+          {{ 10 * (count // 10) }} одно
+        {% endvoice %}
+        {% text %}
+          {{ count }}
+        {% endtext %}
+      {% endset %}
+      У вас {{ count_phrase }} новое уведомление.
+    {% endif %}
+  {% else %}
+    {% if 2 <= count % 10 and count % 10 <= 4 and not (11 <= count % 100 and count % 100 <= 19) %}
+      У вас {{ count }} новых уведомления.
+    {% else %}
+      У вас {{ count }} новых уведомлений.
+    {% endif %}
+  {% endif %}
+  \n
+{% endmacro %}
+
+{% macro render_multiple_notifications() %}
+  {% if not context.previous_notifications %}
+    {{ render_read_notifications_intro(context.notifications_count) }}
+  {% endif %}
+  {% for notification in context.notifications %}
+    {% voice %}
+      {% if loop.index > 1 %}
+        sil<[600]>
+        <speaker audio="alice-sounds-game-ping-1.opus">
+        sil<[600]>
+      {% endif %}
+      {{ notification.voice }}
+    {% endvoice %}
+    {% text %}
+      {% if loop.index > 1 %}
+        \n\n
+      {% endif %}
+      {{ notification.text }}
+    {% endtext %}
+  {% endfor %}
+{% endmacro %}
+
+{% phrase render_notifications %}
+  {% if not context.previous_notifications and context.notifications_count == 1 %}
+    {{ render_one_notification(context.notifications[0]) }}
+  {% else %}
+    {{ render_multiple_notifications() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_no_notifications %}
+  {% if context.previous_notifications %}
+    {% chooseline %}
+      Ладно, тогда до следующих уведомлений!
+      Что ж, до скорого!
+      Я вас услышала! Тогда до новых встреч.
+      Как хотите! До новых встреч!
+      Надеюсь, в следующий раз вы согласитесь.
+      Поняла. Прощаюсь до следующих сообщений.
+    {% endchooseline %}
+  {% else %}
+    У вас нет новых уведомлений.
+  {% endif %}
+{% endphrase %}
+
+{% macro render_onboarding_message(randomphrase) %}
+  {{ randomphrase }}
+  {{ onboarding_instruction() }}
+  Хотите прослушать уведомления прямо сейчас?
+{% endmacro %}
+
+{% phrase render_onboarding %}
+  {% set intro_phrase %}
+    Это я даю вам понять, что у вас есть непрослушанные уведомления.
+  {% endset %}
+
+  {{ render_onboarding_message(intro_phrase) }}
+{% endphrase %}
+
+{% phrase render_onboarding_refuse %}
+  Ах, какая жалость. Но вы всегда можете спросить меня: «Алиса, что нового?», и я все расскажу.
+{% endphrase %}
+
+{% phrase unavailable %}
+  Сценарий получения уведомлений пока доступен только на колонках.
+{% endphrase %}
+
+{% phrase irrelevant %}
+  У меня нет хорошего ответа.
+{% endphrase %}
+
+{% phrase render_unsubscribe %}
+  Вы подписаны на {{ context.subscription.name }}. Хотите отписаться?
+{% endphrase %}
+
+{% macro render_unsubscribe_instruction_macro() %}
+  Чтобы управлять своими подписками, просто скажите мне в приложении Яндекса: «Алиса, настройки уведомлений».
+{% endmacro %}
+
+{% phrase render_unsubscribe_instruction %}
+  {{ render_unsubscribe_instruction_macro() }}
+{% endphrase %}
+
+{% phrase render_unsubscribe_empty %}
+  Чтобы от чего-то отписаться, нужно сначала подписаться! У вас нет активных подписок, но вы всегда можете согласиться получать мой дайджест. Хотите?
+{% endphrase %}
+
+{% phrase render_no_subscription %}
+  Вы не подписаны на {{ context.subscription.name }}.
+{% endphrase %}
+
+{% phrase render_unsubscribe_accept %}
+  Обидно, но ладно - больше не буду. Возвращайтесь!
+{% endphrase %}
+
+{% phrase render_unsubscribe_refuse %}
+  Ура! Не пугайте так.
+{% endphrase %}
+
+{% phrase render_subscribe %}
+  {% if context.subscription.voice %}
+    {{ context.subscription.voice }}
+  {% else %}
+    {% if context.subscription.id == 'all_subscriptions' %}
+      Хотите подписаться на мой регулярный дайджест?
+    {% else %}
+      Хотите подписаться на {{ context.subscription.name }}?
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_subscribe_twice %}
+  Ой, а вы уже подписаны на {{ context.subscription.name }}. Но я рада, что вам так нравится, что вы хотите подписаться дважды.
+{% endphrase %}
+
+{% phrase render_subscribe_accept %}
+  Замечательно!
+  {% if context.first_subscription %}
+    {{ onboarding_instruction() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_subscribe_refuse %}
+  Ах, какая жалость. Но вы всегда можете спросить меня: «Алиса, что ты умеешь?» И я все расскажу.
+{% endphrase %}
+
+{% macro render_phrase_for_residue(count, residue, one, ten_suffix, more) %}
+  {% if count % 10 == residue %}
+    {% if count == residue %}
+      {{ one }}
+    {% elif count < 20 %}
+      {{ count }} {{ ten_suffix }}
+    {% else %}
+      {% voice %}
+        {{ 10 * (count // 10) }} {{ one }}
+      {% endvoice %}
+      {% text %}
+        {{ count }} {{ more }}
+      {% endtext %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_subscriptions_count(count) %}
+  {% if count % 10 == 0 or count % 10 > 4 %}
+    {{ count }} подписок.
+  {% else %}
+    {{ render_phrase_for_residue(count, 1, "одну подписку", "подписок", "подписку") }}
+    {{ render_phrase_for_residue(count, 2, "две подписки", "подписок", "подписки") }}
+    {{ render_phrase_for_residue(count, 3, "три подписки", "подписок", "подписки") }}
+    {{ render_phrase_for_residue(count, 4, "четыре подписки", "подписок", "подписки") }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_subscriptions_list %}
+  {% if context.subscriptions_empty %}
+    У вас нет активных подписок.
+  {% else %}
+    Вы подписаны на
+    {% for subscription in context.subscriptions %}
+      {% if loop.index > 1 %}
+        ,
+      {% endif %}
+      {{ subscription.name }}
+    {% endfor %}
+    {% if context.extra_subscriptions_count %}
+        и еще {{ render_subscriptions_count(context.extra_subscriptions_count) }}.
+    {% else %}
+        .
+    {% endif %}
+  {% endif %}
+  {{ render_unsubscribe_instruction_macro() }}
+  {% if context.send_push %}
+    На всякий случай высылаю вам пуш со ссылкой.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_drop_all %}
+  {% if context.no_notifications %}
+    У вас нет непрочитанных уведомлений.
+  {% elif context.onboarding %}
+    Все ваши уведомления будут стерты, удаляем?
+  {% else %}
+    {% text %}
+      Удаляю.
+    {% endtext %}
+    {% voice %}
+      <speaker audio="yandex_station_notification_delete_sound.opus"> 
+    {% endvoice %}
+  {% endif %}
+{% endphrase %}

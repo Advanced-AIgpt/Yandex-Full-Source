@@ -1,0 +1,170 @@
+import: alice_show/common.grnt
+import: common/prepositions.grnt
+import: common/surfaces.grnt
+
+form alice.alice_show.activate:
+    lemma: true
+    enable_synonyms: all
+    disable_synonyms: synset
+    slots:
+        day_part:
+            type: custom.day_part
+            source:
+                $DayPart
+                $DayPartAndAge
+                $DayPartAndAgeWide
+        age:
+            type: custom.age
+            source:
+                $Age
+                $DayPartAndAge
+                $DayPartAndAgeWide
+
+    root:
+        [$DayPartAndAgeWide* $DayPart* $Age* $AliceShow+]
+        [$DayPartAndAge+ $DayPart* $Age* $AliceShow*]
+
+    filler:
+        $AliceShowPrefix
+        $AliceShowSuffix
+        $Common.At
+        $Common.SmartSpeaker
+        $Filler
+        $TurnOn
+
+$AliceShowPrefix:
+    $Common.PronounYou
+    %lemma
+    интересное
+    информационное
+    музыкальное
+    (с|под)? названием
+    которое? называется
+    новостное
+    онлайн
+    передача
+    развеселить
+    развлекательное
+    развлекать
+    увлекательное
+    увлечь
+
+$AliceShow:
+    %lemma
+    [развлекательная программа]
+    [шоу программа?]
+
+$AliceShowSuffix:
+    %lemma
+    (с|от)? $Common.WayToCallAlice.Name
+    с музыкой
+    с новостями
+    с песнями
+
+$Put:
+    %lemma
+    ложиться
+    укладывать
+    уложить
+
+$Children:
+    %lemma
+    [самый* маленький+]
+    детей
+    дети
+    детское
+    малыш
+    ребенок
+
+$Adult:
+    %lemma
+    [восемнадцать+ плюс+]
+    взрослое
+    взрослых
+
+$Night:
+    %lemma
+    [после+ полночь+]
+    кровать
+    ночное
+    ночь
+    сон
+    спать
+    уснуть
+
+$DayPart:
+    %type "custom.day_part"
+    %lemma
+
+    %value "Morning"
+    $GoodMorning+
+    утро+
+    утреннее+
+
+    %value "Evening"
+    $GoodEvening+
+    вечер+
+    вечернее+
+
+    %value "Night"
+    $GoodNight+
+    $Night+
+
+$Age:
+    %type "custom.age"
+
+    %value "Children"
+    $Children+
+
+    %value "Adult"
+    $Adult+
+
+$DayPartAndAge:
+    $ChildrenDayPart:
+        %type "custom.day_part"
+        %lemma
+
+        %value "Night"
+        [$Put+ $Children+ $Night+]
+
+    $AdultDayPart:
+        %type "custom.day_part"
+        %lemma
+
+        %value "Night"
+        [$Night+ рандеву+]
+
+    %type "custom.age"
+
+    %value "Children"
+    [$Children* $ChildrenDayPart+]
+
+    %value "Adult"
+    [$Adult* $AdultDayPart+]
+
+$DayPartAndAgeWide:
+    $ChildrenDayPartWide:
+        %type "custom.day_part"
+        %lemma
+
+        %value "Night"
+        [$Put+ $Children* $Night+]
+        [$Put+ $Children+ $Night*]
+        [сладкий+ $Night+]
+        подушка+
+        подушкин+
+
+    $AdultDayPartWide:
+        %type "custom.day_part"
+        %lemma
+
+        %value "Night"
+        интимное+
+
+    %type "custom.age"
+
+    %value "Children"
+    [$Children* $ChildrenDayPartWide+]
+
+    %value "Adult"
+    [$Adult* $AdultDayPartWide+]

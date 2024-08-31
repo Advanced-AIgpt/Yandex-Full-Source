@@ -1,0 +1,182 @@
+Conditions {
+    Tag: "tuned"
+    Check {
+        Expression: "!(NewsConfig.Default && TopicsConfig.Default && SkillsConfig.Default)"
+    }
+}
+Conditions {
+    Tag: "no_news_rubrics_exp"
+    Check {
+        Expression: "hw_alice_show_news_no_rubrics"
+    }
+}
+Conditions {
+    Tag: "has_smi"
+    Check {
+        Expression: "hasSmi"
+        Parameters {
+            Path: "NewsConfig.NewsProviders"
+            Name: "hasSmi"
+            Aggregate {
+                Name: "newsProvider"
+                Value {
+                    Expression: "newsProvider.NewsSource != \"6e24a5bb-yandeks-novost\""
+                }
+                Reducer: Or
+            }
+        }
+    }
+}
+Conditions {
+    Tag: "first_time"
+    Check {
+        Expression: "!ScenarioData.Onboarded"
+    }
+}
+Conditions {
+    Tag: "morning"
+    Check {
+        Expression: "State.DayPart.Value == \"Morning\""
+    }
+}
+Conditions {
+    Tag: "evening"
+    Check {
+        Expression: "State.DayPart.Value == \"Evening\""
+    }
+}
+Conditions {
+    Tag: "night"
+    Check {
+        Expression: "State.DayPart.Value == \"Night\""
+    }
+}
+Conditions {
+    Tag: "adult"
+    Check {
+        Expression: "State.Age.Value == \"Adult\""
+    }
+}
+Conditions {
+    Tag: "children"
+    Check {
+        Expression: "State.Age.Value == \"Children\""
+    }
+}
+Conditions {
+    Tag: "winter"
+    Check {
+        Expression: "Month >= 1 && Month < 3 || Month == 12"
+    }
+}
+Conditions {
+    Tag: "spring"
+    Check {
+        Expression: "Month >= 3 && Month < 6"
+    }
+}
+Conditions {
+    Tag: "summer"
+    Check {
+        Expression: "Month >= 6 && Month < 9"
+    }
+}
+Conditions {
+    Tag: "autumn"
+    Check {
+        Expression: "Month >= 9 && Month < 12"
+    }
+}
+Conditions {
+    Tag: "music"
+    Check {
+        Expression: "UserInfo.HasMusicSubscription"
+    }
+}
+Conditions {
+    Tag: "news"
+    IncludeTags: "explicit_news_provider"
+    RequireTags: "has_smi"
+    Check {
+        Expression: "!hw_disable_news && !NewsConfig.Disabled"
+    }
+}
+Conditions {
+    Tag: "news_whitelist"
+    Check {
+        # Country codes from https://geoadmin.yandex-team.ru/
+        # Россия, Беларусь, Казахстан, Узбекистан
+        Expression: "UserLocation.UserCountry == \"\" || "
+            "UserLocation.UserCountry == 225 || "
+            "UserLocation.UserCountry == 149 || "
+            "UserLocation.UserCountry == 159 || "
+            "UserLocation.UserCountry == 171"
+    }
+}
+Conditions {
+    Tag: "explicit_news_provider"
+    RequireTags: "has_smi"
+    Check {
+        Expression: "!hw_disable_news && !State.ActivateFrame.AliceShowActivateSemanticFrame.NewsProvider.empty()"
+    }
+}
+Conditions {
+    Tag: "explicit_topic"
+    RequireTags: "has_smi"
+    Check {
+        Expression: "!hw_disable_news && !State.ActivateFrame.AliceShowActivateSemanticFrame.Topic.empty()"
+    }
+}
+Conditions {
+    Tag: "after_postroll"
+    IncludeTags: ["explicit_news_provider", "explicit_topic"]
+}
+Conditions {
+    Tag: "new_year"
+    Check {
+        Expression: "Month == 1 && MDay < 10"
+    }
+}
+Conditions {
+    Tag: "jan01"
+    Check {
+        Expression: "Month == 1 && MDay == 1"
+    }
+}
+Conditions {
+    Tag: "march"
+    Check {
+        Expression: "Month == 3"
+    }
+}
+Conditions {
+    Tag: "May"
+    Check {
+        Expression: "Month == 5"
+    }
+}
+Conditions {
+    Tag: "May_holidays"
+    Check {
+        Expression: "Month == 5 && MDay <= 9"
+    }
+}
+Conditions {
+    Tag: "push_allowed"
+    IncludeTags: ["!no_news_rubrics_exp", "!has_smi"]
+}
+Conditions {
+    Tag: "push"
+    RequireTags: "push_allowed"
+    Check {
+        Expression: "hw_morning_show_force_push || (!Tuned && ScenarioData.PushesSent < 2 "
+                                                   "&& Request.BaseRequest.ClientInfo.Epoch - ScenarioData.LastPushTimestamp >= 7 * 86400)"
+    }
+}
+Conditions {
+    Tag: "war"
+    Check {
+        # update according to the situation
+        Expression: "0"
+    }
+}

@@ -1,0 +1,129 @@
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.hardcoded_music_play:
+    is_fixlist: true
+    freshness: 1
+
+    slots:
+        hardcoded_playlist:
+            type: custom.music.hardcoded_playlist
+            source:
+                $HardcodedPlaylist.Play
+                $HardcodedPlaylist.Listen
+    root:
+        а? [[$Common.Play $PlayFiller*]+ $HardcodedPlaylist.Play]
+        а? [[$Listen $PlayFiller*]+ $HardcodedPlaylist.Listen]
+    filler:
+        $Please
+        $Common.WayToCallAlice
+        $Common.Filler
+
+$Please:
+    пожалуйста
+    будь добра
+    будьте добры
+    будьте любезны
+
+$Listen:
+    послушаем
+    послушать
+    давай слушать
+
+$PlayFiller:
+    для (меня|нас|нее|него)
+    мне|нам|ему|ей|им
+    давай|дай
+    ка
+
+$HardcodedPlaylist.Common:
+    [$Any* $YourTaste+ $Favourite* $Music]
+    [$Which $You $Music $Like $ToListen?]
+    [$Which $YouInst $Music $LikeInst $ToListen?]
+
+$HardcodedPlaylist.Play:
+    type "custom.music.hardcoded_playlist"
+    %value "alice_playlist"
+
+    $HardcodedPlaylist.Common
+    [$Your+ $Favourite+ $Music]
+
+
+$HardcodedPlaylist.Listen:
+    type "custom.music.hardcoded_playlist"
+    %value "alice_playlist"
+
+    $HardcodedPlaylist.Common
+    [$YourOnly+ $Favourite+ $Music]
+
+$Any:
+    какую нибудь
+    любую
+
+$Favourite:
+    %lemma
+    любимая
+
+$YourTaste:
+    на $Your вкус (и цвет)?
+    на $Your усмотрение
+    на $Your выбор
+    $Which [$FavoriteFiller* $You $Like $ToListen?]
+    $Which [$FavoriteFiller* $YouInst $LikeInst $ToListen?]
+
+$FavoriteFiller:
+    больше всего?
+    именно
+
+$Which:
+    %lemma
+    какая
+    которая
+    что
+    то что
+
+$You:
+    ты|вы
+
+$YouInst:
+    тебе|вам
+
+$Like:
+    %lemma
+    любишь
+    предпочитаешь
+
+$LikeInst:
+    по душе
+    по вкусу
+    по нраву
+    %lemma
+    нравится
+    понравится
+
+$Your:
+    своя
+    свою
+    свое
+    свой
+    $YourOnly
+
+$YourOnly:
+    твоя
+    твою
+    твое
+    твой
+
+$ToListen:
+    %lemma
+    слушать
+
+$Music:
+    песни
+
+    %lemma
+    музыка
+    хорошая музыка
+    жанр музыки
+    музыкальная подборка
+    плейлист

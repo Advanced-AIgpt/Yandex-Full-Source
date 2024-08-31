@@ -1,0 +1,7 @@
+OWNER(g:paskills)
+
+UNION()
+
+FROM_SANDBOX(FILE 1322972048 OUT qe_model)
+
+END()

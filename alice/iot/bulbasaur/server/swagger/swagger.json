@@ -1,0 +1,727 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "IOT HTTP API includes\nmobile api for mobile-app clients\napphost api for serving uniproxy requests",
+    "title": "IOT HTTP API",
+    "version": "3.0"
+  },
+  "paths": {
+    "/m/user/networks": {
+      "post": {
+        "description": "Save user network data (overwrite old if exists)",
+        "tags": [
+          "Networks"
+        ],
+        "operationId": "SaveUserNetwork"
+      },
+      "delete": {
+        "description": "Delete saved user network",
+        "tags": [
+          "Networks"
+        ],
+        "operationId": "DeleteUserNetwork"
+      }
+    },
+    "/m/user/networks/get-info": {
+      "post": {
+        "description": "Fetch full info of saved user network",
+        "tags": [
+          "Networks"
+        ],
+        "operationId": "GetUserNetworkInfo"
+      }
+    },
+    "/m/user/networks/use": {
+      "put": {
+        "description": "Update last timestamp of saved user network",
+        "tags": [
+          "Networks"
+        ],
+        "operationId": "UpdateUserNetworkTimestamp"
+      }
+    },
+    "/m/user/scenarios/triggers/calculate/solar": {
+      "post": {
+        "description": "calculate next run for timetable trigger",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Scenarios"
+        ],
+        "operationId": "CalculateSolarTriggerValue",
+        "parameters": [
+          {
+            "description": "json payload",
+            "name": "payload",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/SolarCalculationRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success calculation",
+            "schema": {
+              "$ref": "#/definitions/SolarCalculationResponse"
+            },
+            "examples": {
+              "application/json": {
+                "request_id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                "status": "ok",
+                "time": "2022-06-12T14:04:00Z"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/m/v3/user/devices/{deviceId}/properties/{instance}/history/graph": {
+      "get": {
+        "description": "List history for float property for the specified device",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Devices"
+        ],
+        "operationId": "GetHistoryGraph",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+            "description": "unique deviceId as uuid",
+            "name": "deviceId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "humidity",
+            "description": "name of the property instance",
+            "name": "instance",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "example": 1643208400,
+            "description": "from datetime filter, unix time in seconds",
+            "name": "from",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "example": 1643288400,
+            "description": "to datetime, unix time in seconds",
+            "name": "to",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "1h",
+            "description": "telemetry aggregation grid (1m, 1h, 1d). 1h means each graph point is aggregated value for 1 hour",
+            "name": "grid",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "max",
+            "description": "aggregation type (min,max,avg) for graph response, can be multiple aggregation params in one request",
+            "name": "aggregation",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "device history telemetry",
+            "schema": {
+              "$ref": "#/definitions/DeviceHistoryAggregatedGraphView"
+            },
+            "examples": {
+              "application/json": {
+                "telemetry": [
+                  {
+                    "timestamp": 1643209200,
+                    "value": {
+                      "min": 16.29
+                    }
+                  },
+                  {
+                    "timestamp": 1643212800,
+                    "value": {
+                      "min": 15.37
+                    }
+                  },
+                  {
+                    "timestamp": 1643216400,
+                    "value": {
+                      "min": 15
+                    }
+                  }
+                ],
+                "thresholds": [
+                  {
+                    "end": 20,
+                    "start": 0,
+                    "status": "danger"
+                  },
+                  {
+                    "end": 40,
+                    "start": 20,
+                    "status": "warning"
+                  },
+                  {
+                    "start": 40,
+                    "status": "normal"
+                  }
+                ],
+                "unit": "unit.percent"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/m/v3/user/sharing/device/accept": {
+      "post": {
+        "description": "Accepts sharingController invitation and sends guest token to shared device",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "AcceptSharingInvitation"
+      }
+    },
+    "/m/v3/user/sharing/device/revoke": {
+      "post": {
+        "description": "removes user from shared device",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "RevokeSharing"
+      }
+    },
+    "/m/v3/user/sharing/devices/{deviceId}/voiceprint": {
+      "post": {
+        "description": "Sends tsf with guest token to device and starts voiceprint scenario",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "CreateVoiceprintHandler"
+      },
+      "delete": {
+        "description": "removes user voiceprint from device",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "RevokeVoiceprintHandler"
+      }
+    },
+    "/m/v3/user/sharing/households/invitations/{invitationId}": {
+      "get": {
+        "description": "decrypts the link id and creates the invitation to household",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "GetSharingInvitationHandler",
+        "responses": {
+          "200": {
+            "description": "invitation view",
+            "examples": {
+              "application/json": {
+                "invitation": {
+                  "household": {
+                    "id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                    "name": "Дача"
+                  },
+                  "id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                  "sender": {
+                    "avatar_url": "https://nda.ya.ru/t/OcvN8err58Ji7U",
+                    "email": "smarthome@yandex-team.ru",
+                    "id": 123456,
+                    "login": "smarthome",
+                    "yandex_plus": true
+                  }
+                },
+                "request_id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                "status": "ok"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/m/v3/user/sharing/households/invitations/{invitationId}/accept": {
+      "post": {
+        "description": "validates invitation and shares household to user",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "AcceptSharingInvitationHandler",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "household_name": {
+                  "description": "shared household future name",
+                  "type": "string",
+                  "example": "Дача"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "/m/v3/user/sharing/households/invitations/{invitationId}/decline": {
+      "post": {
+        "description": "declines sharing invitation",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "DeclineSharingInvitationHandler"
+      }
+    },
+    "/m/v3/user/sharing/households/links/accept": {
+      "post": {
+        "description": "decrypts the link id and creates the invitation to household",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "AcceptSharingLinkHandler",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "token": {
+                  "description": "encoded link id",
+                  "type": "string",
+                  "example": "OGM2M2FjMTItZmQ2Ny00ZGExLWFiMGQtZmZhNjVjY2E2ODg3"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "created invitation",
+            "examples": {
+              "application/json": {
+                "invitation": {
+                  "household": {
+                    "id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                    "name": "Дача"
+                  },
+                  "id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                  "sender": {
+                    "avatar_url": "https://nda.ya.ru/t/OcvN8err58Ji7U",
+                    "email": "smarthome@yandex-team.ru",
+                    "id": 123456,
+                    "login": "smarthome",
+                    "yandex_plus": true
+                  }
+                },
+                "request_id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                "status": "ok"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/m/v3/user/sharing/households/{householdId}/invitations/revoke": {
+      "post": {
+        "description": "revokes sharing invitations by owner",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "RevokeSharingInvitationHandler",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "guest_ids": {
+                  "description": "list of guests to revoke invitations to household",
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "example": 88774996
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "/m/v3/user/sharing/households/{householdId}/leave": {
+      "post": {
+        "description": "leave shared household handler",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "LeaveSharedHouseholdHandler",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+            "description": "unique householdId as uuid",
+            "name": "householdId",
+            "in": "path",
+            "required": true
+          }
+        ]
+      }
+    },
+    "/m/v3/user/sharing/households/{householdId}/links": {
+      "post": {
+        "description": "creates sharing link for household owner",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "GetSharingLinkHandler",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+            "description": "unique householdId as uuid",
+            "name": "householdId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "created link to household sharing",
+            "examples": {
+              "application/json": {
+                "expiration_time": "2022-06-28T00:47:42",
+                "link": "https://3944830.redirect.appmetrica.yandex.com",
+                "previous_expiration_time": "2022-06-28T00:47:42",
+                "request_id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                "status": "ok"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "invalidates all sharing links for this household",
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "DeleteSharingLinkHandler"
+      }
+    },
+    "/m/v3/user/sharing/households/{householdId}/name": {
+      "put": {
+        "description": "rename shared household handler",
+        "consumes": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "RenameSharedHousehold",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+            "description": "unique householdId as uuid",
+            "name": "householdId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "new name for shared household",
+                  "type": "string",
+                  "example": "Дача"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "/m/v3/user/sharing/households/{householdId}/residents": {
+      "get": {
+        "description": "get list of users who have rights on that household",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "GetHouseholdResidents",
+        "parameters": [
+          {
+            "type": "string",
+            "example": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+            "description": "unique householdId as uuid",
+            "name": "householdId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list of household residents",
+            "examples": {
+              "application/json": {
+                "request_id": "8e9646cc-cfee-4c22-8f0d-01064b8147b5",
+                "residents": [
+                  {
+                    "avatar_url": "https://nda.ya.ru/t/OcvN8err58Ji7U",
+                    "display_name": "Марат",
+                    "email": "smarthome@yandex-team.ru",
+                    "id": 123456,
+                    "login": "smarthome",
+                    "role": "owner",
+                    "yandex_plus": true
+                  },
+                  {
+                    "display_name": "Аюка",
+                    "email": "norchine@yandex-team.ru",
+                    "id": 654321,
+                    "login": "norchine",
+                    "phone_number": 79999999999,
+                    "role": "guest",
+                    "yandex_plus": false
+                  }
+                ],
+                "status": "ok"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "delete guests from household handler",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "Sharing"
+        ],
+        "operationId": "DeleteGuestsFromHousehold",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "guest_ids": {
+                  "description": "list of guests to delete from shared households",
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "example": 88774996
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AggregationValue": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "format": "double"
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "DeviceHistoryAggregatedGraphView": {
+      "description": "DeviceHistoryAggregatedGraphView returns data for drawing float property history graph",
+      "type": "object",
+      "properties": {
+        "telemetry": {
+          "description": "List of device telemetry",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeviceHistoryGraphMetric"
+          },
+          "x-go-name": "Telemetry"
+        },
+        "thresholds": {
+          "description": "List of thresholds defines intervals for property statuses (normal, warn, crit)",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DeviceHistoryThresholdInterval"
+          },
+          "x-go-name": "Thresholds"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        }
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "DeviceHistoryGraphMetric": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "description": "Metric UTC timestamp in seconds",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Timestamp",
+          "example": 1643212800
+        },
+        "value": {
+          "$ref": "#/definitions/AggregationValue"
+        }
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "DeviceHistoryThresholdInterval": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "End"
+        },
+        "start": {
+          "type": "number",
+          "format": "double",
+          "x-go-name": "Start"
+        },
+        "status": {
+          "$ref": "#/definitions/PropertyStatus"
+        }
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "PropertyStatus": {
+      "type": "string",
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/model"
+    },
+    "SolarCalculationRequest": {
+      "description": "SolarCalculationRequest is a request for calculating next time for solar trigger",
+      "type": "object",
+      "required": [
+        "solar",
+        "household_id",
+        "days_of_week"
+      ],
+      "properties": {
+        "days_of_week": {
+          "description": "days of weeks of trigger\nin: body",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Weekdays",
+          "example": [
+            "monday",
+            "friday"
+          ]
+        },
+        "household_id": {
+          "description": "household defines location for calculation next solar event\nin: body",
+          "type": "string",
+          "x-go-name": "HouseholdID",
+          "example": "e0ab8772-7e4a-4c12-8186-f1f29ee61e0f"
+        },
+        "solar": {
+          "$ref": "#/definitions/SolarConditionType"
+        }
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "SolarCalculationResponse": {
+      "description": "SolarCalculationResponse is a response with calculated next run for given trigger",
+      "type": "object",
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "x-go-name": "RequestID"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        },
+        "time": {
+          "type": "string",
+          "x-go-name": "Time"
+        }
+      },
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/dto/mobile"
+    },
+    "SolarConditionType": {
+      "description": "SolarConditionType describes scenario condition: trigger on sunset or on sunrise\nexample: sunset",
+      "type": "string",
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/model"
+    },
+    "Unit": {
+      "description": "Unit defines property unit of measure",
+      "type": "string",
+      "x-go-package": "a.yandex-team.ru/alice/iot/bulbasaur/model"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{% card images_search_gallery_div1 %}
+
+{% set host_url = 'https://' ~ context.urls.host %}
+{% set serp_url = 'https://' ~ context.urls.host ~ context.urls.paths.search ~ '?text=' ~ context.alice_data.request %}
+
+{% set sy_max = 130 %}
+{% set sx_max = 220 %}
+
+{
+  "background": [
+    {
+      "color": "{{ '#ffffff' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-separator-block",
+          "size": "s"
+        },
+        {
+          "type": "div-gallery-block",
+          "items": [
+          {% for image in context.images %}
+            {% set thumb_url = 'https:' ~ image.thmb_href ~ '&n=13' %}
+            {% set raspashonka_url = host_url ~ image.preview_url %}
+            {% set log_id = 'images_search_gallery_item_' ~ loop.index0 %}
+            {% set thumb_sx = image.thmb_w_orig | float %}
+            {% set thumb_sy = image.thmb_h_orig | float %}
+            {% set ratio = thumb_sx / thumb_sy %}
+            {% set sx_float = (thumb_sx * sy_max) / thumb_sy %}
+            {% set sx_rounded = sx_float | round | int %}
+            {% if sx_rounded > sx_max %}
+                {% set sy_float = (thumb_sy * sx_max) / thumb_sx %}
+                {% set sy = sy_float | round | int %}
+                {% set sx = sx_max %}
+            {% else %}
+                {% set sy = sy_max %}
+                {% set sx = sx_rounded %}
+            {% endif %}
+            {% if not loop.first %}
+            ,
+            {% endif %}
+            {
+              "frame": {
+                "style": "shadow"
+              },
+              "alignment_horizontal": "center",
+              "type": "div-container-block",
+              "alignment_vertical": "center",
+              "action": {
+                "url": "{{ raspashonka_url }}",
+                "log_id": "{{ log_id }}"
+              },
+              "width": {
+                "value": {{ sx }},
+                "unit": "sp",
+                "type": "numeric"
+              },
+              "height": {
+                "type": "numeric",
+                "unit": "sp",
+                "value": {{ sy }}
+              },
+              "children": [
+                { 
+                  "image": {
+                    "type": "div-image-element",
+                    "image_url": "{{ thumb_url }}",
+                    "ratio": {{ ratio }}
+                  },
+                  "type": "div-image-block"
+                }
+              ]
+            }
+          {% endfor %}
+          ],
+          "tail": {
+            "action": {
+              "log_id": "images_search_gallery_more",
+              "url": "{{ serp_url }}"
+            },
+            "icon": {
+              "border_color": "{{ '#dcdee0' }}",
+              "icon_color": "{{ '#6b7a80' }}",
+              "fill_color": "{{ '#ffffff' }}"
+            },
+            "text": "{{ '<font color=#6b7a80>Ещё картинки</font>' }}"
+          }
+        },
+        {
+          "action": {
+            "log_id": "images_search_gallery",
+            "url": "{{ serp_url }}"
+          },
+          "text": "{{ '<font color=#333333>ОТКРЫТЬ КАРТИНКИ</font>' }}",
+          "type": "div-footer-block"
+        }
+      ]
+    }
+  ]
+}
+{% endcard %}

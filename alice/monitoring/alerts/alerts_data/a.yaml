@@ -1,0 +1,25 @@
+service: megamind
+title: Sync alerts with Solomon
+ci:
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  actions:
+    on-commit-into-trunk:
+      flow: sync-alerts
+      triggers:
+        - on: commit
+          into: trunk
+  flows:
+    sync-alerts:
+      title: Sync alerts between Arcadia and Solomon
+      jobs:
+        run-sandbox-task:
+          task: projects/alice/monitoring/sync_solomon_alerts
+
+          input:
+            tokens: sec-01fj2g9nvx4r6dtmxa4y4bf4z0#solomon
+
+          attempts:
+            max: 3

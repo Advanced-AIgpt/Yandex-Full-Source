@@ -1,0 +1,257 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: open_site_or_app/common.grnt
+
+$BonusCardsCameraShortcut:
+    %type custom.app_data
+    %value {
+        "need_feature": "CanOpenBonusCardsCamera",
+        "nav": {
+            "intent": "shortcut.bonus_cards.camera",
+            "url": {
+                "_": "bonuscards://camera?utm_source=alice",
+                "desktop": "bonuscards://camera?utm_source=alice"
+            },
+            "text": "Бонусные карты",
+            "voice_name": "Бонусные карты",
+            "text_name": "Бонусные карты"
+        }
+    }
+
+    $Filler:
+        $Preposition
+        $Phone
+        $Common.PronounMe
+
+        %lemma
+        новая
+        туда
+        данные
+        только что? (выдали|получил)?
+        ее
+        туда
+        эта
+        этого
+        него
+        номер
+
+    $Main:
+        [$DoAdd+ $AdjectiveMy* $BonusCard+ $Wallet* $SomeShop* $Application* $Filler*]
+        [$DoAdd+ $AdjectiveMy* ($Card|$SomeCard)+ ($Wallet|$BonusCard.Adj|$BonusCard.Bonus|$SomeShop)+ $Application* $Filler*]
+
+    [$Lets* $Common.PronounMe* $Want* $Main+ $Filler*]
+    [$Lets* $Common.PronounMe* $Want* $Common.Open+ ($Wallet|$Application)+ (чтобы|и)* $Main+ $Filler*]
+
+$BonusCardsListShortcut:
+    %type custom.app_data
+    %value {
+        "need_feature": "CanOpenBonusCardsList",
+        "nav": {
+            "intent": "shortcut.bonus_cards.list",
+            "url": {
+                "_": "bonuscards://cardlist?utm_source=alice",
+                "desktop": "bonuscards://cardlist?utm_source=alice"
+            },
+            "text": "Бонусные карты",
+            "voice_name": "Бонусные карты",
+            "text_name": "Бонусные карты"
+        }
+    }
+
+    $Filler:
+        $Preposition
+        $Phone
+        $Common.PronounMe
+
+        %lemma
+        новая
+        туда
+        данные
+        только что? (выдали|получил)?
+        ее
+        туда
+        эта
+        этого
+        него
+        номер
+
+        $Preposition? экран
+        сейчас
+        стою? $Preposition? кассе
+        воспользуюсь
+        использую
+        курьер
+        кассир
+        который
+        оплата
+        покупка
+        среди
+
+    [$DoGive+ $Availability* $Saved* $AdjectiveMy* $BonusCardStrict.Some+ $Wallet* $SomeShop* $Application* $Filler*]
+    [$DoGive+ $Availability* $AdjectiveMy* ($Card|$SomeCard)+ ($BonusCardStrict.Adj|$BonusCardStrict.Bonus|$Wallet)+ $SomeShop* $Application* $Filler*]
+
+    [$Availability+ $Common.PronounMe+ $Saved* $AdjectiveMy* $BonusCardStrict.Some+ $Wallet* $SomeShop* $Application* $Filler*]
+
+    [$DoCheck+ $Availability+ $AdjectiveMy* $Saved* $BonusCardStrict.Some+ $Wallet* $SomeShop* $Application* $Filler*]
+    [$DoCheck+ $Availability+ $AdjectiveMy* $Saved* ($Card|$SomeCard)+ ($BonusCardStrict.Adj|$BonusCardStrict.Bonus|$Wallet)+ $SomeShop* $Application* $Filler*]
+
+    [$AdjectiveMy* $BonusCardStrict.Some+ $Application* $SomeShop* $Wallet* $Filler*]
+
+    %force_negative
+    $BonusCardsCameraShortcut
+
+$DoGive:
+    $ShowActionOrNeed
+    %lemma
+    подай
+    достань
+    выведи
+    посмотри
+    предъяви
+    продемонстрируй
+    вытащи
+    предоставь
+    выдай
+    дай
+    выведи
+
+$DoCheck:
+    %lemma
+    проверь
+
+$Availability:
+    наличие
+    есть ли?
+
+$Card:
+    %lemma
+    карта
+    карточка
+
+$SomeCard:
+    $Card $AlmostAnyWord?
+
+$BonusCard:
+    $Adj:
+        %lemma
+        бонусная
+        скидочная
+        виртуальная
+        дисконтная
+        выданная
+        новая
+
+    $Bonus:
+        %lemma
+        бонус
+        скидка
+        лояльность
+        номер
+        постоянного? (клиента|покупателя)
+
+    $WellKnownShops:
+        %lemma
+        магнит
+        пятерочка
+        пятерка
+        лента
+        глория джинс?
+        перекресток
+        спортмастер
+        ашан
+        летуаль
+
+    [$Adj+ $Card+ $Bonus* $WellKnownShops*]
+    [$Adj* $Card+ $Preposition* ($Bonus|$WellKnownShops)+]
+
+
+$BonusCardStrict:
+    $Adj:
+        %lemma
+        бонусная
+        скидочная
+        виртуальная
+        дисконтная
+
+    $Bonus:
+        %lemma
+        бонус
+        скидка
+        лояльность $AlmostAnyWord?
+        постоянного? (клиента|покупателя) $AlmostAnyWord?
+
+    $WellKnownShops:
+        %lemma
+        магнит
+        пятерочка
+        пятерочки
+        пятерка
+        лента
+        глория джинс?
+        перекресток
+        спортмастер
+        ашан
+        летуаль
+
+    $Main:
+        [$Adj+ $Card+ $Bonus* $WellKnownShops*]
+        [$Adj* $Card+ $Preposition* $Bonus+ $WellKnownShops*]
+        [$Adj* (карту)+ $Preposition* $WellKnownShops+]
+
+    $Some:
+        $Main
+        [$Adj+ $SomeCard+ $Bonus* $WellKnownShops*]
+        [$Adj* $SomeCard+ $Preposition* $Bonus+ $WellKnownShops*]
+
+    $Main
+
+$DoAdd:
+    запиши
+
+    %lemma
+    закинь
+    отсканируй
+    добавь
+    прикрепи
+    положи
+    убери
+    внеси
+    помести
+
+$Wallet:
+    %lemma
+    (виртуальный|электронный)* кошелек
+
+$Shop:
+    %lemma
+    магазин
+
+$SomeShop:
+    $Shop $AlmostAnyWord? $AlmostAnyWord?
+
+$AlmostAnyWord:
+    .
+    %force_negative
+    %lemma
+    улица
+    дом
+    скачай
+    спаси
+    сохрани
+    яндекс
+    видео
+    приложение
+    $Saved
+    загрузи
+    загруженные
+    загрузка
+    $Shop
+    $ShowActionOrNeed
+    $Wallet
+    $DoAdd
+    $DoCheck
+    дурак
+    игра
+    играть
+    поиграть

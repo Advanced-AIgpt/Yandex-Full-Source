@@ -1,0 +1,181 @@
+{% ext_from "alice/hollywood/library/common_nlg/error_en.nlg" import render_error %}
+
+{% macro format_how_long(time, aggressive=True, case='acc') %}
+  {% set v = time | normalize_time_units() | ceil_seconds(aggressive) | render_units_time(cases=case) %}
+  {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+{% endmacro %}
+
+{% macro elari_watch_unsupported() %}
+  {% chooseline %}
+    I'll make a note for myself to learn that.
+    I'll learn that soon. As long as I don't forget about it.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro reminders_unsupported_device() %}
+  {% if context.is_elari_watch %}
+    {{ elari_watch_unsupported() }}
+  {% else %}
+    {% chooseline %}
+      I don't know how to do that yet, though it's on my list to learn.
+      I may not know how to do that right now, but I'm smart enough to learn.
+      Ooph, I don't know how to do that yet. It's something I've put off for future versions.
+      Alexey the programmer promised he'd write the code for that by the fall. The fall of which year? He didn't say.
+      I don't know how to do that. For now.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_error__remindererror %}
+  {% if context.error.data.code == 'unsupported_device' %}
+    {{ reminders_unsupported_device() }}
+  {% elif context.error.data.code == 'list_failed' %}
+    {{ render_error() }}
+  {% elif context.error.data.code == 'alarm_reminders_failed' %}
+    {{ render_error() }}
+  {% elif context.error.data.code == 'creating_failed' %}
+    {% chooseline %}
+      Setting a reminder didn't work. Could we try again later?
+      Something went wrong. Let's try again.
+      Something didn't work.
+      Oops, I failed you on that one. I'll work on that.
+      I hit something, and everything disappeared. Sorry about that. Let's try again.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'canceling_failed' %}
+    I wasn't able to cancel the reminder.
+  {% elif context.error.data.code == 'invalid_datetime' %}
+    I didn't understand the date and time for the reminder.
+  {% elif context.error.data.code == 'past_datetime' %}
+    {% chooseline %}
+      We're already past the time you're asking me to set the reminder for.
+      I can't set reminders in the past.
+      You're trying to set a reminder in the past. My neurons are all going haywire.
+    {% endchooseline %}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__authorization %}
+  Authorization
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__authorization %}
+  {{ context.reminders__authorization.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__open_uri %}
+  List of reminders
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__open_uri %}
+  {{ context.reminders__open_uri.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel %}
+  Cancel reminder
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__reminders__cancel %}
+  Cancel reminder
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__show_reminders_list %}
+  Show list of reminders
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__show_reminders_list %}
+  {{ context.reminders__show_reminders_list.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__reminders_list_quasar %}
+  Show reminders
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__reminders_list_quasar %}
+  Show reminders
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_quasar %}
+  Add reminder
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_quasar %}
+  Add reminder
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_for_today %}
+  Add reminder for today
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_for_today %}
+  Add reminder for today
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_for_tomorrow %}
+  Add reminder for tomorrow
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_for_tomorrow %}
+  Add reminder for tomorrow
+{% endphrase %}
+
+{% macro render_scroll_next_suggest(num_reminders_to_show_next) %}
+  {% if num_reminders_to_show_next == 1 %}
+    Show next
+  {% elif num_reminders_to_show_next > 1 %}
+    Show next {{ num_reminders_to_show_next }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__reminders__scroll_next %}
+  {{ render_scroll_next_suggest(context.reminders__scroll_next.data.num_reminders_to_show_next) }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__scroll_next %}
+  {{ render_scroll_next_suggest(context.reminders__scroll_next.data.num_reminders_to_show_next) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_by_id %}
+  Delete reminder {{ context.reminders__cancel_by_id.data.id }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_by_id %}
+  Delete reminder {{ context.reminders__cancel_by_id.data.id }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_all %}
+  Delete all reminders
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_all %}
+  Delete all reminders
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_single %}
+  Delete that reminder
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_single %}
+  Delete that reminder
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__list_for_today %}
+  Show today's reminders
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__list_for_today %}
+  Show today's reminders
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__list_for_tomorrow %}
+  Show tomorrow's reminders
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__list_for_tomorrow %}
+  Show tomorrow's reminders
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__grant_permission %}
+  Grant permission
+{% endphrase %}

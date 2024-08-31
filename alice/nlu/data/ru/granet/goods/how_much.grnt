@@ -1,0 +1,181 @@
+import: common/adjectives.grnt
+import: common/commands.grnt
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/questions.grnt
+import: common/verbs.grnt
+
+form alice.goods.how_much:
+    slots:
+        request:
+            type: string
+            source: $Request
+
+    root:
+        $Root
+
+        %force_negative
+        $Negative
+
+    filler:
+        $Filler
+
+$Root:
+    [за? $Common.QuestionHowMuch $Location* ($Coast|$CanBuy) $Request]
+    [$WhichPrice $Location* ($Coast|$CanBuy?) $Request]
+    [(почём|по чём|почем|по чем) $Location* ($Coast|$CanBuy)? $Request]
+    [$Price $Location* $Request]
+
+$Location:
+    ($Common.In .+)
+    (на? яндекс? (маркет|маркете|беру|авито))
+
+$WhichPrice:
+    [$WhichPriceCond $Price у?]
+
+$WhichPriceCond:
+    (за|в какую)
+    (по какой)
+    какая
+
+$Price:
+    %lemma
+    с? цена
+    стоимость
+
+$CanBuy:
+    можно? (купить|найти|приобрести)
+
+$Coast:
+    %lemma
+    стоит
+    стоят
+    (может|могут|будет|будут)? стоить
+
+
+$Where:
+    %lemma
+    $Common.QuestionWhere
+    $Common.At $Common.ConjunctionThat магазин
+
+$BestPrice:
+    %lemma
+    бюджетно
+    бюджетный
+    [бюджетная цена]
+    [выгодная цена]
+    [выгоднее купить]
+    [выгодно купить]
+    [выгодное предложение]
+    выгодно
+    выгодный
+    дешевле
+    дешевле всего
+    дешевое
+    дешевый
+    [дешевый вариант]
+    [дешевое предложение]
+    [дешевая цена]
+    [лучшая цена]
+    недорого
+    [недорогая цена]
+    [низкая цена]
+    [низкие цены]
+    по $Common.Best цене
+    по дешевой цене
+    по бюджетной цене
+    подешевле
+
+$Filler:
+    $nonsense
+    $Common.Filler
+    $Common.ToWant
+    $Common.WayToCallAlice
+    $Common.LeftFiller
+    $Common.Search
+    $Common.At? $Common.Now
+    $Common.PronounsAll
+    $BestPrice
+    %lemma
+    $Common.At? ($Common.PronounThis | данный)* (время)+
+    в интернет магазине
+    в интернете
+    интернет
+    можно
+    онлайн
+    сайт
+    самый
+    товар
+    средняя
+    примерно
+    и где
+    купить
+
+$Request:
+    .+
+    %negative
+    $RequestFiller
+
+$RequestFiller:
+    $Common.Filler
+    $Common.QuestionWhere
+    $Common.ConjunctionIf
+    $Common.PronounPossessive3Person
+    $Common.Search
+    $Common.Something
+    $Common.Speak
+    $RequestFillerCustomWords
+    $Common.PronounsAll
+    $Location
+
+$RequestFillerCustomWords:
+    %lemma
+    а
+    дешевый
+    купить .*
+    недорогой
+    смешные .*
+    поиграем .*
+    отдых .*
+    проезд .*
+    .* билет .*
+    .* авиабилет .*
+    .* авиабилеты .*
+    что
+    биткоин
+    .* путевка .*
+    человек .*
+    .* поезд .*
+    .* самолет .*
+    у
+    .* $sys.num? (доллар|евро|рубль) .*
+    .* на? (баррель)? (нефть|нефти) .*
+    .* валюта .*
+    .* $sys.num? грамм? (золото|золота) .*
+    .* $sys.num? акция .*
+
+
+$Negative:
+    .* $Common.QuestionHow+ [правильно* $Common.ToSpell+] .*
+    %lemma
+    .* банк .*
+    .* банковский вклад .*
+    .* букмекерская компания .*
+    .* курс валюты .*
+    .* курс доллара .*
+    .* курс евро .*
+    .* кредит .*
+    .* инвестиции .*
+    .* ставки на спорт .*
+    .* подписка .*
+    .* (яндекс плюс) .*
+    .* (яндекс музыка) .*
+    .* литр? (бензина|дизельного топлива) .*
+    .* номера
+    .* поменять .*
+    .* перетянуть .*
+    .* штраф .*
+
+

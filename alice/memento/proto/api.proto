@@ -1,0 +1,222 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+
+import "alice/memento/proto/device_configs.proto";
+import "alice/memento/proto/user_configs.proto";
+import "alice/protos/data/child_age.proto";
+import "alice/protos/data/proactivity/last_views.proto";
+import "alice/protos/data/proactivity/tag_stats.proto";
+import "alice/protos/data/scenario/music/config.proto";
+import "alice/protos/data/scenario/order/config.proto";
+import "alice/protos/data/scenario/reminders/state.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+package ru.yandex.alice.memento.proto;
+
+option go_package = "a.yandex-team.ru/alice/memento/proto;memento";
+option java_package = "ru.yandex.alice.memento.proto";
+option java_outer_classname = "MementoApiProto";
+
+extend google.protobuf.EnumValueOptions {
+    string db_key = 50003;
+}
+
+// if Enum is serialized in an app with new version of proto,
+// then deserialized in an app where enum element doesn't exist in generated proto code, serialized again
+// and afterwards deserialized in a third app with new version of proto,
+// the third app deserializes initial message correctly, with correct enum value from the first app
+enum EConfigKey {
+    CK_UNDEFINED = 0 [(db_key) = "undefined"];
+    CK_NEWS = 1 [(db_key) = "news_config"];
+    CK_MORNING_SHOW = 2 [(db_key) = "morning_show"];
+    CK_MORNING_SHOW_NEWS = 3 [(db_key) = "morning_show_news"];
+    CK_MORNING_SHOW_TOPICS = 4 [(db_key) = "morning_show_topic"];
+    CK_NEWS_POSTROLL_STATE = 5 [(db_key) = "news_postroll_state_config"];
+    CK_CONFIG_FOR_TESTS = 6 [(db_key) = "config_for_tests"];
+    CK_MUSIC_PROMO = 7 [(db_key) = "music_promo_config"];
+    CK_PROACTIVITY = 8 [(db_key) = "proactivity_config"];
+    CK_EXTERNAL_SKILL_USER_AGREEMENTS = 9 [(db_key) = "external_skill_user_agreements"];
+    CK_MORNING_SHOW_SKILLS = 10 [(db_key) = "morning_show_skills"];
+    CK_IOT_RESPONSE_OPTIONS = 11 [(db_key) = "iot_response_options"];
+    CK_CHILD_AGE = 12 [(db_key) = "child_age"];
+    CK_MUSIC_FM_RADIO = 13 [(db_key) = "music_fm_radio_config"];
+    CK_SMART_TV_MUSIC_PROMO = 14 [(db_key) = "smart_tv_music_promo"];
+    CK_TTS_WHISPER = 15 [(db_key) = "tts_whisper"];
+    CK_GENERATIVE_TALE = 16 [(db_key) = "generative_tale"];
+    CK_TV_GIFT_TEMPLATE_INFO = 17 [(db_key) = "tv_gift_template_info"];
+    CK_TANDEM_PROMO_TEMPLATE_INFO = 18 [(db_key) = "tandem_promo_template_info"];
+    CK_TIME_CAPSULE_INFO = 19 [(db_key) = "time_capsule_info"];
+    CK_VOLUME_ONBOARDING = 20 [(db_key) = "volume_onboarding"];
+    CK_CENTAUR_WIDGETS = 21 [(db_key) = "centaur_widgets"];
+    CK_MUSIC = 22 [(db_key) = "music"];
+    CK_REMINDERS = 23 [(db_key) = "reminders"];
+    CK_ORDER_STATUS = 24 [(db_key) = "order_status"];
+    CK_PROACTIVITY_TAG_STATS = 25 [(db_key) = "proactivity_tag_stats"];
+    CK_PROACTIVITY_LAST_VIEWS = 26 [(db_key) = "proactivity_last_views"];
+}
+
+// enum to annotate device configs
+enum EDeviceConfigKey {
+    DCK_UNDEFINED = 0 [(db_key) = "undefined"];
+    DCK_DUMMY = 1 [(db_key) = "dummy"];
+    DCK_CENTAUR_WIDGETS = 2 [(db_key) = "centaur_widgets"];
+    DCK_CENTAUR_TEASERS = 3 [(db_key) = "centaur_teasers"];
+    DCK_PERSONALIZATION_DATA = 4 [(db_key) = "personalization_data"];
+}
+
+
+extend google.protobuf.FieldOptions {
+    EConfigKey key = 50002;
+    EDeviceConfigKey surface_key = 50003;
+}
+
+message TUserConfigs {
+    reserved 2;
+
+    TNewsConfig NewConfig = 1 [(key) = CK_NEWS];
+    TMorningShowNewsConfig MorningShowNewsConfig = 3 [(key) = CK_MORNING_SHOW_NEWS];
+    TMorningShowTopicsConfig MorningShowTopicsConfig = 4 [(key) = CK_MORNING_SHOW_TOPICS];
+    TNewsPostrollStateConfig NewsPostrollStateConfig = 5 [(key) = CK_NEWS_POSTROLL_STATE];
+    // for tests only
+    TConfigForTests ConfigForTests = 6 [(key) = CK_CONFIG_FOR_TESTS];
+    TMusicPromoConfig MusicPromoConfig = 7 [(key) = CK_MUSIC_PROMO];
+    TProactivityConfig ProactivityConfig = 8 [(key) = CK_PROACTIVITY];
+    TExternalSkillUserAgreements ExternalSkillUserAgreements = 9 [(key) = CK_EXTERNAL_SKILL_USER_AGREEMENTS];
+    TMorningShowSkillsConfig MorningShowSkillsConfig = 10 [(key) = CK_MORNING_SHOW_SKILLS];
+    TIoTResponseOptions IoTResponseOptions = 11 [(key) = CK_IOT_RESPONSE_OPTIONS];
+    NAlice.NData.TChildAge ChildAge = 12 [(key) = CK_CHILD_AGE];
+    TMusicFmRadioConfig MusicFmRadioConfig = 13 [(key) = CK_MUSIC_FM_RADIO];
+    TSmartTvMusicPromoConfig SmartTvMusicPromoConfig = 14 [(key) = CK_SMART_TV_MUSIC_PROMO];
+    TTtsWhisperConfig TtsWhisperConfig = 15 [(key) = CK_TTS_WHISPER, (NYT.column_name) = "tts_whisper_config"];
+    TGenerativeTale GenerativeTale = 16 [(key) = CK_GENERATIVE_TALE, (NYT.column_name) = "generative_tale"];
+    TSmartTvTemplateInfo GiftTemplateInfo = 17 [(key) = CK_TV_GIFT_TEMPLATE_INFO, (NYT.column_name) = "tv_gift_template_info"];
+    TSmartTvTemplateInfo TandemPromoTemplateInfo = 18 [(key) = CK_TANDEM_PROMO_TEMPLATE_INFO, (NYT.column_name) = "tandem_promo_template_info"];
+    TTimeCapsuleInfo TimeCapsuleInfo = 19 [(key) = CK_TIME_CAPSULE_INFO, (NYT.column_name) = "time_capsule_info"];
+    TVolumeOnboardingConfig VolumeOnboardingConfig = 20 [(key) = CK_VOLUME_ONBOARDING, (NYT.column_name) = "volume_onboarding"];
+    TCentaurWidgetsConfig CentaurWidgetsConfig = 21 [(key) = CK_CENTAUR_WIDGETS, (NYT.column_name) = "centaur_widgets", deprecated = true];
+    NAlice.NData.NMusic.TUserConfig MusicConfig = 22 [(key) = CK_MUSIC, (NYT.column_name) = "music_config"];
+    NAlice.NData.NReminders.TState Reminders = 23 [(key) = CK_REMINDERS, (NYT.column_name) = "reminders"];
+    NAlice.NData.NOrder.TOrderStatusUserConfig OrderStatusConfig = 24 [(key) = CK_ORDER_STATUS, (NYT.column_name) = "order_status"];
+    NAlice.NData.NProactivity.TTagStatsStorage ProactivityTagStats = 25 [(key) = CK_PROACTIVITY_TAG_STATS, (NYT.column_name) = "proactivity_tag_stats"];
+    NAlice.NData.NProactivity.TLastViewsStorage ProactivityLastViews = 26 [(key) = CK_PROACTIVITY_LAST_VIEWS, (NYT.column_name) = "proactivity_last_views"];
+}
+
+message TSurfaceConfig {
+    TDummyDeviceConfig DummyDeviceConfig = 1 [(surface_key) = DCK_DUMMY];
+    TCentaurWidgetsDeviceConfig CentaurWidgetsDeviceConfig = 2 [(surface_key) = DCK_CENTAUR_WIDGETS, (NYT.column_name) = "centaur_widgets_device"];
+    TCentaurTeasersDeviceConfig CentaurTeasersDeviceConfig = 3 [(surface_key) = DCK_CENTAUR_TEASERS, (NYT.column_name) = "centaur_teasers_device"];
+    TPersonalizationDataDeviceConfig PersonalizationDataDeviceConfig = 4 [(surface_key) = DCK_PERSONALIZATION_DATA, (NYT.column_name) = "personalization_data_device"];
+}
+
+///////////////////////// API
+message TConfigKeyAnyPair {
+    EConfigKey Key = 1;
+    google.protobuf.Any Value = 2;
+}
+
+message TDeviceConfigsKeyAnyPair {
+    EDeviceConfigKey Key = 1;
+    google.protobuf.Any Value = 2;
+}
+
+message TDeviceConfigs {
+    string DeviceId = 1;
+    repeated TDeviceConfigsKeyAnyPair DeviceConfigs = 2;
+}
+
+message TDeviceKeys {
+    string DeviceId = 1;
+    repeated EDeviceConfigKey Keys = 2;
+}
+
+
+message TSurfaceScenarioData {
+    map<string, google.protobuf.Any> ScenarioData = 1;
+}
+
+message TScenarioNames {
+    repeated string ScenarioName = 1;
+}
+
+message VersionInfo {
+    string SvnVersion = 1;
+    int32 SvnRevision = 2;
+    int32 ArcadiaPatchNumber = 3;
+    string Branch = 4;
+    string Tag = 5;
+}
+
+///////////////// get_objects
+message TReqGetUserObjects {
+    // set for EConfigKeys string = EConfigKey.name
+    repeated EConfigKey Keys = 1;
+
+    // effectively Map<DeviceId, Set<EDeviceConfigKey>>
+    repeated TDeviceKeys DevicesKeys = 2;
+
+    // set of scenario names
+    repeated string ScenarioKeys = 4;
+
+    // effectively Map<DeviceId, Set<scenario_name>>
+    map<string, TScenarioNames> SurfaceScenarioNames = 5;
+
+    // current surface ID. uuid for mobile apps or device_id for devices.
+    // used for anonymous requests
+    string CurrentSurfaceId = 6;
+}
+
+message TRespGetUserObjects {
+    // effectively map<ConfigKey, Any> so keys
+    repeated TConfigKeyAnyPair UserConfigs = 1;
+    repeated TDeviceConfigs DevicesConfigs = 2;
+
+    map<string, google.protobuf.Any> ScenarioData = 3;
+    map<string, TSurfaceScenarioData> SurfaceScenarioData = 4;
+
+    VersionInfo Version = 5;
+}
+
+///////////////// update_objects
+message TReqChangeUserObjects {
+    repeated TConfigKeyAnyPair UserConfigs = 1;
+    repeated TDeviceConfigs DevicesConfigs = 2;
+
+    map<string, google.protobuf.Any> ScenarioData = 3;
+    map<string, TSurfaceScenarioData> SurfaceScenarioData = 4;
+
+    // current surface ID. uuid for mobile apps or device_id for devices.
+    // used for anonymous requests
+    string CurrentSurfaceId = 5;
+}
+
+message TRespChangeUserObjects {
+    VersionInfo Version = 1;
+}
+
+/////////////// get_all_objects
+message TReqGetAllObjects {
+    // list of surface IDs
+    repeated string SurfaceId = 1;
+
+    // current surface ID. uuid for mobile apps or device_id for devices.
+    // used for anonymous requests
+    string CurrentSurfaceId = 2;
+}
+
+message TRespGetAllObjects {
+    TUserConfigs UserConfigs = 1;
+    map<string, TSurfaceConfig> SurfaceConfigs = 2;
+
+    map<string, google.protobuf.Any> ScenarioData = 3;
+    map<string, TSurfaceScenarioData> SurfaceScenarioData = 4;
+
+    VersionInfo Version = 5;
+}
+
+/////////////// clear_user_data
+message TClearUserData {
+    uint64 Puid = 1;
+}

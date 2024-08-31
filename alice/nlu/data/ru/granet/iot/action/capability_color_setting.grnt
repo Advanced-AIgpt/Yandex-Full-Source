@@ -1,0 +1,233 @@
+import:
+    common/adjectives.grnt
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/prepositions.grnt
+    common/verbs.grnt
+    iot/action/colors.grnt
+    iot/action/common.grnt
+    iot/common.grnt
+
+form alice.iot.action.capability.color_setting.ifexp.bg_enable_iot_action_forms:
+    slots:
+        intent_parameters:
+            source:
+                $SetColor
+                $SetColorScene
+                $InvertColorScene
+                $IncreaseColorTemperature
+                $DecreaseColorTemperature
+            type: custom.iot.action.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source:
+                $LightDeviceType  # в некоторых формах $LightDeviceType используется вне $IotDeviceOrDemo, учитываем это здесь
+                $LightDeviceTypeWithoutSvetlana
+                $SmartSpeakerDeviceType
+                $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+        color_setting_value:
+            source:
+                $IotColor
+                $IotColorSceneNoAlice
+                $AliceColorScene
+                $RegularWhite
+                $SetColorScene.TurnOffColorScene
+                $MidiScene
+                $SetColorScene.TurnOnMidiBacklight
+            type:
+                custom.iot.color
+                custom.iot.color.scene
+        relative_datetime:
+            keep_variants: true
+            source: $RelativeDateTime
+            type: sys.datetime_range
+        exact_date:
+            keep_variants: true
+            source: $sys.date
+            type: sys.date
+        exact_time:
+            keep_variants: true
+            source: $sys.time
+            type: sys.time
+        for_datetime:
+            keep_variants: true
+            source: $ForDateTime
+            type: sys.datetime_range
+
+    root:
+        $SetColor
+        $SetColorScene
+        $IncreaseColorTemperature
+        $DecreaseColorTemperature
+
+    $SetColor:
+        %lemma
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "color"
+        }
+
+        [($Set|$Common.Change)+ ((в|на)* $IotColor)+ (режим|$Common.TheColor|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Set|$Common.Change)* ((в|на)* $IotColor)+ $LightDeviceTypeWithoutSvetlana+ (режим|$Common.TheColor|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Set|$Common.Change)+ ((в|на)* $RegularWhite)+ ($White|$Common.TheColor)+ (режим|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+        [($Set|$Common.Change)* ((в|на)* $RegularWhite)+ $LightDeviceTypeWithoutSvetlana+ (режим|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $SetColorScene:
+        %lemma
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "color_scene"
+        }
+
+        [($Set|$Common.Change)* (режим|$Common.TheColor)+ $IotColorSceneNoAlice+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.At)*]
+        $Set+ режим+ $AliceColorScene+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*
+
+        # Midi color scenes
+        $TurnOffColorScene
+        $TurnOnSpeakerColorScene
+        $TurnOnMidiBacklight
+
+        $TurnOnSpeakerColorScene:
+            [($Set|$Glow)+ $MidiScene+ (режим|$OnTopOfSmartSpeaker|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$SmartSpeakerDeviceType|$DevicePreposition)*]
+            [($Set|$Glow|$Imitate|$Work)+ ($Backlight|$OnTopOfSmartSpeaker)+ ($Like* $MidiScene)+ (режим|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$SmartSpeakerDeviceType|$DevicePreposition)*]
+            [$Show+ $Common.QuestionHow+ ($Glow|$Common.ToWork)+ $MidiScene+ (режим|$OnTopOfSmartSpeaker|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$SmartSpeakerDeviceType|$DevicePreposition)*]
+
+        $TurnOffColorScene:
+            %lemma
+            %type custom.iot.color.scene
+            %value inactive
+
+            [$TurnOff+ ($MidiScene|$Backlight)+ (режим|$OnTopOfSmartSpeaker|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$SmartSpeakerDeviceType|$DevicePreposition)*]
+
+        $TurnOnMidiBacklight:
+            %lemma
+            %type custom.iot.color.scene
+            %value lava_lamp
+            [($Set|$Glow)+ ($Backlight|$OnTopOfSmartSpeaker)+ (режим|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$SmartSpeakerDeviceType|$DevicePreposition)*]
+
+        $Show:
+            %lemma
+            $Common.ToShow
+            %exact
+            (показывает|показывают|показывал|показывала|показывало|показывали)
+            (продемонстрирует|продемонстрируют|продемонстрировал|продемонстрировала|продемонстрировало|продемонстрировали)
+
+        $Like:
+            %lemma
+            как
+            как* будто бы*
+
+        $Work:
+            $Common.ToWork
+            %force_negative
+            %exact
+            (работает|работают|работал|работала|работало|работали)
+            (функционирует|функционируют|функционировал|функционировала|функционировало|функционировали)
+
+        $Imitate:
+            %exact
+            (имитируй|превратись|стань|притворись)
+            (имитировать|превратиться|стать|притвориться)
+            (превратишься|станешь|притворишься)
+
+        $Glow:
+            $Common.ToGlow
+            %force_negative
+            %exact
+            (горит|горят|горел|горела|горело|горели)
+            (излучает|излучают|излучал|излучала|излучало|излучали)
+            (подсвечивает|подсвечивают|подсвечивал|подсвечивала|подсвечивало|подсвечивали)
+            (светит|светят|светил|светила|светило|светили)
+            (светится|светятся|светился|светилась|светилось|светились)
+            (сияет|сияют|сиял|сияла|сияло|сияли)
+
+        $OnTopOfSmartSpeaker:
+            %lemma
+            (наверху|сверху) ((в|на)* $SmartSpeakerDeviceType)
+            на* (верхний|световой|светящейся)* (панель|крышка) $SmartSpeakerDeviceType* (которая (может светиться|светится))*
+
+        $TurnOff:
+            $Common.TurnOff
+            $Common.TurnOffLight
+            $Common.ToStop
+            %force_negative
+            $Common.TurnedOff
+
+    $InvertColorScene:
+        %lemma
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "color_scene",
+            "relativity_type": "invert"
+        }
+
+        [режим+ $MidiScene+ ($Backlight|$OnTopOfSmartSpeaker|$DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime)*]
+
+    $IncreaseColorTemperature:
+        %lemma
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "temperature_k",
+            "relativity_type": "increase"
+        }
+
+        [$Set* ($Common.Increase|$IncreaseAdjective)+ (цветовой|$Common.TheColor|$LightDeviceType)+ $Common.TheTemperature+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+        [$Set* $Common.Colder+ ($Common.TheColor|$LightDeviceType)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheTemperature|$Common.TheLevel)*]
+
+    $DecreaseColorTemperature:
+        %lemma
+        %type custom.iot.action.intent.parameters
+        %value {
+            "capability_type": "devices.capabilities.color_setting",
+            "capability_instance": "temperature_k",
+            "relativity_type": "decrease"
+        }
+
+        [$Set* ($Common.Decrease|$DecreaseAdjective)+ (цветовой|$Common.TheColor|$LightDeviceType)+ $Common.TheTemperature+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheLevel)*]
+        [$Set* $Common.Warmer+ ($Common.TheColor|$LightDeviceType)+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions|$IotDateTime|$Common.TheTemperature|$Common.TheLevel)*]
+
+$Backlight:
+    %lemma
+    подсветка
+    свечение
+
+$MidiScene:
+    $LavaLamp
+    $Candle
+    $MidiNight
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Lets
+    $Common.Little
+    все
+    %lemma
+    (мне|у меня)

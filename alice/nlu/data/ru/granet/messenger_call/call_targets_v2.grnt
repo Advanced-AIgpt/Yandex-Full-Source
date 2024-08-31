@@ -1,0 +1,434 @@
+import: common/conjunctions.grnt
+import: common/filler.grnt
+import: common/nouns.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+import: messenger_call/common_v2.grnt
+
+$Room:
+    %fillers off
+    $user.iot.room
+    %force_negative
+    $House
+
+$UnknownRoom:
+    %fillers off
+    %weight 0.5
+    $user.iot.demo.room
+    %force_negative
+    $House
+
+$Device:
+    %fillers off
+    $user.iot.device
+
+$House:
+    %fillers off
+    $user.iot.household
+
+$DeviceType:
+    %fillers off
+    %lemma
+    %type "custom.device_type"
+    %value "yandexmicro"
+    [$DeviceTypeBase+ (лайт|лайтик)+]
+    %type "custom.device_type"
+    %value "yandexmidi"
+    [$DeviceTypeBase+ (миди|мидик|два|2|вторая)+]
+    %type "custom.device_type"
+    %value "yandexmini"
+    [$DeviceTypeBase* (мини|миник)+]
+    %type "custom.device_type"
+    %value "yandexmini_2"
+    [$DeviceTypeBase* (мини|миник)+ (new|нью|2|два)+]
+    %value "yandexstation_2"
+    [$DeviceTypeBase+ (макс|большая|плюс|про)+]
+    %value "elari"
+    [$DeviceTypeBase* (элари|elari)+]
+    %value "irbis"
+    [$DeviceTypeBase* (ирбис|irbis)+]
+    %value "dexpp"
+    [$DeviceTypeBase* (дексп|despp|dexp)+]
+    %value "jbl"
+    [$DeviceTypeBase* (джейбиэль|джей би эль|jbl)+]
+    %value "prestigio"
+    [$DeviceTypeBase* (престиджио|prestigio)+]
+    %value "lg"
+    [$DeviceTypeBase* (элджи|эл джи|lg)+]
+    %value "any"
+    [любой* какой* угодно* какой-нибудь* яндекс* умный* $DeviceTypeAny+]
+
+    $DeviceTypeBase:
+        %lemma
+        яндекс
+        умный
+        $DeviceTypeAny
+
+    $DeviceTypeAny:
+        %lemma
+        $Station
+        устройство
+
+    $Station:
+        %lemma
+        станция
+        колонка
+        колоночка
+
+$Emergency:
+    $Fire:
+        %lemma
+        пожарный
+        пожарная
+        пожарник
+        пожарка
+    $Police:
+        %lemma
+        полиция
+        полиции
+        милиция
+        полицейский
+        милицейский
+    $Sos:
+        %lemma
+        спасение
+        экстренный
+        чрезвычайный
+    $Department:
+        %lemma
+        служба
+    %fillers off
+    %lemma
+    %type "custom.emergency"
+    %value "ambulance"
+    [скорая+ помощь*]
+    (врач|доктор)+
+    %value "fire_department"
+    [$Fire+ $Department* часть* управление*]
+    [мчс+ управление*]
+    %value "police"
+    [$Police+ наряд* $Department*]
+    мент
+    %value "sos"
+    911 | 9 1 1 | девять один один
+    112 | 1 1 2 | один один два
+    [$Sos+ $Department* помощь*]
+    спасатели
+
+$Name:
+    %fillers off
+
+    $FrequentNames:
+        %fillers off
+        %lemma
+        влад а? четыре
+        а четыре
+        моргенштерн
+        егор шип
+        влад милохин
+        даня милохин
+        артур
+        степа
+        эдисон
+
+    $LocalAny:
+        .
+        %force_negative
+        как
+
+    ($FrequentNames | $sys.fio.name | $sys.fio.surname | $sys.fio.patronym)+
+    [$sys.fio.name $LocalAny]
+
+$PhoneNumber:
+    $BigNumberFix:
+        ноль
+        один
+        два
+        три
+        четыре
+        пять
+        шесть
+        семь
+        восемь
+        девять
+        десять
+        одиннадцать
+        двенадцать
+        тринадцать
+        четырнадцать
+        пятнадцать
+        шестнадцать
+        семьнадцать
+        восемьнадцать
+        девятнадцать
+        двадцать
+        тридцать
+        сорок
+        пятьдесят
+        шестьдесят
+        семьдесят
+        восемьдесят
+        девяносто
+        сто
+        двести
+        триста
+        четыреста
+        пятьсот
+        шестьсот
+        семьсот
+        восемьсот
+        девятьсот
+        тысяча
+        $sys.num
+    %fillers off
+    %lemma
+    номер? телефон? плюс? $BigNumberFix+
+    звездочка сто решетка
+
+$PhoneNumberTarget:
+    %lemma
+    (с|в|на|до|по)? [$Common.PronounThis? (контакт|телефон|номер|абонент)? $PhoneNumber]
+
+$FrequentRelatives:
+    %fillers off
+    %lemma
+    %enable_synonyms all
+    мама
+    мать
+    мамуля
+    мамочка
+    мамулечка
+    мамуся
+    мамка
+    момо
+    папа
+    папуля
+    папуле
+    папочка
+    отец
+    брат
+    сестра
+    сестричка
+    сестренка
+    бабушка
+    бабуля
+    баба
+    батя
+    дедушка
+    дед
+    дядя
+    тетя
+    сын
+    сынок
+    сынуля
+    сыночек
+    дочь
+    доченька
+    доче
+    дочка
+    внук
+    внучка
+    муж
+    жена
+    невеста
+    тещя
+    тесть
+
+$FrequentOrganizations:
+    %fillers off
+    %lemma
+    госуслуг
+    сбер
+    сбербанк
+    тинькофф
+    россельхозбанк
+    ростелеком
+    мтс
+    билайн
+    мегафон
+    мфц
+    госуслуги
+    почта
+    дом ру
+    авито
+    яндекс маркет
+    газпромбанк
+    росреестр
+    рос
+    ржд
+    иви
+    эльдорадо
+    аптека ру?
+
+$FrequentPersonTargets:
+    %fillers off
+    %lemma
+    дед мороз
+    друг
+    любимая
+    подруга
+    девушка
+    телка|телки
+    подружка
+    невеста
+    жена
+    киска
+    детка
+    любовница
+    любимка
+    любовник
+    парень
+    он
+    она
+    мне? на мой? телефон
+    кто нибудь
+    куда нибудь
+    кто то
+    домой
+    туда
+    бывший
+    бывшая
+    родной
+    родная
+    малышка
+    малыш
+    лента
+    контакт
+    психушка
+    дурка
+    детдом
+    шлюха
+    проститутка
+    телефон
+    себе
+    хозяин
+    хозяйка
+    зайка
+    зая
+    зае
+    родители
+    президент
+    человек
+    туда
+    %lemma off
+    мне
+
+$PersonCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        мой
+        моя
+        свой
+        своя
+        контакт
+        абонент
+        этот
+        телефонный
+
+    [$LocalFillers* ($Name | $FrequentRelatives | $FrequentPersonTargets)+]
+
+$OrganizationCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        горячая линия
+        техподдержка
+        оператор
+        помощь
+
+    [$LocalFillers* .? $FrequentOrganizations+]
+
+$EmergencyCallTarget:
+    %fillers off
+
+    $LocalFillers:
+        %fillers off
+        %lemma
+        на дом
+        домой
+
+    $LocalAny:
+        .
+        %force_negative
+        7
+
+    [$LocalFillers* $LocalAny? $Emergency+]
+
+$DeviceCallTarget:
+    %fillers off
+    $DeviceNamed
+    $DeviceNamed? $Located? ($Common.In|$Common.At)? $RoomNamed
+    $RoomNamed ($Common.In|$Common.At) $DeviceNamed
+    [$House ($Common.In|$Common.At)? $RoomNamed? ($Common.In|$Common.At)? $DeviceNamed? $Located*]
+    $House ($Common.In|$Common.At)? $RoomNamed
+
+    $DeviceNamed:
+        $DeviceType
+        [$DeviceType $Named? $Device]
+        $Device
+
+    $RoomNamed:
+        %lemma
+        (комната $Named?)? ($Room|$UnknownRoom)
+
+    $Named:
+        (под|по|$Common.With) $Common.TheName
+        $Common.ConjunctionThat? $Common.ToBeNamed
+
+    $Located:
+        $Inner:
+            %lemma
+            стоит|стоящая
+            находится|находящаяся
+            располагается
+            расположена|расположенная
+            есть
+            присутствует
+        (который|которая|которое) $Inner?
+        $Inner
+
+
+$AnyPreciseCallTarget:
+    $AnyPreciseCallTargetInner:
+        $DeviceCallTarget
+        $PersonCallTarget
+        $OrganizationCallTarget
+        $EmergencyCallTarget
+
+    %fillers off
+    %lemma
+    (в|на)? [$Common.PronounThis? (контакт|телефон|номер)? $AnyPreciseCallTargetInner]
+
+
+$AnyPreciseNotOrganizationCallTarget:
+    $AnyPreciseNotOrganizationCallTargetInner:
+        %fillers off
+        $DeviceCallTarget
+        $PersonCallTarget
+        $EmergencyCallTarget
+
+    %fillers off
+    %lemma
+    (с|в|на|до|по)? [$Common.PronounThis? (контакт|телефон|номер|абонент)? $AnyPreciseNotOrganizationCallTargetInner]
+
+$WildcardCallTarget:
+    %fillers off
+
+    $Word:
+        %fillers off
+        .
+        %force_negative
+        $DeviceCallTarget
+        $Emergency
+
+    $Word $Word? $Word? $Word? $Word?
+
+$WildcardCallTargetShort:
+    %lemma
+    (с|в|на|до|по)? [$Common.PronounThis? (контакт|телефон|номер|абонент)? $WildcardCallTarget.Word]

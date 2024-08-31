@@ -1,0 +1,52 @@
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.timer_resume:
+    lemma: True
+    slots:
+        time:
+            source: $sys.units_time
+            type:
+                sys.units_time
+
+        timer_id:
+            source: $sys.selection
+            type: sys.selection
+
+    root:
+        [$Resume+ $Timer+ $sys.units_time*]
+        [$Resume+ (текущий|'все|каждый'(timer_id/sys.selection:all))+ $Timer+]
+        [$Cancel+ $Timer+ $Pause+ $sys.units_time*]
+
+        %negative
+        [запусти $Timer $sys.units_time]
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        на
+        с
+
+    $Timer:
+        %lemma
+        таймер
+
+    $Resume:
+        $Common.Resume
+        продолжи отсчет
+        запусти
+        верни
+        восстанови
+
+    $Pause:
+        %lemma
+        пауза
+
+    $Cancel:
+        $Common.CancelRemoveReset
+        убери
+        сними
+        верни
+        отожми
+        нажми

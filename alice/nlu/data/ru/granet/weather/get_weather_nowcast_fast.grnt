@@ -1,0 +1,59 @@
+import: common/filler.grnt
+import: weather/common.grnt
+
+# практически полная копия гранета get_weather_nowcast, но БЕЗ wildcard-ов
+form personal_assistant.scenarios.get_weather_nowcast.fast:
+    slots:
+        prec_type_asked:
+            type: custom.prec_type
+            source: $PrecType
+        expected_change:
+            type:
+                custom.expected_change
+                string
+            source: $ExpectedChange
+        when:
+            type:
+                sys.datetime_range
+                sys.datetime
+            source: $When
+        day_part:
+            type: custom.day_part
+            source: $DayPart
+        where:
+            matching_type: overlap
+            type:
+                GeoAddr.Address
+                sys.geo
+                string
+            source: $StrictWhere
+    root:
+        $Root
+
+        %negative
+        $SingleWeatherWords
+
+        %force_negative
+        [.* $NoMatchHandcrafted]
+
+$Root:
+    [$TellMe+ $PrecType]
+    [$TellMe* $PrecType $WhenResolver $StrictWhere? $DayPartResolver?]
+    [$TellMe* $PrecType $WhenResolver? $StrictWhere $DayPartResolver?]
+    [$TellMe* $PrecType $WhenResolver? $StrictWhere? $DayPartResolver]
+
+    [$TellMe+ $ExpectedChange (капать | лить | моросить)]
+    [$TellMe* $ExpectedChange $PrecType $WhenResolver? $StrictWhere? $DayPartResolver?]
+
+    [$TellMe* $Umbrella+ (можно|взять|брать|нужен|нужно|надо|понадобится|стоит|будет)+ ли? мне? с? собой? (от дождя)? (идти|выйти)? $WhenResolver? $StrictWhere? $DayPartResolver?]
+
+$Umbrella:
+    %lemma
+    зонт | зонтик
+
+filler:
+    $Common.Filler
+    $Common.LeftFiller
+    $Common.WayToCallAlice
+    $nonsense
+    $WeatherFiller

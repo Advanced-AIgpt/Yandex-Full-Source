@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/div_view;divviewpb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "DivViewProto";
+
+import "google/protobuf/descriptor.proto";
+
+import "alice/protos/endpoint/capability.proto";
+import "alice/protos/extensions/extensions.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+import "alice/protos/div/div2id.proto";
+
+message TDivViewCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = DivViewCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // Не хотим добавлять это в капабилити сейчас, но возможно хотим добавить в будущем.
+        // repeated string SupportedExtensions; // Id доступных расширений.
+        // repeated string SupportedCustoms; // Доступные custom_type.
+        // repeated enum/string SupportedVariables; // Доступные переменные.
+        bool SupportsStringDiv2Card = 1 [json_name = "supports_string_div2_card", (NYT.column_name) = "supports_string_div2_card"];
+        bool SupportsCardStashing = 2 [json_name = "supports_card_stashing", (NYT.column_name) = "supports_card_stashing", deprecated = true];
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        // Ключи доступных из кэша устройства темплейтов. Формат ключа - scenario::template_name::version
+        repeated string GlobalTemplatesCache = 1 [json_name = "global_templates_cache", (NYT.column_name) = "global_templates_cache"];
+    }
+
+    message TStashViewDirective {
+        // Directive to put already shown card into special hidden place called Мешок i.e. Stash
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "stash_view";
+        option (DirectiveType) = StashViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        // predicate to search div cards to stash, according to identity logic of div2id
+        TDiv2Id CardSearchCriteria = 2 [json_name = "card_search_criteria", (NYT.column_name) = "card_search_criteria"];
+    }
+
+    message TUnstashViewDirective {
+        // Directive to revive cards, stored in special hidden place called Мешок i.e. Stash 
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (SpeechKitName) = "unstash_view";
+        option (DirectiveType) = UnstashViewDirectiveType;
+
+        string Name = 1 [json_name = "name", (NYT.column_name) = "name"];
+
+        // predicate to search div cards to unstash, according to identity logic of div2id
+        TDiv2Id CardSearchCriteria = 2 [json_name = "card_search_criteria", (NYT.column_name) = "card_search_criteria"];
+    }
+}

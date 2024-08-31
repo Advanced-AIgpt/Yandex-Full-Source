@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package NModuleSerializer;
+
+// 'TStruct' is identical to 'google.protobuf.Struct', but 'TValueWrapper' is used
+// instead of 'google.protobuf.Value'
+message TStruct {
+    // Unordered map of dynamically typed values.
+    map<string, TValueWrapper> Fields = 1;
+}
+
+// 'TValue' represents a dynamically typed value as 'google.protobuf.Value' do, 
+// but 'TValue' distinguishes between integer and double types and support TRange type, and can be either null,
+// an integer, a float, a string, a boolean, a range, a recursive struct value, or a list of values.
+message TValue {
+    oneof kind {
+        // Represents a null value.
+        TNullValue NullValue = 1;
+        // Represents an integer value.
+        sint64 IntValue = 2;
+        // Represents a double value
+        double FloatValue = 3;
+        // Represents a string value.
+        string StringValue = 4;
+        // Represents a boolean value.
+        bool BoolValue = 5;
+        // Represents a structured value.
+        TStruct StructValue = 6;
+        // Represents a repeated `Value`.
+        TListValue ListValue = 7;
+        // Represents a range value
+        TRangeValue RangeValue = 8;
+    }
+}
+
+
+// 'TValueWrapper' is wrapper for 'TValue' that store nodes.lines field in Lines
+message TValueWrapper {
+    TValue Value = 1;
+    repeated uint32 Lines = 2;
+}
+
+// 'TNullValue' is identical to 'google.protobuf.NullValue'
+enum TNullValue {
+    // Null value.
+    NULL_VALUE = 0;
+}
+
+// 'TRangeValue' supports serialization of nodes.Range type object.
+// nodes.Range contains three fields 'start', 'stop' and 'step' of type nodes.Const,
+// therefore 'TRangeValue also stores information about field.lines
+message TRangeValue {
+    // Range start
+    TValueWrapper Start = 1;
+    // Range stop
+    TValueWrapper Stop = 2;
+    // Range step
+    TValueWrapper Step = 3;
+}
+
+// 'TListValue' is identical to 'google.protobuf.ListValue', but 'TValueWrapper' is used
+// instead of 'google.protobuf.Value'
+message TListValue {
+    // Repeated field of dynamically typed values.
+    repeated TValueWrapper Values = 1;
+}
+
+message TArg {
+    string Name = 1;
+}
+
+message TMacro {
+    string Name = 1;
+    string Intent = 2;
+    string PhraseName = 3;
+    string CardName = 4;
+    repeated TArg Args = 5;
+    TListValue Defaults = 6;
+}
+
+message TImport {
+    string Path = 1;
+    enum TImportType {
+        IMPORT = 0;
+        FROM_IMPORT = 1;
+        NLGIMPORT = 2;
+    }
+    TImportType Type = 2;
+}
+
+message TModule {
+    string Path = 1;
+    string Intent = 2;
+    repeated TImport Imports = 3;
+    repeated TMacro Macros = 4;
+}

@@ -1,0 +1,41 @@
+import: common/commands.grnt
+import: common/filler.grnt
+
+form personal_assistant.scenarios.alarm_show__cancel:
+    slots:
+        date:
+            source:
+                $sys.date
+                $sys.weekdays
+
+            type:
+                sys.date
+                sys.weekdays
+        time:
+            source: $sys.time
+
+            type: sys.time
+        alarm_id:
+            source:
+                $sys.num
+                $sys.selection
+
+            type:
+                sys.num
+                sys.selection
+    root:
+        [$Common.CancelRemoveReset 'все|каждый'(alarm_id) $Alarm?]
+        [$Common.CancelRemoveReset номер? $sys.num? $Alarm?]
+        %weight 0.3
+        [$Common.CancelRemoveReset (на? ($sys.date|$sys.weekdays)|на? $sys.time)+]
+
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+
+
+    $Alarm:
+        %lemma
+        будильник

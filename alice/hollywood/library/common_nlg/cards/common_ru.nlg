@@ -1,0 +1,84 @@
+{% from "alice/hollywood/library/common_nlg/json_macro_ru.nlg" import json_list %}
+
+{% macro dialog_actions(directives) -%}
+  {% call(directive) json_list(directives) -%}
+    {{ directive | to_json }}
+  {%- endcall %}
+{%- endmacro %}
+
+{% macro dialog_actions_url(directives) -%}
+  dialog-action://?directives={{ dialog_actions(directives)|urlencode }}
+{%- endmacro %}
+
+{% macro logged_action_url(directives, additional_logged_payload=dict(), utm_payload=dict()) -%}
+  {% set additional_directives = [] %}
+
+  {%- if utm_payload -%}
+    {% set all_utm_payload = dict(request_id=req_info.request_id) %}
+    {%- do all_utm_payload.update(utm_payload) -%}
+
+    {%- if 'utm_source' not in all_utm_payload -%}
+        {%- do all_utm_payload.update(dict(utm_source='Yandex_Alisa')) -%}
+    {%- endif -%}
+
+    {%- do additional_directives.append(server_action_directive('external_source_action', all_utm_payload, ignore_answer=True)) -%}
+  {%- endif -%}
+
+  {% set logged_payload = dict(request_id=req_info.request_id, card_id=context.card_id, intent_name=intent_name) %}
+  {%- do logged_payload.update(additional_logged_payload) -%}
+  {%- do additional_directives.append(server_action_directive('on_card_action', logged_payload, ignore_answer=True)) -%}
+
+  {{ dialog_actions_url(directives + additional_directives) }}
+{%- endmacro %}
+
+{% macro open_uri_action(uri, action_name, analytics_tag=None, additional_logged_payload=dict(), utm_payload=dict()) -%}
+  {% set logged_payload = dict(action_uri=uri, action_name=action_name) %}
+  {%- do logged_payload.update(additional_logged_payload) -%}
+  {{ logged_action_url(
+         [client_action_directive(name='open_uri', sub_name=analytics_tag|default(action_name), payload={'uri': uri})],
+         logged_payload,
+         utm_payload,
+     )
+  }}
+{%- endmacro %}
+
+{% macro simple_open_uri_action(uri, action_name, utm_payload=dict()) -%}
+  {{ open_uri_action(uri, action_name, action_name, dict(), utm_payload) }}
+{%- endmacro %}
+
+{% macro open_uri_action_for_item_in_list(uri, action_name, item_number, analytics_tag, additional_logged_payload=dict(), utm_payload=dict()) -%}
+  {% set logged_payload = dict() %}
+  {%- if item_number is defined -%}
+    {% do logged_payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {%- do logged_payload.update(additional_logged_payload) -%}
+  {{ open_uri_action(uri, action_name, analytics_tag, logged_payload, utm_payload) }}
+{%- endmacro %}
+
+{% macro start_image_recognizer_action(item_number) -%}
+  {% set logged_payload = dict() %}
+  {%- if item_number is defined -%}
+    {% do logged_payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([client_action_directive(name='start_image_recognizer', sub_name='start_image_recognizer')], logged_payload) }}
+{%- endmacro %}
+
+{% macro get_skill_click_action(case_name, activation, item_number, rec_source, analytics_tag) -%}
+  {% set logged_payload = dict(case_name=case_name) %}
+  {%- if item_number is defined -%}
+    {% do logged_payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+        client_action_directive(name='type', sub_name=analytics_tag|default(case_name), payload={'text': activation | html_escape | capitalize_first }),
+     ], logged_payload,
+     dict(utm_medium=rec_source, utm_source='Yandex_Alisa', utm_campaign='', utm_term='', utm_content='textlink'))
+  }}
+{%- endmacro %}
+
+{% macro font_color(color_code, text) -%}
+  <font color=\"{{ color_code }}\">{{text}}<\/font>
+{%- endmacro %}
+
+{% macro font_bold(text) -%}
+  <b>{{text}}<\/b>
+{%- endmacro %}

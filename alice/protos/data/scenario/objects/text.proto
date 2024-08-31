@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package NAlice.NData;
+
+import "alice/protos/data/scenario/objects/image.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/objects";
+option java_package = "ru.yandex.alice.protos.data.scenario.objects";
+
+message TSimpleText {
+    // Вспомогательная структура для отрисовки спецобъектов (типа названий метро)
+    message TTextSymbol {
+        // Тип спецсимвола для отрисовки данных
+        enum ESymbolType {
+            Undefined = 0; // Неизвестный тип маркера
+            Subway = 1;    // Метро (без детализации по городам)
+        }
+        ESymbolType Type = 1 [json_name = "type", (NYT.column_name) = "type"];
+        // Цвет для отрисовки спецсимвола (#RGB)
+        string Color = 2 [json_name = "color", (NYT.column_name) = "color"];
+        // (опционально) - текст, который должен быть помещен внутрь символа
+        string Text = 3 [json_name = "text", (NYT.column_name) = "text"];
+    }
+    // Тип отрывка. Использутся строчки ровно в таком виде, как они пришли от поиска
+    string SnippetType = 1 [json_name = "snippet_type", (NYT.column_name) = "snippet_type"];
+    // Основной текст
+    string Text = 2 [json_name = "text", (NYT.column_name) = "text"];
+    // Опционально - ссылка на изображение, которое следует поместить в ответ
+    TSingleImage.TImageRef Image = 3 [json_name = "image", (NYT.column_name) = "image"];
+    // Поисковый запрос, который использовался для получения ответа
+    string SearchUrl = 4 [json_name = "search_url", (NYT.column_name) = "search_url"];
+    // Источник ответа (web-страница, на которой найден ответ)
+    string Url = 5 [json_name = "url", (NYT.column_name) = "url"];
+    // Выделенное название хоста, с которого взят ответ (ru.wikipedia.org, ...), т.е. Url без пути и аргументов
+    string Hostname = 6 [json_name = "hostname", (NYT.column_name) = "hostname"];
+    // Заголовок страницы хоста, с которого взят ответ
+    string Title = 7 [json_name = "title", (NYT.column_name) = "title"];
+    // Опционально дополнительный символ для отрисовки перед текстом (например, кружок с номером линии метро)
+    TTextSymbol Symbol = 8 [json_name = "symbol", (NYT.column_name) = "symbol"];
+    // Признак автоматического перевода с другого языка (например "En-US")
+    string OriginalLanguage = 9 [json_name = "original_language", (NYT.column_name) = "original_language"];
+}
+
+message TFactList {
+    // Описание фактового ответа, состоящего из нескольких отдельных текстов, склеенных в одну строку
+    // Используется, например, для форматирования станций метро с TTextSymbol
+    message TMultiText {
+        repeated TSimpleText TextAnswer = 1 [json_name = "text_answer", (NYT.column_name) = "text_answer"];
+    }
+    // Описание отдельного фактового ответа
+    message TFact {
+        // Фактовый текст (первая часть факта)
+        string FactText = 1 [json_name = "fact_text", (NYT.column_name) = "fact_text"];
+        reserved 2; reserved "Text";
+        // Богатый текст, (вторая часть факта)
+        oneof FactAnswer {
+            option (NYT.variant_field_name) = "fact_answer";
+            // Простой абзац текста ответа без дополнительных излишеств
+            string TextAnswer = 3 [json_name = "simple_answer", (NYT.column_name) = "simple_answer"];
+            // Текст с дополнительными параметрами
+            TMultiText MultiTextAnswer = 4 [json_name = "multi_text_answer", (NYT.column_name) = "multi_text_answer"];
+        }
+
+    }
+
+    // Список фактов
+    repeated TFact Facts = 1 [json_name = "facts", (NYT.column_name) = "facts"];
+}

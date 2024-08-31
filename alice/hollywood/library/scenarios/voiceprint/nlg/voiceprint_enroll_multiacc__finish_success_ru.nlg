@@ -1,0 +1,21 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/macros_ru.nlg" import get_alice_name with context %}
+{% ext_from "alice/hollywood/library/common_nlg/error_ru.nlg" import render_error %}
+{% nlgimport "alice/hollywood/library/scenarios/voiceprint/nlg/voiceprint_common_ru.nlg" %}
+{% from "alice/hollywood/library/scenarios/voiceprint/nlg/voiceprint_common_ru.nlg" import multiacc_finish_enrollment with context %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.is_server_error or form.is_server_repeat %}
+    {% chooseline %}
+        Что-то пошло не так. Давайте познакомимся в другой раз.
+        Извините, сервер плохо себя ведёт. Придётся нам отложить знакомство.
+        Небольшие технические шоколадки{% tx %}...{% etx %}{% vc %} -{% evc %} тьфу{% tx %},{% etx %}{% vc %} -{% evc %} неполадки. Давайте познакомимся позже.
+    {% endchooseline %}
+  {% else %}
+    {{ multiacc_finish_enrollment(form) }}     
+  {% endif %}
+{% endphrase %}

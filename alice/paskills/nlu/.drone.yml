@@ -1,0 +1,46 @@
+pipeline:
+  lfs:
+    image: registry.yandex.net/ubuntu:xenial
+    commands:
+      - echo 'deb http://http.debian.net/debian wheezy-backports main' > /etc/apt/sources.list.d/wheezy-backports-main.list
+      - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+      - apt-get install -y git git-lfs
+      - git lfs install
+      - git lfs pull
+
+  docker-branch:
+    image: plugins/docker
+    registry: registry.yandex.net
+    repo: registry.yandex.net/paskills/ner
+    tags: ${DRONE_BRANCH/\//-}
+    build_args:
+      - HTTPS_PROXY=http://172.17.0.1:8888
+    when:
+      event: push
+
+  docker-dev:
+    when:
+      event: push
+      branch: master
+    image: plugins/docker
+    registry: registry.yandex.net
+    repo: registry.yandex.net/paskills/ner
+    tag: dev
+    build_args:
+      - HTTPS_PROXY=http://172.17.0.1:8888
+
+  docker-release:
+    when:
+      event: tag
+    image: plugins/docker
+    registry: registry.yandex.net
+    repo: registry.yandex.net/paskills/ner
+    tag: ${DRONE_TAG}
+    build_args:
+      - HTTPS_PROXY=http://172.17.0.1:8888
+
+  qloud-deploy-testing:
+    when:
+      event: push
+      branch: master
+    image: registry.yandex.net/msup/drone-qloud

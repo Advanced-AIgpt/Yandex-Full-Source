@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+
+package ru.yandex.alice.kronstadt.proto;
+
+option java_package = "ru.yandex.alice.kronstadt.proto";
+option java_outer_classname = "ApplyArgsProto";
+
+
+message TSceneArguments {
+    string SceneName = 1 [json_name = "scene_name"];
+
+    oneof SceneArgument {
+        google.protobuf.Struct Args = 2 [json_name = "args"];
+        google.protobuf.Any ProtoArgs = 3 [json_name = "proto_args"];
+    }
+}
+
+message TSelectedSceneForApply {
+    TSceneArguments SelectedScene = 1 [json_name = "selected_scene"];
+    google.protobuf.Any ApplyArguments = 2 [json_name = "apply_arguments"];
+}
+
+message TSelectedScene {
+
+    message TIrrelevantScene {
+        bool IsIrrelevant = 1 [json_name = "is_irrelevant"];
+    }
+
+    message TErrorScene {
+        string message = 1 [json_name = "message"];
+        string type = 2 [json_name = "type"];
+    }
+
+    oneof Selected {
+        TSceneArguments SelectedScene = 1 [json_name = "selected_scene"];
+        TIrrelevantScene IrrelevantScene = 2 [json_name = "irrelevant_scene"];
+        TErrorScene ErrorScene = 3 [json_name = "error_scene"];
+    }
+}

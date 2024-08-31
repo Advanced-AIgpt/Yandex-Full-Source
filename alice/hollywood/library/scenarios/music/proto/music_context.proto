@@ -1,0 +1,464 @@
+syntax = "proto3";
+
+package NAlice.NHollywood.NMusic;
+
+import "alice/megamind/protos/scenarios/request.proto";
+import "alice/protos/data/scenario/music/content_info.proto";
+
+enum ERepeatType {
+    RepeatNone = 0;
+    RepeatTrack = 1;
+    RepeatAll = 2;
+}
+
+message TContentId {
+    enum EContentType {
+        Track = 0;
+        Album = 1;
+        Artist = 2;
+        Playlist = 3;
+        Radio = 4;
+        Generative = 5;
+        FmRadio = 6;
+    }
+
+    EContentType Type = 1 [json_name = "type"];
+    string Id = 2 [json_name = "id"];
+    repeated string Ids = 3 [json_name = "ids"]; // some types (as Radio) have multiple ids
+}
+
+message TNormalization {
+    double IntegratedLoudness = 1 [json_name = "integrated_loudness"];
+    double TruePeak = 2 [json_name = "true_peak"];
+}
+
+message TTrackUrl {
+    enum EUrlFormat{
+        UrlFormatMp3 = 0;
+        UrlFormatHls = 1;
+    }
+    string Url = 1 [json_name = "url"];
+    uint64 UrlTime = 2 [json_name = "url_time"]; // milliseconds from epoch, url is valid for 60 minutes
+    EUrlFormat UrlFormat = 3 [json_name = "url_format"];
+    uint64 ExpiringAtMs = 4 [json_name = "expiring_at_ms"];
+}
+
+message TBiometryOptions {
+    enum EPlaybackMode {
+        OwnerMode = 0;
+        IncognitoMode = 1;
+        GuestMode = 2;
+    }
+
+    EPlaybackMode PlaybackMode = 1 [json_name = "playback_mode"];
+    string UserId = 2 [json_name = "user_id"];
+    string GuestOAuthTokenEncrypted = 3 [json_name = "guest_oauth_token_encrypted"]; // 1) AES-encrypted and then 2) base64-encoded
+    bool IsOwnerEnrolled = 4 [json_name = "is_owner_enrolled"];
+}
+
+message TPlaybackContext {
+    TContentId ContentId = 1 [json_name = "content_id"];
+    bool Shuffle = 2 [json_name = "shuffle"];
+    ERepeatType RepeatType = 3 [json_name = "repeat_type"];
+    // use /after-track handle to get shots that can be played
+    // before next track
+    bool EnableShots = 4 [json_name = "enable_shots"];
+    bool DisableAutoflow = 5 [json_name = "disable_autoflow"];
+    bool PlaySingleTrack = 6 [json_name = "play_single_track"];
+    bool DisableNlg = 7 [json_name = "disable_nlg"];
+    uint32 TrackOffsetIndex = 8 [json_name = "track_offset_index"];
+    string StartFromTrackId = 9 [json_name = "start_from_track_id"];
+    string From = 10 [json_name = "from"];
+    bool DisableHistory = 11 [json_name = "disable_history"];
+    int32 ShuffleSeed = 12 [json_name = "shuffle_seed"];
+    bool UseIchwill = 13 [json_name = "use_ichwill"];
+    NAlice.NData.NMusic.TContentInfo ContentInfo = 14 [json_name = "content_info"];
+    TBiometryOptions BiometryOptions = 15 [json_name = "biometry_options"];
+}
+
+message TArtistInfo {
+    string Name = 1 [json_name = "name"];
+    bool Composer = 2 [json_name = "composer"];
+    string Id = 3 [json_name = "id"];
+    bool Various = 4 [json_name = "various"];
+}
+
+enum EContentWarning {
+    Unknown = 0;
+    Explicit = 1;
+    ChildSafe = 2;
+}
+
+message TQueueItem {
+    message TTrackInfo {
+        message TLyricsInfo {
+            bool HasAvailableSyncLyrics = 1 [json_name = "has_available_sync_lyrics"];
+            bool HasAvailableTextLyrics = 2 [json_name = "has_available_text_lyrics"];
+        }
+
+        string AlbumId = 1 [json_name = "album_id"];
+        string AlbumTitle = 2 [json_name = "album_title"];
+        string Genre = 3 [json_name = "genre"];
+        string AlbumType = 4 [json_name = "album_type"];
+        string ArtistId = 5 [json_name = "artist_id"];
+        repeated TArtistInfo Artists = 6 [json_name = "artists"];
+        bool Available = 7 [json_name = "available"];
+        bool AvailableForPremiumUsers = 8 [json_name = "available_for_premium_users"];
+        string AlbumCoverUrl = 9 [json_name = "album_cover_url"];
+        repeated TArtistInfo AlbumArtists = 10 [json_name = "album_artists"];
+        int32 Position = 11 [json_name = "position"]; // track's relative index inside playlist/album/artist
+        TLyricsInfo LyricsInfo = 12 [json_name = "lyrics_info"];
+        int32 AlbumYear = 13 [json_name = "album_year"];
+        int32 AlbumLikes = 14 [json_name = "album_likes"];
+    }
+
+    message TGenerativeInfo {
+        string GenerativeStationId = 1 [json_name = "generative_station_id"]; // StationId for generative stream
+        string GenerativeStreamUrl = 2 [json_name = "generative_stream_url"];
+    }
+
+    message TFmRadioInfo {
+        string FmRadioId = 1 [json_name = "fm_radio_id"];
+        string FmRadioStreamUrl = 2 [json_name = "fm_radio_stream_url"];
+        bool Active = 3 [json_name = "active"];
+        bool Available = 4 [json_name = "available"];
+        string Frequency = 5 [json_name = "frequency"];
+        double Score = 6 [json_name = "score"];
+        string Color = 7 [json_name = "color"];
+    }
+
+    string TrackId = 1 [json_name = "track_id"];
+    reserved 2; reserved "AlbumId";
+    string Title = 3 [json_name = "title"];
+    reserved 4;
+    reserved 5; reserved "AlbumTitle";
+    string CoverUrl = 6 [json_name = "cover_url"];
+    TTrackUrl UrlInfo = 7 [json_name = "url_info"];
+    reserved 8; reserved "BatchId"; // not needed anymore at all?
+    string PlayId = 9 [json_name = "play_id"];
+    int32 DurationMs = 10 [json_name = "duration_ms"];
+    reserved 11; reserved "Genre";
+    reserved 12; reserved "AlbumType";
+    reserved 13; reserved "ArtistId";
+    reserved 14; reserved "Artists";
+    EContentWarning ContentWarning = 15 [json_name = "content_warning"];
+    string Type = 16 [json_name = "type"];
+    reserved 17; reserved "GenerativeStationId";
+    reserved 18; reserved "GenerativeStreamUrl";
+    oneof ItemInformation {
+        TTrackInfo TrackInfo = 19 [json_name = "track_info"];
+        TGenerativeInfo GenerativeInfo = 20 [json_name = "generative_info"];
+        TFmRadioInfo FmRadioInfo = 23 [json_name = "fm_radio_info"];
+    }
+    TContentId OriginContentId = 21 [json_name = "origin_content_id"]; // content id which triggered this item
+    TNormalization Normalization = 22 [json_name = "normalization"];
+    bool RememberPosition = 24 [json_name = "remember_position"];
+}
+
+message TExtraPlayable {
+    message TShot {
+        string Id = 1 [json_name = "id"];
+        string Text = 2 [json_name = "text"];
+        string TtsText = 3 [json_name = "tts_text"];
+        string MdsUrl = 4 [json_name = "mds_url"];
+        string CoverUri = 5 [json_name = "cover_uri"];
+        string Title = 6 [json_name = "title"];
+        bool Played = 7 [json_name = "played"]; // set to true when audio_play is generated from this shot
+        string EventId = 8 [json_name = "event_id"]; // from shot metadata
+        string From = 9 [json_name = "from"];
+        string PrevTrackId = 10 [json_name = "prev_track_id"];
+        string NextTrackId = 11 [json_name = "next_track_id"];
+        string Context = 12 [json_name = "context"]; // type of context, f.e. playlist, album, radio, etc
+        string ContextItem = 13 [json_name = "context_item"]; // id of context, for playlist owner:kind
+    }
+
+    message TPlayable {
+        // one of in case we will want to add more types of playables
+        oneof Playable {
+            TShot Shot = 1 [json_name = "shot"];
+        }
+    }
+
+    repeated TPlayable Queue = 1 [json_name = "queue"];
+}
+
+message TMusicQueue {
+    message TPagedState {
+        int32 PageIdx = 1 [json_name = "page_idx"];
+        int32 TotalTracks = 2 [json_name = "total_tracks"];
+    }
+    message TRadioState {
+        //.result.batchId from /rotor/<ID>/tracks
+        string BatchId = 2 [json_name = "batchId"];
+        // .radioSessionId from /rotor/session/new
+        string SessionId = 3 [json_name = "session_id"];
+    }
+    message TGenerativeState {
+        string StationId = 1 [json_name = "station_id"];
+    }
+    message TFmRadioState {
+        string FmRadioId = 1 [json_name = "fm_radio_id"];
+    }
+    message TContentLoadingState {
+        oneof CurrentState {
+            TPagedState Paged = 1 [json_name = "paged"];
+            TRadioState Radio = 2 [json_name = "radio"];
+            TGenerativeState Generative = 3 [json_name = "generative"];
+            TFmRadioState FmRadio = 4 [json_name = "fm_radio"];
+        }
+    }
+    message TConfig {
+        int32 PageSize = 1 [json_name = "page_size"];
+        int32 HistorySize = 2 [json_name = "history_size"];
+        double ExplicitFilteredOutWarningRate = 3 [json_name = "explicit_filtered_out_warning_rate"];
+        int32 FindTrackIdxPageSize = 4 [json_name = "find_track_idx_page_size"];
+    }
+    TPlaybackContext PlaybackContext = 1 [json_name = "playback_context"];
+    repeated TQueueItem History = 2 [json_name = "history"];
+    repeated TQueueItem Queue = 3 [json_name = "queue"];
+    TContentLoadingState CurrentContentLoadingState = 4 [json_name = "current_content_loading_state"];
+    TContentLoadingState NextContentLoadingState = 5 [json_name = "next_content_loading_state"];
+    TConfig Config = 6 [json_name = "config"];
+    NAlice.NScenarios.TUserPreferences.EFiltrationMode FiltrationMode = 7 [json_name = "filtration_mode"];
+    // track id or some special id + suffix -> something that must be played before or after
+    // right now only used for shots that are played before track
+    // for example 4321_before -> shot - play shot before track with id 4321
+    map<string, TExtraPlayable> ExtraPlayableMap = 8 [json_name = "extra_playable_map"];
+    uint32 HistoryBound = 9 [json_name = "history_bound"];
+    bool IsEndOfContent = 10 [json_name = "is_end_of_content"];
+    bool IsRadioPumpkin = 11 [json_name = "is_radio_pumpkin"];
+}
+
+message TAccountStatus {
+    message TPromo {
+        string ActivatePromoUri = 1 [json_name = "activate_promo_uri"];
+        string ExtraPeriodExpiresDate = 2 [json_name = "extra_period_expires_date"];
+    }
+
+    string Uid = 1 [json_name = "uid"];
+    reserved 2; // Premium
+    reserved 3; // ValidUntil
+    bool HasPlus = 4 [json_name = "has_plus"]; // NOTE: That some users DO NOT have plus but have music subscription
+    TPromo Promo = 5 [json_name = "promo"];
+    bool HasMusicSubscription = 6 [json_name = "has_music_subscription"];
+    uint64 MusicSubscriptionRegionId = 7 [json_name = "music_subscription_region_id"];
+}
+
+message TMusicReaskState {
+    enum EMissingType {
+        Track = 0;
+        Album = 1;
+        Artist = 2;
+    }
+    EMissingType MissingType = 1 [json_name = "missing_type"];
+    uint32 ReaskCount = 2 [json_name = "reask_count"];
+}
+
+message TFairytaleReaskState {
+    message TFairytale {
+        string TrackId = 1 [json_name = "track_id"];
+        string Title = 2 [json_name = "title"];
+    }
+
+    uint32 FairytaleReaskCount = 1 [json_name = "fairytale_reask_count"];
+    repeated TFairytale PreviousFairytales = 2 [json_name = "previous_fairytales"];
+}
+
+message TOnboardingState {
+    message TAskingFavorite {
+        enum EContentType {
+            Artist = 0;
+            Genre = 1;
+        }
+        EContentType Type = 1 [json_name = "type"];
+        // True when asking for a favorite for a second time
+        bool Reasking = 2 [json_name = "reasking"];
+    }
+
+    message TTracksGame {
+        uint32 TrackIndex = 1 [json_name = "track_index"];
+        // Zero for infinity
+        uint32 TracksCount = 2 [json_name = "tracks_count"];
+        uint32 ReaskCount = 3 [json_name = "reask_count"];
+
+        reserved 4;
+        reserved "Puid";
+    }
+
+    message TStage {
+        oneof Stage {
+            TAskingFavorite AskingFavorite = 1 [json_name = "asking_favorite"];
+            TTracksGame TracksGame = 2 [json_name = "tracks_game"];
+        }
+    }
+
+    bool InOnboarding = 1 [json_name = "in_onboarding"];
+    bool InMasterOnboarding = 2 [json_name = "in_master_onboarding"];
+    repeated TStage OnboardingSequence = 5 [json_name = "onboarding_sequence"];
+    // For starting genre radio in tracks game stage
+    string LikedGenre = 6 [json_name = "liked_genre"];
+
+    reserved 3, 4;
+    reserved "AskingFavorite", "TracksGame";
+}
+
+message TFairytaleTurnOffTimer {
+    uint64 PlayStartedTimestamp = 1 [json_name = "play_started_timestamp"];
+    uint64 Duration = 2 [json_name = "duration"];
+}
+
+message TRepeatedSkipState {
+    uint64 SkipCount = 1 [json_name = "skip_count"];
+    uint64 ProposalTimestamp = 2 [json_name = "proposal_timestamp"];
+}
+
+message TScenarioState {
+    enum EPlaybackMode {
+        // deprecated. Use TBiometryOptions.EPlaybackMode
+        OwnerMode = 0;
+        IncognitoMode = 1;
+        GuestMode = 2;
+    }
+
+    TMusicQueue Queue = 1 [json_name = "queue"];
+    reserved 2; // AccountStatus
+    string BiometryUserId = 3 [json_name = "biometry_user_id"];     // deprecated. Use TBiometryOptions
+
+    TMusicReaskState ReaskState = 4 [json_name = "reask_state"];
+    TFairytaleReaskState FairytaleReaskState = 5 [json_name = "fairytale_reask_state"];
+    TOnboardingState OnboardingState = 6 [json_name = "onboarding_state"];
+
+    string ProductScenarioName = 7 [json_name = "product_scenario_name"];
+    bool Incognito = 8 [json_name = "incognito"];   // deprecated
+    TFairytaleTurnOffTimer FairytaleTurnOffTimer = 9 [json_name = "fairytale_turn_off_timer"];
+    TRepeatedSkipState RepeatedSkipState = 10 [json_name = "repeated_skip_state"];
+
+    EPlaybackMode PlaybackMode = 11 [json_name = "playback_mode"];  // deprecated. Use TBiometryOptions
+    string GuestOAuthTokenEncrypted = 12 [json_name = "guest_oauth_token_encrypted"];   // deprecated. Use TBiometryOptions
+    string MultiroomToken = 13 [json_name = "multiroom_token"];
+    bool IsOwnerEnrolled = 14 [json_name = "is_owner_enrolled"];    // deprecated. Use TBiometryOptions
+}
+
+enum EContentAttentionVer2 {
+    NoAttention = 0;
+    AttentionContainsAdultContentVer2 = 1;
+    AttentionExplicitContentFilteredVer2 = 2;
+    AttentionMayContainExplicitContentVer2 = 3;
+    AttentionForbiddenPodcast = 4;
+}
+
+enum EContentErrorVer2 {
+    NoError = 0;
+    ErrorForbiddenVer2 = 1;
+    ErrorRestrictedByChildVer2 = 2;
+    ErrorNotFoundVer2 = 3;
+}
+
+message TOnDemandRequest {
+    string ArtistId = 1 [json_name = "artist_id"];
+    string SearchText = 2 [json_name = "search_text"];
+    string TrackId = 3 [json_name = "track_id"];
+}
+
+message TPlaylistRequest {
+    enum EPlaylistType {
+        Normal = 0; // Normal user's playlist
+        Special = 1; // Playlists like 'Play list of the day', 'Dejavu' etc
+    }
+    EPlaylistType PlaylistType = 1 [json_name = "playlist_type"];
+    string PlaylistName = 2 [json_name = "playlist_name"];
+}
+
+message TRadioRequest {
+    reserved 2; reserved "StationId";
+    repeated string StationIds = 3 [json_name = "station_ids"];
+    bool NeedRestrictedContentSettingsAttention = 4 [json_name = "need_restricted_content_settings_attention"];
+}
+
+message TGenerativeRequest {
+    string StationId = 1 [json_name = "station_id"];
+}
+
+message TComplexLikeDislikeRequest {
+    message TArtistTarget {
+        string Id = 1 [json_name = "id"];
+        string Name = 2 [json_name = "name"];
+    }
+
+    message TTrackTarget {
+        string Id = 1 [json_name = "id"];
+        string Title = 2 [json_name = "title"];
+        string AlbumId = 3 [json_name = "album_id"];
+    }
+
+    message TAlbumTarget {
+        string Id = 1 [json_name = "id"];
+        string Title = 2 [json_name = "title"];
+    }
+
+    message TGenreTarget {
+        string Id = 1 [json_name = "id"];
+    }
+
+    bool IsLike = 1 [json_name = "is_like"]; // Otherwise is dislike
+    oneof Target {
+        TArtistTarget ArtistTarget = 2 [json_name = "artist_target"];
+        TTrackTarget TrackTarget = 3 [json_name = "track_target"];
+        TAlbumTarget AlbumTarget = 4 [json_name = "album_target"];
+        TGenreTarget GenreTarget = 5 [json_name = "genre_target"];
+    }
+}
+
+message TFindTrackIdxRequest {
+    enum EContentType {
+        Undefined = 0;
+        Playlist = 1;
+        Artist = 2;
+        Album = 3;
+    }
+
+    EContentType ContentType = 1 [json_name = "content_type"];
+    string TrackId = 2 [json_name = "track_id"];
+    bool ShouldUseResumeFrom = 3 [json_name = "should_use_resume_from"];
+}
+
+message TMusicContext {
+    message TContentStatus {
+        reserved 1; reserved "Attention";
+        reserved 2; reserved "Error";
+        EContentAttentionVer2 AttentionVer2 = 3 [json_name = "attention_ver2"];
+        EContentErrorVer2 ErrorVer2 = 4 [json_name = "error_ver2"];
+    }
+
+    TScenarioState ScenarioState = 1 [json_name = "scenario_state"];
+
+    // All other fileds live while request is being handled
+    bool FirstPlay = 2 [json_name = "first_play"];
+    int32 OffsetMs = 3 [json_name = "offset_ms"];
+    TContentStatus ContentStatus = 4 [json_name = "content_status"];
+    TAccountStatus AccountStatus = 5 [json_name = "account_status"];
+    TPlaylistRequest PlaylistRequest = 6 [json_name = "playlist_request"];
+    TRadioRequest RadioRequest = 7 [json_name = "radio_request"];
+    bool NeedRadioSkip = 8 [json_name = "need_radio_skip"];
+    bool NeedRadioDislike = 9 [json_name = "need_radio_dislike"];
+    NAlice.NScenarios.TScenarioBaseRequest.ERequestSourceType RequestSource = 10 [json_name = "request_source"];
+    reserved 11; reserved "RadioSessionId";
+    bool NeedToSendShotSkipFeedback = 12 [json_name = "need_to_send_shot_skip_feedback"];
+    TGenerativeRequest GenerativeRequest = 13 [json_name = "generative_request"];
+    bool NeedGenerativeSkip = 14 [json_name = "need_generative_skip"];
+    bool NeedGenerativeDislike = 15 [json_name = "need_generative_dislike"];
+    TOnDemandRequest OnDemandRequest = 16 [json_name = "on_demand_request"];
+    bool NeedGenerativeContinue = 17 [json_name = "need_generative_continue"];
+    bool NeedSetPauseAtStart = 18 [json_name = "need_set_pause_at_start"];
+    TFindTrackIdxRequest FindTrackIdxRequest = 19 [json_name = "find_track_idx_request"];
+    reserved 20; reserved "NeedBassRadioFallback";
+    uint32 FirstRequestPageSize = 21 [json_name = "first_request_page_size"];
+    bool NeedOnboardingRadioLikeDislike = 22 [json_name = "need_onboarding_radio_like_dislike"];
+    bool NeedShotDislike = 23 [json_name = "need_shot_dislike"];
+    bool UnverifiedPlaylist = 24 [json_name = "unverified_playlist"];
+    bool UsedSavedProgress = 25 [json_name = "used_saved_progress"];
+    reserved 26; reserved "FmRadioRequest";
+    bool BatchOfTracksRequested = 27 [json_name = "batch_of_tracks_requested"];
+    reserved 28; reserved "NeedPersonalFmRadio";
+    bool CacheHit = 29 [json_name = "cache_hit"];
+}

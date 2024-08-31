@@ -1,0 +1,477 @@
+import:
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/persons.grnt
+    common/pronouns.grnt
+    common/verbs.grnt
+    messenger_call/common.grnt
+    messenger_call/call_targets.grnt
+    messenger_call/call_phrases.grnt
+    messenger_call/device_call_shortcuts.grnt
+
+form alice.messenger_call.device_call_shortcut:
+    root:
+        [$Lets* $Common.PronounMe* $Want* $CallShortcut+]
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.WayToCallAlice
+        $Common.LeftFiller
+        $ForFree
+        %lemma
+        чтобы
+        чтоб
+        этот
+        [от* в* у* компании* яндекс+]
+
+form alice.messenger_call.get_caller_name:
+    $Who:
+        %lemma
+        кто
+        кто такой
+        какой (номер|контакт|абонент)
+        с какого номера
+        от кого
+        откуда
+    $Calls:
+        %lemma
+        звонит
+        вызывет
+        на (связи|проводе)
+    root:
+        %lemma
+        [$Who]
+        [$Who $Calls]
+        [$Who $Call]
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.LeftFiller
+        покажи
+        расскажи
+        скажи
+        (там|тут|это|нам|мне|сейчас|здесь|у нас|же)
+        %negative
+        ты
+
+form alice.messenger_call.stop_current_call:
+    root:
+        $Hangup
+    filler:
+        $nonsense
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+
+form alice.messenger_call.stop_incoming_call:
+    root:
+        $Decline
+    filler:
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+
+form alice.messenger_call.accept_incoming_call:
+    root:
+        $Accept
+    filler:
+        $nonsense
+        $Filler
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+        %negative
+        сначала
+        с начала
+        еще раз
+        с? чего
+
+form alice.messenger_call.call_target.ifexp.bg_enable_call_target_form:
+    slots:
+        room:
+            source: $Room
+            type: user.iot.room
+        device:
+            source: $Device
+            type: user.iot.device
+        device_type:
+            source: $DeviceType
+            type: custom.device_type
+        emergency:
+            source: $Emergency
+            type: custom.emergency
+        other:
+            source: $Name | $PhoneNumber | $FrequentRelatives | $FrequentOrganizations | $FrequentPersonTargets | $WildcardCallTarget
+            type: string
+    root:
+        %lemma
+
+        $PersonCallTarget
+        $OrganizationCallTarget
+        $EmergencyCallTarget
+        $WildcardCallTarget
+
+        %force_negative
+        .* (включи|вруби|поставь) .*
+        .* такси .*
+        .* $Common.Stop .*
+    filler:
+        $nonsense
+        $Filler
+        $Common.Filler
+        $Common.LeftFiller
+        $Common.WayToCallAlice
+
+$Lets:
+    %lemma
+    давай
+    как
+    можешь
+    сделай
+
+$Want:
+    хочу
+    хочется
+    хотим
+    надо
+    нужно
+
+$ForFree:
+    %lemma
+    бесплатно
+    бесплатный
+
+$CallRequestMaybe:
+    абонент
+    звонок
+    телефон
+    вызов
+    как (позвонить|вызвать|набрать)
+    (напомни|скажи|дай) номер
+    позвонишь
+    поговори с
+
+$CallRequest:
+    %fillers off
+    %lemma off
+
+    $CallVerb<g:|inf|imper,2p,sg|imper,2p,pl|imper,1p,pl>
+    $GiveVerb<g:imper,2p,sg|imper,2p,pl|imper,1p,pl> номер
+    $SayVerb<g:imper,2p,sg|imper,2p,pl|imper,1p,pl> номер
+
+    (сделать|сделай) (вызов|звонок|звоночек|дозвон)
+    (дай|передай) (телефон|трубку|привет)
+    передай привет
+    поздоровайся
+    позови
+
+    %lemma on
+    звонить
+
+$Hangup:
+    .* [$StopNoun $Call] .*
+    .* [$StopVerb $Call] .*
+    .* [$TurnOff $Phone] .*
+    $Decline
+    $Phrases
+    $Phrases:
+        %lemma
+        $Common.CancelRemoveReset
+        отбой
+        пока
+        покеда
+        до (свидания|связи|встречи)
+        выключи
+        сбрось
+        скинь
+        отклони
+    %force_negative
+    ничего
+
+$Decline:
+    $LeftAnything $DeclineCall .*
+    $LeftAnything $TurnSoundOff .*
+    $LeftAnything [($Common.DontWant|(не $Common.Can)|$Common.Decline) $Talk] .*
+    $LeftAnything [($Common.DontWant|(не $Common.Can)|$Common.Decline|не стоит) $TurnOn $Common.PronounThis? ($Phone|$Call)] .*
+    $LeftAnything [$StopNoun ($Call|$Phone)] .*
+    $LeftAnything $Phrases
+    $LeftAnything $CallBackLater .*
+    $LeftAnything $StopVerb
+
+    отмена
+
+    [(я|мы)? $DeclineShort+ $Common.PronounThis?]
+    $Common.Stop $CallVerb
+
+    $DeclineShort:
+        не $Common.Can
+        не $TurnOn
+        не $StartVerb
+        занят|занята
+        $Common.Decline
+        $Common.Stop
+        поставь $Phone
+        $TurnOffVerbs
+        $DeclineVerb
+        %force_negative
+        %lemma
+        не
+        меня .*
+        я знал
+
+    $DeclineCall:
+        $Inner:
+            $DeclineVerb
+            $TurnOffVerbs
+        [$Inner+ (на|со|из)? (этот|эту|это)? ($Call|$Phone|беседу)]
+        [$Inner+ $Common.PronounMe? от? (этого|текущего)? ($Person|$Name)+]
+        [$Inner+ меня]
+
+    $TurnOffVerbs:
+        выключи|выключить|выключаю|выключаем
+        вешать|вешаю|вешаем|вешай|повесить|повесь|повешу
+        положить|положу|кладу|клади|ложи|положь|положи|ложи|ложь|ложим
+        бросить|брось|сбрось|сбросить|бросаю|сбрасываю|сбрасывай
+        скинуть|скинь|скину
+        вырубить|выруби|вырубай|вырубись
+        отрубить|отруби|отрубай
+        закрыть|закрой|закрываю|закрывай
+        разъедини
+        выйди
+        выкинь
+
+    $TurnSoundOff:
+        [$TurnSoundOffVerbs+ $Common.TheSound $Call?]
+        [($Common.Set|$Common.ToMake|переведи|включи)+ ($Call|$Phone)? $Common.In? $DoNotDisturb]
+
+        $TurnSoundOffVerbs:
+            %lemma
+            $Common.TurnOff
+            $Common.Remove
+            заглушить
+            приглушить
+
+        $DoNotDisturb:
+            %lemma
+            режим (занят|не беспокоить|в самолете)
+            [(беззвучный|бесшумный) режим?]
+            беззвучно
+
+    $CallBackLater:
+        $Common.Later (позвоню|перезвоню)
+
+    $LeftAnything:
+        .*
+        $NotAllowed:
+            не
+            зачем
+            почему
+            как
+            музыка|музыку
+            а потом
+        %force_negative
+        .* $NotAllowed
+
+    $DeclineVerb:
+        $DoNot $StartVerb
+        $StopVerb
+        $SkipVerb
+        $Ignore
+        %negative
+        %weight 10
+        не $StopVerb
+        не $SkipVerb
+        не $Ignore
+    $Ignore:
+        %lemma
+        игнорировать|проигнорировать|проигнорь
+        игнорить
+        игнор
+        [ничего не (делай|предпринимай)]
+        не обращай внимание
+        не реагируй
+    $Talk:
+        разговаривать
+        болтать
+        говорить
+    $Person:
+        %lemma
+        $Common.PersonsAll
+        абонент
+        звонящий
+        вызывающий
+    $Phrases:
+        пока
+        покеда
+        до (свидания|связи|встречи)
+        выключи
+        сбрось
+        скинь
+        отклони|отклоняем
+        отсоедини|отсоединяемся
+        отбой
+        стоп
+        всего доброго
+        меня? нет дома
+        хорошего (дня|вечера)
+        всего хорошего
+        достаточно
+        закрой рот
+
+    $Negatives:
+        %fillers off
+        $Common.Stop+ $Common.DontWant+
+        (не|$Common.DontWant)+ $Common.Stop+
+        %lemma
+        .* (с начала|сначала|в начало) .*
+        .* (песня|аудиозапись) .*
+        .* запустить навык .*
+        .* ответить на вопрос .*
+        .* (пока|почему|зачем) .*
+        .* не пожалеешь .*
+
+    %force_negative
+    $Negatives
+
+
+$Accept:
+    $LeftAnything [$TurnOnVerbs ($Call|$Phone)] .*
+    $LeftAnything [$ConnectMe ($Common.With|$Common.To) ($NamedPerson|$Call)] .*
+    $LeftAnything $ConnectMe .*
+    $LeftAnything $AcceptCall .*
+    $LeftAnything $AnswerToPerson .*
+    $LeftAnything $AnswerToCall .*
+    $LeftAnything $AnswerWithFillers
+    $LeftAnything $TalkWithPerson .*
+    $LeftAnything $ConnectToCall .*
+    $LeftAnything $ConnectAbonent .*
+    $LeftAnything $Common.Lets $Answer .*
+    $LeftAnything [(это|там)? $NamedPerson $Common.PronounMe? $CallVerb ($Answer|$TurnOnVerbs)]
+
+    $StartVerbsImper|$TurnOnVerbs
+    $StartNoun
+
+    ответ на $Call
+    [слушаю (вас|тебя)?]
+
+    $LeftAnything $Phrases+
+
+    $TurnOnVerbs:
+        взять|возьми|возьмите|возьму|возьмем
+        брать|бери|берите
+        снять|сними|снимите|снимай
+        поднять|подними|поднимите|поднимай
+        принять|прими|примите|принимай
+        включить|включи|включите|включай
+        подыми|подымите|подымай
+        подключить|подключи|подключай
+
+    $StartVerbsImper:
+        включить|включи|включай|включайте|включишь
+        начать|начни|начинай|начинаем|начнем|начинать
+        стартовать|стартани|стартуй
+        ответить|ответь
+        принимать|прими|принимай
+        соединять|соединить|соединяй|соедини
+        запустить|запускай
+
+    $ConnectMe:
+        $Inner:
+            свяжи|связывай
+            (установи|устанавливай) связь
+            соедини|соединяй
+            подключи|подключай
+        [$Inner+ (меня|нас)+]
+        [$Inner+ (меня|нас)? $Common.With ($NamedPerson|ним|ней|любимым)]
+
+    $ConnectToCall:
+        $Inner:
+            %lemma
+            присоединиться
+            подключиться
+            законнектиться
+        [$Inner+ к $Call]
+
+    $Answer:
+        ответить|отвечай|отвечаю|ответь|отвечу|ответим
+
+    $AcceptCall:
+        [$StartVerb<g:fut,pl|imper>+ $Call]
+
+    $AnswerToCall:
+        [$Answer на ($Call|$Phone)]
+
+    $AnswerToPerson:
+        [($Answer|прими|принимай|принять) (этому|этой|этого)? ($NamedPerson|ему|ей)+]
+
+    $AnswerWithFillers:
+        [$Answer $AcceptDescription+]
+
+    $AcceptDescription:
+        $Common.Immediately
+        $Common.Very (важный|нужный|срочный)?
+        $Common.Now
+        $Common.Agree
+        готов
+        скорее
+        (что сидим)? кого ждем
+
+    $TalkWithPerson:
+        [$Talk $Common.With $CallingMe? (ней|ним)]
+        [$Talk $Common.With $CallingMe? $Common.PronounThis? $NamedPerson<g:dat|ins>]
+        $Talk:
+            %lemma
+            поговорим
+            побазарим
+            обкашляем
+            поболтать|болтать
+        $CallingMe:
+            $Inner:
+                %lemma
+                звонящий
+                вызывающий
+            [$Inner+ $Common.PronounMe?]
+
+    $ConnectAbonent:
+        $Connect:
+            включить|включи|включите|включай|включим
+            подключить|подключи|подключишь|подключим|подключай
+            присоединить|присоедини|присоединишь|присоединим|присоединяй
+        [$Connect (абонента|звонящего|вызывающего)]
+
+    $NamedPerson:
+        $Person
+        $Name
+
+    $LeftAnything:
+        .*
+        $Restricted:
+            не|нет
+            нельзя
+            зачем
+            как
+            почему
+        %negative
+        .* $Restricted+
+
+    $Phrases:
+        на связи
+        у аппарата
+        алло
+        але
+        прием
+
+    $Negatives:
+        %fillers off
+        $Decline
+        %lemma
+        .* (с начала|сначала|в начало) .*
+        .* (песня|аудиозапись) .*
+        .* запустить навык .*
+        .* ответить на вопрос .*
+        .* пока .*
+
+    %force_negative
+    $Negatives

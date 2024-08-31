@@ -1,0 +1,9 @@
+RECURSE(
+    catboost_item_selector
+    common
+    composite
+    default
+    interface
+    relevance_based
+    testing
+)

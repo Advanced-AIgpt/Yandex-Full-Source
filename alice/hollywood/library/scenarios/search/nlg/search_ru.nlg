@@ -1,0 +1,474 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__common__ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search_factoid_div_cards_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/wizards/images/images_search_gallery_div1_ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/serp_gallery__ru.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/skill_discovery/skill_discovery_ru.nlg" %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ru.nlg" import showing_search_results_not_supported, opening_sites_or_apps_not_supported, nothing_found, render_serp_invitation_message, render_serp_caption %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ru.nlg" import get_search_info, render_factoid_or_object, render_search_images_invitation_message %}
+{% from "alice/hollywood/library/scenarios/search/nlg/search__ask__ru.nlg" import ask_confirmation_on_road %}
+
+{% macro render_navigator_warning() %}
+  Могу поискать это в Яндексе или на карте.
+{% endmacro %}
+
+{% macro render_auto_warning() %}
+  Извините, пока не умею.
+{% endmacro %}
+
+{% macro render_navigation_results(navigation_results, default_tts=true) %}
+  {% if navigation_results %}
+    {% text %}
+      {% if navigation_results.text %}
+        {{ navigation_results.text | capitalize_first }}
+      {% elif navigation_results.tts %}
+        {{ navigation_results.tts | capitalize_first }}
+      {% elif navigation_results.text_name %}
+        Открываю {{ navigation_results.text_name }}
+      {% else %}
+        Открываю
+      {% endif %}
+    {% endtext %}
+    {% voice %}
+      {% if default_tts or not navigation_results.tts %}
+        Открываю
+      {% else %}
+        {{ navigation_results.tts | capitalize_first }}
+      {% endif %}
+    {% endvoice %}
+  {% else %}
+    Открываю
+  {% endif %}
+{% endmacro %}
+
+{% macro render_web_search_push() %}
+  {% chooseline %}
+    Отправила вам пуш с дополнительной информацией.
+    Отправила вам сообщение, чтобы вы могли изучить вопрос самостоятельно.
+    Отправила ссылку с информацией, смотрите!
+    Отправила вам ссылку по теме, смотрите!
+    Больше подробностей - по ссылке, отправила!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_web_search_push_pp_reminder() %}
+  {% chooseline %}
+    Отправила вам пуш с дополнительной информацией. Чтобы его прочесть, зайдите в приложение Яндекс.
+    Отправила уведомление, продолжим в приложении Яндекс, откройте его.
+    Отправила вам сообщение, чтобы вы могли изучить вопрос самостоятельно. Чтобы его прочесть, зайдите в приложение Яндекс.
+    Отправила ссылку с информацией, продолжим в приложении Яндекс, откройте его.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo() %}
+  {% set accent %} {%vc%} <[accented]> {%evc%} {% endset %}
+  {% chooseline %}
+    Хотите почитать подробнее в телефоне? Только скажите
+    Хотите{{ accent }}, я отправлю результаты поиска вам на телефон?
+    Если захотите{{ accent }}, я могу отправить ссылку с результатами поиска на ваш телефон.
+    Хотите подробнее? Только попросите меня скинуть это на телефон
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo_long() %}
+  {% chooseline %}
+    Кстати, если у меня не получится найти ответ на ваш вопрос, я могу прислать вам ссылку на телефон, чтобы вы могли найти его самостоятельно
+    Кстати, я могу отправить вам пуш в телефон, чтобы вы могли легко найти ответ самостоятельно
+    К слову, иногда я не знаю ответа на вопрос, и теперь я научилась присылать уведомление на телефон, чтобы вы нашли ответ в Яндексе
+    Срочная новость, я научилась отправлять ссылку на телефон, чтобы вы могли найти ответ самостоятельно. А то вдруг я не смогу, иногда бывает
+    Кстати, если захотите посмотреть все результаты по этой теме, я могу прислать вам ссылку на телефон
+    Кстати, если захотите перейти на сайт, я могу прислать вам ссылку на телефон
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_handoff_promo_no_answer() %}
+  {% set accent %} {%vc%} <[accented]> {%evc%} {% endset %}
+  {% chooseline %}
+    Тут в двух словах не рассказать.
+    Так просто не объяснить.
+    Это сложный вопрос, быстро не разобраться.
+  {% endchooseline %}
+  {% chooseline %}
+    Хотите{{ accent }}, я отправлю результаты поиска вам на телефон?
+    Если хотите{{ accent }}, я могу отправить ссылку с результатами поиска на ваш телефон.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_web_search_push_no_answer() %}
+  {% chooseline %}
+    Ой, что-то пошло не так. Пожалуйста, попробуйте ещё раз.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not context.is_smart_speaker and not context.is_legatus and not context.is_navigator and not context.is_auto and not context.is_elari_watch %}
+    {% if info.afisha_url %}
+      {{ info.afisha_url }}
+    {% elif info.kinopoisk_url %}
+      {{ info.kinopoisk_url }}
+    {% elif info.translate_url %}
+      {{ info.translate_url }}
+    {% elif info.music_url %}
+      {{ info.music_url }}
+    {% elif info.market_url %}
+      {{ info.market_url }}
+    {% elif info.rasp_url %}
+      {{ info.rasp_url }}
+    {% elif info.avia_url %}
+      {{ info.avia_url }}
+    {% elif info.tv_url %}
+      {{ info.tv_url }}
+    {% elif info.auto_url %}
+      {{ info.auto_url }}
+    {% elif info.realty_url %}
+      {{ info.realty_url }}
+    {% elif info.nav_url %}
+      {{ info.nav_url }}
+    {% elif info.serp_search_url and not info.factoid_text and not info.calculator and not info.pre_rendered_card and not "skills_discovery" in context.attention %}
+      {{ info.serp_search_url }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if info.pre_rendered_card %}
+    {% text %} {{ info.pre_rendered_card['text'] }} {% endtext %}
+    {% voice %} {{ info.pre_rendered_card['tts'] or info.pre_rendered_card['text'] }} {% endvoice %}
+  {% elif info.afisha_url %}
+    {% chooseline %}
+      Давайте сразу на Афише посмотрим, чтобы время не терять.
+      Предлагаю сразу пойти на Афишу.
+      Давайте с этим сразу на Афишу.
+    {% endchooseline %}
+  {% elif info.kinopoisk_url %}
+    {% chooseline %}
+      Кажется, вопрос про кино. Давайте сразу в Кинопоиск.
+      Я сразу иду на Кинопоиск, когда у меня вопрос про кино.
+      Можем сразу на Кинопоиск пойти. Там оценки и рецензии.
+    {% endchooseline %}
+  {% elif info.translate_url %}
+    {% chooseline %}
+      Я думаю, для перевода нет ничего лучше {%vc%}Яндекс Переводчика{%evc%}{%tx%}Яндекс.Переводчика{%etx%}.
+      Лет ми спик фром май харт: пойдёмте в {%vc%}Яндекс Переводчик{%evc%}{%tx%}Яндекс.Переводчик{%etx%}. Там переводить проще.
+    {% endchooseline %}
+  {% elif info.music_url %}
+    {% chooseline %}
+      Если хотите послушать музыку, пойдемте сразу в {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%}, там удобно.
+      Веселее всего слушать музыку на {%vc%}Яндекс Музыке{%evc%}{%tx%}Яндекс.Музыке{%etx%}, пойдёмте туда.
+      За музыкой нужно только в {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%} ходить.
+      Можем сразу на {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%} пойти.
+    {% endchooseline %}
+  {% elif info.market_url %}
+    {% chooseline %}
+      Давайте сэкономим пару секунд и сразу поищем на Маркете. Вот такой план.
+      Быстрее всего товары можно найти и купить на Маркете. Там и отзывы есть.
+    {% endchooseline %}
+  {% elif info.rasp_url %}
+    {% chooseline %}
+      Я думаю, расписание транспорта удобнее всего смотреть на {%vc%}Яндекс Расписаниях{%evc%}{%tx%}Яндекс.Расписаниях{%etx%}. Открываю.
+      Нужно расписание транспорта? У Яндекса есть сервис специально для этого. Давайте посмотрим там.
+      Электрички и автобусы — это сервис {%vc%}Яндекс Расписания{%evc%}{%tx%}Яндекс.Расписания{%etx%}. Не говоря уже о поездах. Давайте там посмотрим.
+    {% endchooseline %}
+  {% elif info.avia_url %}
+    {% chooseline %}
+      Ключ поверни и полетели. У Яндекса есть специальный поиск билетов. Давайте там поищем.
+      Давайте на {%vc%}Яндекс Авиабилетах{%evc%}{%tx%}Яндекс.Авиабилетах{%etx%} это поищем, там можно любые билеты найти. Открываю.
+      Давайте на {%vc%}Яндекс Авиабилетах{%evc%}{%tx%}Яндекс.Авиабилетах{%etx%} это поищем, там можно дешёвые билеты найти. Открываю.
+    {% endchooseline %}
+  {% elif info.tv_url %}
+    {% chooseline %}
+      Предлагаю ничего не искать, а сразу пойти на сервис Телепрограмма.
+    {% endchooseline %}
+  {% elif info.auto_url %}
+    {% chooseline %}
+      Я думаю, если хотите купить или продать автомобиль, нет ничего лучше {%vc%}Авто ру{%evc%}{%tx%}Auto.Ru{%etx%}. Пойдемте прямо туда.
+    {% endchooseline %}
+  {% elif info.realty_url %}
+    {% chooseline %}
+      Если вас интересует недвижимость, можем сразу пойти на специальный сервис Яндекса, мне кажется, там удобнее.
+    {% endchooseline %}
+  {% elif info.calculator %}
+    {% if info.calculator == 'inf' %}
+      Бесконечность.
+    {% elif info.calculator == '-inf' %}
+      Минус бесконечность.
+    {% else %}
+      {% voice %}
+        {% if 'e' in info.calculator %}
+          Вот ответ
+        {% else %}
+          {{ info.calculator }}
+        {% endif %}
+      {% endvoice %}
+      {% text %}
+        {{ info.calculator }}
+      {% endtext %}
+    {% endif %}
+  {% elif info.nav_url %}
+    {% if "ask_confirmation" in context.attentions %}
+      {{ ask_confirmation_on_road(info) }}
+    {% elif "unsupported_feature" in context.attentions %}
+      {{ opening_sites_or_apps_not_supported(info, "simple_open_link" in context.attentions, "send_push" in context.attentions) }}
+    {% else %}
+      {{ render_navigation_results(info.nav, false) }}
+    {% endif %}
+  {% elif info.factoid_text or info.factoid_tts %}
+    {{ render_factoid_or_object(info.factoid_text, info.factoid_hostname, info.factoid_tts, info.factoid_voice_info, info.factoid_child_search, info.related_query, context.is_smart_speaker or context.is_legatus or context.is_auto or context.is_elari_watch, 'factoid_recipe_preroll' in context.attentions) }}
+    {% if (context.is_smart_speaker or context.is_legatus) and "handoff_promo" in context.attentions and not info.related_query %}
+      {{ render_handoff_promo() }}
+    {% elif (context.is_smart_speaker or context.is_legatus) and "handoff_promo_long" in context.attentions and not info.related_query %}
+      {{ render_handoff_promo_long() }}
+    {% endif %}
+  {% elif "skills_discovery" in context.attentions %}
+    # Do nothing in this case, text_card + div_card have already done the job
+  {% else %}
+    {% if (context.is_smart_speaker or context.is_legatus) and "search__nothing_found_with_handoff" in context.attentions %}
+      {{ render_handoff_promo_no_answer() }}
+    {% elif "search__nothing_found" in context.attentions %}
+      {{ nothing_found() }}
+    {% else %}
+      {% if (context.is_smart_speaker or context.is_legatus) and "search__push_sent" in context.attentions %}
+        {{ render_web_search_push() }}
+      {% elif (context.is_smart_speaker or context.is_legatus) and "search__push_sent_pp_reminder" in context.attentions %}
+        {{ render_web_search_push_pp_reminder() }}
+      {% elif (context.is_smart_speaker or context.is_legatus) and "search__push_not_sent" in context.attentions %}
+        {{ render_web_search_push_no_answer() }}
+      {% elif context.is_smart_speaker or context.is_legatus or context.is_elari_watch %}
+        {{ showing_search_results_not_supported() }}
+      {% elif "ask_confirmation" in context.attentions %}
+        {{ ask_confirmation_on_road(info) }}
+      {% elif context.is_auto %}
+        {{ render_auto_warning() }}
+      {% elif "search_images" in context.attentions %}
+        {{ render_search_images_invitation_message() }}
+      {% else %}
+        {{ render_serp_invitation_message() }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase search__skills_discovery %}
+  Хорошо. Вот кто может вам помочь:
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__serp %}
+  {{ render_serp_caption() }}
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__serp %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.serp_search_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__factoid_src %}
+  Открыть источник
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__factoid_src %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if info.factoid_url %}
+    {{ info.factoid_url }}
+  {% elif info.object_url %}
+    {{ info.object_url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__nav %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__nav %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.nav_url or info.factoid_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__phone_call %}
+  Позвонить
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__phone_call %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.factoid_phone_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__afisha %}
+  Открыть Афишу
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__afisha %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.afisha_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__kinopoisk %}
+  Открыть Кинопоиск
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__kinopoisk %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.kinopoisk_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__translate %}
+  Открыть Переводчик
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__translate %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.translate_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__music %}
+  Открыть Яндекс.Музыку
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__music %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.music_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__musicplayer %}
+  Открыть Яндекс.Музыку
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__musicplayer %}
+  {{ context.search__musicplayer.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__market %}
+  Открыть Маркет
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__market %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.market_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__rasp %}
+  Открыть Яндекс.Расписания
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__rasp %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.rasp_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__avia %}
+  Открыть Яндекс.Авиабилеты
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__avia %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.avia_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__tv %}
+  Открыть Телепрограмму
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__tv %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.tv_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__auto %}
+  Открыть Auto.Ru
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__auto %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.auto_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__realty %}
+  Открыть Яндекс.Недвижимость
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__realty %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.realty_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__show_on_map %}
+  Искать на карте
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__show_on_map %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {{ info.map_search_url.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__see_also %}
+  {{ context.search__see_also.data.query }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__search__see_also %}
+  {{ context.search__see_also.data.query }}
+{% endphrase %}
+
+{#                                   #}
+{# Answers prepared by new framework #}
+{#                                   #}
+{% phrase render_hwf_answer  %}
+  {% text %}
+    {{ context.text_answer }}
+  {% endtext %}
+  {% voice %}
+    {{ context.voice_answer }}
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_fact_calculator %}
+  {% if context.text_answer == "inf" %}
+    Бесконечность
+  {% elif context.text_answer == "-inf" %}
+    Минус бесконечность
+  {% else %}
+    {{ context.text_answer }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_fact_distance %}
+  Примерно
+  {% if context.value >= 1000 %}
+    {% set dist_km = context.value / 1000 %}
+    {{ dist_km | round | int }} км
+  {% elif context.value > 1 %}
+    {{ context.value | round | int }} м
+  {% elif context.value > 0.01 %}
+    {% set dist_sm = context.value * 100 %}
+    {{ dist_sm | round | int }} см
+  {% elif context.value > 0.001 %}
+    {% set dist_mm = context.value * 1000 %}
+    {{ dist_mm | round | int }} мм
+  {% else %}
+    {% set dist_nm = context.value * 1000000000 %}
+    {{ dist_nm | round | int }} нм
+  {% endif %}
+{% endphrase %}
+
+{# Временная заглушка, которая отвечает на нераспознанные данные #}
+{% phrase centaur_nothing %}
+  Поиск не распознал datasource
+{% endphrase %}

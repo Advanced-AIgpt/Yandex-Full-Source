@@ -1,0 +1,27 @@
+{% from "alice/hollywood/library/scenarios/reminders/nlg/common__ar.nlg" import shoot_at %}
+
+{% phrase success %}
+  {% set amount = context.reminders|length %}
+  {% if amount > 0 %}
+    لقد عينت بنجاح
+    {% if amount == 1 %}
+      تذكير "{{ context.reminders.0.text }}" في {{ shoot_at(context.reminders.0.datetime) }}.
+    {% else %}
+      {{ amount }} {{ 'تذكير' | pluralize(amount) }}:
+      {% for r in context.reminders %}
+        "{{ r.text }}" على {{ shoot_at(r.datetime) }}
+        {% if not loop.last %}
+        \n
+        {% endif %}
+      {% endfor %}.
+    {% endif %}
+  {% else %}
+    تم تعيين التذكير بنجاح.
+  {% endif %}
+{% endphrase %}
+{% phrase fail %}
+  {% chooseline %}
+    حدث خطأ ما، رجاءً حاول تعيين تذكير مجدداً.
+    لم يتم تعيين تذكير.
+  {% endchooseline %}
+{% endphrase %}

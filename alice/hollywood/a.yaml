@@ -1,0 +1,108 @@
+service: hollywood
+title: Hollywood
+ci:
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  autocheck:
+    fast-targets:
+      - apphost/conf/tests
+      - alice/tests/protobuf/breaking_change
+
+  actions:
+    test-hw-scenario-template:
+      flow: test-hw-scenario-template
+      triggers:
+        - on: pr
+        - on: commit
+          filters:
+            - discovery: dir
+              sub-paths:
+                - hw/**
+                - library/framework/**
+    hollywood-common-fast-data:
+      flow: hollywood-common-fast-data
+      triggers:
+      - 'on': commit
+        filters:
+        - abs-paths:
+          - alice/hollywood/shards/common/prod/fast_data/**
+    hollywood-general-conversation-fast-data:
+      flow: hollywood-general-conversation-fast-data
+      triggers:
+      - 'on': commit
+        filters:
+        - abs-paths:
+          - alice/hollywood/shards/general_conversation/prod/fast_data/**
+          - alice/hollywood/library/scenarios/general_conversation/fast_data/**
+          - alice/begemot/lib/fixlist_index/data/ru/**
+
+  flows:
+    test-hw-scenario-template:
+      title: Check HW template scenario pipeline
+      jobs:
+        run_task:
+          title: Create and build scenario
+          task: common/misc/run_command
+          attempts:
+            max: 3
+          input:
+            config:
+              arc_mount_config:
+                enabled: true
+              cmd_line: |
+                # build pr trunk
+                $ARC_BIN pr checkout ${context.launch_pull_request_info.pull_request.id}
+                # create example scenario: FooBar
+                ya make -r $ARCADIA_PATH/alice/hollywood/hw
+                $ARCADIA_PATH/alice/hollywood/hw/hw create -n fooBar --abc megamind
+                # build and test example scenario: FooBar
+                ya make -rt $ARCADIA_PATH/alice/hollywood/library/scenarios/foo_bar
+    hollywood-common-fast-data:
+      title: Hollywood common fast data
+      jobs:
+        hollywood-common-fast-data-dummy-build:
+          title: Hollywood common fast data
+          task: projects/alice/hollywood/hollywood_common_fast_data
+          input:
+            only_build: true
+        manual-confirm:
+          needs: hollywood-common-fast-data-dummy-build
+          title: Confirm fast_data release
+          task: dummy
+          manual: # Ручное подтверждение задачи
+              enabled: true
+              prompt: "Release LAST fast_data version to prod"
+              approvers:
+                service: aliceruntime
+        hollywood-common-fast-data-release:
+          needs: manual-confirm
+          title: Hollywood common fast data
+          task: projects/alice/hollywood/hollywood_common_fast_data
+          input:
+            only_build: false
+
+    hollywood-general-conversation-fast-data:
+      title: Hollywood general conversation fast data
+      jobs:
+        hollywood-general-conversation-fast-data-dummy-build:
+          title: Hollywood general conversation fast data
+          task: projects/alice/hollywood/hollywood_general_conversation_fast_data
+          input:
+            only_build: true
+        manual-confirm:
+          needs: hollywood-general-conversation-fast-data-dummy-build
+          title: Confirm fast_data release
+          task: dummy
+          manual: # Ручное подтверждение задачи
+              enabled: true
+              prompt: "Release LAST fast_data version to prod"
+              approvers:
+                service: aliceruntime
+        hollywood-general-conversation-fast-data-release:
+          needs: manual-confirm
+          title: Hollywood general conversation fast data
+          task: projects/alice/hollywood/hollywood_general_conversation_fast_data
+          input:
+            only_build: false

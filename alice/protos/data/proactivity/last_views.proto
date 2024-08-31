@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package NAlice.NData.NProactivity;
+option go_package = "a.yandex-team.ru/alice/protos/data/proactivity";
+option java_package = "ru.yandex.alice.protos.data.proactivity";
+
+import "alice/protos/data/proactivity/analytics.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TItemView {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TItemAnalytics ItemAnalytics = 1 [(NYT.column_name) = "item_analytics"];
+    repeated TSuccessCondition SuccessConditions = 2 [(NYT.column_name) = "success_conditions"];
+    string RequestId = 3 [(NYT.column_name) = "request_id"];
+    string PostrollSource = 4 [(NYT.column_name) = "postroll_source"];
+}
+
+message TLastViews {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    repeated TItemView ItemViews = 1 [(NYT.column_name) = "item_views"];
+    string LastViewRequestId = 2 [(NYT.column_name) = "last_view_request_id"];   // используется для action-ов стопов
+}
+
+message TLastViewsStorage {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // The key is the item type in PN_AlisaSkills
+    map<uint32, TLastViews> LastViewsByItemType = 2 [(NYT.column_name) = "last_views_by_item_type"];
+
+    reserved 1; reserved "LastViews";
+}

@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package NAlice.NData;
+option go_package = "a.yandex-team.ru/alice/protos/data/scenario/alarm";
+option java_package = "ru.yandex.alice.protos.data.scenario.alarm";
+
+import "google/protobuf/struct.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TAlarm {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    string AlarmId = 1 [json_name = "alarm_id", (NYT.column_name) = "alarm_id"];
+    TTime LocalTime = 2 [json_name = "local_time", (NYT.column_name) = "local_time"];
+    bool CurrentlyPlaying = 3 [json_name = "currently_playing", (NYT.column_name) = "currently_playing"];
+    bool Enabled = 4 [json_name = "enabled", (NYT.column_name) = "enabled"];
+    repeated TActivationDay ActivationDays = 5 [json_name = "activation_days", (NYT.column_name) = "activation_days"];
+    repeated TAlarmAction AlarmActions = 6 [json_name = "alarm_actions", (NYT.column_name) = "alarm_actions"];
+
+    enum EWeekday {
+        NONE = 0;
+        MONDAY = 1;
+        TUESDAY = 2;
+        WEDNESDAY = 3;
+        THURSDAY = 4;
+        FRIDAY = 5;
+        SATURDAY = 6;
+        SUNDAY = 7;
+    }
+
+    message TDate {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        uint32 Year = 1 [json_name = "year", (NYT.column_name) = "year"];
+        uint32 Month = 2 [json_name = "month", (NYT.column_name) = "month"];
+        uint32 Day = 3 [json_name = "day", (NYT.column_name) = "day"];
+    }
+
+    message TTime {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        uint32 Hours = 1 [json_name = "hours", (NYT.column_name) = "hours"];
+        uint32 Minutes = 2 [json_name = "minutes", (NYT.column_name) = "minutes"];
+        uint32 Seconds = 3 [json_name = "seconds", (NYT.column_name) = "seconds"];
+    }
+
+    message TActivationDay {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        oneof ActivationDay {
+            option (NYT.variant_field_name) = "activation_day";
+
+            EWeekday Weekday = 1 [json_name = "weekday", (NYT.column_name) = "weekday"];
+            TDate Date = 2 [json_name = "date", (NYT.column_name) = "weekdays"];
+        }
+    }
+
+    message TAlarmAction {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        oneof Action {
+            option (NYT.variant_field_name) = "action";
+
+            TPlaySound PlaySound = 1 [json_name = "play_sound", (NYT.column_name) = "play_sound"];
+        }
+
+        message TPlaySound {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            TRawSoundAlarmSetting RawSoundAlarmSetting = 1 [json_name = "raw_sound_alarm_setting", (NYT.column_name) = "raw_sound_alarm_setting"];
+            TSoundLevelInfo SoundLevelInfo = 2 [json_name = "sound_level_info", (NYT.column_name) = "sound_level_info"];
+
+            message TRawSoundAlarmSetting {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                google.protobuf.Struct RawInfo = 1 [json_name = "raw_info", (NYT.column_name) = "raw_info", (NYT.flags) = SERIALIZATION_PROTOBUF];
+            }
+
+            message TSoundLevelInfo {
+                option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+                uint32 MinSoundLevel = 1 [json_name = "min_sound_level", (NYT.column_name) = "min_sound_level"];
+                uint32 MaxSoundLevel = 2 [json_name = "max_sound_level", (NYT.column_name) = "max_sound_level"];
+                uint32 VolumeStepMs = 3 [json_name = "volume_step_ms", (NYT.column_name) = "volume_step_ms"];
+            }
+        }
+    }
+}
+

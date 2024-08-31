@@ -1,0 +1,155 @@
+use hahn;
+
+pragma yt.Pool='voice';
+pragma yson.DisableStrict = 'true';
+
+$from_date = '2020-02-10';
+$to_date = '2020-02-11';
+
+$sample_size = 50000;
+
+$get_sc_info = ($analyticsInfo) -> { RETURN $analyticsInfo.analytics_info.Dialogovo.scenario_analytics_info };
+
+$get_session_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::LookupString($obj, 'name') == 'external_skill.session' }
+    )[0];
+};
+
+$get_skill_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::Contains($obj, 'skill') }
+    )[0];
+};
+
+$get_user_obj = ($analyticsInfo) -> {
+    RETURN ListFilter(
+        Yson::ConvertToList($get_sc_info($analyticsInfo).objects),
+        ($obj) -> { RETURN Yson::LookupString($obj, 'name') == 'external_skill.user' }
+    )[0];
+};
+
+$vins_logs = (
+        SELECT
+            vins_logs.*,
+        FROM
+            range(`home/voice/vins/logs/dialogs`,$from_date,$to_date) as vins_logs
+);
+
+$dialogovo_server_logs = (
+        SELECT
+            *
+        FROM
+            range(`home/logfeller/logs/dialogovo-prod-server-log/1d`,$from_date,$to_date)
+);
+
+$vins_dialogovo_logs = (
+    SELECT
+        Yson::ConvertToString($get_sc_info(analytics_info).intent) as intent,
+        Yson::ConvertToString($get_skill_obj(analytics_info).human_readable) as skill_human_readable,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.category) as skill_category,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.developer_name) as skill_developer_name,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.developer_type) as skill_developer_type,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.id) as skill_id,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.name) as skill_name,
+        Yson::ConvertToString($get_skill_obj(analytics_info).skill.voice) as skill_voice,
+        Yson::ConvertToString($get_session_obj(analytics_info).human_readable) as skill_session_hum_read,
+        Yson::ConvertToString($get_session_obj(analytics_info).id) as skill_session,
+        Yson::ConvertToString($get_user_obj(analytics_info).skill_user.skill_user_id) as skill_user,
+        Yson::ConvertToString($get_user_obj(analytics_info).human_readable) as skill_user_hum_read,
+        Yson::ConvertToString(request.request_id) as request_id,
+        utterance_text,
+        `uuid`,
+        utterance_source,
+        type,
+        server_time,
+        server_time_ms,
+        lang,
+        form_name,
+        device_id,
+        dialog_id,
+        error,
+        client_time,
+        client_tz,
+        analytics_info,
+        request,
+        DateTime::MakeDate(DateTime::FromMilliseconds(server_time*1000)) as server_date
+    FROM $vins_logs
+    WHERE
+        form_name=='Dialogovo' AND
+        Yson::Contains(analytics_info.analytics_info.Dialogovo,'scenario_analytics_info')
+);
+
+$irrelevants = (
+    SELECT
+        vins_logs.request_id as request_id,
+        vins_logs.utterance_text as utterance_text,
+        vins_logs.utterance_source as utterance_source
+    FROM
+        $dialogovo_server_logs as server_logs
+    JOIN
+        $vins_logs as vins_logs on vins_logs.request_id = server_logs.requestId
+    WHERE
+        server_logs.message ilike 'No skill found by activation phrases%' AND
+        (form_name!='Dialogovo' OR
+        NOT Yson::Contains(analytics_info.analytics_info.Dialogovo,'scenario_analytics_info') OR
+        Yson::ConvertToString($get_sc_info(vins_logs.analytics_info).intent) in ('external_skill.irrelevant','irrelevant'))
+        -- button click
+        AND vins_logs.utterance_source != 'suggested'
+    GROUP BY vins_logs.request_id, vins_logs.utterance_text, vins_logs.utterance_source
+);
+
+SELECT * from $irrelevants limit 100;
+$irrelevant_count = SELECT count(*) from $irrelevants;
+SELECT $irrelevant_count;
+
+$activations = (
+    SELECT
+        request_id,
+        utterance_text,
+        utterance_source,
+        'ACTIVATE' as status,
+        skill_id
+    FROM
+        $vins_dialogovo_logs as vins_logs
+    WHERE
+        vins_logs.intent = 'external_skill.activate' AND
+        vins_logs.utterance_source != 'suggested'
+    GROUP BY request_id, utterance_text, skill_id, utterance_source
+);
+
+SELECT * from $activations limit 100;
+$activations_count = SELECT count(*) FROM $activations;
+SELECT $activations_count;
+
+
+$all_requests = (
+select request_id, utterance_text,utterance_source, 'IRRELEVANT' as status, '' as skill_id from $irrelevants
+union all
+select * from $activations
+);
+
+$count = $irrelevant_count + $activations_count;
+select $count;
+SELECT COUNT(*) FROM $all_requests;
+
+$sample_ratio = (100 * CAST($sample_size AS Double)) / $count;
+$sample = (
+    SELECT
+        request_id,
+        utterance_text,
+        utterance_source,
+        status,
+        skill_id
+    FROM
+        $all_requests
+    TABLESAMPLE BERNOULLI($sample_ratio));
+
+SELECT * FROM $sample;
+SELECT utterance_text FROM $sample;
+
+
+INSERT INTO `//home/paskills/discovery/datasets/activations_with_skill/raw` WITH TRUNCATE
+SELECT * FROM $sample;

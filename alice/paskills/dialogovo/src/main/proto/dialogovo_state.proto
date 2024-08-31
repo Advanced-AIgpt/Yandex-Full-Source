@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package ru.yandex.alice.paskill.dialogovo.proto;
+
+option java_package = "ru.yandex.alice.paskill.dialogovo.proto";
+option java_outer_classname = "DialogovoStateProto";
+
+message State {
+    message ProactiveSkillExit {
+        int64 SuggestedExitAtMessageId = 1 [json_name = "suggested_exit_at_message_id"];
+        int64 DoNotUnderstandReplyCounter = 2 [json_name = "do_not_understand_reply_counter"];
+    }
+
+    message SkillSession {
+        string SessionId = 1 [json_name = "session_id"];
+        int64 MessageId = 2 [json_name = "message_id"];
+        int64 StartTimestamp = 3 [json_name = "start_timestamp"];
+        bool IsEnded = 4 [json_name = "is_ended"];
+        ProactiveSkillExit proactiveSkillExitState = 5 [json_name = "proactive_skill_exit"];
+        string ActivationSourceType = 6 [json_name = "activation_source_type"];
+        int64 AppMetricaEventCounter = 7 [json_name = "appmetrica_event_counter"];
+        int64 FailCounter = 8 [json_name = "fail_counter"];
+    }
+
+    message ThereminModeState {
+        bool IsInternal = 1 [json_name = "is_internal"];
+        string ModeId = 2 [json_name = "mode_id"];
+    }
+
+    message TSkillFeedbackState {
+        string SkillId = 1 [json_name = "skill_id"];
+    }
+
+    message TNewsState {
+        message TNewsByFeed {
+            map<string, string> FeedNews = 1 [json_name = "feed_news"];
+        }
+        map<string, TNewsByFeed> LastFeedNewsBySkillRead = 1 [json_name = "last_feed_news_by_skill_read"];
+        repeated string PostrolledProviders = 2 [json_name = "postroll_providers"];
+        int64 LastPostrolledProviderTimestamp = 3 [json_name = "last_postrolled_provider_timestamp"];
+    }
+
+    message TRecipeState {
+
+        enum TStateType {
+            UNKNOWN = 0;
+            SELECT_RECIPE = 1;
+            RECIPE_STEP = 2;
+            RECIPE_STEP_AWAITS_TIMER = 3;
+            WAITING_FOR_FEEDBACK = 4;
+        }
+
+        message TTimer {
+            string Id = 1 [json_name = "id"];
+            string Text = 2 [json_name = "text"];
+            string Tts = 3 [json_name = "tts"];
+            int64 ShouldRingAtEpochMs = 4 [json_name = "should_ring_at_epoch_ms"];
+            int64 DurationSeconds = 5 [json_name = "duration_seconds"];
+        }
+
+        TStateType StateType = 1 [json_name = "state_type"];
+        string RecipeId = 2 [json_name = "recipe_id"];
+        bool CookingStarted = 3 [json_name = "cooking_started"];
+        int32 CurrentStepId = 4 [json_name = "current_step_id"];
+        repeated TTimer Timers = 5 [json_name = "timers"];
+        string PreviousIntent = 6 [json_name = "previous_intent"];
+        string SessionId = 7 [json_name = "session_id"];
+        repeated int32 CompletedSteps = 8 [json_name = "completed_steps"];
+        repeated string CreatedTimerIds = 9 [json_name = "created_timer_ids"];
+        repeated string OnboardingSeenIds = 10 [json_name = "onboarding_seen_ids"];
+
+    }
+
+    message TProductActivationState {
+        enum TActivationType {
+            UNKNOWN = 0;
+            MUSIC = 1;
+        }
+        int32 MusicAttemptCount = 1 [json_name = "music_attempt_count"];
+        TActivationType ActivationType = 2 [json_name = "activation_type"];
+    }
+
+    message TGeolocationSharingState {
+        bool IsRequested = 1 [json_name = "is_requested"];
+        int64 AllowedSharingUntilTime = 2 [json_name = "allowed_sharing_until_time"];
+    }
+
+    string CurrentSkillId = 1 [json_name = "current_skill_id"];
+    SkillSession Session = 2 [json_name = "session"];
+    ThereminModeState ThereminState = 3 [json_name = "theremin_state"];
+    int64 PrevResponseTimestamp = 4 [json_name = "prev_response_timestamp"];
+    bool IsFeedbackRequested = 5 [json_name = "is_feedback_requested", deprecated = true];
+    TNewsState NewsState = 6 [json_name = "news_state"];
+    TSkillFeedbackState SkillFeedbackState = 7 [json_name = "skill_feedback_state"];
+    TRecipeState RecipeState = 8 [json_name = "recipe_state"];
+    bool IsSessionInBackground = 9 [json_name = "is_session_in_background"];
+    int32 ResumeSessionAfterPlayerStopRequests = 10  [json_name = "resume_session_after_player_stop_requests"];
+    TProductActivationState ProductActivationState = 11 [json_name = "product_activation_state"];
+    TGeolocationSharingState GeolocationSharingState = 12 [json_name = "geolocation_sharing_state"];
+}

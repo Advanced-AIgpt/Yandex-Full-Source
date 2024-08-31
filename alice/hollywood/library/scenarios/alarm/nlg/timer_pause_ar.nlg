@@ -1,0 +1,46 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" import render_error, render_timer, render_timer_list, no_such_timer, suggest_show_timers %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% elif context.attentions.get('multiple_timers') %}
+    {{ render_timer_list(context.data.available_timers) }}\n{% vc %}-{% evc %}
+    {% if context.data.available_timers|length > 1 %}
+      أيها يجب أن أضعه على الإيقاف المؤقت؟
+    {% else %}
+      هل تريد وضعه على الإيقاف المؤقت؟
+    {% endif %}
+  {% else %}
+    حسناً، وضعته على الإيقاف المؤقت
+    {% if context.data.timer_id == 'all' %}
+      جميع المؤقتات.
+    {% else %}
+      {% if context.attentions.get('timer__abs_time') %}
+        {{ render_timer(context.data.time, True, context.data.specification) }}.
+      {% else %}
+        {{ render_timer(context.data.time, False, context.data.specification) }}.
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {% chooseitem %}
+      لا، حالياً لا أعرف كيف أضع المؤقت على الإيقاف المؤقت. لكن هذا الوضع مؤقت.
+    {% or %}
+      حالياً لا أستطيع وضع المؤقتات في هذا الجهاز على الإيقاف المؤقت، لكنني سأتعلم يوماً ما.
+    {% endchooseitem %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    لا أفهم أي مؤقت تريد أن أوقف.
+  {% elif context.error.data.code == 'already_actioned' %}
+    المؤقت معين.
+  {% else %}
+    {% if context.data.time %}
+      {{ render_error(context.error.data.code, time=context.data.time) }}
+    {% else %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

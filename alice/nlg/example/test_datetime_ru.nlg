@@ -1,0 +1,106 @@
+{% set dt_1970_utc = timestamp_to_datetime(3543) %}
+{% set dt_1912 = datetime(1912, 4, 14, 23, 40) %}
+{% set dt_2008 = create_date_safe(2008, 10, 16) %}
+{% set dt_2010 = datetime(2010, 1, 5, 12, 15, 40) %}
+{% set utc = parse_tz('UTC') %}
+{% set msd = parse_tz('Europe/Moscow') %}
+{% set cet = parse_tz('Europe/Amsterdam') %}
+
+{% macro render_datetime(date) %}
+    {{ date.year }}
+    {{ date.month }}
+    {{ date.day }}
+    {{ date.hour }}
+    {{ date.minute }}
+    {{ date.second }}
+    {{ date.microsecond }}
+    {{ date.tzinfo }}
+    {{ date | human_month }}
+    {{ date | format_weekday }}
+{% endmacro %}
+
+{% macro add_hours_and_render(date) %}
+    {% set date2 = add_hours(date, 6) %}
+    {% set date3 = add_hours(date2, 7) %}
+    {% set date4 = add_hours(date3, 25) %}
+    {{ date2.strftime('%Y-%m-%d-%H:%M:%S') }} |
+    {{ date3.strftime('%Y-%m-%d-%H:%M:%S') }} |
+    {{ date4.strftime('%Y-%m-%d-%H:%M:%S') }} |
+{% endmacro %}
+
+{% phrase test_timestamp %}
+    {{ render_datetime(dt_1970_utc) }};
+    {{ render_datetime(timestamp_to_datetime(-3665)) }}
+{% endphrase %}
+
+{% phrase test_datetime %}
+   {{ render_datetime(dt_1912) }}
+{% endphrase %}
+
+{% phrase test_strftime %}
+    {{ dt_1970_utc.strftime("%Y-%m-%d %H:%M:%S") }};
+    {{ dt_1970_utc.strftime("%Y %m %d %H-%M") }};
+    {{ dt_1970_utc.strftime("%Z%z") }};
+    {{ dt_2008.strftime("%Y-%m-%d %H:%M:%S") }};
+{% endphrase %}
+
+{% phrase test_timezone %}
+    {% set dt_2008_msd = msd.localize(dt_2008) %}
+    {% set dt_2010_msk = msd.localize(dt_2010) %}
+    {% set dt_2017_msk = timestamp_to_datetime(1500000000, parse_tz('Europe/Moscow')) %}
+    {{ utc }};
+    {{ dt_2008_msd.strftime("%Y-%m-%d %H:%M:%S %Z%z") }};
+    {{ dt_2010_msk.strftime("%Y-%m-%d %H:%M:%S %Z%z") }};
+    {{ dt_2017_msk.strftime("%Y-%m-%d %H:%M:%S %Z%z") }};
+{% endphrase %}
+
+{% phrase test_full_datetime %}
+    {% set dt_2020 = datetime(2020, 2, 7, 10, 31, 17, 120734) %}
+    {{ render_datetime(dt_2020) }}
+{% endphrase %}
+
+{% phrase test_parse_date %}
+    {% set dt_str = datetime_strptime("2020-01-17 15:45:14", "%Y-%m-%d %H:%M:%S") %}
+    {{ dt_str.strftime("%Y-%m-%d %H:%M:%S") }};
+    {% set dt_parsed = "2019/07/30 17:33:21" | parse_dt %}
+    {{ dt_parsed.strftime("%Y-%m-%d %H:%M:%S") }};
+{% endphrase %}
+
+{% phrase test_isoweekday %}
+    {{ dt_1912.isoweekday() }}
+    {{ dt_1970_utc.isoweekday() }}
+    {{ dt_2008.isoweekday() }}
+    {{ dt_2010.isoweekday() }}
+    {{ datetime(2020, 2, 14).isoweekday() }}
+{% endphrase %}
+
+{% phrase test_add_hours %}
+    {{ add_hours_and_render(dt_1912) }}
+    {{ add_hours_and_render(dt_1970_utc) }}
+    {{ add_hours_and_render(dt_2008) }}
+    {{ add_hours_and_render(dt_2010) }}
+{% endphrase %}
+
+{% phrase test_human_date %}
+    {{ dt_1912 | human_date }} |
+    {{ dt_1970_utc | human_date }} |
+    {{ dt_2008 | human_date }} |
+    {{ dt_2010 | human_date }} |
+{% endphrase %}
+
+{% phrase test_human_date_current_year %}
+    {{ create_date_safe(context.current_year, 1, 1) | human_date }} |
+    {{ create_date_safe(context.current_year, 12, 31) | human_date }} |
+    {{ create_date_safe(context.current_year, 7, 13) | human_date }} |
+    {{ create_date_safe(context.current_year, 8, 28) | human_date }} |
+{% endphrase %}
+
+{% phrase test_human_day_rel %}
+    {{ create_date_safe(context.today.year, context.today.month, context.today.day) | human_day_rel }} |
+    {{ create_date_safe(context.plus1.year, context.plus1.month, context.plus1.day) | human_day_rel }} |
+    {{ create_date_safe(context.plus2.year, context.plus2.month, context.plus2.day) | human_day_rel }} |
+    {{ create_date_safe(context.plus3.year, context.plus3.month, context.plus3.day) | human_day_rel }} |
+    {{ create_date_safe(context.minus1.year, context.minus1.month, context.minus1.day) | human_day_rel }} |
+    {{ create_date_safe(context.minus2.year, context.minus2.month, context.minus2.day) | human_day_rel }} |
+    {{ create_date_safe(context.minus3.year, context.minus3.month, context.minus3.day) | human_day_rel }} |
+{% endphrase %}

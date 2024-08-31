@@ -1,0 +1,66 @@
+LIBRARY()
+
+OWNER(
+    g:hollywood
+    g:alice
+)
+
+PEERDIR(
+    alice/hollywood/library/common_nlg
+)
+
+COMPILE_NLG(
+    alarm__common__ar.nlg
+    alarm__common__ru.nlg
+    cards__ar.nlg
+    cards__ru.nlg
+    fm_radio_ar.nlg
+    fm_radio_ru.nlg
+    multiroom_ru.nlg
+    music__common__ar.nlg
+    music__common__ru.nlg
+    music_onboarding_ar.nlg
+    music_onboarding_ru.nlg
+    music_play_ar.nlg
+    music_play_less_ar.nlg
+    music_play_less_ru.nlg
+    music_play_ru.nlg
+    music_tags__ar.nlg
+    music_tags__ru.nlg
+    nonmusic_common__ar.nlg
+    nonmusic_common__ru.nlg
+    player__common__ar.nlg
+    player__common__ru.nlg
+    player_continue_ar.nlg
+    player_continue_ru.nlg
+    player_dislike_ar.nlg
+    player_dislike_ru.nlg
+    player_like_ar.nlg
+    player_like_ru.nlg
+    player_next_track_ar.nlg
+    player_next_track_ru.nlg
+    player_no_prev_track_ar.nlg
+    player_no_prev_track_ru.nlg
+    player_repeat_ar.nlg
+    player_repeat_ru.nlg
+    player_replay_ar.nlg
+    player_replay_ru.nlg
+    player_rewind_ar.nlg
+    player_rewind_ru.nlg
+    player_send_song_text_ar.nlg
+    player_send_song_text_ru.nlg
+    player_shuffle_ar.nlg
+    player_shuffle_ru.nlg
+    player_songs_by_this_artist_ru.nlg
+    player_timestamp_skip_ar.nlg
+    player_timestamp_skip_ru.nlg
+    player_what_album_is_this_song_from_ru.nlg
+    player_what_is_playing_ar.nlg
+    player_what_is_playing_ru.nlg
+    player_what_is_this_song_about_ru.nlg
+    player_what_year_is_this_song_ru.nlg
+)
+
+END()
+
+RECURSE_FOR_TESTS(ut)

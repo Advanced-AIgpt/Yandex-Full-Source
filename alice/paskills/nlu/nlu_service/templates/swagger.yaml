@@ -1,0 +1,183 @@
+openapi: "3.0.0"
+info:
+  description: "API сервиса NER/NLU Яндекс.Диалогов"
+  version: "1.0.0"
+  title: "NER/NLU"
+  termsOfService: "http://swagger.io/terms/"
+  contact:
+    email: "paskills-dev@yandex-team.ru"
+servers:
+  - url: "http://localhost:8000/api"
+    description: "Local server"
+paths:
+  /ner:
+    get:
+      description: "Извлечение именованных сущностей"
+      parameters:
+        - name: "utterance"
+          in: "query"
+          schema:
+            type: "string"
+      responses:
+        200:
+          description: "Массив выделенных именованных сущностей"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  entities:
+                    type: "array"
+                    items:
+                      "$ref": "#/components/schemas/AnyEntity"
+        400:
+          description: "некорректный запрос"
+components:
+  schemas:
+    AbstractEntity:
+      type: "object"
+      description: "Обязательные поля для любой сущности"
+      properties:
+        type:
+          type: "string"
+          description: "Тип именованной сущности"
+        token_start:
+          type: "integer"
+          format: "int64"
+          description: "Позиция первого токена (начинается с 0)"
+          example: 0
+        token_end:
+          type: "integer"
+          format: "int64"
+          description: "Позиция последнего токена (начинается с 0)"
+          example: 1
+    DateTime:
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.DATETIME"
+        value:
+          type: "object"
+          properties:
+            year:
+              type: int
+            month:
+              type: int
+            day:
+              type: int
+            hour:
+              type: int
+            minute:
+              type: int
+    RelativeDateTime:
+      # TODO: проработать формат
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.RELATIME_DATETIME"
+        value:
+          type: "string"
+          example: "2018-07-18 12:00:00"
+    Number:
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.NUMBER"
+        value:
+          type: "integer"
+          format: int64
+          example: 100
+    GeoField:
+      type: "object"
+      properties:
+        type:
+          type: string
+          enum:
+            - "COUNTRY"
+            - "CITY"
+            - "STREET"
+            - "HOUSE"
+        name:
+          type: string
+          description: Канонического название объекта
+        token_start:
+          type: integer
+        token_end:
+          type: integer
+    Geo:
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.GEO"
+        value:
+          type: "object"
+          properties:
+            fields:
+              type: "array"
+              items:
+                $ref: '#/components/schemas/GeoField'
+    Name:
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.NAME"
+        value:
+          type: object
+          properties:
+            first:
+              type: string
+              description: "Имя"
+              example: "Иван"
+            patronymic:
+              type: string
+              description: "Отчество"
+              example: "Иванович"
+            last:
+              type: string
+              description: "Фамилия"
+              example: "Иванов"
+    PhoneNumber:
+      type: "object"
+      allOf:
+        - "$ref": "#/components/schemas/AbstractEntity"
+      properties:
+        type:
+          type: string
+          enum:
+            - "YANDEX.PHONE_NUMBER"
+        value:
+          type: string
+          example: '+79991234000'
+    AnyEntity:
+      type: "object"
+      anyOf:
+        - $ref: "#/components/schemas/Date"
+        - $ref: "#/components/schemas/DateTime"
+        - $ref: "#/components/schemas/RelativeDateTime"
+        - $ref: "#/components/schemas/Number"
+        - $ref: "#/components/schemas/Geo"
+        - $ref: "#/components/schemas/Name"
+        - $ref: "#/components/schemas/PhoneNumber"
+externalDocs:
+  description: "Find out more about Swagger"
+  url: "http://swagger.io"

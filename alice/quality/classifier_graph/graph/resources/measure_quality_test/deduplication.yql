@@ -1,0 +1,17 @@
+PRAGMA yt.InferSchema = "1000";
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT *
+FROM (
+    SELECT SOME(TableRow())
+    FROM {{input1}}
+    GROUP BY reqid
+)
+FLATTEN COLUMNS;
+
+-- should be empty
+insert into {{output2}} with truncate
+select reqid, count(*) as cnt
+from {{input1}}
+group by reqid
+having count(*) > 1;

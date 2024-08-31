@@ -1,0 +1,36 @@
+{% from "alice/hollywood/library/scenarios/reminders/nlg/common__en.nlg" import shoot_at %}
+
+{% phrase success %}
+  {% if context.everything %}
+    {% chooseline %}
+      Okay, I deleted all your reminders.
+      I deleted all your reminders.
+    {% endchooseline %}
+  {% else %}
+    {% set amount = context.reminders|length %}
+    {% if amount > 0 %}
+      {% if amount == 1 %}
+        Okay, I deleted "{{ context.reminders.0.text }}" for {{ shoot_at(context.reminders.0.datetime) }}.
+      {% else %}
+        I deleted {{ amount }} {{ 'reminder' | pluralize(amount) }}:
+        {% for r in context.reminders %}
+          "{{ r.text }}" for {{ shoot_at(r.datetime) }}
+          {% if not loop.last %}
+          \n
+          {% endif %}
+        {% endfor %}.
+      {% endif %}
+    {% else %}
+      You successfully deleted your reminder.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+{% phrase fail %}
+  {% chooseline %}
+    Something happened when I was trying to delete your reminder.
+    I wasn't able to delete your reminder.
+  {% endchooseline %}
+{% endphrase %}
+{% phrase not_found %}
+  I can't delete something that doesn't exist.
+{% endphrase %}

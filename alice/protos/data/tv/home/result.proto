@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package NAlice.NTv;
+
+option go_package = "a.yandex-team.ru/alice/protos/data/tv/home";
+option java_package = "ru.yandex.alice.protos.data.tv.home";
+option java_outer_classname = "TvHomeResultProto";
+
+import "alice/protos/data/action/tv_action.proto";
+import "alice/protos/data/tv/carousel.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+import "google/protobuf/struct.proto";
+
+message TTtlInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    bool HasTtl = 1 [json_name = "has_ttl", (NYT.column_name) = "has_ttl"];
+    uint64 TtlMillis = 2 [json_name = "ttl_millis", (NYT.column_name) = "ttl_millis"];
+}
+
+message THomeCarouselWrapper {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TTtlInfo TtlInfo = 1 [json_name = "ttl_info", (NYT.column_name) = "ttl_info"];
+    google.protobuf.Struct AnalyticsInfoPayload = 2 [json_name = "analytics_info_payload", (NYT.column_name) = "analytics_info_payload"];
+    oneof Carousel {
+        NAlice.NTv.TEmptyCarousel EmptyCarousel = 1001 [json_name = "empty_carousel", (NYT.column_name) = "empty_carousel"];
+        NAlice.NTv.TCarousel HomeCarousel = 1002 [json_name = "home_carousel", (NYT.column_name) = "home_carousel"];
+        NAlice.NTv.TDivCarousel DivCarousel = 1003 [json_name = "div_carousel", (NYT.column_name) = "div_carousel"];
+    }
+}
+
+message TTvCarouselResultData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TTtlInfo TtlInfo = 1 [json_name = "ttl_info", (NYT.column_name) = "ttl_info"];
+    THomeCarouselWrapper Carousel = 2 [json_name = "carousel", (NYT.column_name) = "carousel"];
+    reserved 3; reserved "CacheHash";
+}
+
+message TTvFeedResultData {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    TTtlInfo TtlInfo = 1 [json_name = "ttl_info", (NYT.column_name) = "ttl_info"];
+    repeated THomeCarouselWrapper Carousels = 2 [json_name = "carousels", (NYT.column_name) = "carousels"];
+    string CacheHash = 3 [json_name = "cache_hash", (NYT.column_name) = "cache_hash"];
+}

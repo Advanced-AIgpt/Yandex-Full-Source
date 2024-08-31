@@ -1,0 +1,27 @@
+{% macro render_additional_traits(with_turn_on=False) %}
+  {% if not context.no_shuffle_repeat_in_nlg %}
+    {% set type = (form.answer or context.slots.answer)|get_item('type') %}
+    {% set order_slot = form.order or context.slots.order %}
+    {% set repeat_slot = form.repeat or context.slots.repeat %}
+    {% if order_slot == 'shuffle' and type != 'track' %}
+      вперемешку
+    {% endif %}
+    {% if repeat_slot == 'repeat' and with_turn_on %}
+      на повтор
+    {% elif repeat_slot == 'repeat' %}
+      на повторе
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_personal_playlist_nlg_list() %}
+{% set traits = render_additional_traits().strip() %}
+{% set traits_with_turn_on = render_additional_traits(True).strip() %}
+  Послушаем ваше любимое {{ traits }}.
+  Включаю ваши любимые песни {{ traits_with_turn_on }}.
+  Окей. Плейлист с вашей любимой музыкой {{ traits }}.
+  {% if not traits %}
+    Люблю песни, которые вы любите.
+    Окей. Песни, которые вам понравились.
+  {% endif %}
+{% endmacro %}

@@ -1,0 +1,119 @@
+import: common/filler.grnt
+        external_skills/recipes/common.grnt
+        external_skills/recipes/entities/ingredient.grnt
+        external_skills/recipes/entities/recipe_tag.grnt
+
+form alice.recipes.onboarding:
+    slots:
+        recipe_tag:
+            type:
+                RecipeTag
+                string
+            source: $RecipeTag1; $DishTag
+        recipe_tag_2:
+            type:
+                RecipeTag
+                string
+            source: $RecipeTag2
+        ingredient:
+            type:
+                Ingredient
+                string
+            source: $Ingredient1
+        ingredient_2:
+            type:
+                Ingredient
+                string
+            source: $Ingredient2
+    root:
+        $Onboarding.Root
+        %negative
+        $DontWant $RecipeWordWithSynonims?
+    filler:
+        $Common.WayToCallAlice
+        $ner.nonsense
+        $Say
+        $Know
+        %lemma
+        блюдо
+        какие
+        есть
+        посоветуй
+        перечисли
+        какой
+        что
+        нибудь
+        ты
+        тебя
+        есть
+        у
+        такое
+        ли
+        я
+        и
+        твои
+        $Preposition
+        $From
+        $FromBlogger+
+        $BloggerName+
+        $RecipeAdjective
+
+$Onboarding.Root:
+    [($What $Cook) ($Preposition? $MultipleTags)? $FromMultipleIngredients?]
+    [$MultipleTags? $RecipeWord] $FromMultipleIngredients?
+    $RecipeTag1 $RecipeWord+ $RecipeTag2 $FromMultipleIngredients?
+    [$Say $RecipeWord $MultipleTags] $FromMultipleIngredients?
+    [$Know $Cook] $FromMultipleIngredients?
+    [$Know $CookOrMake ($MultipleIngredients|$MultipleTags)]
+    как $CookOrMake $MultipleTags $FromMultipleIngredients?
+    какие $DishTag ты знаешь
+    $FindOrTeach [$RecipeTag1 $RecipeWordWithSynonims] $RecipeTag2? $FromMultipleIngredients
+    какие идеи $Preposition $DishTag
+
+    [(что $CookOrMake) $From $MultipleIngredients]
+    какие? есть? рецепты $From $MultipleIngredients
+
+$FromMultipleIngredients:
+    ($IHave|$From)? $MultipleIngredients
+
+$IHave:
+    [у? меня? есть]
+
+$DontWant:
+    не знаю
+    не хочу
+    не нужны
+ 
+$MultipleTags:
+    $RecipeTag1
+    $RecipeTag1 $RecipeTag2
+
+$MultipleIngredients:
+    $Ingredient1
+    $Ingredient1 $Ingredient2
+
+$What:
+    что
+    чего
+$CookOrMake:
+    $Cook
+    сделать
+    делать
+$From:
+    из
+    с
+$Preposition:
+    на
+    за
+    к
+$Know:
+    знаешь
+    умеешь
+$RecipeTag1:
+    $RecipeTag
+$RecipeTag2:
+    $RecipeTag
+$Ingredient1:
+    $Ingredient
+$Ingredient2:
+    $Ingredient

@@ -1,0 +1,36 @@
+agent_log:
+    priority: INFO
+storages:
+-   name: logs_storage_setrace
+    plugin: fs
+    config:
+        directory: ./logs/storage
+        max_partition_size: 100mb
+routes:
+-   input:
+        plugin: grpc
+        config:
+            uri: localhost:12387
+    channel:
+        fanout:
+        -   channel:
+                output:
+                    plugin: debug
+                    id: my_output_id
+                    config:
+                        file_name: ./logs/megamind-log
+                        delimiter: ""
+                        _test:
+                            register_test_handlers: true
+        -   channel:
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/local-dev
+                        # codec: zstd
+                        tvm:
+                            client_id: 2000860
+                            secret:
+                                env: BASS_DEV_TVM_SECRET
+                            disk_cache_directory: ./data/monitoring_tvm_cache

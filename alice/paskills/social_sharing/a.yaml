@@ -1,0 +1,67 @@
+service: yandexdialogs2
+title: Social sharing backend
+ci:
+  release-title-source: flow
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags:
+        - RM_CI
+        - RM_COMPONENT:alice-social-sharing
+  releases:
+    release_social_sharing:
+      title: Release Alisa Social Sharing Backend
+      flow: social-sharing-release-flow
+      start-version: 1
+      stages:
+        build:
+          title: Build
+        release-to-priemka:
+          title: Release to priemka
+      auto: true
+      filters:
+        - discovery: any
+  flows:
+    social-sharing-release-flow:
+      title: Alisa Social Sharing Backend release flow
+      jobs:
+        build:
+          title: Build
+          task: common/arcadia/ya_package
+          stage: build
+          input:
+            build_system: semi_distbuild
+            packages: alice/paskills/social_sharing/pkg.json
+            resource_type: ALICE_SOCIAL_SHARING_BINARY
+            package_type: docker
+            docker_push_image: true
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: robot-paskills-ci-docker-registry-token
+            docker_image_repository: paskills
+            use_new_format: true
+            custom_version: "release-r${context.target_revision.number}"
+        release-to-priemka:
+          title: Release to priemka
+          task: common/deploy/create_release
+          needs: build
+          stage: release-to-priemka
+          input:
+            config:
+              stage_id: alice-social-sharing-priemka
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: backend
+                      box_id: backend
+                    image_name: "paskills/alice_skills_social_sharing:release-r${context.target_revision.number}"
+  autocheck:
+    fast-targets:
+      - alice/paskills/social_sharing
+      - alice/paskills/common
+arcanum:
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: st_issue_linked

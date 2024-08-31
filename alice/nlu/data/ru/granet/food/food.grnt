@@ -1,0 +1,134 @@
+import:
+    common/filler.grnt
+    common/commands.grnt
+    common/pronouns.grnt
+    food/mc_menu.grnt
+    food/common.grnt
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.PronounMe
+    вкусный
+    для
+    обязательно
+
+form alice.food.main.reset_scenario:
+    # Сбрось сценарий еды
+    lemma: true
+    root:
+        $Reset $State? $Scenario
+    $Reset:
+        очисть
+        сбрось
+        сброс
+    $State:
+        память
+        состояние
+    $Scenario:
+        в? сценарий еды
+
+form alice.food.main.can_order:
+    # Умеешь заказывать еду?
+    # Закажи еду
+    lemma: true
+    root:
+        [$CanYou* $Buy+ $Food+]
+
+form alice.food.main.can_order_mc:
+    # Умеешь заказывать в Макдональдсе?
+    lemma: true
+    root:
+        [$Buy+ $McDonalds $Other*]
+    $Other:
+        .
+        %negative
+        сайт
+        карта
+        маршрут
+        как
+        найди
+
+form alice.food.main.start_mc:
+    # Сделай заказ в Макдональдсе
+    lemma: true
+    root:
+        [$CanYou* $Buy+ $Food* $Other* $McDonalds+]
+    $Other:
+        чего-нибудь
+
+form alice.food.main.repeat_last_order:
+    # Повтори заказ в Макдональдсе
+    lemma: true
+    root:
+        [$CanYou* повтори $Common.PronounMe? $Last? $Order+ ($McDonalds|$Food)+]
+
+$CanYou:
+    $Common.Lets
+    $Common.PronounYou* $Can
+
+$Can:
+    умеешь
+    можешь
+    сможешь
+
+$Food:
+    еда
+    еду
+    еды
+    # есть - лематизируется в "быть"
+    поесть
+    покушать
+    жрать
+    пожрать
+
+$Last:
+    последний
+    предыдущий
+    прошлый
+    надавний
+
+form alice.food.cart.what_you_can:
+    # Что ты умеешь?
+    root:
+        что ты умеешь
+
+form alice.food.cart.where_from_order:
+    # Откуда еда?
+    root:
+        откуда еда
+
+form alice.food.exit.exit_scenario:
+    is_action: true
+    root:
+        хватит
+        $Prefix* $Cancel+
+        $Prefix* $Exit+ из? $Scenario+
+        прекрати $Ask?
+        хватит $Ask?
+    $Prefix:
+        всё
+        нет
+    $Cancel:
+        $Exit
+        %lemma
+        отмена
+        отстань
+        отвали
+        назад
+    $Exit:
+        %lemma
+        выйди
+        выйти
+        выход
+        прекрати
+    $Scenario:
+        %lemma
+        заказ еды?
+        режим заказа еды?
+        сценарий еды?
+        еда
+        $McDonalds
+    $Ask:
+        %lemma
+        спрашивать

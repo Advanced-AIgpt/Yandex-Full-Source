@@ -1,0 +1,44 @@
+import: common/filler.grnt
+import: weather/common.grnt
+
+form personal_assistant.scenarios.get_weather__ellipsis:
+    slots:
+        when:
+            type:
+                sys.datetime_range
+                sys.datetime
+            source: $When
+        day_part:
+            type: custom.day_part
+            source: $DayPart
+        where:
+            matching_type: overlap
+            type:
+                sys.geo
+                string
+            source: $StrictWhere|$StrictUnknownWhere
+    root:
+        $Root
+
+        %negative
+        $SingleWeatherWords
+        $StrictUnknownWhere
+        [$Weather.ExtraWeatherWord+ .*]
+
+        %force_negative
+        [.* $NoMatchHandcrafted]
+
+$Root:
+    # отличие от get_weather.grnt - не требуем нетерминал "Weather+", вместо него "Weather*"
+    # и требует покрыть хотя бы один слот, и без ".*"
+    [$TellMe* $Weather* $WhenResolver $DayPartResolver? $StrictWhereResolver? $ExpectedChange*]
+    [$TellMe* $Weather* $WhenResolver? $DayPartResolver $StrictWhereResolver? $ExpectedChange*]
+    [$TellMe* $Weather* $WhenResolver? $DayPartResolver? $StrictWhereResolver $ExpectedChange*]
+
+filler:
+    $Common.Filler
+    $Common.LeftFiller
+    $Common.WayToCallAlice
+    $nonsense
+    $WeatherFiller
+    $EllipsisFiller

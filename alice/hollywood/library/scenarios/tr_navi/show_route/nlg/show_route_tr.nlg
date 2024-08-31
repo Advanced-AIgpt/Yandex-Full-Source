@@ -1,0 +1,109 @@
+{% macro render_city_genitive(location) %}
+  {% if location.city_cases %}
+    {{ location.city_cases.genitive }}
+  {% else %}
+    {{ location.city }} ilçesine
+  {% endif %}
+{% endmacro %}
+
+{% macro render_location(location_or_poi, address_case='gen') %}
+  {% set location = location_or_poi['geo'] if 'geo' in location_or_poi else location_or_poi %}
+  {% set poi = location_or_poi if 'geo' in location_or_poi else None %}
+  {% set user_bookmark = location_or_poi if (not poi and 'name' in location_or_poi) else None %}
+  {% set location_is_city = location.level == 'city' %}
+  {% if user_bookmark %}
+    "{{ user_bookmark.name }}"
+  {% elif poi %}
+    "{{ poi.name }}"
+    {% if location_is_city %}
+      {{ render_city_genitive(location) }}
+    {% else %}
+      {{ location.address_line }} adresine
+    {% endif %}
+  {% else %}
+    {% if location_is_city %}
+      {{ render_city_genitive(location) }}
+    {% else %}
+      {{ location.address_line }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro navigator_route(form, command) %}
+  {% if form.resolved_location_to %}
+    {% set location = form.resolved_location_to %}
+    {% set location_is_poi = 'geo' in location %}
+    {% if location.level %}
+      {% set location_is_city = location.level == 'city' %}
+    {% endif %}
+  {% endif %}
+  {% if form.what_to %}
+    {% set location_is_home = form.what_to == 'home' %}
+  {% endif %}
+  {% if form.what_to %}
+    {% set location_is_work = form.what_to == 'work' %}
+  {% endif %}
+  {% if form.resolved_location_via %}
+    {% set via_is_poi = 'geo' in form.resolved_location_via %}
+  {% endif %}
+  {% if via_is_poi %}
+    {% if command == 'route' %}
+      {% chooseline %}
+        Rotayı oluşturuyorum.
+        Rotan hesaplandı bile.
+        Rotan hazır.
+        Rota hazır, hadi yola çıkalım.
+        Rotan hazır, ben de öyle.
+        İşte rotan tam karşında.
+        Rotan hazır, peki sen hazır mısın?
+        Rotanı oluşturdum, keyifli yolculuklar.
+      {% endchooseline %}
+    {% endif %}
+    {% if command == 'search' %}
+      {% chooseline %}
+        İşte burada.
+        Şu anda gösteriyorum.
+        Haritada gösteriyorum.
+        Haritada senin için işaretledim, hemen görebilirsin.
+      {% endchooseline %}
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      Tamam.
+      Yola çıkalım!
+      Peki.
+      {% if location_is_home %} Yaşasın! {% endif %}
+    {% endchooseline %}
+  {% endif %}
+  {% text %}
+    {% if command == 'route' %}
+      {% if location_is_home %}
+        Eve gidiyoruz.
+      {% elif location_is_work %}
+        {% chooseline %}
+        İş yerine rota oluşturuyorum.
+        İşe gidiyoruz.
+        {% endchooseline %}
+      {% elif location_is_poi or location %}
+        {{ render_location(location) }} konumuna gidiyoruz.
+      {% endif %}
+    {% endif %}
+  {% endtext %}
+{% endmacro %}
+
+{% phrase render_route %}
+  {{ navigator_route(form, 'route') }}
+{% endphrase %}
+
+{% phrase render_search %}
+  {{ navigator_route(form, 'search') }}
+{% endphrase %}
+
+{% phrase remember_named_location %}
+  {% chooseline %}
+    Bu konum ne yazık ki kayıtlı değil. Eklemek için Yerlerim sekmesini tıklayarak Kayıtlı Yerler’in altına ev ve iş adreslerini yazman yeterli.
+    Söylediğin konum maalesef kayıtlı değil. Eklemek için Yerlerim sekmesini tıklayarak Kayıtlı Yerler’in altına ev ve iş adreslerini yazman yeterli.
+    Maalesef söylediğin konumun nerede olduğunu şimdilik bilmiyorum. Yerlerim sekmesine girerek Kayıtlı Yerler’in altına ev ve iş adreslerini ekleyebilirsin.
+    Gitmek istediğin konum maalesef kayıtlı değil. Yerlerim sekmesini tıklayıp Kayıtlı Yerler’in altına ev ve iş adreslerini ekleyebilirsin.
+  {% endchooseline %}
+{% endphrase %}

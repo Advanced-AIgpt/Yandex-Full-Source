@@ -1,0 +1,146 @@
+import:
+    common/adverbs.grnt
+    common/commands.grnt
+    common/filler.grnt
+    common/prepositions.grnt
+    player/common.grnt
+
+form personal_assistant.scenarios.player.rewind:
+    slots:
+        time:
+            source:
+                $sys.units_time
+                $FemAccNumPlusMinute
+                $FemGenNumPlusMinute
+            type:
+                sys.units_time
+                string
+        rewind_type:
+            source:
+                $RewindType
+            type:
+                custom.rewind_type
+                string
+        rewind_size:
+            source:
+                $Little
+            type:
+                custom.rewind_size
+                string
+    root:
+        [$RewindType+ $Rewind* $Playable* $Little+]
+        [$RewindType+ $Rewind+ $Playable* $sys.units_time*]
+        [$RewindType+ $Rewind* $Playable* $sys.units_time+]
+        [$RewindType* $Rewind+ $Playable* $sys.units_time+]
+        [$RewindType* $Rewind+ $Playable* $Little+]
+        [$RewindType+ $Rewind* $Playable* $sys.units_time+]
+        [$RewindType* $Rewind+ $Playable* $sys.units_time+]
+        [$TurnOn+ на+ $Playable* $sys.units_time]
+        [$TurnOn+ $RewindType+ $Playable* $sys.units_time?]
+        [$TurnOn+ $sys.units_time]
+        [$Common.Play+ (на? $FemAccNumPlusMinute|$Common.From $FemGenNumPlusMinute)+ $Playable*]
+        $Phrase
+
+        %force_negative
+        $Rewind $Playable? на? $sys.num
+        [$sys.num+ $Rewind]
+        [$Rewind $Playable $sys.num]
+        $sys.num+ $RewindType
+        (давай | $TurnOn)+ (на? $Little)
+        (давай | $TurnOn)+ $RewindType
+        [$TurnOn+ $sys.num]
+        [$TurnOn+ $ArtistName+]
+
+# Should be consistent with
+# https://a.yandex-team.ru/arc/trunk/arcadia/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/entities/rewind_type.json?rev=r8225711
+$RewindType:
+    %lemma
+    %type custom.rewind_type
+    %value forward
+    вперед
+    дальше
+
+    %value backward
+    назад
+    обратно
+
+$TurnOn:
+    %lemma
+    включи
+    включить
+    поставь
+    поставить
+    переключи
+
+$Rewind:
+    %lemma
+    перемотай
+    перемотать
+    перемотни
+    перемотнуть
+    промотни
+    промотнуть
+    отмотай
+    промотай
+    давай
+    мотай
+    перейди
+    прокрути
+    прокрутить
+    открути
+    открутить
+    верни
+    вернуть
+    вернись
+    сделай
+    пролистай
+    перелистни
+    переведи
+    перекрути
+    передвинь
+
+    %force_negative
+    дай
+
+$Little:
+    %type custom.rewind_size
+    %value little
+    %lemma
+    немного
+    немножко
+    чуть чуть
+    слегка
+    чуть
+    капельку
+
+$Phrase:
+    верни то что было $sys.units_time $RewindType
+
+$ArtistName:
+    двадцать пять семнадцать
+
+filler:
+    %lemma
+    $Common.Filler
+    $Common.OneMoreTime
+    еще
+    яндекс
+    на
+    это
+    с
+    ты
+    можешь
+
+$FemAccNumPlusMinute:
+    $FemAccNum минуту
+
+    $FemAccNum:
+        сто? (двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто)? (первую|вторую|третью|четвертую|пятую|шестую|седьмую|восьмую|девятую)
+        десятую
+
+$FemGenNumPlusMinute:
+    $FemGenNum минуты
+
+    $FemGenNum:
+        сто? (двадцать|тридцать|сорок|пятьдесят|шестьдесят|семьдесят|восемьдесят|девяносто)? (первой|второй|третьей|четвёртой|пятой|шестой|седьмой|восьмой|девятой)
+        десятой

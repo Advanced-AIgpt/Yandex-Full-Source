@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/protos/endpoint/capabilities/battery;batterypb";
+option java_package = "ru.yandex.alice.protos.endpoint.capabilities";
+option java_outer_classname = "BatteryProto";
+
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/wrappers.proto";
+
+import "alice/protos/endpoint/capability.proto";
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TBatteryCapability {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    option (CapabilityType) = BatteryCapabilityType;
+
+    TCapability.TMeta Meta = 1 [json_name = "meta", (NYT.column_name) = "meta"];
+    TParameters Parameters = 2 [json_name = "parameters", (NYT.column_name) = "parameters"];
+    TState State = 3 [json_name = "state", (NYT.column_name) = "state"];
+
+    message TParameters {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+    }
+
+    message TState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        double Percentage = 1 [json_name = "percentage", (NYT.column_name) = "percentage"];
+        double Voltage = 2 [json_name = "voltage", (NYT.column_name) = "voltage"];
+    }
+
+    // events
+    message TUpdateStateEvent {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (EventType) = BatteryUpdateStateEventType;
+
+        TBatteryCapability Capability = 1 [json_name = "capability", (NYT.column_name) = "capability"];
+    }
+
+    message TCondition {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        option (ConditionEvents) = BatteryUpdateStateEventType;
+
+        google.protobuf.DoubleValue LowerBound = 1 [json_name = "lower_bound", (NYT.column_name) = "lower_bound"];
+        google.protobuf.DoubleValue UpperBound = 2 [json_name = "upper_bound", (NYT.column_name) = "upper_bound"];
+        double Hysteresis = 3 [json_name = "hysteresis", (NYT.column_name) = "hysteresis"];
+    }
+}

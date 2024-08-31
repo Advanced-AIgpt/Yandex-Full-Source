@@ -1,0 +1,305 @@
+import: common/commands.grnt
+import: common/filler.grnt
+import: common/pronouns.grnt
+import: open_site_or_app/common.grnt
+
+$CallBlockShortcut:
+    %type custom.app_data
+    %value {
+        "nav": {
+            "intent": "shortcut.whocalls.call_filter",
+            "close_dialog": true,
+            "url": {
+                "_": "https://yandex.ru/promo/searchapp/alice/aon_station_block",
+                "desktop": "https://yandex.ru/promo/searchapp/alice/aon_station_block"
+            },
+            "text": "Настройки определителя номера",
+            "voice_name": "страницу определителя номера",
+            "text_name": "страницу определителя номера"
+        }
+    }
+
+    [$Lets* $Want* $ShowActionOrNeed* $Common.PronounMe* $OpenCallBlockSettings+ $CallFiller*]
+    %negative
+    [отклони (входящий|исходящий)? звонок]
+
+$MessageBlockShortcut:
+    %type custom.app_data
+    %value {
+        "nav": {
+            "intent": "shortcut.whocalls.message_filter",
+            "url": {
+                "_": "https://yandex.ru/promo/searchapp/alice/aon_station_sms",
+                "desktop": "https://yandex.ru/promo/searchapp/alice/aon_station_sms"
+            },
+            "text": "Фильтрация СМС. Определитель номера Яндекса",
+            "voice_name": "настройку фильтрации смс",
+            "text_name": "настройку фильтрации смс"
+        }
+    }
+
+    [$Lets* $Want* $ShowActionOrNeed* $Common.PronounMe* $OpenSmsBlockSettings+ $CallFiller*]
+
+$CallFiller:
+    $Preposition
+    $Common.PronounMe
+    $Preposition? $Phone
+    $Preposition? $Scammer
+    $ServiceOffering
+    $UnwantedOrSpam? $Service
+    $Scammer
+    $PhoneNumber
+
+    не
+    автоматом
+    %lemma
+    автоматически
+    реклама
+    рекламных
+    автоматическую
+    которая
+    чтобы
+    будет
+
+$OpenCallBlockSettings:
+    [$TurnOnOrOff+ $CallApplication* ($BlockerApp|$Blocker|$Protector|$Determinant)+ $Preposition* ($ObjectToBlock|$ServiceOffering)+ $CallFiller*]
+    [$TurnOnOrOff+ $CallApplication* $AntiSpam+ $Spam* $Call* $UnwantedOrSpam* $PhoneNumber* $CallFiller*]
+
+    [($BlockerApp|$Blocker|$Protector|$Determinant)+ $UnwantedOrSpam+ $Preposition* ($ObjectToBlock|$PhoneNumber)+ $CallFiller*]
+
+    [$CallApplication* $DoProtect+ $UnwantedOrSpam* $ObjectToBlock+ $Common.PronounMe* $CallFiller*]
+    [$CallApplication* $DoProtectLoose+ $UnwantedOrSpam+ $ObjectToBlock+ $Common.PronounMe* $CallFiller*]
+    [$CallApplication* $DoBlockLoose+ $UnwantedOrSpam+ $ObjectToBlock+ $Common.PronounMe* $CallFiller*]
+    [$CallApplication* $DoBlockLoose+ $UnwantedOrSpam* ($Spam|$Call|$Scammer)+ $Common.PronounMe* $PhoneNumber* $CallFiller*]
+
+    [$TurnOnOrOff+ $CallApplication+ $Spam+ $Call+ $CallFiller*]
+
+    [$TurnOff+ $UnwantedOrSpam+ ($Call|$PhoneNumber)+ $CallFiller*]
+
+$OpenSmsBlockSettings:
+    [$TurnOnOrOff+ $CallApplication* ($Blocker|$AntiSpam|$BlockSetting)+ $UnwantedOrSpam* $Message+ $CallFiller*]
+    [$TurnOnOrOff+ $CallApplication+ ($DoBlockLoose|$DoProtectLoose|$Blocker)+ $Message+ $UnwantedOrSpam* $AntiSpam* $CallFiller*]
+
+    [($DoBlockLoose|$DoProtectLoose|$DoDeleteLoose)+ $Message+ ($UnwantedOrSpam|$Blocker)+ $CallFiller*]
+    [$DoMarkLoose+ $Message+ $Transaction+ $CallFiller*]
+
+$Transaction:
+    %lemma
+    транзакция
+
+$Message:
+    $Sms:
+        $S:
+            с
+            эс
+        $M:
+            м
+            эм
+
+        $S $M $S
+
+        %lemma
+        смс (ки|ка)?
+        смска
+        смсках
+        смску
+        смски
+        смской
+        смсок
+        смскам
+        смсками
+        эсэмэс
+        эсэмэски
+        эсэмэска
+        эсэмэсок
+
+    %lemma
+    сообщение
+    $Sms
+
+$ServiceOffering:
+    [$Preposition? $UnwantedOrSpam? $Offer $Service]
+
+$Offer:
+    %lemma
+    предложение
+
+$ObjectToBlock:
+    $Spam
+    $Call
+    $UnwantedOrSpam? $PhoneNumber
+    $Scammer
+
+$AntiSpam:
+    %lemma
+    анти $Spam
+    антиспам
+    антиспамер
+
+$Scammer:
+    %lemma
+    мошенник
+
+$PhoneNumber:
+    $Phone
+
+    %lemma
+    номер
+    абонент
+
+$TurnOff:
+    $Common.TurnOff
+
+    %lemma
+    отключи
+
+$TurnOn:
+    $Common.TurnOn
+    $Common.Open
+
+    %lemma
+    включить
+    активировать
+    подключить
+
+$TurnOnOrOff:
+    $TurnOff
+    $TurnOn
+
+$Spam:
+    $Noun:
+        %lemma
+        спам
+        спамер
+    [$Call.Adj? $Noun]
+
+$Unwanted:
+    от? мошенников
+
+    %lemma
+    незнакомые
+    неизвестные
+    нежелательные
+    надоедливых
+    ненужных
+    мошеннические
+    спамные
+    непонятные
+    рекламные
+    плохие
+
+$UnwantedOrSpam:
+    $Unwanted
+    $Spam
+
+$Call:
+    $Adj:
+        $Unwanted
+
+        %lemma
+        входящие
+
+    $Noun:
+        %lemma
+        звонок
+
+    [($Adj|$Spam)? $Noun]
+
+$DoProtect:
+    сбрасывай
+    скидывай
+    защищай
+    отклони
+    отклоняй
+
+$DoProtectLoose:
+    %lemma
+    сбрасывай
+    скидывай
+    защищай
+    отклони
+    отклоняй
+
+$DoMarkLoose:
+    %lemma
+    помечай
+
+$Protector:
+    $Protecting:
+        отсеивает
+
+        %lemma
+        защищающий
+        отклоняющий
+        сбрасывающий
+        сбрасывает
+        отклоняет
+        защищает
+    %lemma
+    защита
+    защитник
+    сброс
+    сбрасывание
+
+$DoBlock:
+    заблокируй
+    блокируй
+    блокировать
+    фильтруй
+    отфильтруй
+    отфильтровывай
+
+$DoBlockLoose:
+    %lemma
+    блокируй
+    заблокируй
+    фильтруй
+    отфильтруй
+    отфильтровывай
+
+$DoDeleteLoose:
+    %lemma
+    удаляй
+    удали
+
+$Blocker:
+    $Blocking:
+        %lemma
+        авто? блокирующий
+        автоблокирующий
+        блокирует
+    %lemma
+    авто? блокер
+    авто? блокировщик
+    авто? блокиратор # sic
+    авто? блокировка
+    автоблокер
+    автоблокиратор # sic
+    автоблокировщик
+    автоблокировка
+    фильтрация
+    фильтровщик
+    фильтр
+
+$Determinant:
+    $Determining:
+        %lemma
+        определяющий
+        определяет
+        определение
+    %lemma
+    авто? определитель
+    автоопределитель
+
+$BlockerApp:
+    %lemma
+    [$CallApplication+ $Preposition* которая* автоматически* и* ($Determinant.Determining|$Blocker.Blocking|$Protector.Protecting)+ $Spam* $TurnOff*]
+
+$BlockSetting:
+    %lemma
+    [настройка $Blocker]
+
+$CallApplication:
+    $Application
+    %lemma
+    функция

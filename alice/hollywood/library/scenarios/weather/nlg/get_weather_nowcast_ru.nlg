@@ -1,0 +1,43 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ru.nlg" %}
+{% ext_nlgimport "alice/hollywood/library/common_nlg/error_ru.nlg" %}
+
+{% nlgimport "alice/hollywood/library/scenarios/weather/nlg/cards/weather_nowcast.nlg" %}
+{% from "alice/hollywood/library/scenarios/weather/nlg/get_weather__common_ru.nlg" import render_precipitation, geo_changed_attention %}
+
+
+{% phrase render_result %}
+  {% if 'can_not_display_prec_map' in context.attentions %}
+    У меня не получается открыть карту осадков, однако могу сообщить вам, что
+    {{ context.forecast_location | city_prepcase }} {{ render_precipitation(context) | decapitalize_first }}.
+  {% else %}
+    {% set weather %}
+      {{ render_precipitation(context) | capitalize_first + '.' }}
+    {% endset %}
+
+    {% if context.attentions.get('geo_changed') %}
+      {{ geo_changed_attention(context, weather) | capitalize_first }}
+    {% else %}
+      {{ weather }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase weather__precipitation__text %}
+  {% text %}
+    {{ render_precipitation(context) | capitalize_first + '.' }}
+  {% endtext %}
+{% endphrase %}
+
+
+{% phrase render_button_caption__weather_nowcast %}
+  {% chooseline %}
+    Открыть карту осадков
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_empty %}
+{% endphrase %}
+
+{% phrase render_prec_map %}
+  Открываю карту осадков {{ context.forecast_location | city_prepcase }}.
+{% endphrase %}

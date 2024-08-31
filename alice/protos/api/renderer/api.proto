@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option go_package = "a.yandex-team.ru/alice/protos/api/renderer";
+option java_package = "ru.yandex.alice.protos.api.renderer";
+
+import "alice/protos/data/scenario/data.proto";
+import "alice/protos/div/div2id.proto";
+import "google/protobuf/struct.proto";
+
+
+package NAlice.NRenderer;
+
+message TRenderResponse {
+    string CardId = 1 [json_name = "card_id"];
+    oneof Div2 {
+        google.protobuf.Struct Div2Body = 2 [json_name = "div2_body"];
+        string StringDiv2Body = 5 [json_name = "string_div2_body"];
+        Div2Patch Div2PatchBody = 7 [json_name = "div2_patch_body"];
+    }
+
+    message Div2Template {
+        oneof Div2 {
+            google.protobuf.Struct Body = 1 [json_name = "body"];
+            string StringBody = 6 [json_name = "string_body"];
+        }
+    }
+
+    message Div2Patch {
+        oneof Body {
+            google.protobuf.Struct Div2PatchBody = 1 [json_name = "div2_patch_body"];
+            string StringDiv2PatchBody = 2 [json_name = "div2_patch_string_body"];
+        }
+        string Templates = 3 [json_name = "templates_body"];
+    }
+
+    // Templates than can be cached on device between multiple div-card responses
+    // map from template name to template content
+    map<string, Div2Template> GlobalDiv2Templates = 3 [json_name = "global_div2_templates"];
+    // logical card/screen/view name
+    string CardName = 4 [json_name = "card_name"];
+        
+}
+
+message TDivRenderData {
+    string CardId = 1 [json_name = "card_id"];
+    oneof RenderData {
+        NAlice.NData.TScenarioData ScenarioData = 2 [json_name = "scenario_data"];
+        NAlice.NData.TScenarioData DivPatchData = 3 [json_name = "div_patch_data"];
+    }
+    string CardName = 4 [json_name = "card_name"];
+}

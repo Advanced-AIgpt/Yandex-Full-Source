@@ -1,0 +1,26 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" import render_error, render_timer_list %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'not_supported' %}
+    للأسف، لا أستطيع الوصول إلى المؤقتات على هذا الجهاز
+  {% else %}
+    {{ render_error(context.error.data.code) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__is_mobile') %}
+    {% chooseitem %}
+      حسناً، سأفتح قائمة المؤقتات.
+    {% or %}
+      هاهي قائمة المؤقتات.
+    {% or %}
+      حسناً. لنرى مؤقتاتك.
+    {% endchooseitem %}
+  {% else %}
+    {% if context.data.available_timers %}
+      {{ render_timer_list(context.data.available_timers) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

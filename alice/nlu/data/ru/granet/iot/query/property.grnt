@@ -1,0 +1,447 @@
+import:
+    common/adjectives.grnt
+    common/adverbs.grnt
+    common/commands.grnt
+    common/conjunctions.grnt
+    common/prepositions.grnt
+    common/filler.grnt
+    common/nouns.grnt
+    common/questions.grnt
+    common/verbs.grnt
+    iot/common.grnt
+
+
+form alice.iot.query.property.float.ifexp.bg_enable_iot_query_forms:
+    slots:
+        intent_parameters:
+            source:
+                $Humidity
+                $Temperature
+                $Co2Level
+                $WaterLevel
+                $Amperage
+                $Voltage
+                $Power
+                $AirQuality
+                $PMLevel.Level
+                $Pressure
+                $BatteryLevel
+                $Illumination
+                $GasConcentration
+                $SmokeConcentration
+                $TimerProperty
+            type: custom.iot.query.intent.parameters
+        room:
+            keep_variants: true
+            source: $IotRoomOrDemo
+            type:
+                user.iot.room
+                custom.iot.room.type
+                user.iot.demo.room
+        household:
+            source: $IotHouseholdOrDemo
+            type:
+                user.iot.household
+                user.iot.demo.household
+        group:
+            keep_variants: true
+            source: $user.iot.group
+            type: user.iot.group
+        device:
+            keep_variants: true
+            source: $IotDeviceOrDemo
+            type:
+                user.iot.device
+                custom.iot.device.type
+                user.iot.demo.device
+
+    root:
+        $TimerProperty
+        $Common.LeftFiller* [$PropertyQueryPrefix* $FloatProperty+ ($DeviceWithPrepositions|$RoomWithPrepositions|$HouseholdWithPrepositions)+ $UnitWithPrepositions*]
+        %force_negative
+        .* $CommandAdjective<g:срав>+ .*
+
+    $PropertyQueryPrefix:
+        $Common.QuestionWhat
+        $Common.QuestionHow
+        $Common.QuestionHowMuch
+        насколько
+        $Common.With
+        $Common.TheLevel
+
+        %negative
+        на
+
+    $FloatProperty:
+        $Humidity
+        $Temperature
+        $Co2Level
+        $WaterLevel
+        $Amperage
+        $Voltage
+        $Power
+        $AirQuality
+        $PMLevel
+        $Pressure
+        $BatteryLevel
+        $Illumination
+        $GasConcentration
+        $SmokeConcentration
+
+    $Humidity:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "humidity"
+        }
+        %lemma
+        влажность
+        (влажно|сухо)
+
+    $Temperature:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "temperature"
+        }
+        %lemma
+        температура
+        (жарко|тепло|холодно|прохладно)
+        [$Common.QuestionHowMuch+ градус+ (по|цельсий|кельвин|фаренгейт|тепла|((выше|ниже) нуля))*]
+
+    $Co2Level:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "co2_level"
+        }
+        %lemma
+        [углекислый газ]
+        кислород
+
+    $WaterLevel:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "water_level"
+        }
+        %lemma
+        вода
+        жидкость
+
+    $Amperage:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "amperage"
+        }
+        %lemma
+        ампераж
+        [сила* электрический* ток]
+
+    $Voltage:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "voltage"
+        }
+        %lemma
+        [(напряжение|вольтаж)+ электрический* ток*]
+
+    $Power:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "power"
+        }
+        %lemma
+        [(потребление|потреблять|потреляемый|мощность)+ электрический* ток*]
+
+    $AirQuality:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "tvoc"
+        }
+        %lemma
+        [(чистота|состояние|загрязнённость|загрязнение|качество)+ воздух+]
+        [(количество|органический|летучий)* частица+ ($Common.At* воздух)+ $UnitPPM*]
+
+    $PMLevel:
+        %lemma
+        [$Level+ ($Amount|частица|(на миллион)|($Common.At* воздух))*]
+
+        $Level:
+            %type custom.iot.query.intent.parameters
+            %value {
+                "target": "property",
+                "property_type": "devices.properties.float",
+                "property_instance": "pm1_density"
+            }
+            $UnitPPM один
+
+            %value {
+                "target": "property",
+                "property_type": "devices.properties.float",
+                "property_instance": "pm2.5_density"
+            }
+            $UnitPPM $TwoAndAHalf
+
+            $TwoAndAHalf:
+                %lemma
+                два ((с* половиной)|((и|точка|запятая)* пять))
+
+            %value {
+                "target": "property",
+                "property_type": "devices.properties.float",
+                "property_instance": "pm10_density"
+            }
+            $UnitPPM десять
+
+        $Amount:
+            %lemma
+            (количество|органический|летучий|концентрация)
+
+    $Pressure:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "pressure"
+        }
+        %lemma
+        [(гидростатический|атмосферный)* давление (вода|жидкость|воздух|газ|атмосфера)*]
+
+    $BatteryLevel:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "battery_level"
+        }
+        %lemma
+        [(уровень|количество)* (зарядка|заряд|батарея|батарейка|аккумулятор)+]
+
+    $Illumination:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "illumination"
+        }
+        %lemma
+        # для слов "освещение", "свет" обязательно слово "уровень", чтоб не путать с командами
+        [($Common.QuestionWhat|$Common.QuestionHow|$Common.With|$Common.TheLevel)+ освещённость+]|[($Common.QuestionWhat|$Common.QuestionHow|$Common.With)* $Common.TheLevel+ (освещение|свет)+]
+
+    $GasConcentration:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "gas_concentration"
+        }
+        %lemma
+        [($Common.QuestionWhat|$Common.TheLevel)+ газ]
+
+    $SmokeConcentration:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "smoke_concentration"
+        }
+        %lemma
+        [($Common.QuestionWhat|$Common.QuestionHow|$Common.With|$Common.TheLevel)+ дым]
+
+    $TimerProperty:
+        %type custom.iot.query.intent.parameters
+        %value {
+            "target": "property",
+            "property_type": "devices.properties.float",
+            "property_instance": "timer"
+        }
+        %lemma
+        $Common.LeftFiller* $HowMuchTimeLeft
+
+    $HowMuchTimeLeft:
+        # сколько осталось до того, как будет приготовлен, постиран и т. д.
+        [($Common.QuestionHowMuch|$Common.QuestionHowLong)+ $Left+ $WillBe+ $CompletedAction+ ($DeviceWithPrepositions|$TimerFillerNoun)+ (ещё|$Common.TheTime|$Common.Until|$Common.ConjunctionUntil|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+        # когда будет приготовлен, постиран и т. д.
+        [$When+ $WillBe+ $CompletedAction+ ($DeviceWithPrepositions|$TimerFillerNoun)+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+        # сколько ещё варить
+        [($Common.QuestionHowMuch|$Common.QuestionHowLong)+ (ещё|$Left)+ $InProgressAction+ ($DeviceWithPrepositions|$TimerFillerNoun)+ ($Common.TheTime|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+        # сколько будет готовиться
+        [($Common.QuestionHowMuch|$Common.QuestionHowLong)+ $WillBe+ $InProgressAction+ ($DeviceWithPrepositions|$TimerFillerNoun)+ (ещё|$Common.TheTime|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+        # когда приготовится, закончит стирать и т. д.
+        [($Common.QuestionHowMuch|$Common.QuestionHowLong)+ $Left+ $FutureAction+ ($DeviceWithPrepositions|$TimerFillerNoun)+ (ещё|$Common.TheTime|$InProgressAction|$Common.Until|$Common.ConjunctionUntil|$RoomWithPrepositions|$HouseholdWithPrepositions)*]
+        [$When+ $FutureAction+ $InProgressAction* ($DeviceWithPrepositions|$TimerFillerNoun)+ ($RoomWithPrepositions|$HouseholdWithPrepositions)*]
+
+    $Left:
+        %lemma
+        осталось
+        пройдет
+
+    $When:
+        $Common.QuestionWhen
+        через сколько $Common.TheTime*
+        как скоро
+
+    $InProgressAction:
+        $ToCook
+        $ToClean
+        $ToWash
+
+    $ToCook:
+        %exact
+        (варить|вариться)
+        (тушить|тушиться)
+        (жарить|жариться)
+        (печь|печься)
+        (делать|делаться)
+        (готовить|готовиться)
+        (приготавливать|приготавливаться)
+
+    $ToClean:
+        %exact
+        (убирать|убираться)
+        (прибирать|прибираться)
+        пылесосить
+        чистить
+
+    $ToWash:
+        %exact
+        (стирать|стираться)
+        (полоскать|полоскаться)
+        (отжимать|отжиматься)
+        (мыть|мыться)
+
+    $FutureAction:
+        $WillClean
+        $WillCook
+        $WillWash
+        $WillFinish
+
+    $WillCook:
+        %exact
+        (сварит|сварится|сварят|сварятся)
+        (пожарит|пожарится|пожарят|пожарятся)
+        (испечёт|испечётся|испекут|испекутся)
+        (потушит|потушится|потушат|потушатся)
+        (сделает|сделается|сделают|сделаются)
+        (приготовит|приготовится|приготовят|приготовятся)
+
+    $WillClean:
+        %exact
+        (уберёт|уберётся|уберут|уберутся)
+        (приберёт|приберётся|приберут|приберутся)
+        (пропылесосит|пропылесосят)  # не уверен, что такое слово есть
+        (вернётся|вернутся) (на (базу|станцию))*  # в контексте пылесоса
+        (почистит|почистят|почистится|почистятся)
+
+    $WillWash:
+        %exact
+        (постирает|постирается|постирают|постираются)
+        (прополощет|прополощется|прополощут|прополощутся)
+        (отожмёт|отожмётся|отожмут|отожмутся)
+        (высушит|высушится|высушат|высушатся)
+        (вымоет|вымоется|вымоют|вымоются)
+        (помоет|помоется|помоют|помоются)
+
+    $WillFinish:
+        $Common.ToStop<g:сов,буд>
+
+    $CompletedAction:
+        $Cleaned
+        $Cooked
+        $Washed
+        $Finished
+
+    $Cooked:
+        %exact
+        (готов|готова|готовы|готово)
+        (сварен|сварена|сварены|сварено)
+        (пожарен|пожарена|пожарены|пожарено)
+        (испечен|испечена|испечены|испечено)
+        (потушен|потушена|потушены|потушено)
+        (сделан|сделана|сделаны|сделано)
+        (приготовлен|приготовлена|приготовлены|приготовлено)
+
+    $Cleaned:
+        %exact
+        (убран|убрана|убраны|убрано)
+        (прибран|прибрана|прибраны|прибрано)
+        (пропылесошен|пропылесошена|пропылесошены|пропылесошено)  # не уверен, что такое слово есть
+        (возвращён|возвращена|возвращены|возвращено)  # в контексте пылесоса
+        (почищен|почищена|почищены|почищено)
+
+    $Washed:
+        %exact
+        (постиран|постирана|постираны|постирано)
+        (прополощен|прополощена|прополощены|прополощено)
+        (отжат|отжата|отжаты|отжато)
+        (высушен|высушена|высушены|высушено)
+        (вымыт|вымыта|вымыты|вымыто)
+        (помыт|помыта|помыты|помыто)
+
+    $Finished:
+        %exact
+        (прекращён|прекращена|прекращены|прекращено)
+        (закончен|закончена|закончены|закончено)
+        (остановлен|остановлена|остановлены|остановлено)
+        (завершен|завершена|завершены|завершено)
+        (окончен|окончена|окончены|окончено)
+
+    $WillBe:
+        %exact
+        (будет|будут)
+
+    $TimerFillerNoun:
+        %lemma
+        (еда|пища)
+        чай
+        уборка
+        посуда
+        мытьё посуды?
+        (стирка|сушка|отжим|полоскание)
+        (вещи|шмотки|тряпки)
+        таймер
+
+
+$DeviceWithPrepositions:
+    ($Common.ConjunctionAnd|$Common.ConjunctionOr|$Common.At|$Common.With|у)* ($IotDeviceOrDemo|$user.iot.group)
+
+$UnitWithPrepositions:
+    ($Common.ConjunctionAnd|$Common.At|$Common.To)* $Unit
+
+$CommandAdjective:  # некоторые попадаются в $nonsense, поэтому нужно перехватить
+    %lemma
+    выше
+    ниже
+    больше
+    меньше
+    ярче
+    тусклее
+    влажнее
+    суше
+
+filler:
+    $nonsense
+    $Common.Filler
+    $Common.WayToCallAlice
+    $Common.Now
+    $ExactTell
+    $Common.Check
+    ($Common.ConjunctionAnd|$Common.ConjunctionOr|$Common.At|$Common.From|у)* $Common.PronounMe
+    там

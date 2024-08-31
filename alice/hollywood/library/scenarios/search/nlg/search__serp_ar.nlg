@@ -1,0 +1,33 @@
+{% ext_nlgimport "alice/hollywood/library/common_nlg/suggests_ar.nlg" %}
+{% nlgimport "alice/hollywood/library/scenarios/search/nlg/search__ask__ar.nlg" %}
+
+{% from "alice/hollywood/library/scenarios/search/nlg/search__common__ar.nlg" import get_search_info %}
+{% ext_from "alice/hollywood/library/common_nlg/common_ar.nlg" import showing_serp_not_supported, nothing_found %}
+
+{% phrase render_uri %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if not (context.is_smart_speaker or context.is_legatus or context.is_auto) and info.serp_search_url %}
+    {{ info.serp_search_url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set info = namespace() %}
+  {% do get_search_info(form, info) %}
+  {% if context.is_smart_speaker or context.is_legatus or context.is_auto %}
+    {{ showing_serp_not_supported() }}
+  {% elif not info.serp_search_url %}
+    {{ nothing_found() }}
+  {% else %}
+    {% chooseline %}
+      سأقوم بفتح
+      سأفتح الآن
+    {% endchooseline %}
+    {% chooseline %}
+      البحث
+      نتائج البحث
+    {% endchooseline %}
+    .
+  {% endif %}
+{% endphrase %}

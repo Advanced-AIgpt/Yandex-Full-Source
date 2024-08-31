@@ -1,0 +1,863 @@
+version: 10
+
+# Документация: https://a.yandex-team.ru/arc/trunk/arcadia/frontend/packages/monitorado
+
+juggler_checks_defaults:
+  namespace: paskills
+  # Настройки флаподава по умолчанию
+  flaps:
+    stable: 120
+    critical: 300
+    boost: 0
+
+juggler_notify_statuses:
+  - WARN
+  - CRIT
+
+notifications:
+  paskills_duty:
+    telegram: [voicetech-dialog-monitorings]
+
+settings_defaults:
+  notifications: [paskills_duty]
+  abc: yandexdialogs2
+
+deploy:
+  objects:
+    deploy_unit:paskills-int-stable.alice-b2b: default
+    deploy_unit:paskills-int-stable.api: api
+    deploy_unit:paskills-int-stable.api-scheduler: api
+    deploy_unit:paskills-int-stable.ner: default
+    deploy_unit:paskills-int-stable.sound-convertor: default
+    deploy_unit:paskills-int-stable.verstehen: verstehen
+
+    deploy_unit:paskills-ext-stable.alice-b2b: default
+    deploy_unit:paskills-ext-stable.dev-console: default
+    deploy_unit:paskills-ext-stable.store: default
+
+    deploy_unit:my-alice-prod.my_alice_pumpkin: default
+
+    deploy_unit:alice-social-sharing-production.backend: default
+    deploy_unit:alice-social-sharing-production.frontend: default
+  alertsets:
+    default:
+      alerts:
+        cpu_usage_man:
+          signal: '%cpu_perc(99)'  # 99-ый перцентиль процента потребления CPU (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: man
+        cpu_usage_sas:
+          signal: '%cpu_perc(99)'  # 99-ый перцентиль процента потребления CPU (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: sas
+        cpu_usage_vla:
+          signal: '%cpu_perc(99)'  # 99-ый перцентиль процента потребления CPU (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: vla
+        cpu_throttle_man:
+          signal: 'quant(portoinst-cpu_throttled_slot_hgram, 99)'
+          warn: 5
+          crit: 10
+          tags:
+            geo: man
+        cpu_throttle_sas:
+          signal: 'quant(portoinst-cpu_throttled_slot_hgram, 99)'
+          warn: 5
+          crit: 10
+          tags:
+            geo: sas
+        cpu_throttle_vla:
+          signal: 'quant(portoinst-cpu_throttled_slot_hgram, 99)'
+          warn: 5
+          crit: 10
+          tags:
+            geo: vla
+        cpu_usage_avg:
+          signal: '%cpu_perc_avg'  # Средний процент потребления CPU
+          warn: 70
+          crit: 80
+        cpu_wait:
+          signal: '%cpu_wait(99)'  # 99-ый перцентиль времени ожидания процессов в очереди за CPU (рекомендуется)
+          warn: 1
+          crit: 2
+        cpu_wait_avg:
+          signal: '%cpu_wait_avg'  # Среднее время ожидания процессов в очереди за CPU
+          warn: 1
+          crit: 2
+        mem_usage_man:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: man
+        mem_usage_sas:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: sas
+        mem_usage_vla:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 70
+          crit: 80
+          tags:
+            geo: vla
+        mem_usage_avg:
+          signal: '%anon_mem_perc_avg'  # Средний процент процента потребления памяти процессами
+          warn: 70
+          crit: 80
+        net_limit_usage_man:
+          signal: 'perc(max(portoinst-net_tx_mb_summ, portoinst-net_rx_mb_summ), portoinst-net_limit_mb_summ)'
+          warn: 60
+          crit: 85
+          tags:
+            geo: man
+          juggler_check:
+            flaps:
+              stable: 240
+              critical: 480
+              boost: 0
+        net_limit_usage_sas:
+          signal: 'perc(max(portoinst-net_tx_mb_summ, portoinst-net_rx_mb_summ), portoinst-net_limit_mb_summ)'
+          warn: 60
+          crit: 85
+          tags:
+            geo: sas
+          juggler_check:
+            flaps:
+              stable: 240
+              critical: 480
+              boost: 0
+        net_limit_usage_vla:
+          signal: 'perc(max(portoinst-net_tx_mb_summ, portoinst-net_rx_mb_summ), portoinst-net_limit_mb_summ)'
+          warn: 60
+          crit: 85
+          tags:
+            geo: vla
+          juggler_check:
+            flaps:
+              stable: 240
+              critical: 480
+              boost: 0
+        cores_dumped_man:
+          signal: 'hsum(portoinst-cores_dumped_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: man
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        cores_dumped_sas:
+          signal: 'hsum(portoinst-cores_dumped_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: sas
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        cores_dumped_vla:
+          signal: 'hsum(portoinst-cores_dumped_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: vla
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        crashes_man:
+          signal: 'hsum(portoinst-cores_total_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: man
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        crashes_sas:
+          signal: 'hsum(portoinst-cores_total_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: sas
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        crashes_vla:
+          signal: 'hsum(portoinst-cores_total_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: vla
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        oom_man:
+          signal: 'hsum(portoinst-ooms_slot_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: man
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        oom_sas:
+          signal: 'hsum(portoinst-ooms_slot_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: sas
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        oom_vla:
+          signal: 'hsum(portoinst-ooms_slot_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: vla
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        major_page_faults_man:
+          signal: 'portoinst-major_page_faults_summ'
+          warn: 200
+          crit: 500
+          tags:
+            geo: man
+        major_page_faults_sas:
+          signal: 'portoinst-major_page_faults_summ'
+          warn: 200
+          crit: 500
+          tags:
+            geo: sas
+        major_page_faults_vla:
+          signal: 'portoinst-major_page_faults_summ'
+          warn: 200
+          crit: 500
+          tags:
+            geo: vla
+
+# TODO: uncomment after TOOLBOX-146
+#        no_online_instances_man:
+#          signal: 'perc(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),sum(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_in_progress_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_failed_ahhh, 1, 2), normal()), 5)))'
+#          warn: 20
+#          crit: 0
+#          tags:
+#            geo: man
+#        no_online_instances_sas:
+#          signal: 'perc(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),sum(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_in_progress_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_failed_ahhh, 1, 2), normal()), 5)))'
+#          warn: 20
+#          crit: 0
+#          tags:
+#            geo: sas
+#        no_online_instances_vla:
+#          signal: 'perc(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),sum(mul(div(hcount(unistat-condition_pod_ready_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_in_progress_ahhh, 1, 2), normal()), 5),mul(div(hcount(unistat-condition_pod_failed_ahhh, 1, 2), normal()), 5)))'
+#          warn: 20
+#          crit: 0
+#          tags:
+#            geo: vla
+        lost_logs_rotated_by_pod_agent_man:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_pod_agent_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: man
+        lost_logs_rotated_by_pod_agent_sas:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_pod_agent_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: sas
+        lost_logs_rotated_by_pod_agent_vla:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_pod_agent_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: vla
+        lost_logs_rotated_by_porto_man:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_porto_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: man
+        lost_logs_rotated_by_porto_sas:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_porto_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: sas
+        lost_logs_rotated_by_porto_vla:
+          signal: 'unistat-pod_agent_logs_transmitter_lost_logs_rotated_by_porto_deee'
+          warn: 0.0001
+          crit: 0.0002
+          tags:
+            geo: vla
+
+    api:
+      extends: default
+      alerts:
+# HTTP_SOURCES_BEGIN MODIFY ONLY VIA SCRIPT!
+        http_source_tvm_errors:
+          signal: or(perc(unistat-http_source_tvm_requests_error_summ, unistat-http_source_tvm_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_avatars_errors:
+          signal: or(perc(unistat-http_source_avatars_requests_error_summ, unistat-http_source_avatars_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_social_errors:
+          signal: or(perc(unistat-http_source_social_requests_error_summ, unistat-http_source_social_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_nlu_errors:
+          signal: or(perc(unistat-http_source_nlu_requests_error_summ, unistat-http_source_nlu_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_startrek_errors:
+          signal: or(perc(unistat-http_source_startrek_requests_error_summ, unistat-http_source_startrek_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_yt_errors:
+          signal: or(perc(unistat-http_source_yt_requests_error_summ, unistat-http_source_yt_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_tycoon_errors:
+          signal: or(perc(unistat-http_source_tycoon_requests_error_summ, unistat-http_source_tycoon_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_tycoon-rubrics_errors:
+          signal: or(perc(unistat-http_source_tycoon-rubrics_requests_error_summ, unistat-http_source_tycoon-rubrics_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_wordstat_errors:
+          signal: or(perc(unistat-http_source_wordstat_requests_error_summ, unistat-http_source_wordstat_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_skill_errors:
+          signal: or(perc(unistat-http_source_skill_requests_error_summ, unistat-http_source_skill_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_soundService_errors:
+          signal: or(perc(unistat-http_source_soundService_requests_error_summ, unistat-http_source_soundService_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_samsara_errors:
+          signal: or(perc(unistat-http_source_samsara_requests_error_summ, unistat-http_source_samsara_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_market_errors:
+          signal: or(perc(unistat-http_source_market_requests_error_summ, unistat-http_source_market_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_iot_errors:
+          signal: or(perc(unistat-http_source_iot_requests_error_summ, unistat-http_source_iot_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_granet_errors:
+          signal: or(perc(unistat-http_source_granet_requests_error_summ, unistat-http_source_granet_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_ugc_errors:
+          signal: or(perc(unistat-http_source_ugc_requests_error_summ, unistat-http_source_ugc_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_memento_errors:
+          signal: or(perc(unistat-http_source_memento_requests_error_summ, unistat-http_source_memento_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_news-api_errors:
+          signal: or(perc(unistat-http_source_news-api_requests_error_summ, unistat-http_source_news-api_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_notificator_errors:
+          signal: or(perc(unistat-http_source_notificator_requests_error_summ, unistat-http_source_notificator_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_billing_errors:
+          signal: or(perc(unistat-http_source_billing_requests_error_summ, unistat-http_source_billing_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_suggest_errors:
+          signal: or(perc(unistat-http_source_suggest_requests_error_summ, unistat-http_source_suggest_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_recipes_errors:
+          signal: or(perc(unistat-http_source_recipes_requests_error_summ, unistat-http_source_recipes_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_webmaster_errors:
+          signal: or(perc(unistat-http_source_webmaster_requests_error_summ, unistat-http_source_webmaster_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_sender_errors:
+          signal: or(perc(unistat-http_source_sender_requests_error_summ, unistat-http_source_sender_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_geobase_errors:
+          signal: or(perc(unistat-http_source_geobase_requests_error_summ, unistat-http_source_geobase_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_blog_errors:
+          signal: or(perc(unistat-http_source_blog_requests_error_summ, unistat-http_source_blog_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_solomon_errors:
+          signal: or(perc(unistat-http_source_solomon_requests_error_summ, unistat-http_source_solomon_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_verstehen_errors:
+          signal: or(perc(unistat-http_source_verstehen_requests_error_summ, unistat-http_source_verstehen_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_abc_errors:
+          signal: or(perc(unistat-http_source_abc_requests_error_summ, unistat-http_source_abc_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_saas_errors:
+          signal: or(perc(unistat-http_source_saas_requests_error_summ, unistat-http_source_saas_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_kvsaas_errors:
+          signal: or(perc(unistat-http_source_kvsaas_requests_error_summ, unistat-http_source_kvsaas_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+
+        http_source_mds_errors:
+          signal: or(perc(unistat-http_source_mds_requests_error_summ, unistat-http_source_mds_requests_total_summ), 0)
+          warn: 5
+          crit: 10
+# HTTP_SOURCES_END
+    verstehen:
+      extends: default
+      alerts:
+        mem_usage_man:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 75
+          crit: 85
+          tags:
+            geo: man
+        mem_usage_sas:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 75
+          crit: 85
+          tags:
+            geo: sas
+        mem_usage_vla:
+          signal: '%anon_mem_perc(99)'  # 99-ый перцентиль процента потребления памяти процессами (рекомендуется)
+          warn: 75
+          crit: 85
+          tags:
+            geo: vla
+        mem_usage_avg:
+          signal: '%anon_mem_perc_avg'  # Средний процент процента потребления памяти процессами
+          warn: 75
+          crit: 85
+
+mdb:
+  databases:
+    postgresql:yandexdialogstwo.yandexdialogstwo.paskillsdb-prestable01: paskills-postgres
+    postgresql:yandexdialogstwo.yandexdialogstwo.alice_business-production: common-postgresql-small
+  alertsets:
+    common:
+      alerts:
+        cpu_load:
+          signal: '%cpu_perc'  # Процент потребления CPU
+          warn: 75
+          crit: 85
+        max_cpu_load:
+          signal: '%max_cpu_perc'  # Процент потребления CPU (максимальный по инстансам)
+          warn: 70
+          crit: 80
+        net_usage:
+          signal: '%net_perc'  # Процент потребления сети
+          warn: 75
+          crit: 85
+        cpu_wait:
+          signal: '%cpu_wait'  # Время ожидания процессов в очереди
+          warn: 5
+          crit: 10
+        mem_usage:
+          signal: '%mem_anon_perc'  # Процент потребления памяти (anon)
+          warn: 75
+          crit: 85
+        max_mem_usage:
+          signal: '%max_mem_anon_perc'  # Максимальный процент потребления памяти (anon)
+          warn: 70
+          crit: 80
+        used_space:
+          signal: '%used_space_perc'  # Процент занятого места на диске
+          warn: 70
+          crit: 85
+          tier: master
+        replication_lag:
+          signal: '%replica_lag_avg'  # Среднее отставание реплик от мастера (сек)
+          warn: 3
+          crit: 5
+
+    common-postgresql:
+      extends: common
+      alerts:
+        statement_avg_time:
+          signal: '%statm_avg'  # Среднее время выполнения стейтментов (мс)
+          warn: 100
+          crit: 200
+        transaction_avg_time:
+          signal: '%trans_avg'  # Среднее время выполнения транзакций (мс)
+          warn: 200
+          crit: 300
+
+    paskills-postgres:
+      extends: common-postgresql
+      alerts:
+        net_usage:
+          signal: '%net_perc'  # Процент потребления сети
+          warn: 85
+          crit: 90
+          window:
+            size: 2m
+            aggregate: aver
+
+    common-postgresql-small:
+      extends: common-postgresql
+      alerts:
+        cpu_wait:
+          signal: '%cpu_wait'  # Время ожидания процессов в очереди
+          warn: 10
+          crit: 20
+
+
+nanny:
+  services:
+    dialogovo_sas: jvm_default
+    dialogovo_man: jvm_default
+    dialogovo_vla: jvm_default
+
+    granet_server_production: default
+
+    memento-sas: jvm_default
+    memento-man: jvm_default
+    memento-vla: jvm_default
+
+    my_alice_sas: jvm_default
+    my_alice_man: jvm_default
+    my_alice_vla: jvm_default
+
+    penguinary_production: default
+
+    renderer_alice_sas: renderer
+    renderer_alice_man: renderer
+    renderer_alice_vla: renderer
+
+    rtc_balancer_dialogovo_alice_yandex_net_man: awacs
+    rtc_balancer_dialogovo_alice_yandex_net_sas: awacs
+    rtc_balancer_dialogovo_alice_yandex_net_vla: awacs
+
+    rtc_balancer_paskills-common-production_alice_yandex_net_man: awacs
+    rtc_balancer_paskills-common-production_alice_yandex_net_sas: awacs
+    rtc_balancer_paskills-common-production_alice_yandex_net_vla: awacs
+
+    rtc_balancer_dialogs_alice_yandex_net_man: awacs
+    rtc_balancer_dialogs_alice_yandex_net_sas: awacs
+    rtc_balancer_dialogs_alice_yandex_net_vla: awacs
+
+    rtc_balancer_dialogs_yandex_ru_man: awacs
+    rtc_balancer_dialogs_yandex_ru_sas: awacs
+    rtc_balancer_dialogs_yandex_ru_vla: awacs
+
+  alertsets:
+    default:
+      alerts:
+        cpu_usage:
+          signal: '%cpu_perc'  # Процент потребления CPU
+          warn: 75
+          crit: 85
+        cpu_throttle:
+          signal: 'quant(portoinst-cpu_throttled_slot_hgram, 99)'
+          warn: 5
+          crit: 10
+          tags:
+            geo: man
+        mem_usage:
+          signal: '%mem_anon_perc'  # Процент потребления памяти (anon)
+          warn: 75
+          crit: 85
+        cpu_wait:
+          signal: '%cpu_wait'  # Время ожидания процессов в очереди
+          warn: 2
+          crit: 3
+        cores_dumped:
+          signal: 'hsum(portoinst-cores_dumped_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        crashes:
+          signal: 'hsum(portoinst-cores_total_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        oom:
+          signal: 'portoinst-ooms_summ'
+          warn: 0.0001
+          crit: 0.0002
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        slot_oom:
+          signal: 'hsum(portoinst-ooms_slot_hgram)'
+          warn: 0.0001
+          crit: 0.0002
+          juggler_check:
+            flaps:
+              stable: 0
+              critical: 0
+              boost: 0
+        major_page_faults:
+          signal: 'portoinst-major_page_faults_summ'
+          warn: 200
+          crit: 500
+        hdd_root_usage:
+          signal: 'portoinst-volume_root_usage_perc_txxx'
+          warn: 80
+          crit: 90
+        hdd_cwd_usage:
+          signal: 'portoinst-volume_cwd_usage_perc_txxx'
+          warn: 80
+          crit: 90
+        hdd_logs_usage:
+          signal: 'portoinst-volume_/logs_usage_perc_txxx'
+          warn: 80
+          crit: 90
+        net_limit_usage:
+          signal: 'max(quant(portoinst-net_rx_utilization_hgram, 95),quant(portoinst-net_tx_utilization_hgram, 95))'
+          warn: 60
+          crit: 85
+          juggler_check:
+            flaps:
+              stable: 240
+              critical: 480
+              boost: 0
+        io_throttle:
+          signal: 'hsum(portoinst-io_throttled_time_/place_total_hgram)'
+          warn: 10
+          crit: 30
+
+# TODO: uncomment after TOOLBOX-146
+#        online_instances_man:
+#          signal: 'counter-instance_tmmv'
+#          warn: [1, 2]
+#          crit: [null, 1]
+#          tags:
+#            geo: man
+#        online_instances_sas:
+#          signal: 'counter-instance_tmmv'
+#          warn: [1, 2]
+#          crit: [null, 1]
+#          tags:
+#            geo: sas
+#        online_instances_vla:
+#          signal: 'counter-instance_tmmv'
+#          warn: [1, 2]
+#          crit: [null, 1]
+#          tags:
+#            geo: vla
+
+    awacs:
+      extends: default
+      alerts:
+        hdd_cwd_usage_man:
+          signal: 'portoinst-volume_cwd_usage_perc_txxx'
+          warn: 90
+          crit: 95
+          tags:
+            geo: man
+        hdd_cwd_usage_sas:
+          signal: 'portoinst-volume_cwd_usage_perc_txxx'
+          warn: 90
+          crit: 95
+          tags:
+            geo: sas
+        hdd_cwd_usage_vla:
+          signal: 'portoinst-volume_cwd_usage_perc_txxx'
+          warn: 90
+          crit: 95
+          tags:
+            geo: vla
+
+    jvm_default:
+      extends: default
+      alerts:
+        mem_usage:
+          signal: '%mem_anon_perc'
+          warn: 95
+          crit: 98
+
+    renderer:
+        extends: default
+        alerts:
+            mem_usage_man:
+                signal: '%mem_anon_perc'
+                warn: 85
+                crit: 90
+                tags:
+                    geo: man
+            mem_usage_sas:
+                signal: '%mem_anon_perc'
+                warn: 85
+                crit: 90
+                tags:
+                    geo: sas
+            mem_usage_vla:
+                signal: '%mem_anon_perc'
+                warn: 85
+                crit: 90
+                tags:
+                    geo: vla
+
+awacs:
+  sections:
+    dialogovo.alice.yandex.net.apply: default
+    dialogovo.alice.yandex.net.vins: default
+    dialogovo.alice.yandex.net.service_total: default
+
+    paskills-common-production.alice.yandex.net.requests_to_granet_server_production: default
+    paskills-common-production.alice.yandex.net.requests_to_penguinary_production: default
+    paskills-common-production.alice.yandex.net.memento: default
+    paskills-common-production.alice.yandex.net.verstehen: default
+
+    dialogs.alice.yandex.net.api_dev-console_v1_monitoring_skills: default
+    dialogs.alice.yandex.net.api_external: default
+    dialogs.alice.yandex.net.api_dev-console_v1: default
+    dialogs.alice.yandex.net.api-scheduler: default
+    dialogs.alice.yandex.net.api_public_v1_skills: default
+    dialogs.alice.yandex.net.ner: default
+    dialogs.alice.yandex.net.sound-convertor: default
+    dialogs.alice.yandex.net.api: default
+    dialogs.alice.yandex.net.api-b2b: default
+    dialogs.alice.yandex.net.service_total: default
+
+    dialogs.yandex.ru.developer-api-monitoring-skills: default
+    dialogs.yandex.ru.landing-generator-proxy: default
+    dialogs.yandex.ru.api: default
+    dialogs.yandex.ru.b2b: default
+    dialogs.yandex.ru.store: default
+    dialogs.yandex.ru.developer: default
+    dialogs.yandex.ru.s3-proxy: default
+    dialogs.yandex.ru.s3-proxy-sitemap: default
+    dialogs.yandex.ru.service_total: without_announce_checks
+    dialogs.yandex.ru.social-sharing-send-to-device: default
+    dialogs.yandex.ru.social-sharing-get-document-from-store: default
+    dialogs.yandex.ru.social-sharing-document-from-request: default
+  alertsets:
+    default:
+      alerts:
+        http_5xx:
+          signal: '%5xx_perc'  # Процент ответов с кодами вида 5xx (рекомендуется)
+          warn: 0.5
+          crit: 2
+        http_fail:
+          signal: '%backend_fail_perc'  # Процент безуспешных ответов из-за ошибок бэкенда (рекомендуется)
+          warn: 0.5
+          crit: 2
+    without_announce_checks:
+      extends: default
+      alerts:
+        http_5xx:
+          signal: 'or(perc(diff(balancer_report-report-service_total-outgoing_5xx_summ, balancer_report-report-announce_check-outgoing_5xx_summ), balancer_report-report-service_total-requests_summ), 0)'
+          warn: 0.5
+          crit: 2
+
+custom:
+  abc:
+    yandexdialogs2:
+      my_alice_balancer:
+        alertset: my_alice_balancer
+        tags:
+          hosts: ASEARCH
+          itype: balancer
+          ctype: prod
+          prj: l7-balancer-knoss-fast
+  alertsets:
+    my_alice_balancer:
+      alerts:
+        4xx:
+          signal: 'perc(balancer_report-report-alice-home-outgoing_4xx_summ, balancer_report-report-alice-home-requests_summ)'
+          warn: 2
+          crit: 4
+        5xx:
+          signal: 'perc(balancer_report-report-alice-home-outgoing_5xx_summ, balancer_report-report-alice-home-requests_summ)'
+          warn: 2
+          crit: 4
+        client_errors:
+          signal: 'perc(balancer_report-report-alice-home-client_fail_summ, balancer_report-report-alice-home-requests_summ)'
+          warn: 5
+          crit: 10
+        backend_errors:
+          signal: 'perc(balancer_report-report-alice-home-backend_error_summ, balancer_report-report-alice-home-requests_summ)'
+          warn: 2
+          crit: 4

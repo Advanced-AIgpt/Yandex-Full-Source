@@ -1,0 +1,144 @@
+{% phrase test_range1 %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x in range(5) %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_range2 %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x in range(0, 5) %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_range3 %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x in range(0, 5, 1) %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_list %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x in ['foo', 123, None, 5.5, [1, 2, 3]] %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+# Dicts don't guarantee a fixed order of iteration,
+# in particular, C++ and Python use different hash table implementations
+# so it's very likely to differ in practice.
+# Hence we have lighter tests here
+{% phrase test_dict %}
+    {% for x in {'a': 123, 'b': 456, 'c': 789} %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_dict_keys %}
+    {% for x in {'a': 123, 'b': 456, 'c': 789}.keys() %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_dict_values %}
+    {% for x in {'a': 123, 'b': 456, 'c': 789}.values() %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_dict_items %}
+    {% for key, value in {'a': 123, 'b': 456, 'c': 789}.items() %}
+        {{ key }} {{ value }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_undefined %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x in awol %}
+        {{ copy }}  # always undefined
+        {% set copy = x %}
+        {{ x }} {{ copy }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_list_of_lists %}
+    x c F L i0 i ri0 ri px nx ||
+    {% for x, y in [[1, 2], ["foo", True]] %}
+        {{ x }} {{ y }} {{ loop.first }} {{ loop.last }} {{ loop.index0 }} {{ loop.index }} {{ loop.revindex0 }} {{ loop.revindex }} {{ loop.previtem }} {{ loop.nextitem }} |
+        {% if loop.last %}
+            length = {{ loop.length }}
+        {% endif %}
+    {% else %}
+        NOTHING!
+    {% endfor %}
+{% endphrase %}
+
+{% phrase test_nested_loops %}
+    {% for list in [[1, 2, 3], [4, 5, 6]] %}
+        [{{ loop.previtem }} {{ loop.nextitem }} {{ loop.index }}]
+        {% for number in list %}
+            {{ loop.previtem }} {{ loop.nextitem }} {{ loop.index }} {{ number }} |
+        {% endfor %}
+    {% endfor %}
+{% endphrase %}

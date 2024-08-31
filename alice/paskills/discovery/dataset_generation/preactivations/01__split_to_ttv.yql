@@ -1,0 +1,75 @@
+USE hahn;
+
+$parse = DateTime::Parse("%Y-%m-%d");
+$make_timestamp = ($value) -> {
+    RETURN DateTime::MakeTimestamp($parse($value));
+};
+
+$between = ($value, $l, $r) -> {
+    RETURN $l <= $value AND $value < $r;
+};
+
+$between_dates = ($value, $l, $r) -> {
+    RETURN $between($value, $make_timestamp($l), $make_timestamp($r));
+};
+
+$choose = ($query, $l, $r) -> {
+    $hash = Digest::MurMurHash($query) % 100;
+    RETURN $between($hash, $l, $r);
+};
+
+$__RAW = (
+    SELECT
+        query,
+        "YES" as answer,
+        skill_id,
+        `date`
+    FROM `home/paskills/discovery/datasets/PreActivations/raw/all`
+);
+
+$__SAAS_TRAIN_VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between_dates(`date`, '2019-09-01', '2019-10-01')
+);
+
+SELECT COUNT(*) FROM $__SAAS_TRAIN_VALID;
+
+$__TRAIN = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between_dates(`date`, '2019-09-01', '2019-10-01')
+);
+
+$__VALID = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 50) AND $between_dates(`date`, '2019-11-01', '2019-11-08')
+);
+
+$__SAAS_TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 0, 100) AND $between_dates(`date`, '2019-10-01', '2019-11-01')
+);
+
+$__TEST = (
+    SELECT *
+    FROM $__RAW
+    WHERE $choose(query, 50, 100) AND $between_dates(`date`, '2019-11-02', '2019-11-08')
+);
+
+INSERT INTO `//home/paskills/discovery/datasets/PreActivations/split/train` WITH TRUNCATE
+SELECT * FROM $__TRAIN;
+
+INSERT INTO `//home/paskills/discovery/datasets/PreActivations/split/test` WITH TRUNCATE
+SELECT * FROM $__TEST;
+
+INSERT INTO `//home/paskills/discovery/datasets/PreActivations/split/valid` WITH TRUNCATE
+SELECT * FROM $__VALID;
+
+INSERT INTO `//home/paskills/discovery/datasets/PreActivations/split/saas__train_valid` WITH TRUNCATE
+SELECT * FROM $__SAAS_TRAIN_VALID;
+
+INSERT INTO `//home/paskills/discovery/datasets/PreActivations/split/saas__test` WITH TRUNCATE
+SELECT * FROM $__SAAS_TEST;

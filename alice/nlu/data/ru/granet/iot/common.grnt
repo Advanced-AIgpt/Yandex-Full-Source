@@ -1,0 +1,409 @@
+import: common/conjunctions.grnt
+import: common/nouns.grnt
+import: common/prepositions.grnt
+import: common/pronouns.grnt
+import: common/verbs.grnt
+
+# новые слоты для времени
+# пример использования в alice/nlu/data/ru/granet/iot/action/capability_on_off.grnt
+# почему не просто datetime_range: https://st.yandex-team.ru/IOT-1121
+$ExactDateTime:
+    (((в|во)* $sys.date)|(в* $sys.time))+
+    %force_negative
+    %exact
+    .* через .*
+    $sys.num # запрещаем одинокие числа
+    %lemma
+    первый
+    второй
+    третий
+    четвёртый
+    пятый
+    шестой
+    седьмой
+    восьмой
+    девятый
+    десятый
+    одиннадцатый
+    двенадцатый
+    тринадцатый
+    четырнадцатый
+    пятнадцатый
+    шестнадцатый
+    семнадцатый
+    восемнадцатый
+    девятнадцатый
+    двадцатый
+    двадцать первый
+    двадцать второй
+    двадцать третий
+    двадцать четвёртый
+    # дальше не матчатся
+
+$RelativeDateTime:
+    через+ (и* $sys.datetime_range)+
+
+$ForDateTime:
+    на+ (и* $sys.datetime_range)+
+    %force_negative
+    %lemma
+    .* на+ следующий+ (день|неделя)+ .*
+
+$IotDateTime:
+    $ExactDateTime
+    $RelativeDateTime
+    $ForDateTime
+
+$ThatIsNamed:
+    %lemma
+    [$Common.ConjunctionThat* $Common.ToHave+ $Common.TheName+]
+    [$Common.ConjunctionThat* $Common.ToBeNamed+]
+    ($Common.With|$Common.Under)* $Common.TheName+
+
+$UselessPronoun:
+    %lemma
+    $Common.PronounMe
+    $Common.PronounYou
+    $Common.PronounThis
+    $Common.PronounThat
+
+# Веса фиксят странные ситуации, когда DeviceType не матчится на фразу.
+$IotDeviceOrDemo:
+    %weight 0.1
+    $user.iot.device
+    %weight 0.01
+    $IotDeviceType
+    %weight 0.000001
+    $user.iot.demo.device
+
+$IotDeviceOrGroup:
+    %lemma
+    $IotDeviceOrDemo
+    [группа* $user.iot.group]
+
+$IotRoomOrDemo:
+    $user.iot.room
+    $EverywhereRoomType
+    $user.iot.demo.room
+
+$IotHouseholdOrDemo:
+    $user.iot.household
+    $user.iot.demo.household
+
+$LocationPreposition:
+    $Common.ConjunctionAnd
+    $Common.ConjunctionOr
+    $Common.At
+    $Common.From
+    у
+    %force_negative
+    %exact
+    есть
+
+$RoomWithPrepositions:
+    $LocationPreposition* $IotRoomOrDemo
+
+$HouseholdWithPrepositions:
+    $LocationPreposition* $IotHouseholdOrDemo
+
+$AllDevices:
+    всё+
+    все+ бытовые* (устройства|приборы|девайсы)+
+
+$Unit:
+    $UnitPercent
+    $UnitTemperatureCelsius
+    $UnitTemperatureKelvin
+    $UnitPPM
+    $UnitAmpere
+    $UnitVolt
+    $UnitWatt
+    $UnitDensityMcgM3
+    $UnitPressureAtm
+    $UnitPressurePascal
+    $UnitPressureBar
+    $UnitPressureMmHg
+    $UnitTimeSeconds
+    $UnitIlluminationLux
+
+$UnitPercent:
+    %lemma
+    процент
+
+$UnitTemperatureCelsius:
+    %lemma
+    [градус по* цельсий*]
+
+$UnitTemperatureKelvin:
+    %lemma
+    [градус по* кельвин]
+
+$UnitPPM:
+    %lemma
+    [миллионная доля]
+    [частиц на миллион]
+    %exact
+    (пи|пэ|п|p)+ (м|эм|мэ|м|m)
+    (ппм|пм|pm)
+
+$UnitAmpere:
+    %lemma
+    ампер
+
+$UnitVolt:
+    %lemma
+    вольт
+
+$UnitWatt:
+    %lemma
+    ватт
+
+$UnitDensityMcgM3:
+    %lemma
+    [микрограмм на кубический метр]
+
+$UnitPressureAtm:
+    %lemma
+    атмосфера
+
+$UnitPressurePascal:
+    %lemma
+    паскаль
+
+$UnitPressureBar:
+    %lemma
+    бар
+
+$UnitPressureMmHg:
+    %lemma
+    [миллиметр (ртутного|водяного) столба]
+
+$UnitTimeSeconds:
+    %lemma
+    секунда
+
+$UnitIlluminationLux:
+    %lemma
+    люкс
+
+$IotDeviceType:
+    $SocketDeviceType
+    $LightDeviceType
+    $SwitchDeviceType
+    $AcDeviceType
+    $TvDeviceType
+    $ReceiverDeviceType
+    $TvBoxDeviceType
+    $KettleDeviceType
+    $CurtainDeviceType
+    $PurifierDeviceType
+    $VacuumCleanerDeviceType
+    $CoffeeMakerDeviceType
+    $HumidifierDeviceType
+    $WashingMachineDeviceType
+    $DishwasherDeviceType
+    $MulticookerDeviceType
+    $RefrigeratorDeviceType
+    $IronDeviceType
+    $FanDeviceType
+    $SensorDeviceType
+    $PetFeederDeviceType
+
+$SocketDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.socket
+    %lemma
+    розетка
+    розеточка
+
+$LightDeviceTypeWithoutSvetlana:
+    %type custom.iot.device.type
+    %value devices.types.light
+    $LightDeviceType
+    %force_negative
+    %exact
+    света  # чтобы не обижать Светлан
+
+# Чтобы не обижать Светлан, следите, чтобы этот нетерминал не использовался поодиночке.
+# Используйте его как зависимое слово: "яркость света", "температура света" и т. д.
+$LightDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.light
+    %lemma
+    свет
+    освещение
+
+$SwitchDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.switch
+    %lemma
+    переключатель
+    выключатель
+
+$AcDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.thermostat.ac
+    %lemma
+    кондиционер
+    кондей
+    кондер
+    кондир
+
+$TvDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.media_device.tv
+    %lemma
+    телевизор
+    телик
+    тв
+    телек
+    зомбоящик
+    ящик
+
+$ReceiverDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.media_device.receiver
+    %lemma
+    [ресивер (спутниковый|аудио|видео|ав)*]
+
+$TvBoxDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.media_device.tv_box
+    %lemma
+    [приставка (к|от|на|телевизор|тв)*]
+
+$KettleDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.cooking.kettle
+    %lemma
+    чайник
+    чайничек
+    котелок
+
+$CurtainDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.openable.curtain
+    %lemma
+    шторы
+    жалюзи
+    гардины
+    шторки
+    занавески
+
+$PurifierDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.purifier
+    %lemma
+    [очиститель (воздуха|воздушный)*]
+    воздухоочиститель
+
+$VacuumCleanerDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.vacuum_cleaner
+    %lemma
+    [пылесос робот*]
+    пылик
+
+$CoffeeMakerDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.cooking.coffee_maker
+    %lemma
+    кофеварка
+    кофемашина
+    кофейник
+
+$HumidifierDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.humidifier
+    %lemma
+    [увлажнитель (воздуха|воздушный)*]
+    воздухоувлажнитель
+
+$WashingMachineDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.washing_machine
+    %lemma
+    [стиральная (машина|машинка)*]
+    стиралка
+
+$DishwasherDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.dishwasher
+    %lemma
+    посудомойка
+    посудомоечная машина
+    судомойка
+
+$MulticookerDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.cooking.multicooker
+    %lemma
+    мультиварка
+    мультипекарь
+    мультиповар
+    мультиварочка
+    скороварка
+    скороварочка
+    пароварка
+    пароварочка
+
+$RefrigeratorDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.refrigerator
+    %lemma
+    холодильник
+    холодос
+    рефрижератор
+    морозильник
+    морозилка
+
+$IronDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.iron
+    %lemma
+    утюг
+    электроутюг
+
+$FanDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.fan
+    %lemma
+    вентилятор
+    пропеллер
+
+$SensorDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.sensor
+    %lemma
+    сенсор
+    датчик
+
+$PetFeederDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.pet_feeder
+    %lemma
+    [умная* (чаша|чашка|миска|кормушка)]
+
+$SmartSpeakerDeviceType:
+    %type custom.iot.device.type
+    %value devices.types.smart_speaker
+    %lemma
+    [умная* (колонка|станция)]
+
+$EverywhereRoomType:
+    %type custom.iot.room.type
+    %value rooms.types.everywhere
+    %lemma
+    (везде|всюду|повсюду)
+    [($Common.At|для|по)* все+ комнаты+]
+    [($Common.At|для|по)* (мой|весь)* (дом|квартира)+]
+
+$ExactTell:
+    %exact
+    (назови|назовите|назвать)
+    (поведай|поведайте|поведать)
+    (проконсультируй|проконсультируйте|проконсультировать)
+    (расскажи|расскажите|рассказать)
+    (говори|говорите|говорить)
+    (отвечай|отвечайте|отвечать)
+    (скажи|скажите|сказать)

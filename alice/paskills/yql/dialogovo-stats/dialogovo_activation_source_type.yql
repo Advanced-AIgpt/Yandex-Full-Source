@@ -1,0 +1,66 @@
+use hahn;
+
+pragma yt.Pool='paskills';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--$from = '2020-04-14';
+--$to = '2020-04-29';
+$to = select cast(max(cast(substring(Path,Length('home/paskills/sessions/')) as Date)) as String )
+from folder('home/paskills/sessions')
+where Type = 'table';
+
+$max_history_length = Interval("P500D");
+$to_date = cast($to as Date);
+-- $from_date = cast($from as Date);
+$from_date = $to_date - $max_history_length;
+
+$uplimit = unwrap(DateTime::ToDays($to_date-$from_date))+1;
+$range = ListFromRange(0, $uplimit);
+
+$shift_back_by_days = ($days_count) -> {
+    RETURN Unwrap(
+        $from_date + $days_count * Interval("P1D"),
+        "Failed to shift today back by " || CAST($days_count AS String) || " days"
+    );
+};
+
+$dates_tmp = ListMap($range, $shift_back_by_days);
+
+$dates = select ListSort(aggregate_list(dt))
+from (
+    select cast(substring(Path,Length('home/paskills/sessions/')) as Date) as dt
+    from folder('home/paskills/sessions')
+    where Type = 'table'
+)
+where dt in $dates_tmp;
+
+DEFINE ACTION $activation_source($date) AS
+    $table_path = 'home/paskills/sessions/' || CAST($date AS String);
+
+    INSERT INTO @daily_results
+
+        select fielddate, activation_source_type,skill_id, app_group, category, dev_type,
+        count(distinct `uuid`) as uuid_count,
+        count(*) as session_count,
+        count_if(is_long_session) as long_session_count,
+        sum(tpt_session_duration_sec) as tpt_session_duration_sec,
+        from $table_path
+        group compact by fielddate, activation_source_type, app_group, dev_type, category, skill_id
+
+    --group compact by fielddate, activation_source_type, app_group, dev_type, category, skill_id
+    -- GROUPING SETS (
+    --     (fielddate, activation_source_type, app_group, category, skill_id),
+    --     (fielddate, activation_source_type, dev_type, category          ),
+    --     (fielddate, activation_source_type, dev_type                    ),
+    --     (fielddate, activation_source_type,           category          ),
+    --     (fielddate, activation_source_type                              )
+    -- )
+    ;
+END DEFINE;
+
+EVALUATE FOR $date IN $dates DO $activation_source($date);
+COMMIT;
+
+insert into `home/paskills/stat/dialogovo_activation_source_type` with truncate
+select * from @daily_results --where --category = '_total_' and dev_type = '_total_' -- skill_id = '_total_'
+;

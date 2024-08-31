@@ -1,0 +1,44 @@
+{% nlgimport "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" %}
+{% from "alice/hollywood/library/scenarios/alarm/nlg/timer__common_ar.nlg" import render_error, render_timer, render_timer_list, no_such_timer, suggest_show_timers %}
+
+{% phrase render_result %}
+  {% if context.attentions.get('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% elif context.attentions.get('multiple_timers') %}
+    {{ render_timer_list(context.data.available_timers) }}\n{% vc %}-{% evc %}
+    {% if context.data.available_timers|length > 1 %}
+      أيها تريد أن تحذف؟
+    {% else %}
+      هل تريد حذفه؟
+    {% endif %}
+  {% else %}
+    حسناً حذفته.
+    {% if context.data.timer_id == 'all' %}
+      جميع المؤقتات.
+    {% else %}
+      {% if context.attentions.get('timer__abs_time') %}
+        {{ render_timer(context.data.time, True, context.data.specification) }}.
+      {% else %}
+        {{ render_timer(context.data.time, False, context.data.specification) }}.
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase error %}
+  {% if context.error.data.code == 'not_supported' %}
+    {% chooseitem %}
+      لا، لا أستطيع حذف المؤقت حالياً. لكن هذا وضع مؤقت.
+    {% or %}
+      لا زلت لا أستطيع حذف المؤقتات على هذا الجهاز، لكنني سأتعلم يوماً ما.
+    {% endchooseitem %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    لا أفهم أي مؤقت تريد أن أحذف.
+  {% else %}
+    {% if context.data.time %}
+      {{ render_error(context.error.data.code, time=context.data.time) }}
+    {% else %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

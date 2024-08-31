@@ -1,0 +1,191 @@
+#!/bin/bash -e
+
+#
+# Command line:
+#
+function help_run_hollywood {
+    echo ""
+    echo "run-hollywood [SHARD_NAME] [OPTIONS] [EXTRA PARAMS FOR HW]"
+    echo " SHARD_NAME is: all, common, general_conversation, music, video"
+    echo ""
+    echo " available options for run-hollywood:"
+    echo "    --help, -H - show detailed information about command line options"
+    echo "    --skip_resource, -R - skip resource building command"
+    echo "    --skip_build, -B - skip hollywood building command"
+    echo "    --skip_start, -S - skip hollywood run command (make build only)"
+    echo "    --scenario=, -C= - build and run only selected scenario. This option can be used multiple times in command line"
+    echo "    --run-unified-agent - also build and run unified agent (allow to collect setrace logs from local host)"
+    echo ""
+    echo " available options for ya-make:"
+    echo "    -d - force ya make to build debug configuration"
+    echo "    -r - force ya make to build release configuration"
+    echo "    -a - add results cpp/h to build configuration (i.e. --add-result=.h --add-result=.cpp)"
+    echo "    -D=VAR - add variablle to ya make compilation"
+    echo "    --rebuild - rebuild all sources"
+    echo "    --checkout - add --checkout option (for SVN users only)"
+    echo "    --keep-going, -k - don't stop after 1st error"
+    echo "    --sanitize=XXX - build with given sanitizer (allowed XXX option is: address, memory, thread, undefined, leak)"
+    echo "    --verbose, -V - turn on bash debug output"
+    echo ""
+    echo "Scenario name must be uppercase, i.e. -C=ALARM -C=FM_RADIO"
+    echo "Don't use -R/-B options the first time when you change active scenarios with -C option, because you have to rebuild both resources and the server."
+    echo ""
+    echo "EXTRA PARAMS FOR HW: any allowed arguments for run-hollywood-bin (see below):"
+    if [ -f $HOLLYWOOD_DIR/shards/all/server/hollywood_server ]; then
+        $HOLLYWOOD_DIR/shards/all/server/hollywood_server --help
+    else
+        echo "Error. Hollywood server not found, build it first to see additional command line options"
+    fi  
+}
+
+SCRIPT_DIR="$(dirname "$0")"
+HOLLYWOOD_DIR="$SCRIPT_DIR/../.."
+ARCADIA_DIR="$SCRIPT_DIR/../../../.."
+
+SHARD=""
+RUN_OPTIONS="--use-signal-filter"
+SKIP_RESOURCE=0
+SKIP_BUILD=0
+SKIP_START=0
+RUN_UNIFIED_AGENT=0
+SCENARIO=""
+ADD_RESULTS="--add-result ''"
+
+if [ -d $ARCADIA_DIR/.svn ]; then
+    echo "SVN detected, will use --checkout"
+    BUILD_OPTIONS="--checkout"
+else
+    echo "ARC detected, will not use --checkout"
+    BUILD_OPTIONS=""
+fi
+
+#
+# Analyze command line
+#
+for i in "$@"; do
+  case $i in
+    -R|--skip_resource)
+      SKIP_RESOURCE=1
+      ;;
+    -B|--skip_build)
+      SKIP_BUILD=1
+      ;;
+    -S|--skip_start)
+      SKIP_START=1
+      ;;
+    -C=*|--scenario=*)
+      SCENARIO+="${i#*=}"
+      SCENARIO+=" "
+      ;;
+    --sanitize=*)
+      BUILD_OPTIONS+=" --sanitize=${i#*=}"
+      ;;
+    -H|--help)
+      help_run_hollywood
+      exit
+      ;;
+    -d)
+      BUILD_OPTIONS+=" -d"
+      ;;
+    -r)
+      BUILD_OPTIONS+=" -r"
+      ;;
+    --checkout)
+      if [ -d $ARCADIA_DIR/.svn ]; then
+          echo "Warning: SVN detected, second --checkout option is ignored"
+      else
+          BUILD_OPTIONS+=" --checkout"
+      fi
+      ;;
+    -D=*)
+      BUILD_OPTIONS+=" -D="
+      BUILD_OPTIONS+="${i#*=}"
+      ;;
+    -a)
+      ADD_RESULTS="--add-result=.h --add-result=.cpp"
+      ;;
+    --rebuild*)
+      BUILD_OPTIONS+=" --rebuild"
+      ;;
+    -k|--keep-going)
+      BUILD_OPTIONS+=" --keep-going"
+      ;;
+    -V|--verbose)
+      set -x
+      ;;
+    --run-unified-agent)
+      RUN_UNIFIED_AGENT=1
+      RUN_OPTIONS+=" "
+      RUN_OPTIONS+=$i
+      ;;
+    *)
+      if [ -z $SHARD ]; then
+          SHARD=$i
+      else
+          RUN_OPTIONS+=" "
+          RUN_OPTIONS+=$i
+      fi
+      ;;
+  esac
+done
+
+if [ -z $SHARD ]; then
+    SHARD="all"
+fi
+
+if [ -d $HOLLYWOOD_DIR/shards/$SHARD ]; then
+   echo "Shard is" $SHARD
+else
+   echo "Error: Shard" $SHARD "does not exist. Abort"
+   exit
+fi
+
+if [ -z "$SCENARIO" ]; then
+    echo "Scenario is not set use shard " $SHARD
+else
+    echo "Use scenarios "$SCENARIO", switch to shard 'all'"
+    SHARD="all"
+    RUN_OPTIONS+=" --ignore-missing-scenarios"
+    BUILD_OPTIONS+=" -D=DISABLE_ALL_SCENARIOS"
+    SCENARIO_LIST=(`echo $SCENARIO | tr ' ' ' '`)
+
+    for (( i=0; i<=${#SCENARIO_LIST[@]}; i++ )); do
+        if [ "${SCENARIO_LIST[$i]}" != "" ]; then
+            if grep -Fq "SCENARIO_${SCENARIO_LIST[$i]}" "$HOLLYWOOD_DIR/shards/all/scenarios/ya.make"
+            then
+                BUILD_OPTIONS+=" -D=SCENARIO_${SCENARIO_LIST[$i]}"
+            else
+                echo "Error: scenario ${SCENARIO_LIST[$i]} not found in make file"
+                exit
+            fi
+        fi
+    done
+fi
+
+SERVER_DIR="$HOLLYWOOD_DIR/shards/$SHARD/server"
+
+if [ $SKIP_RESOURCE -eq 1 ]; then
+    echo "Resource building is skipped by command line arg"
+else
+    # prepare the resource files and link them into the source tree
+    ya make -DHOLLYWOOD_SHARD="$SHARD" "$HOLLYWOOD_DIR/shards/$SHARD/prod" $BUILD_OPTIONS $ADD_RESULTS
+fi
+
+if [ $SKIP_BUILD -eq 1 ]; then
+    echo "Server building is skipped by command line arg"
+else
+    # build hollywood binary and the script binary
+    ya make -DHOLLYWOOD_SHARD="$SHARD" "$SERVER_DIR" "$SCRIPT_DIR" $BUILD_OPTIONS $ADD_RESULTS
+fi
+
+if [ $RUN_UNIFIED_AGENT -eq 1 ]; then
+    export BASS_DEV_TVM_SECRET=$(ya vault get version sec-01cnbk6vvm6mfrhdyzamjhm4cm --only-value TVM2_SECRET)
+    ya make "$HOLLYWOOD_DIR/../../logbroker/unified_agent/bin" $BUILD_OPTIONS
+fi
+
+if [ $SKIP_START -eq 1 ]; then
+    echo "Server run is skipped by command line arg"
+else
+    echo "Run server with shard " $SHARD " and options " $RUN_OPTIONS
+    "$SCRIPT_DIR/run-hollywood-bin" --server "$SERVER_DIR/hollywood_server" --shard_name "$SHARD" $RUN_OPTIONS
+fi
