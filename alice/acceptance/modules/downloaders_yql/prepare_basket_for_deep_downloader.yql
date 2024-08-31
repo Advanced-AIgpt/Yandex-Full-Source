@@ -1,0 +1,89 @@
+PRAGMA yt.InferSchema = '100';
+
+
+$code = @@
+import base64
+import cyson
+import json
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+PARTITION_SIZE = 256
+PUBLIC_KEY_STR = (
+    b'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzokOkMWkvbyDU7ZWEH0p'
+    b'Hv+K5Hx6efvVgvd42hupk7CZmFGQOLxSOt4PDnS3+cL5FNJzwRPMcKOB+fMdG5BJ'
+    b'zfIVtWR8L6SENg/j+QB4vY3d7TeonchfIOP4z2r8FM+K6ekLzXqN/MbVBVdU0W+b'
+    b'xC4SV8K3g+Wrrqx0E6y2EzjDjdKaOWZygrnwi5vaM9juZtVEqNwde7UDrHoYgITI'
+    b'EOb3VE1UJJZgdW/ypT2F55H/FN7EjCuwIeoyrWKcDyuBhltWdHBE4eUK59K7uYtS'
+    b'jli/3GHx2v5uS69PLDQ4ttBWvMHL6jKQ9ihlY/kKDf5toR+imaK+PNuX+x3lyrZx'
+    b'/wIDAQAB')
+
+
+def encrypt(message):
+    assert message, 'Empty message for encrypt'
+    public_key = serialization.load_der_public_key(base64.b64decode(PUBLIC_KEY_STR), backend=default_backend())
+    result = b''
+    while(len(message) > 0):
+        ciphertext = public_key.encrypt(
+            message[:PARTITION_SIZE],
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                algorithm=hashes.SHA1(),
+                label=None
+            )
+        )
+        message = message[PARTITION_SIZE:]
+        r = b'<--' + base64.b64encode(ciphertext) + b'-->'
+        result += r
+    return result
+
+
+def reducer(key, values):
+    rows = [cyson.loads(v) for v in values]
+    use_reversed_session_sequence = False
+    for row in rows:
+        flags = row.pop(b'flags', [])
+        if b'soy_decrypt_secrets' in flags:
+            if row.get(b'oauth'):
+                row[b'oauth'] = encrypt(row[b'oauth'])
+        if b'use_reversed_session_sequence' in flags:
+            use_reversed_session_sequence = True
+
+    if use_reversed_session_sequence:
+        try:
+            rows.sort(key=lambda t: -t[b'reversed_session_sequence'])
+        except KeyError:
+            rows.sort(key=lambda t: -t[b'session_sequence'])
+    else:
+        rows.sort(key=lambda t: -t[b'session_sequence'])
+    return {'session_requests': cyson.dumps(rows), 'session_id': key}
+
+
+def enrich_row(row, flags):
+    flags = json.loads(flags)
+    row = cyson.loads(row)
+    row['flags'] = flags
+    return cyson.dumps(row)
+@@;
+
+
+$reducer = Python3::reducer(
+    Callable<(
+        String?,
+        Stream<Yson?>
+    ) -> Struct<session_requests:Yson?,session_id:String>>,
+    $code
+);
+
+$enrich_row = Python3::enrich_row(
+    Callable<(
+        Yson?,
+        String
+    ) -> Yson>,
+    $code
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+REDUCE {{input1}}
+ON session_id USING $reducer($enrich_row(Yson::Serialize(Yson::From(TableRow())), {{param.downloader_flags}}));

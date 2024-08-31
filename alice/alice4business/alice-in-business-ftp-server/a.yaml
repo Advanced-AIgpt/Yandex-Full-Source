@@ -1,0 +1,72 @@
+service: alice4business
+title: Алиса для бизнеса FTP сервер
+ci:
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags: CI_ALICE4BUSINESS
+      notifications:
+        - statuses: [ TIMEOUT, FAILURE, EXCEPTION ]
+          transport: email
+          recipients: da-levkovets
+  flows:
+    release-to-production-flow:
+      title: Release to production api
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/alice4business/alice-in-business-ftp-server/build.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "release-${context.version_info.full}"
+        release-to-production:
+          title: Release to production
+          task: common/deploy/create_release
+          needs: build
+          stage: stable
+          input:
+            config:
+              stage_id: paskills-ext-ftp-stable
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: ftp-server
+                      box_id: ftp-server
+                    image_name: "paskills/alice-in-business-ftp-server:release-${context.version_info.full}"
+  releases:
+    release:
+      title: Create production release FTP server
+      flow: release-to-production-flow
+      branches:
+        pattern: releases/alice4business/ftp-server/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: stable
+          title: Release to Stable
+arcanum:
+  review:
+    groups:
+      - name: "reviewers_group_front"
+        roles:
+          - "alice4business:frontend_developer"
+    override_policy: "override"
+    rules:
+      - reviewers:
+          - name: "reviewers_group_front"
+            ship: 1
+            assign: 1
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: st_issue_linked

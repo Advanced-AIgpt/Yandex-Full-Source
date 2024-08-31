@@ -1,0 +1,187 @@
+service: alice4business
+title: Алиса для бизнеса
+ci:
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags: CI_ALICE4BUSINESS
+      notifications:
+        - statuses: [ TIMEOUT, FAILURE, EXCEPTION ]
+          transport: email
+          recipients: da-levkovets
+  actions:
+    pre-merge:
+      flow: pre-merge-flow
+      triggers:
+        - on: pr
+          into: trunk
+    per-commit:
+      flow: per-commit-flow
+      triggers:
+        - on: commit
+  flows:
+    pre-merge-flow:
+      title: Pre-merge check ups
+      jobs:
+        lint-and-test:
+          title: Lint and test stage
+          task: common/misc/run_command
+          requirements:
+            cores: 4
+            sandbox:
+              client_tags: GENERIC & LINUX & SSD & LXC
+              container_resource: 2985458169
+              dns: dns64
+          input:
+            config:
+              arc_mount_config:
+                enabled: true
+              cmd_line: |
+                cd alice/alice4business/alice-in-business-console
+                npm ci
+                npm run lint && npm run test
+    per-commit-flow:
+      title: Per commit into trunk
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/alice4business/alice-in-business-console/build.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "trunk-${context.version_info.full}"
+        release-to-priemka:
+          title: Release to priemka
+          task: common/deploy/create_release
+          needs: build
+          stage: deploy
+          input:
+            config:
+              stage_id: paskills-ext-priemka
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: alice-b2b
+                      box_id: alice-b2b
+                    image_name: "paskills/alice-in-business-console:trunk-${context.version_info.full}"
+    release-to-production-flow:
+      title: Release to production
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/alice4business/alice-in-business-console/build.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "release-${context.version_info.full}"
+        create-release-ticket:
+          title: Создание релизного тикета
+          task: common/tracker/create_issue
+          needs: build
+          stage: priemka
+          input:
+            rules:
+              on_duplicate: UPDATE
+            config:
+              secret:
+                key: st.token
+            template:
+              type: Задача
+              summary: Релиз Alice for business console ${context.version_info.major}
+              queue: ALICERELEASE
+              fixVersion: alice-in-business-console ${context.version_info.major}
+              tags:
+                - alice-in-business-console
+                - release_console_${context.version_info.major}
+            update_template:
+              comment: |
+                Новые тикеты и коммиты в ((${context.ci_url} ${context.title}))
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+
+        release-to-priemka:
+          title: Release to priemka
+          task: common/deploy/create_release
+          needs: create-release-ticket
+          stage: priemka
+          input:
+            config:
+              stage_id: paskills-ext-priemka
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: alice-b2b
+                      box_id: alice-b2b
+                    image_name: "paskills/alice-in-business-console:release-${context.version_info.full}"
+
+        await-release-to-production-confirm:
+          title: Await release to prod confirmation
+          task: dummy
+          stage: stable
+          needs:
+            - release-to-priemka
+          manual:
+            enabled: true
+            prompt: Launch Production Release?
+
+        release-to-production:
+          title: Releasee to production
+          task: common/deploy/create_release
+          needs: await-release-to-production-confirm
+          stage: stable
+          input:
+            config:
+              stage_id: paskills-ext-stable
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: alice-b2b
+                      box_id: alice-b2b
+                    image_name: "paskills/alice-in-business-console:release-${context.version_info.full}"
+  releases:
+    release:
+      title: Create production release
+      flow: release-to-production-flow
+      branches:
+        pattern: releases/alice4business/console/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: priemka
+          title: Release to priemka
+        - id: stable
+          title: Release to Stable
+arcanum:
+  review:
+    groups:
+      - name: "reviewers_group_front"
+        roles:
+          - "alice4business:frontend_developer"
+    override_policy: "override"
+    rules:
+      - reviewers:
+          - name: "reviewers_group_front"
+            ship: 1
+            assign: 1
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: st_issue_linked

@@ -1,0 +1,13 @@
+export enum ERRORS {
+    WRONG_CODE,
+    CODE_EXPIRED,
+    CUSTOM,
+    FATAL,
+    INFO,
+}
+
+export const INPUT_ERRORS = [
+    ERRORS.WRONG_CODE,
+    ERRORS.CODE_EXPIRED,
+    ERRORS.CUSTOM
+]

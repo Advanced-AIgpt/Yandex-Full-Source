@@ -1,0 +1,3 @@
+RECURSE(
+    canonize_checkers
+)

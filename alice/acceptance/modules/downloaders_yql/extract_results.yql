@@ -1,0 +1,220 @@
+PRAGMA yt.MaxRowWeight = "64M";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$raw_success = {{input1->table_quote()}};
+$raw_errors = {{input2->table_quote()}};
+
+$unpacked_success = {{output1->table_quote()}};
+$unpacked_errors = {{output2->table_quote()}};
+$error_stat = {{output3->table_quote()}};
+
+
+----- UNPACK PROTOBUF
+
+$config = AsAtom(@@{"name":"NScraperOverYT.TVoiceOutput","meta":"eNp1kk1Lw0AQhqn90E5jP/agi4iUHqQHMVfxZvUiiIUkLXgqMRnsYpuNu5v6cfMv+Qvd3dS0RrwkO8/7zDIZAp91uJQYimjuykiEKYoZX+nHu3KXYapLd8Ee3VRwxd0VZxHOeKbSTJ1bRNr3ft411k0PweCrBk4wNd7YauQYmh6+ZCjVbUwr/cqw6W0AIVCbZCymOzawZzIA50oKD2XKE4mSVm32ixlnyhL5A2gtd7YZGUInUDLAN1VodauVMTmDnkZ+ihjNC7ehXcf7G5AuVO/4E921d5kjOQG4XjBMVMCWSMEGW4QcwZ55f/AEacumRW16fVQijHAiFtTJezfE7M9HKRlP9P728/0VwHzjuvDNTpMIaVs7Va+MyQE0RqF8RkU79pJ1RU6hfcNfkwUPYxR2/q7NS5T0oTVivNhOz0rbiFzAoYf6L5AYl2cidqb/4m86V8R6"}@@);
+$udf = YQL::Udf(AsAtom("Protobuf.Parse"), YQL::Void(), YQL::Void(), $config);
+
+DEFINE SUBQUERY $unpack_proto($input) AS
+    SELECT *
+    FROM (
+        SELECT Error AS FetchedError, $udf(FetchedResult) AS Packed
+        FROM concat($input)
+        WITH SCHEMA Struct<FetchedResult:String?, UsedBetas:String?, Error:String?>
+    ) FLATTEN COLUMNS;
+END DEFINE;
+
+INSERT INTO $unpacked_success WITH TRUNCATE
+SELECT * FROM $unpack_proto($raw_success);
+
+INSERT INTO $unpacked_errors WITH TRUNCATE
+SELECT * FROM $unpack_proto($raw_errors);
+COMMIT;
+
+----- EXTRACT ERRORS
+
+$code = @@
+import collections
+import json
+import re
+
+import cyson
+
+
+def get_source_error_type(VinsResponse):
+    try:
+        vins = VinsResponse
+        if vins is not None:
+            meta = json.loads(vins)['directive']['payload']['response'].get('meta', [])
+            for meta_item in meta:
+                if meta_item['type'] == 'error':
+                    return 'vins_sources_error_' + meta_item['error_type']
+    except (KeyError, ValueError) as e:
+        return 'vins_sources_error_traceback'
+
+
+ERROR_PREFIX_MAPPING = [
+    (
+        '(NAlice::NUniproxy::NHelpers::TUniproxyInteractionError) alice/uniproxy/mapper/uniproxy_client/lib/helpers.cpp:#: Unexpected response. Expected namespace "Vins" actual namespace "System"',
+        'mm_unanswer_error'
+    ),
+    (
+        '(NAlice::NUniproxy::NHelpers::TUniproxyInteractionError) alice/uniproxy/mapper/uniproxy_client/lib/async_uniproxy_client.cpp:#: Bad vins response:',
+        'mm_unanswer_error'
+    ),
+    (
+        '(NAlice::NUniproxy::NHelpers::TUniproxyInteractionError) alice/uniproxy/mapper/uniproxy_client/lib/async_uniproxy_client.cpp:#: directive exception: scope=MEGAMIND_RUN code=http.512',
+        'mm_unanswer_error'
+    ),
+    ('(NAlice::NUniproxy::NHelpers::TUniproxyInteractionError)', 'uniproxy_error'),
+    ('(Poco::Net::NoMessageException)', 'uniproxy_error'),
+    ('(Poco::Net::NetException)', 'uniproxy_error'),
+    ('(NScraperOverYT::TBinaryHolderFail)', 'downloader_error'),
+    ('(NScraperOverYT::TWebUnanswerFail)', 'tunneler_error'),
+]
+DEFAULT_PREFIX = 'unknown_error'
+MESSAGEID_REGEX = re.compile('[a-f0-9]{1,8}-[a-f0-9]{1,8}-[a-f0-9]{1,8}-[a-f0-9]{1,8}', re.I)
+STR_NUM_REGEX = re.compile('cpp:[0-9]+')
+def get_error_type(error):
+    if not error:
+        return None
+
+    error = error.decode('utf-8')
+    modified_error = MESSAGEID_REGEX.sub('MESSAGEID', error)
+    modified_error = STR_NUM_REGEX.sub('cpp:#', modified_error)
+    is_prefix_replaced = False
+    for (key, value) in ERROR_PREFIX_MAPPING:
+        if modified_error.startswith(key):
+            is_prefix_replaced = True
+            modified_error = modified_error.replace(key, value)
+            break
+
+    if not is_prefix_replaced:
+        modified_error = DEFAULT_PREFIX + '_' + modified_error
+    return modified_error.replace(' ', '_')
+
+
+def get_error_group(error):
+    if not error:
+        return None
+    error = error.decode('utf-8')
+    return error[:error.index('error')] + 'error'
+@@;
+
+$get_source_error_type = Python3::get_source_error_type(
+    Callable<(String?) -> String?>,
+    $code
+);
+$get_error_type = Python3::get_error_type(
+    Callable<(String?) -> String>,
+    $code
+);
+$get_error_group = Python3::get_error_group(
+    Callable<(String?) -> String?>,
+    $code
+);
+
+INSERT INTO @selected_errors
+SELECT
+    $get_source_error_type(VinsResponse) AS metric,
+    $get_error_group($get_source_error_type(VinsResponse)) AS `group`,
+    SetraceUrl AS setrace_url,
+    Basket AS basket
+FROM $unpacked_success
+UNION ALL
+SELECT
+    $get_error_type(FetchedError) AS metric,
+    $get_error_group($get_error_type(FetchedError)) AS `group`,
+    SetraceUrl AS setrace_url,
+    Basket AS basket
+FROM $unpacked_errors;
+COMMIT;
+
+----- FILL ERRORS RESULT
+
+DEFINE SUBQUERY $group_percent($group_name) AS
+SELECT
+    basket,
+    'download_error_percent' AS `group`,
+    $group_name AS metric,
+    1.0 * COUNT_IF(group == $group_name AND metric IS NOT NULL) / COUNT(*) AS value
+FROM @selected_errors
+GROUP BY basket;
+END DEFINE;
+
+DEFINE SUBQUERY $group_absolute($group_name) AS
+SELECT
+    basket,
+    'download_error_absolute' AS `group`,
+    $group_name AS metric,
+    COUNT_IF(group == $group_name AND metric IS NOT NULL) AS value
+FROM @selected_errors
+GROUP BY basket;
+END DEFINE;
+
+$download_groups = ['downloader_error', 'mm_unanswer_error', 'uniproxy_error', 'tunneler_error', 'unknown_error'];
+
+DEFINE SUBQUERY $all_group_percent() AS
+SELECT
+    basket,
+    'download_error_percent' AS `group`,
+    'all_download_error' AS metric,
+    1.0 * COUNT_IF(`group` IN $download_groups AND metric IS NOT NULL) / COUNT(*) AS value
+FROM @selected_errors
+GROUP BY basket
+UNION ALL
+SELECT
+    basket,
+    'error' AS `group`,
+    'all_download_error' AS metric,
+    1.0 * COUNT_IF(`group` IN $download_groups AND metric IS NOT NULL) / COUNT(*) AS value
+FROM @selected_errors
+GROUP BY basket;
+END DEFINE;
+
+DEFINE SUBQUERY $all_group_absolute() AS
+SELECT
+    basket,
+    'download_error_absolute' AS `group`,
+    'all_download_error' AS metric,
+    COUNT_IF(`group` IN $download_groups) AS value
+FROM @selected_errors
+GROUP BY basket;
+END DEFINE;
+
+INSERT INTO $error_stat WITH TRUNCATE
+SELECT * FROM $group_percent('downloader_error')
+UNION ALL
+SELECT * FROM $group_absolute('downloader_error')
+UNION ALL
+SELECT * FROM $group_percent('mm_unanswer_error')
+UNION ALL
+SELECT * FROM $group_absolute('mm_unanswer_error')
+UNION ALL
+SELECT * FROM $group_percent('uniproxy_error')
+UNION ALL
+SELECT * FROM $group_absolute('uniproxy_error')
+UNION ALL
+SELECT * FROM $group_percent('tunneler_error')
+UNION ALL
+SELECT * FROM $group_absolute('tunneler_error')
+UNION ALL
+SELECT * FROM $group_percent('vins_sources_error')
+UNION ALL
+SELECT * FROM $group_absolute('vins_sources_error')
+UNION ALL
+SELECT * FROM $group_percent('unknown_error')
+UNION ALL
+SELECT * FROM $group_absolute('unknown_error')
+UNION ALL
+SELECT * FROM $all_group_percent()
+UNION ALL
+SELECT * FROM $all_group_absolute()
+UNION ALL
+SELECT basket, 'download_error_details' AS `group`, metric, COUNT(*) as value,
+    Yson::From(AsDict(AsTuple(
+        'setrace_urls',
+        TOP_BY(setrace_url, Random(setrace_url), 10)
+    ))) AS additional_info
+FROM @selected_errors
+GROUP BY basket, metric
+HAVING metric IS NOT NULL;
