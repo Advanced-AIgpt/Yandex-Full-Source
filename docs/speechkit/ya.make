@@ -1,0 +1,7 @@
+DOCS()
+
+OWNER(
+    alsikorskii
+)
+
+END()

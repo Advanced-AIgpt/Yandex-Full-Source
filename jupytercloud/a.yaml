@@ -1,0 +1,293 @@
+---
+service: jupyter-cloud
+title: JupyterCloud
+ci:
+  autocheck:
+    strong: False
+    fast-targets:
+      - jupytercloud/backend
+      - jupytercloud/library
+      - jupytercloud/nirvana
+  secret: sec-01d83hjj2yehgykzn85n2h5pa5
+  runtime:
+    sandbox-owner: JUPYTER_CLOUD
+
+  triggers:
+  - "on": pr
+    flow: build-base-docker-flow
+    required: False
+    filters:
+    - sub-paths:
+      - infrastructure/images/build-image/**
+      - infrastructure/images/deploy-app/**
+
+  - "on": pr
+    flow: release-docker-flow
+    required: False
+    filters:
+    - sub-paths:
+      - infrastructure/**
+      - backend/**
+
+
+  flows:
+    build-base-docker-flow:
+      title: Build base Docker images flow
+      jobs:
+        build-build-image:
+          title: Build build-image
+          task: common/arcadia/ya_package_2
+          requirements:
+            sandbox:
+              dns: dns64
+              priority:
+                class: SERVICE
+                subclass: LOW
+          input:
+            packages: jupytercloud/infrastructure/images/build-image/pkg.json
+            # ↓ same for every job ↓
+            package_type: docker
+            docker_image_repository: jupyter-cloud
+            docker_push_image: True
+            docker_user: robot-jupyter-cloud
+            docker_token_vault_name: DOCKER_TOKEN
+            ya_yt_token_vault_owner: JUPYTER_CLOUD
+            ya_yt_token_vault_name: JUPYTERCLOUD_JAM_TOKEN
+
+        build-build-image-latest:
+          title: Build build-image:latest
+          task: common/arcadia/ya_package_2
+          requirements:
+            sandbox:
+              dns: dns64
+              priority:
+                class: SERVICE
+                subclass: LOW
+          input:
+            packages: jupytercloud/infrastructure/images/build-image/pkg.json
+            custom_version: latest
+
+            package_type: docker
+            docker_image_repository: jupyter-cloud
+            docker_push_image: True
+            docker_user: robot-jupyter-cloud
+            docker_token_vault_name: DOCKER_TOKEN
+            ya_yt_token_vault_owner: JUPYTER_CLOUD
+            ya_yt_token_vault_name: JUPYTERCLOUD_JAM_TOKEN
+
+        build-deploy-app:
+          title: Build deploy-app
+          task: common/arcadia/ya_package_2
+          requirements:
+            sandbox:
+              dns: dns64
+              priority:
+                class: SERVICE
+                subclass: LOW
+          needs: build-build-image-latest
+          input:
+            packages: jupytercloud/infrastructure/images/deploy-app/pkg.json
+
+            package_type: docker
+            docker_image_repository: jupyter-cloud
+            docker_push_image: True
+            docker_user: robot-jupyter-cloud
+            docker_token_vault_name: DOCKER_TOKEN
+            ya_yt_token_vault_owner: JUPYTER_CLOUD
+            ya_yt_token_vault_name: JUPYTERCLOUD_JAM_TOKEN
+
+        build-deploy-app-latest:
+          title: Build deploy-app:latest
+          task: common/arcadia/ya_package_2
+          requirements:
+            sandbox:
+              dns: dns64
+              priority:
+                class: SERVICE
+                subclass: LOW
+          needs: build-build-image-latest
+          input:
+            packages: jupytercloud/infrastructure/images/deploy-app/pkg.json
+            custom_version: latest
+
+            package_type: docker
+            docker_image_repository: jupyter-cloud
+            docker_push_image: True
+            docker_user: robot-jupyter-cloud
+            docker_token_vault_name: DOCKER_TOKEN
+            ya_yt_token_vault_owner: JUPYTER_CLOUD
+            ya_yt_token_vault_name: JUPYTERCLOUD_JAM_TOKEN
+
+    release-docker-flow:
+      title: Docker build → Deploy
+      jobs:
+        start-build:
+          title: Start build
+          task: dummy
+        build-image:
+          title: Build image
+          task: common/arcadia/ya_package_2
+          needs: start-build
+          requirements:
+            sandbox:
+              dns: dns64
+              priority:
+                class: SERVICE
+                subclass: LOW
+          multiply:
+            by: |
+             ${[
+                {"image": 'jupyter-cloud-idm'},
+                {"image": 'jupyterhub'},
+                {"image": 'salt-master'},
+                {"image": 'traefik-proxy'}
+              ]}
+            title: Build ${by.image}
+          input:
+            packages: jupytercloud/infrastructure/images/${by.image}/pkg.json
+            custom_version: "${context.version_info.full}"
+
+            package_type: docker
+            docker_image_repository: jupyter-cloud
+            docker_push_image: True
+            docker_user: robot-jupyter-cloud
+            docker_token_vault_name: DOCKER_TOKEN
+            build_system: semi_distbuild
+            ya_yt_token_vault_owner: JUPYTER_CLOUD
+            ya_yt_token_vault_name: JUPYTERCLOUD_JAM_TOKEN
+
+        finish-build:
+          title: Finish build
+          task: dummy
+          needs: build-image
+
+        release-to-test:
+          title: Release to testing
+          task: common/deploy/create_release
+          needs: finish-build
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-test
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: backend
+                    box_id: backend
+                  image_name: "jupyter-cloud/jupyterhub:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: idm
+                    box_id: idm
+                  image_name: "jupyter-cloud/jupyter-cloud-idm:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: proxy
+                    box_id: proxy
+                  image_name: "jupyter-cloud/traefik-proxy:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: salt
+                    box_id: salt
+                  image_name: "jupyter-cloud/salt-master:${context.version_info.full}"
+
+        release-to-prod:
+          title: Release to prod
+          task: dummy
+          needs: finish-build
+
+        release-all-to-prod:
+          title: Release EVERYTHING to production
+          task: common/deploy/create_release
+          needs: release-to-prod
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-prod
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: backend
+                    box_id: backend
+                  image_name: "jupyter-cloud/jupyterhub:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: idm
+                    box_id: idm
+                  image_name: "jupyter-cloud/jupyter-cloud-idm:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: proxy
+                    box_id: proxy
+                  image_name: "jupyter-cloud/traefik-proxy:${context.version_info.full}"
+
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: salt
+                    box_id: salt
+                  image_name: "jupyter-cloud/salt-master:${context.version_info.full}"
+
+        release-backend-to-prod:
+          title: Release backend to production
+          task: common/deploy/create_release
+          needs: release-to-prod
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-prod
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: backend
+                    box_id: backend
+                  image_name: "jupyter-cloud/jupyterhub:${context.version_info.full}"
+
+        release-idm-to-prod:
+          title: Release IDM to production
+          task: common/deploy/create_release
+          needs: release-to-prod
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-prod
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: idm
+                    box_id: idm
+                  image_name: "jupyter-cloud/jupyter-cloud-idm:${context.version_info.full}"
+
+        release-proxy-to-prod:
+          title: Release proxy to production
+          task: common/deploy/create_release
+          needs: release-to-prod
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-prod
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: proxy
+                    box_id: proxy
+                  image_name: "jupyter-cloud/traefik-proxy:${context.version_info.full}"
+
+        release-salt-to-prod:
+          title: Release salt to production
+          task: common/deploy/create_release
+          needs: release-to-prod
+          manual: true
+          input:
+            config:
+              stage_id: jupytercloud-hub-prod
+              patches:
+              - docker:
+                  docker_image_ref:
+                    deploy_unit_id: salt
+                    box_id: salt
+                  image_name: "jupyter-cloud/salt-master:${context.version_info.full}"

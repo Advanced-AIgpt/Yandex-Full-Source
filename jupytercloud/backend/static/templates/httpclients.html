@@ -1,0 +1,50 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="page-header">
+  <h1>Statistics on instantiated tornado async http clients</h1>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Client name</th>
+      <th>Is alive</th>
+      <th>Creation Time</th>
+      <th>Active requests</th>
+      <th>Queued requests</th>
+      <th>Processed</th>
+      <th>Timouted</th>
+      <th>Times instantiated</th>
+      <th>Times disposed</th>
+      <th>Create options</th>
+      <th>Creation traceback</th>
+    </tr>
+  <tbody>
+    {% for client_info in http_clients_info.values() %}
+    <tr>
+      <td>{{ client_info.name }}</td>
+      <td>{{ client_info.is_alive }}</td>
+      <td>{{ client_info.creation_time }}</td>
+      <td>{{ client_info.active_requests }}</td>
+      <td>{{ client_info.queued_requests }}</td>
+      <td>{{ client_info.counters['processed_requests_rate'].get() }}</td>
+      <td>{{ client_info.counters['timeouted_requests_rate'].get() }}</td>
+      <td>{{ client_info.counters['instantiated_count'].get() }}</td>
+      <td>{{ client_info.counters['disposed_count'].get() }}</td>
+      <td><pre>{{ client_info.options | tojson(2) }}</pre></td>
+      <td><pre>{{ client_info.pretty_traceback }}</pre></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
+
+{% block yndxbug %}
+{# kill yndxbug on this page #}
+{% endblock %}
+{% block yndxmetrika %}
+{# kill yndxmetrika on this page #}
+{% endblock %}

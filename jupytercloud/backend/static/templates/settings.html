@@ -1,0 +1,44 @@
+{% extends "page.html" %}
+
+{% import "utils.jinja" as utils %}
+
+{% block main %}
+
+<div class="container">
+  <div class="page-header">
+    <h1>Settings of user {{ user.name }} and their server</h1>
+  </div>
+  {% if pending_task %}
+    {% set disabled = "disabled" %}
+    <div class="alert alert-warning">
+        Settings are in read-only mode while task
+        <a href="{{ pending_url }}" class="btn btn-default">"{{ pending_task }}"</a>
+        performing.
+    </div>
+  {% else %}
+    {% set disabled = '' %}
+  {% endif %}
+
+  {% if message %}
+    <div class="alert alert-{{ message_level }}">
+        {{ message }}
+    </div>
+  {% endif %}
+
+  <form action="{{ action_url }}" method="POST">
+
+    {{ utils.settings_panel('page', settings_registry, disabled=disabled) }}
+
+    <button
+        type="submit"
+        class="btn btn-primary col-sm-6 col-sm-offset-3 {{ disabled }}"
+        value="apply"
+    >
+        Apply settings
+    </button>
+
+  </form>
+
+</div>
+
+{% endblock %}

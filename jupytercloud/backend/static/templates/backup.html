@@ -1,0 +1,137 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="container">
+  <div class="page-header">
+    <h1>Backup control for user {{ user.name }}</h1>
+  </div>
+
+  {% if ongoing_tasks or user.spawner.pending or existing_vm_status.name == 'poll_error' %}
+  {% set button_status = "disabled" %}
+  {% else %}
+  {% set button_status = '' %}
+  {% endif %}
+
+  {% if ongoing_tasks %}
+  <div class="alert alert-warning">Can't start new backup/restore tasks while there are any active tasks</div>
+  {% elif user.spawner.pending %}
+  <div class="alert alert-warning">
+    Can't start new backup/restore tasks while there are
+    <a href="{{ base_url }}spawn-pending/{{user.name}}">spawn in process</a>
+  </div>
+  {% elif existing_vm_status.name == 'poll_error' %}
+  <div class="alert alert-danger">
+    QYP or VM status is unavailable, so backup and restore are blocked.
+    {% if existing_vm %}
+    <a href="{{ existing_vm.link }}">Link to VM</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if tasks %}
+  <h2>
+    Current backup/restore tasks
+  </h2>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Age</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    <tbody>
+      {% for task in tasks %}
+      <tr {% if task['failed'] %}class="danger"{% endif %}>
+        <td><a href="https://sandbox.yandex-team.ru/task/{{ task['id'] }}">
+          {{ task['id'] }}
+        </a></td>
+        <td>{{ task['age_min'] }} minutes ago</td>
+        <td>{{ task['task_type'] }}</td>
+        <td>{{ task['status'] }}</td>
+        <td>
+            {% set stop_disabled = "" if task['canceable'] else 'disabled' %}
+            <a role="button" class="btn btn-default {{ stop_disabled }}" href="{{ base_backup_url }}/stop/{{ task['id'] }}">
+                Stop
+            </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if user.spawner.active or existing_vm_status.is_running %}
+  <div class="row text-center">
+    <span class="input-group-btn">
+      <a role="button" class="btn btn-primary {{ button_status }}" href="{{ backup_url }}">
+        Do backup
+      </a>
+    </span>
+  </div>
+  {% elif existing_vm_status.is_stopped %}
+    <div class="alert alert-info">
+      You have stopped VM
+      <a href="{{ existing_vm.link }}">{{ existing_vm.host }} and can start it via QYP</a>
+      just for backup purposes
+    </div>
+  {% elif existing_vm and not existing_vm_status.is_stopped and not existing_vm_status.is_running %}
+    <div class="alert alert-info">
+      You have VM
+      <a href="{{ existing_vm.link }}">{{ existing_vm.host }}</a>
+      in status {{ existing_vm_status.name }}; it must be running for backup purposes
+    </div>
+  {% endif %}
+
+  <h2>Last {{ backups_nu }} backups</h2>
+
+  <div class="alert alert-warning">WARNING! Restore might overwrite files on your machine!</div>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Age</th>
+        <th>Expires in</th>
+        <th>Size</th>
+        <th>Host</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not backups %}
+      <tr><td colspan=6>No backups yet</td></tr>
+      {% endif %}
+
+      {% for backup in backups %}
+      <tr>
+        <td><a href="https://sandbox.yandex-team.ru/resource/{{ backup['id'] }}">
+            {{ backup['id'] }}
+        </a></td>
+        <td>{{ backup['age'] }} days ago</td>
+        <td>
+          {% if backup['expires'] %}
+          {{ backup['expires'] }} days
+          {% else %}
+          never
+          {% endif %}
+        </td>
+        <td>{{ backup['size'] }} MB</td>
+        <td>{{ backup['host'] }}</td>
+        <td>
+          <a role="button" class="btn btn-default {{ button_status }}"
+            href="{{ backup['restore_url'] }}">
+            {% if not user.spawner.active %} Spawn and {% endif %}Restore
+          </a>
+        </td>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+
+
+{% endblock %}

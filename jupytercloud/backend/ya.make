@@ -1,0 +1,135 @@
+PY3_LIBRARY()
+
+OWNER(g:jupyter-cloud)
+
+PEERDIR(
+    contrib/python/tornado/tornado-6
+    contrib/python/pycurl
+    contrib/python/attrs
+    contrib/python/asyncio-pool
+    contrib/python/jupyterhub
+    contrib/python/jupytext
+    contrib/python/jsonschema
+    contrib/python/uvloop
+    contrib/libs/grpc/src/python/grpcio
+    contrib/python/redis  # need to refactor redis_endpoint_generator to remove this
+    contrib/python/yappi
+    contrib/python/websockets
+    contrib/python/aiojobs
+    contrib/python/more-itertools
+
+    arc/api/public
+
+    jupytercloud/backend/lib/clients
+    jupytercloud/backend/lib/util
+    jupytercloud/backend/lib/db
+    jupytercloud/backend/lib/db/alembic
+    jupytercloud/backend/lib/idm
+    jupytercloud/backend/lib/qyp
+)
+
+PY_SRCS(
+    __init__.py
+    _version.py
+    app.py
+    auth.py
+    env.py
+    settings.py
+    jupyticket.py
+    launcher.py
+    dns/__init__.py
+    dns/api_client.py
+    dns/manager.py
+    handlers/__init__.py
+    handlers/arcadia.py
+    handlers/backup.py
+    handlers/base.py
+    handlers/events.py
+    handlers/jupyticket.py
+    handlers/metrics.py
+    handlers/misc.py
+    handlers/nb_template.py
+    handlers/nirvana.py
+    handlers/oauth.py
+    handlers/patch.py
+    handlers/qyp.py
+    handlers/settings.py
+    handlers/startrek.py
+    handlers/test.py
+    handlers/utils.py
+    handlers/vault.py
+    services/base/app.py
+    services/base/handlers.py
+    services/consistency_watcher/app.py
+    services/dns_sync/app.py
+    services/idm/app.py
+    services/idm/handlers.py
+    services/local_key_accepter/app.py
+    services/redis_endpoint_generator/app.py
+    services/backend_switcher/app.py
+    services/backend_switcher/handlers.py
+    spawner/__init__.py
+    spawner/form.py
+    spawner/spawner.py
+    static/__init__.py
+    vcs/__init__.py
+    vcs/arc.py
+    vcs/arcadia.py
+)
+
+RESOURCE_FILES(
+    PREFIX jupytercloud/backend/
+    static/css/fix_progress.css
+    static/css/fix_navbars.css
+    static/js/events.js
+    static/js/home.js
+    static/js/nb_template.js
+    static/js/settings_pending.js
+    static/js/spawn.js
+    static/templates/admin.html
+    static/templates/backup.html
+    static/templates/error.html
+    static/templates/feature_board.html
+    static/templates/handlers.html
+    static/templates/home.html
+    static/templates/httpclients.html
+    static/templates/jupyticket.html
+    static/templates/nb_template.html
+    static/templates/page.html
+    static/templates/page_future.html
+    static/templates/settings.html
+    static/templates/settings_pending.html
+    static/templates/spawn.html
+    static/templates/spawn/existing_vm.html
+    static/templates/spawn/full.html
+    static/templates/spawn/qyp_unavailable.html
+    static/templates/spawn_pending.html
+    static/templates/quota_services.html
+    static/templates/utils.jinja
+    static/templates/yandex_oauth.html
+    static/nb_templates/nbconvert.tpl
+    static/nb_templates/yt/010_pandas.pyt
+    static/nb_templates/yt/015_pandas_xlsx.pyt
+    static/nb_templates/yt/020_nile_yt_empty.pyt
+    static/nb_templates/yt/030_nile_yt_aggregate.pyt
+    static/nb_templates/yt/040_nile_libra.pyt
+    static/nb_templates/yt/050_nile_yt_publish.pyt
+    static/nb_templates/yt/060_spyt.pyt
+    static/nb_templates/yt/070_nile_libra_column.pyt
+    static/nb_templates/pulsar_experiments/collect_experiment_metrics.pyt
+    static/nb_templates/pulsar_instances/uplift_metrics.pyt
+    static/resources/logo.svg
+    static/resources/favicon-red.png
+    static/resources/favicon-black.png
+    static/resources/jupyter100.svg
+)
+
+END()
+
+RECURSE(
+    lib
+)
+
+RECURSE_FOR_TESTS(
+    tests
+)

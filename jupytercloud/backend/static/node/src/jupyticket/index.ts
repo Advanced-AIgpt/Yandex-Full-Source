@@ -1,0 +1,1 @@
+export { JupyTicketPage } from "./page";

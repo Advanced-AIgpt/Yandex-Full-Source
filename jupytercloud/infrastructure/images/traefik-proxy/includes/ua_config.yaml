@@ -1,0 +1,48 @@
+status:
+  port: 16301
+
+storages:
+- name: metrics_storage
+  plugin: fs
+  config:
+    directory: /var/cache/unified_agent
+    max_partition_size: 100mb
+
+routes:
+- input:
+    plugin: metrics_pull
+    config:
+      url: http://localhost:8080/metrics
+      format:
+        prometheus: {}
+
+      project: jupyter-cloud
+      service: proxy
+  channel:
+    channel_ref:
+      name: transform_prometheus
+
+channels:
+- name: transform_prometheus
+  channel:
+    pipe:
+    - filter:
+        plugin: transform_metric_labels
+        config:
+          labels:
+          - sensor: "prom.{name}"
+          - traefik_service: "{service}"
+          - name: "-"
+          - service: "-"
+    channel_ref:
+      name: solomon_output
+
+- name: solomon_output
+  channel:
+    pipe:
+    - storage_ref:
+        name: metrics_storage
+    output:
+      plugin: metrics_pull
+      config:
+        port: 8900

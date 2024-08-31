@@ -1,0 +1,57 @@
+---
+interface: '::'
+ipv6: True
+worker_threads: 8
+
+rest_cherrypy:
+  port: 80
+  # ssl is on balancer
+  disable_ssl: True
+  host: '::'
+
+external_auth:
+  sharedsecret:
+    '*':
+    - '@wheel'
+    - '@runner'
+    - '@jobs'
+    - .*
+
+log_level: INFO
+
+file_roots:
+  base:
+  - /srv/states
+  - /srv/extensions
+
+cache: postgres_cache
+postgres_cache.port: 6432
+postgres_cache.user: robot_jupyter_cloud
+postgres_cache.database: salt_cache
+postgres_cache.table_name: cache
+
+master_job_cache: pgjsonb
+returner.pgjsonb.user: robot_jupyter_cloud
+returner.pgjsonb.db: salt_job_cache
+returner.pgjsonb.port: 6432
+
+pillar_roots:
+  base:
+  - /srv/pillar
+
+extension_modules: /srv/modules
+
+ext_pillar:
+- postgres:
+  - query: 'SELECT name, value FROM pillars WHERE minion_id LIKE %s'
+
+reactor:
+  - 'salt/minion/*/start':
+    - /srv/reactor/sync_grains.sls
+
+keep_jobs: 48
+cli_summary: True
+show_jid: True
+job_cache_store_endtime: True
+
+state_output: changes

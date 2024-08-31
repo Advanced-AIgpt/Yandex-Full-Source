@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<concept xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xml:lang="ru" 
+    xsi:noNamespaceSchemaLocation="urn:yandex:names:tc:dita:xsd:yandexConcept.xsd:1.3"
+    id="quick-start">
+    <title>Быстрый старт</title>
+    <abstract>
+        <p>Если вы хотите размещать у себя документацию, выполните несколько шагов:</p>
+    </abstract>
+    <prolog>
+        <metadata>
+            <othermeta name="vcs_source_url" content="https://a.yandex-team.ru/arc/trunk/arcadia/docs/tech-doc/ru/daas/api/concepts/quick-start.dita"></othermeta>
+        </metadata>
+    </prolog>
+    <conbody>
+        <minitoc/>
+        <section id="one">
+            <title>1. Заполните заявку</title>
+            <feedback form-id="8557" form-title="Заявка"/>
+        </section>
+        <section id="two">
+            <title>2. Настройте проксирование в DaaS</title>
+            <p>У каждого заведенного проекта есть уникальный <xref href="../concepts/glossary.dita#glossary/slug" popup="yes">слаг</xref>, например, <codeph>pogoda</codeph>.</p>
+            <p>Настройте проксирование выбранного домена и пути (например, <codeph>pogoda.yandex.ru/docs/</codeph>) на наш сервис с учетом <codeph>tld</codeph>, указав слаг в адресе — <codeph>http://pogoda.daas.yandex.$tld</codeph>.</p>
+            <note><p>Для тестинга — <codeph>http://pogoda.daas.locdoc-test.yandex.$tld</codeph>.</p></note>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>У меня свой Nginx</dt>
+                    <dd><p>В качестве примера используется путь <codeph>pogoda.yandex.ru/docs/</codeph>.</p><p>Добавьте проксирование в конфигурацию:</p>
+                        <codeblock code-lang="nginx">location ~ ^/docs(/.*)?$ {
+    proxy_pass http://pogoda.daas.yandex.$tld;
+}</codeblock>
+                    </dd>
+                </dlentry>
+                <dlentry>
+                    <dt>У меня Qloud</dt>
+                    <dd><p>В качестве примера используется путь <codeph>pogoda.yandex.ru/docs/</codeph>.</p>
+                    <ol>
+                        <li>Заведите компонент <codeph>proxy</codeph> и привяжите к нужному пути — <codeph>/docs/</codeph>.</li>
+                        <li>В качестве Server укажите <codeph>internal.daas.yandex.net</codeph> (для тестинга <codeph>internal.daas.locdoc-test.yandex.net</codeph>).</li>
+                        <li>В качестве Host укажите <codeph>pogoda.daas.yandex$yandex_tld</codeph> (для тестинга <codeph>pogoda.daas.locdoc-test.yandex$yandex_tld</codeph>).</li>
+                    </ol>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="three">
+            <title>3. Закажите доступы</title>
+            <p>Порт: 80.</p>
+            <p>Боевой балансер: <codeph>locdoc-www.stable.qloud-b.yandex.net</codeph>.</p>
+            <p>Тестовый балансер: <codeph>locdoc-www-test.stable.qloud-b.yandex.net</codeph>.</p>
+            <p>Если вы проксируете из Qloud-окружения, доступы нужно заказывать от сети вашего балансера.</p>
+            <note>
+                <p>Для common-балансеров и L7 доступы уже есть.</p>
+            </note>
+        </section>
+        <section id="four">
+            <title>4. Замените ссылки</title>
+            <p>Замените ссылки, которые ведут на <codeph>yandex.ru/support/...</codeph>, <codeph>tech.yandex.ru/...</codeph>, на ссылки на ваш домен. Обычно такие ссылки размещены в шапке и подвале сервиса.</p>
+        </section>
+        <section id="five">
+            <title>5. Добавьте <filepath>sitemap.xml</filepath> по документации (опциональный шаг)</title>
+            <p>Это поможет большому поиску быстрее обновить адреса.</p>
+            <p>DaaS умеет автоматически собирать <filepath>sitemap.xml</filepath> по документации и отдавать на выбранном вами домене, например, <xref href="https://surveys.yandex.ru/help/sitemap.xml" format="html" scope="external"/>.</p>
+            <p>Как добавить <filepath>sitemap.xml</filepath> на ваш сервис: <note>
+                    <p>Если у вас несколько доменов, необходимо добавить <filepath>sitemap.xml</filepath> в файлы <filepath>robots.txt</filepath> или <filepath>sitemapindex</filepath> для каждого домена.</p>
+                </note>
+                <ol id="ol_wx5_kjp_4gb">
+                    <!-- <li>С помощью операции <xref href="../reference/get-documents-sitemap.dita"/> получите файл.</li> -->
+                    <li>Добавьте в конец файла <filepath>robots.txt</filepath> строку с местонахождением вашего <filepath>sitemap.xml</filepath> (в примере рассмотрен сервис <xref href="https://surveys.yandex.ru/" format="html" scope="external"/>): <codeblock>Sitemap: https://surveys.yandex.ru/help/sitemap.xml</codeblock>
+                    </li>
+                    <li>Или добавьте строку с адресом в <filepath>sitemapindex</filepath> (в примере рассмотрен сервис <xref href="https://surveys.yandex.ru/" format="html" scope="external"/>): <codeblock code-lang="xml">&lt;sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    &lt;sitemap>
+        &lt;loc>https://surveys.yandex.ru/help/sitemap.xml&lt;/loc>
+    &lt;/sitemap>
+&lt;/sitemapindex>  </codeblock>
+                    </li>
+                </ol></p>
+        </section>
+    </conbody>
+</concept>

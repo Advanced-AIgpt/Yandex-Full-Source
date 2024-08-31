@@ -1,0 +1,30 @@
+{% import "utils.jinja" as utils %}
+
+{%- set level = 'warning' if existing_vm.is_evacuating else 'info' -%}
+
+<div class="alert alert-{{ level }} text-center" role="alert">
+  You already have VM
+  <a class"alert-link" href="{{ existing_vm.link }}", target_="_blank">
+    {{ existing_vm.host }}</a>.
+  <br/>
+  {%- if existing_vm.is_evacuating -%}
+  Currently it is evacuating from host, check your mail for QYP alerts.
+  {%- else -%}
+  You can either start it with the spawn button or deallocate it at
+  <a class="alert-link" href="{{ existing_vm.link }}">QYP</a> and refresh this page.
+  {%- endif -%}
+</div>
+
+{%- if not existing_vm.is_evacuating -%}
+<form enctype="multipart/form-data" id="spawn_form" class="form-horizontal"
+  action="{{url}}" method="post" role="form">
+
+  <input type="hidden" name="start_existing" value="1">
+
+  {{ utils.settings_panel('existing-vm', settings_registry) }}
+
+  <input type="submit" value="Spawn"
+    id="submit-button" class="btn btn-primary col-sm-6 col-sm-offset-3">
+
+</form>
+{%- endif -%}

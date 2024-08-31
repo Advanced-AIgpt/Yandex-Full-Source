@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<concept xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xml:lang="ru" xsi:noNamespaceSchemaLocation="urn:yandex:names:tc:dita:xsd:yandexConcept.xsd:1.3" id="proxy">
+    <title>Проксирование документации на домен сервиса</title>
+    <abstract>
+        <p>Проксирование станет оптимальным выбором, если:<ul id="ul_h3n_3xk_f3b">
+                <li>вы хотите размещать документацию на домене сервиса (<xref href="https://yandex.ru/pogoda/docs/" scope="external" format="html">пример</xref>);</li>
+                <li>вам подходит стандартный стиль оформления документации (<xref href="https://yandex.ru/pogoda/docs/" scope="external" format="html">пример</xref>);</li>
+                <li>вы хотите иметь удобный поиск по документации в рамках своего сервиса.</li>
+            </ul></p>
+        <p>При использовании проксирования дополнительно вы можете настроить: <ul>
+                <li>логотип (может быть картинкой или текстом);</li>
+                <li>фавиконка;</li>
+                <li>счетчик метрики;</li>
+                <li>включить или отключить определенные элементы интерфейса (авторизация, кнопки следующая/предыдущая статья и блок голосования за статью).</li>
+            </ul>
+        </p>
+        <minitoc/>
+    </abstract>
+    <prolog>
+        <metadata>
+            <othermeta name="vcs_source_url" content="https://a.yandex-team.ru/arc/trunk/arcadia/docs/tech-doc/ru/daas/service/concepts/proxy.dita"/>
+        </metadata>
+    </prolog>
+    <concept id="doc-yes">
+        <title>У меня уже есть документация</title>
+        <conbody>
+            <p>Если ваша документация написана в одном из <xref href="about.dita#main/dif-formats">исходных форматов</xref>, можно настроить проксирование.</p>
+            <ol>
+                <li id="li0">
+                    <p>Определитесь с <xref href="about.dita#main/dif-public">вариантом размещения документации</xref>.</p>
+                </li>
+                <li id="li1"> Заполните заявку и дождитесь завершения работы по ней. <feedback form-id="8557" form-title="Заявка" collapsed="yes"/>
+                </li>
+                <li id="li2">
+                    <p>Настройте проксирование домена и пути, где будет лежать документация, на сервис DaaS с учетом <codeph>tld</codeph> и укажите <xref href="../concepts/glossary.dita#glossary/slug" popup="yes">слаг</xref> в адресе. </p>
+                    <note>
+                        <p>У каждого заведенного проекта (проект заводится по заявке из пункта 1) есть уникальный <xref href="../concepts/glossary.dita#glossary/slug" popup="yes">слаг</xref>, например, <codeph>pogoda</codeph>. </p>
+                    </note>
+                    <p>Пример: документация будет лежать по адресу <codeph>pogoda.yandex.ru/docs</codeph>, значит проксирование необходимо настроить на адрес <codeph>http://pogoda.daas.yandex.$tld</codeph>.</p>
+                    <p>
+                        <dl display-style="cut">
+                            <dlentry>
+                                <dt>Тестинг</dt>
+                                <dd>
+                                    <dl display-style="htab">
+                                        <dlentry>
+                                            <dt>У меня свой Nginx</dt>
+                                            <dd>
+                                                <p>Добавьте проксирование в конфигурацию:</p>
+                                                <p>
+                                                    <codeblock code-lang="nginx">location ~ ^/docs(/.*)?$ {
+    proxy_pass http://pogoda.daas.locdoc-test.yandex.$tld;
+}                                           </codeblock>
+                                                </p>
+                                            </dd>
+                                        </dlentry>
+                                        <dlentry>
+                                            <dt>У меня Qloud</dt>
+                                            <dd>
+                                                <ol>
+                                                    <li>Заведите компонент <codeph>proxy</codeph> и привяжите к нужному пути — <codeph>/docs/</codeph>.</li>
+                                                    <li>В качестве Server укажите <codeph>internal.daas.locdoc-test.yandex.net</codeph>.</li>
+                                                    <li>В качестве Host укажите <codeph>pogoda.daas.locdoc-test.yandex$yandex_tld</codeph>.</li>
+                                                </ol>
+                                            </dd>
+                                        </dlentry>
+                                    </dl>
+                                </dd>
+                            </dlentry>
+                            <dlentry>
+                                <dt>Продакшн</dt>
+                                <dd>
+                                    <p>Настройка на примере <codeph>pogoda.yandex.ru/docs</codeph></p>
+                                    <dl display-style="htab">
+                                        <dlentry>
+                                            <dt>У меня свой Nginx</dt>
+                                            <dd>
+                                                <p>Добавьте проксирование в конфигурацию:</p>
+                                                <p>
+                                                    <codeblock code-lang="nginx">location ~ ^/docs(/.*)?$ {
+    proxy_pass http://pogoda.daas.yandex.$tld;
+}                                           </codeblock>
+                                                </p>
+                                            </dd>
+                                        </dlentry>
+                                        <dlentry>
+                                            <dt>У меня Qloud</dt>
+                                            <dd>
+                                                <ol>
+                                                    <li>Заведите компонент <codeph>proxy</codeph> и привяжите к нужному пути — <codeph>/docs/</codeph>.</li>
+                                                    <li>В качестве Server укажите <codeph>internal.daas.yandex.net</codeph>.</li>
+                                                    <li>В качестве Host укажите <codeph>pogoda.daas.yandex$yandex_tld</codeph>.</li>
+                                                </ol>
+                                            </dd>
+                                        </dlentry>
+                                    </dl>
+                                </dd>
+                            </dlentry>
+                        </dl>
+                    </p>
+                </li>
+                <li id="li3">
+                    <p>Закажите доступы до балансеров. Доступы заказываются в <xref href="https://puncher.yandex-team.ru" scope="external" format="html">Puncher</xref>.</p>
+                    <note>
+                        <p>Для common-балансеров и L7 доступы уже есть по умолчанию. Их не надо заказывать повторно.</p>
+                    </note>
+                    <p>Параметры для заказа доступов:</p>
+                    <ol>
+                        <li>Если вы проксируете из Qloud-окружения, доступы нужно заказывать от сети вашего балансера.</li>
+                        <li>Порт: 80.</li>
+                        <li>Адреса: <dl display-style="cut">
+                                <dlentry>
+                                    <dt>Тестовый балансер:</dt>
+                                    <dd><codeph>locdoc-www-test.stable.qloud-b.yandex.net</codeph></dd>
+                                </dlentry>
+                                <dlentry>
+                                    <dt>Боевой балансер:</dt>
+                                    <dd><codeph>locdoc-www.stable.qloud-b.yandex.net</codeph></dd>
+                                </dlentry>
+                            </dl>
+                        </li>
+                    </ol>
+                </li>
+                <li>
+                    <p>Если ваша документация уже была опубликована до настройки проксирования, не забудьте заменить ссылки, которые ведут на старые адреса с документацией, например, <codeph>yandex.ru/support/...</codeph>, <codeph>tech.yandex.ru/...</codeph>. Обычно такие ссылки размещены в шапке и подвале сервиса.</p>
+                </li>
+                <li id="li4">
+                    <p>Добавьте <codeph>sitemap.xml</codeph> по документации (опциональный шаг) в один из файлов.</p>
+                    <p>DaaS умеет автоматически собирать <codeph>sitemap.xml</codeph> по документации и отдавать на вашем домене. Вам необходимо только добавить строку с местонахождением <codeph>sitemap.xml</codeph> в файл <codeph>robots.txt</codeph> или в <codeph>sitemapindex</codeph>. Это поможет большому поиску быстрее обновить адреса.</p>
+                    <note>
+                        <p>Если у вас несколько доменов, необходимо добавить <codeph>sitemap.xml</codeph> в файлы <codeph>robots.txt</codeph> или <codeph>sitemapindex</codeph> для каждого домена.</p>
+                    </note>
+                    <dl display-style="cut">
+                        <dlentry>
+                            <dt>Добавление в <codeph>robots.txt</codeph></dt>
+                            <dd>
+                                <p>Добавьте в конец файла <codeph>robots.txt</codeph> строку с местонахождением вашего <codeph>sitemap.xml</codeph> (в примере рассмотрен сервис <xref href="https://surveys.yandex.ru/" format="html" scope="external"/>): </p>
+                                <codeblock>Sitemap: https://surveys.yandex.ru/help/sitemap.xml</codeblock>
+                            </dd>
+                        </dlentry>
+                        <dlentry>
+                            <dt>Добавление в <codeph>sitemapindex</codeph></dt>
+                            <dd>
+                                <p>Добавьте строку с адресом в <codeph>sitemapindex</codeph> (в примере рассмотрен сервис <xref href="https://surveys.yandex.ru/" format="html" scope="external"/>): </p>
+                                <codeblock>&lt;sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    &lt;sitemap>
+        &lt;loc>https://surveys.yandex.ru/help/sitemap.xml&lt;/loc>
+    &lt;/sitemap>
+&lt;/sitemapindex>                             </codeblock>
+                            </dd>
+                        </dlentry>
+                    </dl>
+                </li>
+            </ol>
+        </conbody>
+    </concept>
+    <concept id="doc-no">
+        <title>У меня еще нет документации</title>
+        <conbody>
+            <ol>
+                <li>Определитесь с <xref href="about.dita#main/dif-formats">исходным форматом документации</xref> и напишите ее (самостоятельно или с помощью <xref href="https://wiki.yandex-team.ru/doc-and-loc/doc/request/internal/?from=%252Fdoc%252Forder-doc%252F" scope="external" format="html">технического писателя</xref>).</li>
+                <li conref="#doc-yes/li0"/>
+                <li conref="#doc-yes/li1"/>
+                <li conref="#doc-yes/li2"/>
+                <li conref="#doc-yes/li3"/>
+                <li conref="#doc-yes/li4"/>
+            </ol>
+        </conbody>
+    </concept>
+</concept>

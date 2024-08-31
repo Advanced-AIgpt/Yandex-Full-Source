@@ -1,0 +1,57 @@
+{% macro bool_setting(name, info, disabled) -%}
+  <div class="checkbox">
+    <label>
+      <input
+        type="checkbox"
+        name="setting-{{ name }}"
+        value=""
+        {%- if info['value'] -%}checked{%- endif -%}
+        {%- if disabled -%}disabled{%- endif -%}
+      >
+        {{ info['title_en'] }}
+    </label>
+  </div>
+{%- endmacro %}
+
+{% macro setting(name, info, disabled) -%}
+  {% if info['type'] == 'bool' %}
+    {{ bool_setting(name, info, disabled) }}
+  {% else %}
+    Wrong setting type {{ info['type'] }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro settings_panel(tab_name, settings_registry, collapsed=False, disabled=False) -%}
+  {#
+    TODO: all this collapsiple thing should be transformed to accordeon with settings
+    groups in the future with increasing number of settings
+  #}
+  <div class="panel-group">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">
+            <a data-toggle="collapse"
+               data-target="#settings-{{tab_name}}"
+               aria-expanded="{%- if collapsed -%}false{%- else -%}true{%- endif -%}"
+               aria-controls="settings-{{tab_name}}"
+            >
+              Additional settings
+              <span class="caret"></span>
+            </a>
+        </h4>
+      </div>
+      <div
+          id="settings-{{tab_name}}"
+          class="panel-collapse collapse {% if not collapsed -%}in{%- endif -%}"
+      >
+        <div class="panel-body">
+          {% for setting_name, setting_info in settings_registry.items() -%}
+            {{ setting(setting_name, setting_info, disabled) }}
+          {%- endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+{%- endmacro %}
+
+

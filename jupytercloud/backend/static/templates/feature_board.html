@@ -1,0 +1,54 @@
+{% extends "page.html" %}
+
+{# use c.JupyterHub.template_vars to change #}
+{% set feature_board_url = feature_board_url or 'https://feature-requests.yandex-team.ru/#query=Filter:402387&formUrl=https://forms.yandex-team.ru/surveys/68730/' %}
+
+{% block main %}
+
+<div class="container">
+  <div class="page-header">
+    <h1>
+        JupyterCloud feature requests board
+        <span
+            class="mdi mdi-information-outline text-info"
+            data-placement="bottom"
+            data-toggle="tooltip"
+            data-html="true"
+            title="Feature board shows tickets from JUPYTER st.yandex-team.ru queue with 'feature' tag sorted by voices"
+        >
+        </span>
+    </h1>
+  </div>
+  <iframe src="{{ feature_board_url }}" width="100%" id="feature_board">
+  </iframe>
+</div>
+
+{% endblock %}
+
+
+{% block script %}
+
+{{ super() }}
+
+<script>
+(function () {
+    const MIN_HEIGHT = 300;
+
+    const adjustHeight = () => {
+        const $featureBoard = $('#feature_board');
+        const margin = $featureBoard.outerHeight(true) - $featureBoard[0].clientHeight;
+        const topOffset = $featureBoard.offset().top;
+
+        {# -1 is magical #}
+        let height = window.innerHeight - topOffset - margin - 1;
+        if (height < MIN_HEIGHT) {
+            height = MIN_HEIGHT;
+        }
+        $featureBoard.outerHeight(height);
+    };
+    adjustHeight();
+    $(window).resize(adjustHeight);
+})();
+</script>
+
+{% endblock %}

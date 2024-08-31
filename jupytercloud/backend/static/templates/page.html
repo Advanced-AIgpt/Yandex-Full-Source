@@ -1,0 +1,133 @@
+{% extends "templates/page.html" %}
+
+{% set metrika_counter = "64806643" %}
+
+{% block title %}JupyterCloud{% endblock %}
+
+{% block stylesheet %}
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript" >
+   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+   m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+   ym({{ metrika_counter }}, "init", {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true,
+        webvisor:true
+   });
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/{{ metrika_counter }}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+<link rel="stylesheet" href="https://infracloudui-cdn.s3.mds.yandex.net/infraBuzzer/latest/styles.css"/>
+<link rel="stylesheet" href="https://cdn.materialdesignicons.com/4.9.95/css/materialdesignicons.min.css"/>
+<!-- this css fixes .progress class after buzzler css -->
+<link rel="stylesheet" href="{{ jc_static_url('css/fix_progress.css') }}"/>
+
+{{ super() }}
+
+<link rel="stylesheet" href="{{ jc_static_url('css/fix_navbars.css') }}"/>
+
+
+{% endblock %}
+
+
+{% block login_widget %}
+
+{% endblock %}
+
+
+{% block nav_bar_left_items %}
+
+{% if jc_holiday %}
+<li><span id="holiday" title="{{jc_holiday_title}}" style="{{jc_holiday_style}}">{{jc_holiday}}</span></li>
+{% endif %}
+
+{{ super() }}
+
+{% if user.admin %}
+
+<li><a href="{{ deploy_link }}" target="_blank">Y.Deploy</a></li>
+<li><a href="{{ base_url }}handlers" target="_blank">Handlers</a></li>
+
+{% endif %}
+
+<li><a href="{{ documentation_link }}" target="_blank">Documentation</a></li>
+<li><a href="{{ chat_link }}" target="_blank">Chat</a></li>
+<li><a href="{{ base_url }}feature_board">Feature requests</a></li>
+
+{% endblock %}
+
+
+{% block nav_bar_right_items %}
+
+{% if user.admin %}
+<li><a> {{ version }} </a><li>
+<li><a> {{ dc }} </a><li>
+{% endif %}
+
+<li><a href="{{ base_url}}quota/{{user.name}}/services">Q</a><li>
+
+<li><a id="infra-buzzer"></a></li>
+
+{% endblock %}
+
+
+{% block script %}
+
+{{ super() }}
+
+<!-- https://bb.yandex-team.ru/projects/INFRACLOUDUI/repos/infra-buzzer-bundled/browse -->
+<script src="https://infracloudui-cdn.s3.mds.yandex.net/infraBuzzer/latest/index_skip_define.js"></script>
+<script>
+    (function () {
+        const {ref, unmount} = window.infraBuzzer.mount({
+            container: document.getElementById('infra-buzzer'),
+            subscribeTo: [
+                {serviceId: 931, environmentId: 1271},
+                {serviceId: 277, environmentId: 357},
+                {serviceId: 6, environmentId: 13},
+            ],
+            test: false,
+            callback: () => console.log('infra buzzer mounted'),
+        });
+    }());
+</script>
+
+{% block yndxmetrika %}
+<script>
+    (function () {
+        const user = window.jhdata.user;
+
+        ym({{ metrika_counter }}, 'userParams', {
+            UserID: user
+        });
+    })();
+</script>
+{% endblock %}
+
+{% block yndxbug %}
+<script
+  src="https://yandex.ru/global-notifications/butterfly/stable/butterfly.js"
+  id="yndxbug"
+  position="left"
+  modules="forms,info"
+  form="10016227"
+  data-text=""
+  custom-theme=""
+  screenshot="true"
+  data-domain="yandex"
+  async=""
+  {% if yndxbug_info -%}
+  data-data='{{ yndxbug_info | tojson(indent=4) }}'
+  data-info='{{ yndxbug_info | tojson | safe }}'
+  {%- endif %}
+  crossorigin=""
+></script>
+
+{% endblock %}
+
+{% endblock %}

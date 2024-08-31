@@ -1,0 +1,13 @@
+include:
+- .generic
+- .deb_env
+- .pip_env
+- .libgeobase
+- .pip_yandex
+- .arc
+- .arcadia_kernels
+- .statinfra
+- .clickhouse
+- .spark
+- .java
+- .pip_fixed

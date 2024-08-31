@@ -1,0 +1,93 @@
+{% extends "page.html" %}
+
+{% block script %}
+
+{{ super() }}
+
+<script type="text/javascript">
+(function () {
+    'use strict';
+
+    // FIXME: map all fields? Up to you
+    const ALLOWED_FIELDS = ['access_token', 'expires_in', 'token_type', 'state', 'error', 'error_description'];
+    const TARGET_URL = '{{ save_token_url }}';
+
+    function logError(message) {
+        // some logging should be here
+        console.error(`Error happened while saving the token. ${message}`);
+        if (window.opener) {
+            window.opener.postMessage({
+                'event': 'jupytercloud-oauth',
+                'success': false,
+                'message': String(message)
+            }, '*');
+            window.close();
+        }
+    }
+
+    const anchor = document.location.hash;
+
+    if (!anchor) {
+        logError('Empty anchor');
+    }
+
+    const parsedAnchorValues = new URLSearchParams(anchor.replace('#', '?'));
+
+    const valuesMap = ALLOWED_FIELDS.reduce((acc, key) => {
+        acc[key] = parsedAnchorValues.get(key);
+
+        return acc;
+    }, {});
+
+    const requestPromise = fetch(TARGET_URL, {
+        method: 'POST',
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(valuesMap),
+    })
+        .then(async response => {
+            if (!response.ok) {
+                const error_text = 'Unexpected response code: ' + response.status + '; response text: ' + await response.text();
+                logError(error_text);
+                throw new Error(error_text);
+            }
+            response.json().then((data) => {
+                if (window.opener) {
+                    window.opener.postMessage({'event': 'jupytercloud-oauth', 'success': true}, '*');
+                }
+
+                if (data.close) {
+                    window.close();
+                    return;
+                }
+
+                if (data.redirect) {
+                    document.location = data.redirect;
+                } else {
+                    document.location = '{{ redirect_url }}';
+                }
+            });
+        }, logError)
+})()
+</script>
+
+{% endblock %}
+
+{% block main %}
+
+<div class="container">
+    <div class="text-center">
+        <h1>Saving your token here. Maybe.</h1>
+        <h2>If you are not redirecting in 5-10 seconds, something went wrong.</h2>
+        <div class="row"><a href="{{ redirect_url }}">Manual link to return back to spawn</a></div>
+        {% if jc_debug %}
+        <div class="row">
+            OAuth URL: <a href={{ oauth_url }}>{{ oauth_url }}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

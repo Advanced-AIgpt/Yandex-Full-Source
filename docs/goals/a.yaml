@@ -1,0 +1,87 @@
+title: Deploy docs
+# slug вашего сервиса в ABC. Его можно узнать из url страницы
+# вашего сервиса в ABC, например для адреса
+# https://abc.yandex-team.ru/services/market/, market - это slug
+service: documentation
+
+ci:
+  secret: sec-01fzfs0sbxsqb628z9zrswfmtp # id секрета, созданного на шаге 1
+  runtime:
+    # Sandbox-группа (https://sandbox.yandex-team.ru/admin/groups),
+    # в которую должен входить ваш робот
+    # Создать группу можно по инструкции https://docs.yandex-team.ru/sandbox/groups
+    sandbox:
+      owner: DOCLOC
+      # Настройки уведомлений при падении сборки (https://docs.yandex-team.ru/ci/runtime)
+      notifications:
+        - statuses: FAILURE
+          transport: email # доступные транспорты: telegram, email, jabber, q
+          # логины сотрудников, Sandbox-группы, рассылки (рассылки только для email уведомлений) и др.
+          recipients: DOCLOC
+
+  actions:
+    # определение экшена, который будет вызван при пулл-реквесте,
+    # затрагивающим вашу документацию
+    docs:
+      title: Deploy docs
+      flow: deploy-pr-docs
+      triggers:
+        - on: pr
+
+  releases:
+    release-docs:
+      title: Release docs
+      flow: release-docs
+      auto: true
+      filters:
+        - sub-paths: ['**']
+        - abs-paths: ['build/platform/yfm']
+
+      stages:
+        - id: build
+          title: Build
+          displace: true
+        - id: testing
+          title: Testing
+          displace: true
+        - id: stable
+          title: Stable
+
+  flows:
+    deploy-pr-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          input:
+            targets: docs/goals # путь до вашего проекта от корня Аркадии
+            arcanum_review_id: ${context.launch_pull_request_info.pull_request.id}
+            notify: true # отставлять комментарий к ПР с ссылкой на выложенную документацию
+
+    release-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          stage: build
+          input:
+            targets: docs/goals # путь до вашего проекта от корня Аркадии
+
+        release-to-testing:
+          title: Release docs to testing
+          task: common/docs/release
+          needs: deploy
+          stage: testing
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: testing
+
+        release-to-stable:
+          title: Release docs to stable
+          task: common/docs/release
+          needs: release-to-testing
+          manual: false
+          stage: stable
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: production

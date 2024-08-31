@@ -1,0 +1,2 @@
+---
+sharedsecret: '{{ salt_secret }}'

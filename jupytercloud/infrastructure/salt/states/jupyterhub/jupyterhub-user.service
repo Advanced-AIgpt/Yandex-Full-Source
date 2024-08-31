@@ -1,0 +1,25 @@
+[Unit]
+Description=JupyterHub user service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ jupyterhub_command }}
+
+Environment="USER={{ jupyterhub_username }}"
+Environment="HOME=/home/{{ jupyterhub_username }}"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:{{ jupyterhub_path }}"
+Environment="REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt"
+Environment={{ jupyterhub_env }}
+WorkingDirectory=/home/{{ jupyterhub_username }}
+
+User={{ jupyterhub_alias }}
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=file:/var/log/jupyterhub.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target

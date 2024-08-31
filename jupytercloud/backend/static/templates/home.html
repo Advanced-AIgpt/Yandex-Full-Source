@@ -1,0 +1,99 @@
+{% extends "templates/home.html" %}
+
+{% block main %}
+
+{% set PLACEHOLDER_URL = "https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.5.8/ajax-loader.gif" -%}
+
+{% macro empty_string() %}
+<div class="row col-lg-12">&nbsp;</div>
+{% endmacro %}
+
+<div class="container">
+  <div class="row text-center">
+      <div class="btn-group">
+        <a id="start" role="button" class="btn btn-lg btn-primary server-alive" href="{{ url }}"
+           {% if default_server.active %} style="display: none" {% endif %}>
+          Start My Server
+        </a>
+        {% if default_server.active %}
+          <a role="button" class="btn btn-lg btn-primary server-alive" href="{{ user.server_url() }}">
+            Go to My Server
+          </a>
+          <a id="frontend-dropdown" href="#" class="btn btn-primary btn-lg dropdown-toggle server-alive" data-toggle="dropdown">
+            <span class="caret"></span>
+          </a>
+          <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ url }}/lab">Go to Jupyter Lab</a></li>
+              <li role="separator" class="divider"></li>
+              <li><a class="dropdown-item" href="{{ url }}/tree">Go to Jupyter Notebook</a></li>
+
+              <li><a class="dropdown-item" href="https://wiki.yandex-team.ru/jupyter/Jupyter-Notebook-Deprecation/" style="color: #2c7bc6">
+                Learn why Notebook is deprecated
+              </a></li>
+          </ul>
+        {% endif %}
+      </div>
+  </div>
+
+  {{ empty_string() }}
+
+  <div class="row text-center">
+    {% if default_server.active %}
+      <a id="stop-server" role="button" class="btn btn-danger">
+        Stop My Server
+      </a>
+    {% endif %}
+    <a id="backup" role="button" class="btn btn-default" href="{{ base_url }}backup/{{ user.name }}">
+    Manage Backups
+    </a>
+    <a id="settings" role="button" class="btn btn-default" href="{{ base_url }}settings/{{ user.name }}">
+    Settings
+    </a>
+  </div>
+
+  {{ empty_string() }}
+
+  {% if default_server.active %}
+    {% if default_server.vm %}
+      <div id="server-host-row" class="row col-lg-6 col-lg-offset-3">
+        <div class="input-group">
+          <span class="input-group-addon" id="server-host-addon">VM adress</span>
+          <input id="server-host-input" type="text" class="form-control" aria-describedby="input-group-addon" value="{{ default_server.vm.pretty_host }}" readonly>
+          <span class="input-group-btn">
+            <button id="server-host-button" class="btn btn-default" type="button">Copy &#x1f4cb;</button>
+            <a id="qyp" role="button" class="btn btn-default" target="_blank" href="{{ default_server.qyp_link }}">QYP</a>
+          </span>
+        </div>
+      </div>
+    {% endif %}
+
+    {{ empty_string() }}
+
+    <div class="row col-lg-6 col-lg-offset-3">
+      <div id="events-panel" class="panel panel-default">
+        <div id="events-panel-body" class="panel-body">
+          <div id="events-load-placeholder" class="text-center">
+            <img src="{{ PLACEHOLDER_URL }}"/>
+            <h4>Fetching information about upcoming events...</h4>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% call modal('Stop server', btn_class='btn-danger stop-button') %}
+  Are you sure you want to stop your server? <br>
+  Restart may take some time (5+ minutes).
+{% endcall %}
+
+{% endblock %}
+
+{% block script %}
+
+{{ super() }}
+
+<script src="{{ jc_static_url('js/home.js') }}"></script>
+<script src="{{ jc_static_url('js/events.js') }}"></script>
+
+{% endblock %}

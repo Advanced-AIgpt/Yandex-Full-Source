@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<concept xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xml:lang="ru" xsi:noNamespaceSchemaLocation="urn:yandex:names:tc:dita:xsd:yandexConcept.xsd:1.3" id="post-documents-load-path">
+    <title>Запрос документа с указанными параметрами</title>
+    <abstract>
+        <p>Возвращает <xref href="../../service/concepts/glossary.dita#glossary/document" popup="yes">документ</xref> из DaaS с учетом указанных параметров.</p>
+        <minitoc/>
+    </abstract>
+    <prolog>
+        <metadata>
+            <othermeta name="vcs_source_url" content="https://a.yandex-team.ru/arc/trunk/arcadia/docs/tech-doc/ru/daas/api/reference/post-documents-load-path.dita"/>
+        </metadata>
+    </prolog>
+    <concept id="input">
+        <title>Формат запроса</title>
+        <conbody>
+            <url-syntax>
+                <url-origin>POST <keyword keyref="http"/><keyword keyref="cluster"/>.<keyword keyref="stable-url"/>/<keyword keyref="version-stable"/></url-origin>
+                <url-pathgroup>
+                    <url-pathparam>
+                        <url-paramname>documents</url-paramname>
+                        <url-paramdesc/>
+                    </url-pathparam>
+                    <url-pathparam>
+                        <url-paramname>load</url-paramname>
+                        <url-paramdesc/>
+                    </url-pathparam>
+                    <url-pathparam conref="includes.dita#includes/load-path">
+                        <url-paramname/>
+                        <url-paramdesc/>
+                    </url-pathparam>
+                </url-pathgroup>
+            </url-syntax>
+            <section id="structure-in">
+                <title>Формат тела запроса</title>
+                <codeblock code-lang="json" href="#input/spec-in">{
+  "tld":{string},
+  "doccenterParams":{
+    "components":[array of string],
+    "lang":{string},
+    "isolated":{bool},
+    "bidi":{bool},
+    "forceFullLinks":{bool},
+    "formsParams":{
+      "service":{string},
+      "path":{string},
+      "url":{string},
+      "theme":{string}
+    },
+    "customParams": {
+      "key":{string},
+      "value":{string}
+    }
+  },
+  "userInfo":{
+    "isMobile":{string}
+  }
+}</codeblock>
+            </section>
+            <section id="spec-in">
+                <tree conref="structures.dita#structures/RetrieveDocumentRequest">
+                    <tree-item>
+                        <tree-itemname/>
+                    </tree-item>
+                </tree>
+            </section>
+            <section minitoc="no">
+                <title/>
+                <p><ph keyref="note"/></p>
+            </section>
+        </conbody>
+    </concept>
+    <concept id="output-structure">
+        <title>Формат ответа</title>
+        <conbody>
+            <codeblock code-lang="json" href="#output-structure/spec-output">{
+  "doccenterResponse":{string}
+}</codeblock>
+            <section id="spec-output">
+                <tree conref="structures.dita#structures/doccenterResponse">
+                    <tree-item>
+                        <tree-itemname/>
+                    </tree-item>
+                </tree>
+            </section>
+        </conbody>
+    </concept>
+    <concept id="response-codes">
+        <title>Коды ответа</title>
+        <conbody>
+            <table>
+                <tgroup cols="3">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <colspec colnum="3"/>
+                    <thead>
+                        <row>
+                            <entry>Код</entry>
+                            <entry>Причина</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="../concepts/response-codes.dita#response-codes/200">
+                            <entry/>
+                        </row>
+                        <row conref="../concepts/response-codes.dita#response-codes/400">
+                            <entry/>
+                        </row>
+                        <row>
+                            <entry>404</entry>
+                            <entry><ph conref="../concepts/response-codes.dita#response-codes/not-found"/></entry>
+                            <entry>
+                                <ph conref="../concepts/response-codes.dita#response-codes/desc-404"/>
+                                <dl display-style="cut">
+                                    <dlentry>
+                                        <dt>Пример ответа:</dt>
+                                        <dd>
+                                            <codeblock code-lang="json">HTTP/1.1 404 Not Found
+Content-Type: application/json
+X-Protobuf-Message: DocumentNotFoundError
+
+{
+  "message":"Can't find document /display/order/add-baner.html",
+  "documentPath":"/display/order/add-baner.html",
+  "doccenterUrl":"http://support-new.doccenter.yandex.ru/display/order/add-baner.html"
+}</codeblock>
+                                        </dd>
+                                    </dlentry>
+                                </dl>
+                            </entry>
+                        </row>
+                        <row conref="../concepts/response-codes.dita#response-codes/500">
+                            <entry/>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </conbody>
+    </concept>
+    <concept id="example-JSON">
+        <title>Пример</title>
+        <conbody>
+            <example>
+                <p>Запрос:</p>
+                <codeblock code-lang="http" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/order/add-banner.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["content"]}}'</codeblock>
+                <p>Ответ:</p>
+                <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"content\":\"&lt;main role=\\\"main\\\" class=\\\"doc-c doc-c-main doc-c-i-bem\\\" doc-data-bem=\\\"{&amp;quot;doc-c-main&amp;quot;:{}}\\\">&lt;article role=\\\"article\\\" aria-labelledby=\\\"ariaid-title1\\\" class=\\\"doc-c-article doc-c-view-column\\\">&lt;h1 class=\\\"doc-c-title doc-c-topictitle1 doc-c-headers doc-c-headers_mod_h1\\\" id=\\\"ariaid-title1\\\" data-help-title=\\\"1\\\">Шаг 7. Добавьте баннер&lt;/h1>&lt;div class=\\\"doc-c-abstract\\\">&lt;div class=\\\"doc-c-note doc-c-attention doc-c-note_attention doc-c-note doc-c-note_mod_attention\\\">&lt;span class=\\\"doc-c-note__title doc-c-note__title\\\">Внимание.&lt;/span>&lt;p class=\\\"doc-c-p\\\">Рекламные материалы, соответствующие &lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"http://legal.yandex.ru/general_adv_rules/\\\" target=\\\"_blank\\\">требованиям Яндекса&lt;/a> и законодательству РФ, необходимо предоставить для модерации не позднее чем за&amp;nbsp;2&amp;nbsp;рабочих дня до даты начала показов. Однако мы рекомендуем предоставлять баннеры не менее чем за 5 рабочих дней до даты старта. Это поможет избежать возможных задержек, связанных с корректированием рекламных материалов.&lt;/p>&lt;/div>...&lt;/li>&lt;/ol>&lt;/div>&lt;p class=\\\"doc-c-p\\\">Статус отправленных баннеров изменится на &lt;span class=\\\"doc-c-q\\\">«Ожидает модерации»&lt;/span>. Баннеры, принятые модератором, получат статус &lt;span class=\\\"doc-c-q\\\">«Принят модерацией»&lt;/span>, отклоненные — статус &lt;span class=\\\"doc-c-q\\\">«Отклонен модерацией»&lt;/span>. Об изменениях статуса баннеров вы получите уведомление по электронной почте.&lt;/p>&lt;/div>&lt;/article>&lt;/article>&lt;div class=\\\"doc-c doc-c-useful-links-container\\\">&lt;div class=\\\"doc-c-linklist doc-c-block-useful doc-c-useful-links\\\">&lt;div class=\\\"doc-c-linkset-title\\\">Правовые документы&lt;/div>&lt;div class=\\\"doc-c-linklist-item\\\">&lt;a class=\\\"doc-c-link doc-c-link\\\" href=\\\"https://www.yandex.ru/adv/requirements\\\" target=\\\"_blank\\\">Требования к рекламным материалам&lt;/a>&lt;/div>&lt;/div>&lt;/div>&lt;/main>\"}"}</codeblock>
+            </example>
+        </conbody>
+    </concept>
+</concept>

@@ -1,0 +1,30 @@
+
+OWNER(
+    julia90
+)
+
+RECURSE(
+    arcadia
+    cpp
+    build
+    python
+    java
+    devtools
+    driveadmin
+    infra_billing
+    market/mobile
+	nirvana-onboarding
+    goals
+    golang
+    messenger
+    ydo
+    payment-sdk
+    passport
+    captcha-api
+    lang-detect
+    rms
+    intro-api-guide
+    speechkit
+    xscript
+    membrace
+)

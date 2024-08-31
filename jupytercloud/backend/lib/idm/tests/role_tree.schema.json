@@ -1,0 +1,165 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+
+    "id": "idm.role_tree",
+
+    "definitions": {
+        "localized_string": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "en": {
+                            "type": "string"
+                        },
+                        "ru": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": ["en", "ru"]
+                }
+            ]
+        },
+
+        "role": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/localized_string"
+                },
+                "values": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^.+$": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/definitions/value"
+                                },
+                                {
+                                    "$ref": "#/definitions/role"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/field"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": ["name", "values", "slug"]
+        },
+
+        "value": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/localized_string"
+                },
+                "help": {
+                    "$ref": "#/definitions/localized_string"
+                },
+                "visibility": {
+                    "type": "boolean"
+                },
+                "roles": {
+                    "$ref": "#/definitions/role"
+                }
+            },
+            "additionalProperties": false,
+            "required": ["name"]
+        },
+
+        "field": {
+            "type": "object",
+            "properties": {
+                "slug": {
+                    "type": "string"
+                },
+                "name": {
+                    "$ref": "#/definitions/localized_string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["passportlogin", "charfield", "booleanfield",
+                             "choicefield"]
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "options": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/charfield_options"
+                        },
+                        {
+                            "$ref": "#/definitions/choicefield_options"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": ["slug", "name", "type"]
+        },
+
+        "charfield_options": {
+            "type": "object",
+            "properties": {
+                "blank_allowed": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "required": ["blank_allowed"]
+        },
+
+        "choicefield_options": {
+            "type": "object",
+            "properties": {
+                "widget": {
+                    "type": "string",
+                    "enum": ["radio", "select"]
+                },
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "value": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "$ref": "#/definitions/localized_string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": ["value", "name"]
+                    }
+                },
+                "custom": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false,
+            "required": ["widget", "choices", "custom"]
+        }
+    },
+
+    "$ref": "#/definitions/role"
+}

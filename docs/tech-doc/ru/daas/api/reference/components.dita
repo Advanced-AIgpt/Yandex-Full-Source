@@ -1,0 +1,1099 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<concept xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xml:lang="ru"
+    xsi:noNamespaceSchemaLocation="urn:yandex:names:tc:dita:xsd:yandexConcept.xsd:1.3"
+    id="components">
+    <title>Компоненты документа</title>
+  <abstract>
+    <ph id="components">Компонентами документа называются интерфейсные элементы/блоки на странице, а также свойства документа (например, блок голосования, язык документа).</ph> Компоненты можно запрашивать и получать по API (например, <xref href="post-documents-load-path.dita"/>). </abstract>
+    <prolog>
+        <metadata>
+            <othermeta name="vcs_source_url" content="https://a.yandex-team.ru/arc/trunk/arcadia/docs/tech-doc/ru/daas/api/reference/components.dita"></othermeta>
+        </metadata>
+    </prolog>
+    <conbody>
+        <minitoc/>
+        <section id="visual-components">
+            <title>Визуальное представление компонентов документа</title>
+            <p>
+                <image href="../../images/components-all.png"/>
+            </p>
+        </section>
+        <section id="format">
+      <title>Формат передачи параметров компонента</title>
+      <p>У каждого компонента есть набор параметров, которые можно передать в запросе для более тонкой настройки результата.</p><p>Формат передачи компонента с параметрами:</p>
+      <codeph>"components":["component_name(key=value|key2=value)"]</codeph>
+      <dl>
+        <dlentry>
+          <dt>component_name</dt>
+          <dd>Имя компонента.</dd>
+        </dlentry>
+        <dlentry>
+          <dt>key</dt>
+          <dd>Параметр компонента.</dd>
+        </dlentry>
+        <dlentry>
+          <dt>value</dt>
+          <dd>Значение параметра компонента.</dd>
+        </dlentry>
+      </dl>
+    </section>
+        <section id="content">
+            <title>content</title>
+            <p>Контент — содержимое <xref href="../../service/concepts/glossary.dita" popup="yes">документа</xref> (вся странница с необходимым форматированием).</p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row id="linksTargetTop">
+                            <entry><codeph>linksTargetTop</codeph></entry>
+                            <entry><p>Управляет ссылками. Если параметру присвоено непустое значение, ко всем ссылкам в документе, у которых нет атрибута <codeph>target</codeph>, будет добавлен атрибут <codeph>target=_top</codeph>. Атрибут <codeph>target</codeph> со значением <codeph>top</codeph> отменяет все фреймы и загружает страницу в полном окне браузера. Если фреймов нет, страница загружается в текущем окне.</p></entry>
+                        </row>
+                        <row>
+                            <entry><codeph>minitoc</codeph></entry>
+                            <entry><p>Управляет оглавлением документа (компонент <xref href="#components/minitoc">minitoc</xref>) в контенте. Допустимые значения:</p>
+                                <ul>
+                                    <li><codeph>exclude</codeph> — вырезает <q>оглавление документа</q> из контента.</li>
+                                </ul>
+                                <p>По умолчанию оглавление документа включено в контент.</p>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry><codeph>usefulLinks</codeph></entry>
+                            <entry><p>Управляет <q>полезными ссылками</q> (компонент <xref href="#components/useful_links">usefulLinks</xref> в контенте. Допустимые значения:</p>
+                                <ul>
+                                    <li><codeph>exclude</codeph> — вырезает <q>полезные ссылки</q> из контента.</li>
+                                </ul>
+                                <p>По умолчанию полезные ссылки включены в контент.</p></entry>
+                        </row>
+                        <row>
+                            <entry><codeph>mobile</codeph></entry>
+                            <entry><p>Адаптирует контент для мобильных устройств. Допустимые значения:</p>
+                                <ul>
+                                    <li><codeph>yes</codeph> — адаптация контента для мобильных устройств включена;</li>
+                                    <li><codeph>no</codeph> — адаптация контента для мобильных устройств выключена.</li>
+                                </ul></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/general/about.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["content(usefulLinks=exclude|mobile=yes)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"content\":\"&lt;main role=\\\"main\\\" class=\\\"doc-c doc-c-main doc-c-i-bem\\\" doc-data-bem=\\\"{&amp;quot;doc-c-main&amp;quot;:{}}\\\">&lt;article role=\\\"article\\\" aria-labelledby=\\\"ariaid-title1\\\" class=\\\"doc-c-article doc-c-view-column\\\">&lt;h1 class=\\\"doc-c-title doc-c-topictitle1 doc-c-headers doc-c-headers_mod_h1\\\" id=\\\"ariaid-title1\\\" data-help-title=\\\"1\\\">Что такое Дисплей&lt;/h1>&lt;div class=\\\"doc-c-body doc-c-conbody\\\" data-help-text=\\\"1\\\">&lt;p class=\\\"doc-c-p\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"https://display.yandex.ru/\\\" target=\\\"_blank\\\">Дисплей&lt;/a> — это инструмент для создания и управления медийной рекламой. Рекламу можно размещать на сервисах Яндекса и в Рекламной сети Яндекса.&lt;/p>&lt;p class=\\\"doc-c-p\\\">С помощью Дисплея сотрудники рекламных агентств смогут совершать следующие действия:&lt;/p>&lt;ul class=\\\"doc-c-ul doc-c-list doc-c-list_type_ul\\\">&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">создавать планы рекламных кампаний, оценивать их стоимость;&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">отправлять заявки на размещение рекламы;&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">добавлять баннеры;&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">оплачивать размещения;&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">отслеживать показы рекламы и расходование средств рекламодателя.&lt;/li>&lt;/ul>&lt;p class=\\\"doc-c-p\\\">Описание площадок, на которых можно разместить медийный баннер, представлено на сайте &lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"https://yandex.ru/adv/products/display\\\" target=\\\"_blank\\\">Яндекс.Реклама&lt;/a>.&lt;/p>&lt;p class=\\\"doc-c-p\\\">Рекомендуем также ознакомиться с &lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"https://legal.yandex.ru/general_adv_rules/\\\" target=\\\"_blank\\\">Требованиями к рекламным материалам&lt;/a>.&lt;/p>&lt;p class=\\\"doc-c-p\\\">Если у вас возникли вопросы по работе сервиса, вы можете обратиться к главному менеджеру компании.&lt;/p>&lt;/div>&lt;nav role=\\\"navigation\\\" class=\\\"doc-c-related-links doc-c-related-links\\\">&lt;div class=\\\"doc-c-linklist doc-c-relinfo doc-c-relconcepts\\\">&lt;div class=\\\"doc-c-linkset-title\\\">См.&amp;nbsp;также&lt;/div>&lt;div class=\\\"doc-c-linklist-item\\\">&lt;a class=\\\"doc-c-link doc-c-link\\\" href=\\\"/support/display/qanda/personal-manager.html\\\" target=\\\"_top\\\">Как узнать имя главного менеджера компании?&lt;/a>&lt;/div>&lt;/div>&lt;/nav>&lt;/article>&lt;/main>\"}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "content":
+     "&lt;main role=\"main\" class=\"doc-c doc-c-main doc-c-i-bem\" doc-data-bem=\"{&amp;quot;doc-c-main&amp;quot;:{}}\">
+        &lt;article role=\"article\" aria-labelledby=\"ariaid-title1\" class=\"doc-c-article doc-c-view-column\">
+          &lt;h1 class=\"doc-c-title doc-c-topictitle1 doc-c-headers doc-c-headers_mod_h1\" id=\"ariaid-title1\" data-help-title=\"1\">Что такое Дисплей&lt;/h1>
+          &lt;div class=\"doc-c-body doc-c-conbody\" data-help-text=\"1\">
+            &lt;p class=\"doc-c-p\">&lt;a class=\"doc-c-xref doc-c-link\" href=\"https://display.yandex.ru/\" target=\"_blank\">Дисплей&lt;/a> — это инструмент для создания и управления медийной рекламой. Рекламу можно размещать на сервисах Яндекса и в Рекламной сети Яндекса.&lt;/p>
+            &lt;p class=\"doc-c-p\">С помощью Дисплея сотрудники рекламных агентств смогут совершать следующие действия:&lt;/p>
+            &lt;ul class=\"doc-c-ul doc-c-list doc-c-list_type_ul\">
+              &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">создавать планы рекламных кампаний, оценивать их стоимость;&lt;/li>
+              &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">отправлять заявки на размещение рекламы;&lt;/li>
+              &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">добавлять баннеры;&lt;/li>
+              &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">оплачивать размещения;&lt;/li>
+              &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">отслеживать показы рекламы и расходование средств рекламодателя.&lt;/li>
+            &lt;/ul>
+            &lt;p class=\"doc-c-p\">Описание площадок, на которых можно разместить медийный баннер, представлено на сайте &lt;a class=\"doc-c-xref doc-c-link\" href=\"https://yandex.ru/adv/products/display\" target=\"_blank\">Яндекс.Реклама&lt;/a>.&lt;/p>
+            &lt;p class=\"doc-c-p\">Рекомендуем также ознакомиться с &lt;a class=\"doc-c-xref doc-c-link\" href=\"https://legal.yandex.ru/general_adv_rules/\" target=\"_blank\">Требованиями к рекламным материалам&lt;/a>.&lt;/p>
+            &lt;p class=\"doc-c-p\">Если у вас возникли вопросы по работе сервиса, вы можете обратиться к главному менеджеру компании.&lt;/p>
+          &lt;/div>
+          &lt;nav role=\"navigation\" class=\"doc-c-related-links doc-c-related-links\">
+            &lt;div class=\"doc-c-linklist doc-c-relinfo doc-c-relconcepts\">
+              &lt;div class=\"doc-c-linkset-title\">См.&amp;nbsp;также&lt;/div>
+              &lt;div class=\"doc-c-linklist-item\">&lt;a class=\"doc-c-link doc-c-link\" href=\"/support/display/qanda/personal-manager.html\" target=\"_top\">Как узнать имя главного менеджера компании?&lt;/a>&lt;/div>
+            &lt;/div>
+          &lt;/nav>
+        &lt;/article>
+      &lt;/main>"
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="selector">
+            <title>selector</title>
+            <p>Любая часть документа, выбранная по CSS-селектору. При данном запросе все попапы документа будут преобразованы в обычные ссылки. </p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="#components/linksTargetTop">
+                            <entry/>
+                            <entry/>
+                        </row>
+                        <row>
+                            <entry><codeph>query</codeph></entry>
+                            <entry><p>Селектор для выбора. Название параметра может состоять из любого набора латинских букв и цифр (например, <q>query</q>, <q>q</q> и другие варианты). В качестве значения параметра указывается CSS-селектор (например, чтобы получить контент из селектора <codeph>&lt;div class=\\\"doc-c-list__item-content>...&lt;/div></codeph>, необходимо написать запрос <codeph>selector(query=.doc-c-list__item-content)</codeph>) или идентификатор какого-либо блока из документа (например, чтобы получить контент с идентификатором <codeph>id="ariaid-title1"</codeph>, необходимо написать запрос <codeph>selector(q=#ariaid-title1)</codeph>. Для идентификаторов есть специальное правило, согласно которому можно указать только последнюю часть идентификатора, отделенную <codeph>#</codeph> и система самостоятельно достроит полный идентификатор.</p>
+                                <note><p>Чтобы запросить несколько блоков, напишите <codeph>selector(query=.doc-c-p|q=#ariaid-title1)</codeph>.</p></note></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["selector(query=#ariaid-title20|query2=#d177e402)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"selector\":{\"#ariaid-title20\":\"&lt;h3 class=\\\"title topictitle3 doc-c-headers doc-c-headers_mod_h3\\\" id=\\\"ariaid-title20\\\">Оформление обязательной юридической информации&lt;/h3>\",\"#d177e402\":\"&lt;article class=\\\"topic concept nested2 doc-c-article doc-c-article_mod_topic\\\" aria-labelledby=\\\"ariaid-title16\\\" id=\\\"d177e402\\\">\\n   &lt;h3 class=\\\"title topictitle3 doc-c-headers doc-c-headers_mod_h3\\\" id=\\\"ariaid-title16\\\">Уменьшите количество шрифтов&lt;/h3>\\n   &lt;div class=\\\"body conbody\\\" id=\\\"d177e402__d177e407\\\">\\n    &lt;ol class=\\\"ol doc-c-list doc-c-list_type_ol\\\">\\n     &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">Используйте не больше двух шрифтов и начертаний.&lt;/li>\\n     &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">Используйте не больше трех цветов в шрифтах.&lt;p class=\\\"p\\\">&lt;/p>&lt;/li>\\n    &lt;/ol>\\n    &lt;div class=\\\"p\\\">Эти два требования не относятся к:\\n     &lt;ul class=\\\"ul doc-c-list doc-c-list_type_ul\\\">\\n      &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">логотипу бренда, продукта или технологии;&lt;/li>\\n      &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">дисклеймеру или обязательной правовой информации;&lt;/li>\\n      &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">шрифту возрастной метки;&lt;/li>\\n      &lt;li class=\\\"li doc-c-list doc-c-list__li\\\">шрифту, который является частью иллюстрации.&lt;/li>\\n     &lt;/ul>&lt;/div>\\n    &lt;p class=\\\"p\\\">&lt;img class=\\\"image doc-c-image\\\" src=\\\"//yastatic.net/doccenter/images/support.yandex.ru/ru/display/freeze/O9yxZX5m3ahMApNV8vkFvhH7udI.png\\\">&lt;/p>\\n   &lt;/div>\\n  &lt;/article>\"}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"
+    {
+      "selector":{"#ariaid-title20":"&lt;h3 class=\"title topictitle3 doc-c-headers doc-c-headers_mod_h3\" id=\"ariaid-title20\">Оформление обязательной юридической информации&lt;/h3>","#d177e402":"&lt;article class=\"topic concept nested2 doc-c-article doc-c-article_mod_topic\" aria-labelledby=\"ariaid-title16\" id=\"d177e402\">\
+   &lt;h3 class=\"title topictitle3 doc-c-headers doc-c-headers_mod_h3\" id=\"ariaid-title16\">Уменьшите количество шрифтов&lt;/h3>\
+   &lt;div class=\"body conbody\" id=\"d177e402__d177e407\">\
+    &lt;ol class=\"ol doc-c-list doc-c-list_type_ol\">\
+     &lt;li class=\"li doc-c-list doc-c-list__li\">Используйте не больше двух шрифтов и начертаний.&lt;/li>\
+     &lt;li class=\"li doc-c-list doc-c-list__li\">Используйте не больше трех цветов в шрифтах.&lt;p class=\"p\">&lt;/p>&lt;/li>\
+    &lt;/ol>\
+    &lt;div class=\"p\">Эти два требования не относятся к:\
+     &lt;ul class=\"ul doc-c-list doc-c-list_type_ul\">\
+      &lt;li class=\"li doc-c-list doc-c-list__li\">логотипу бренда, продукта или технологии;&lt;/li>\
+      &lt;li class=\"li doc-c-list doc-c-list__li\">дисклеймеру или обязательной правовой информации;&lt;/li>\
+      &lt;li class=\"li doc-c-list doc-c-list__li\">шрифту возрастной метки;&lt;/li>\
+      &lt;li class=\"li doc-c-list doc-c-list__li\">шрифту, который является частью иллюстрации.&lt;/li>\
+     &lt;/ul>&lt;/div>\
+    &lt;p class=\"p\">&lt;img class=\"image doc-c-image\" src=\"//yastatic.net/doccenter/images/support.yandex.ru/ru/display/freeze/O9yxZX5m3ahMApNV8vkFvhH7udI.png\">&lt;/p>\
+   &lt;/div>\
+  &lt;/article>"
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="menu">
+            <title>menu</title>
+            <p>Блок с содержанием <xref href="../../service/concepts/glossary.dita#glossary/book" popup="yes">книги</xref>. Отображается в левом верхнем углу.</p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <!--<row conref="#components/linksTargetTop">
+                            <entry/>
+                            <entry/>
+                        </row>-->
+                        <row id="menuDir">
+                            <entry><codeph>menuDir</codeph></entry>
+                            <entry><p>Путь до директории с <xref href="../../service/concepts/glossary.dita#glossary/menu-json" popup="yes">menu.json</xref>. Значение по умолчанию: корень проекта. Рекомендуется передавать значение <codeph>@auto</codeph>, тогда будет использоваться ближайший к документу файл <filepath>menu.json</filepath>.</p></entry>
+                        </row>
+                        <row id="json-param">
+                            <entry><codeph>json</codeph></entry>
+                            <entry>Формат ответа. Допустимые значения:<ul id="ul_abm_p3m_2gb">
+                                    <li>непустая строка — ответ придет в формате <codeph>json</codeph>;</li>
+                                    <li>параметр отсутствует или значение параметра отсутствует — ответ придет в формате <codeph>html</codeph>.</li>
+                                </ul></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd>
+                        <dl display-style="cut">
+                            <dlentry>
+                                <dt>JSON</dt>
+                                <dd>
+                                   <p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["menu(json=test)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"menu\":{\"docmenu\":{\"lang\":\"ru\",\"index\":\"display/general/about.html\",\"content\":[{\"item\":{\"role\":\"root\",\"content\":[{\"item\":{\"title\":\"Что такое Дисплей\",\"path\":\"display/general/about.html\",
+...
+{\"item\":{\"title\":\"Как понять, размещение крутится по расписанию или опаздывает?\",\"path\":\"display/qanda/line-delayed.html\",\"normalizedPath\":\"display/qanda/line-delayed.html\"}},{\"item\":{\"title\":\"Как проверить, что моя реклама показывается?\",\"path\":\"display/qanda/advert_watch.html\",\"normalizedPath\":\"display/qanda/advert_watch.html\"}},{\"item\":{\"title\":\"Как удалить размещение?\",\"path\":\"display/qanda/delete.html\",\"normalizedPath\":\"display/qanda/delete.html\"}},{\"item\":{\"title\":\"Как узнать, что происходит с моими размещениями?\",\"path\":\"display/qanda/info-lines.html\",\"normalizedPath\":\"display/qanda/info-lines.html\"}},{\"item\":{\"title\":\"Как формируется стоимость в расписании «Жаворонок»?\",\"path\":\"display/qanda/how-cost-bird.html\",\"normalizedPath\":\"display/qanda/how-cost-bird.html\"}},{\"item\":{\"title\":\"Может ли прогнозируемый CPM отличаться от CPM брони (расписание «Жаворонок»)?\",\"path\":\"display/qanda/cpm-bird.html\",\"normalizedPath\":\"display/qanda/cpm-bird.html\"}},{\"item\":{\"title\":\"Почему недоступно редактирование размещения с фиксированной ценой показа?\",\"path\":\"display/qanda/edit-line-denied.html\",\"normalizedPath\":\"display/qanda/edit-line-denied.html\"}},{\"item\":{\"title\":\"Почему одобренные и фактические значения могут отличаться?\",\"path\":\"display/qanda/delta-stat.html\",\"normalizedPath\":\"display/qanda/delta-stat.html\"}},{\"item\":{\"title\":\"Что означает статус размещения?\",\"path\":\"display/qanda/status-line.html\",\"normalizedPath\":\"display/qanda/status-line.html\"}},{\"item\":{\"title\":\"Что такое автопродление расписания?\",\"path\":\"display/qanda/auto-prolongation.html\",\"normalizedPath\":\"display/qanda/auto-prolongation.html\"}}],\"normalizedPath\":\"display/qanda/faq-lines.html\"}},{\"item\":{\"title\":\"Частые вопросы\",\"path\":\"display/qanda/faq.html\",\"content\":[{\"item\":{\"hidden\":\"yes\",\"title\":\"Как посмотреть список сотрудников рекламодателя?\",\"path\":\"display/qanda/sotrudniki-adv.html\",\"normalizedPath\":\"display/qanda/sotrudniki-adv.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Как работает поиск Дисплея?\",\"path\":\"display/qanda/search-work.html\",\"normalizedPath\":\"display/qanda/search-work.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Как узнать имя главного менеджера компании?\",\"path\":\"display/qanda/personal-manager.html\",\"normalizedPath\":\"display/qanda/personal-manager.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Как узнать, прошел ли мой рекламодатель модерацию?\",\"path\":\"display/qanda/client-moderation.html\",\"normalizedPath\":\"display/qanda/client-moderation.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Могу ли я получить доступ в Дисплей для логина, который уже используется на других сервисах Яндекса?\",\"path\":\"display/qanda/many-logins.html\",\"normalizedPath\":\"display/qanda/many-logins.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Моего рекламодателя отклонили на модерации. Что делать?\",\"path\":\"display/qanda/client-reject.html\",\"normalizedPath\":\"display/qanda/client-reject.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Почему кампания не стартовала?\",\"path\":\"display/qanda/start-trouble.html\",\"normalizedPath\":\"display/qanda/start-trouble.html\"}}],\"normalizedPath\":\"display/qanda/faq.html\"}},{\"item\":{\"title\":\"Обратная связь\",\"path\":\"display/troubleshooting/feedback.html\",\"normalizedPath\":\"display/troubleshooting/feedback.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Заказать рекламу\",\"path\":\"display/troubleshooting/order.html\",\"normalizedPath\":\"display/troubleshooting/order.html\"}},{\"item\":{\"hidden\":\"yes\",\"title\":\"Документы для прохождения модерации\",\"path\":\"display/troubleshooting/form-moderation.html\",\"normalizedPath\":\"display/troubleshooting/form-moderation.html\"}}]}}]},\"lastModified\":\"2018-12-19T15:23:08.000Z\",\"currentItem\":\"display/required-docs-rules/full-version.html\"}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p> 
+                                    <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"
+    {
+      "menu":{
+        "docmenu":{
+          "lang":"ru",
+          "index":"/support/display/general/about.html",
+          "content":[
+            {
+              "item":{
+                "role":"root",
+                "content":[
+                  {
+                    "item":{
+                      "title":"Что такое Дисплей",
+                      "path":"/support/display/general/about.html",
+                      "normalizedPath":"display/general/about.html"
+                    }
+                  },
+                  {
+                    "item":{
+                      "title":"Основные понятия",
+                      "path":"/support/display/general/terms.html",
+                      "normalizedPath":"display/general/terms.html"
+                    }
+                  },
+                  {
+                    "item":{
+                      "title":"Как получить доступ",
+                      "path":"/support/display/general/access.html",
+                      "normalizedPath":"display/general/access.html"
+                    }
+                  },
+                },
+                {
+                  ...
+                },
+                {
+                  "item":{
+                    "title":"Обратная связь",
+                    "path":"/support/display/troubleshooting/feedback.html",
+                    "normalizedPath":"display/troubleshooting/feedback.html"
+                  }
+                },
+                {
+                  "item":{
+                    "hidden":"yes","title":"Заказать рекламу",
+                    "path":"/support/display/troubleshooting/order.html",
+                    "normalizedPath":"display/troubleshooting/order.html"
+                  }
+                },
+                {
+                  "item":{
+                    "hidden":"yes",
+                    "title":"Документы для прохождения модерации",
+                    "path":"/support/display/troubleshooting/form-moderation.html",
+                    "normalizedPath":"display/troubleshooting/form-moderation.html"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+    "lastModified":"2019-02-14T13:56:15.000Z",
+    "currentItem":"/support/display/required-docs-rules/full-version.html"
+    }
+  }"
+}</codeblock>
+                                </dd>
+                            </dlentry>
+                            <dlentry>
+                                <dt>HTML</dt>
+                                <dd>
+                                    <p>Запрос:</p>
+                                    <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["menu"]}}'</codeblock>
+                                    <p>Ответ:</p>
+                                    <codeblock code-lang="html" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"menu\":\"&lt;div class=\\\"doc-c-doc-menu doc-c doc-c-i-bem\\\" doc-data-bem='{\\\"doc-menu\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__content doc-c-doc-menu__content_opener_yes doc-c-doc-menu__content_open_yes doc-c-doc-menu__content_has-current_yes\\\">&lt;div class=\\\"doc-c-doc-menu__item\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/general/about.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Что такое Дисплей&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/general/terms.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Основные понятия&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/general/access.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как получить доступ&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_has-current_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher doc-c-doc-menu__switcher_type_opened\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/adv-rules.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Требования модерации&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/special-categories.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Подтверждающие документы&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/required-docs.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Документы по категориям&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/letter-of-guarantee.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Правила оформления гарантийного письма&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/required-docs-for-banner.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как отправить документы на проверку&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/ad-rules.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как оформить баннер&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/age-alerts.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Юридическая информация на медийном баннере&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_has-current_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher doc-c-doc-menu__switcher_type_opened\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/main-page-required.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Требования к оформлению баннеров на главной странице&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_current_yes doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/full-version.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Полная версия сайта&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/mobile-version.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Мобильная версия сайта&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/requirements-tech.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Технические ошибки при создании баннера&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/required-docs-rules/restricted-categories.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Запрещенные категории товаров и услуг&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;span class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Размещение рекламы&lt;/span>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/log-in.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 1. Авторизуйтесь&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/add-client.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 2. Добавьте клиента (рекламодателя)&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/add-campaign.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 3. Добавьте рекламную кампанию&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/add-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 4. Добавьте и настройте размещение&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/product.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Группа продуктов&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/buying.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Параметры покупки&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/placement.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Место показа&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/banner.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Баннер&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/geo.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>География&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/users.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Пользователи&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/segments-audience.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Сегменты Яндекс.Аудиторий&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/schedule.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Расписание показов&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/booking.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 5. Отправьте размещение на подтверждение&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/billing.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 6. Оплатите размещение&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/order/add-banner.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Шаг 7. Добавьте баннер&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;span class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Статистика&lt;/span>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/stat/view-stat.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Статистика в Дисплее&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/stat/diagram-stat.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Формат отображения статистики&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/stat/slice-factors-stat.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Срезы и показатели&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/stat/stat-other-systems.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Статистика в Яндекс.Метрике&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;span class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Аукцион&lt;/span>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/auction-questions.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Общие вопросы&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/prediction.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Прогноз в аукционе&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/edit-data.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Показатели в аукционе&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/faq-banners.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Баннеры&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/click.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Есть ли в Дисплее защита от недобросовестных показов?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/start.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как запустить баннер?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/view.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Какие показы баннера засчитываются (проверка видимости)?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/copy.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как создать несколько одинаковых баннеров?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/stop.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как остановить баннер?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/edit.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как отредактировать баннер?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/info-banners.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как узнать, что происходит с моими баннерами?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/schedule-banner-quest.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Почему не удается назначить расписания для баннера?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/status.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Что означает статус баннера?&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;div class=\\\"doc-c-doc-menu__switcher\\\">&lt;/div>&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/faq-lines.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Размещения&lt;/a>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/start-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как запустить остановленное размещение?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/edit-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как изменить параметры размещения?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/stop-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как остановить размещение?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/rename-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как переименовать размещение?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/line-delayed.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как понять, размещение крутится по расписанию или опаздывает?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/advert_watch.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как проверить, что моя реклама показывается?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/delete.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как удалить размещение?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/info-lines.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как узнать, что происходит с моими размещениями?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/how-cost-bird.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Как формируется стоимость в расписании «Жаворонок»?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/cpm-bird.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Может ли прогнозируемый CPM отличаться от CPM брони (расписание «Жаворонок»)?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/edit-line-denied.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Почему недоступно редактирование размещения с фиксированной ценой показа?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/delta-stat.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Почему одобренные и фактические значения могут отличаться?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/status-line.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Что означает статус размещения?&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/auto-prolongation.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Что такое автопродление расписания?&lt;/a>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/qanda/faq.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Частые вопросы&lt;/a>&lt;/div>&lt;div class=\\\"doc-c-doc-menu__item\\\">&lt;a class=\\\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\\\" tabindex=\\\"0\\\" href=\\\"/support/display/troubleshooting/feedback.html\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;div class=\\\"doc-c-doc-menu__border-left\\\">&lt;/div>Обратная связь&lt;/a>&lt;/div>&lt;/div>&lt;/div>\"}"}</codeblock>
+                                    <p>Человекочитаемый вариант ответа (без экранирования):</p> 
+                                    <codeblock code-lang="html" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "menu":"&lt;div class=\"doc-c-doc-menu doc-c doc-c-i-bem\" doc-data-bem='{\"doc-menu\":{}}'>
+              &lt;div class=\"doc-c-doc-menu__content doc-c-doc-menu__content_opener_yes doc-c-doc-menu__content_open_yes doc-c-doc-menu__content_has-current_yes\">
+                &lt;div class=\"doc-c-doc-menu__item\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/general/about.html\" doc-data-bem='{\"link\":{}}'>
+                  &lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Что такое Дисплей&lt;/a>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/general/terms.html\" doc-data-bem='{\"link\":{}}'>
+                  &lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Основные понятия&lt;/a>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/general/access.html\" doc-data-bem='{\"link\":{}}'>
+                  &lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как получить доступ&lt;/a>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_has-current_yes\">
+                  &lt;div class=\"doc-c-doc-menu__switcher doc-c-doc-menu__switcher_type_opened\">&lt;/div>
+                  &lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/adv-rules.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Требования модерации&lt;/a>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">
+                    &lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>
+                    &lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/special-categories.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Подтверждающие документы&lt;/a>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/required-docs.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Документы по категориям&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/letter-of-guarantee.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Правила оформления гарантийного письма&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/required-docs-for-banner.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как отправить документы на проверку&lt;/a>&lt;/div>
+                  &lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/ad-rules.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как оформить баннер&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/age-alerts.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Юридическая информация на медийном баннере&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_has-current_yes\">
+                    &lt;div class=\"doc-c-doc-menu__switcher doc-c-doc-menu__switcher_type_opened\">&lt;/div>
+                    &lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/main-page-required.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Требования к оформлению баннеров на главной странице&lt;/a>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_open_yes doc-c-doc-menu__item_current_yes doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/full-version.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Полная версия сайта&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/mobile-version.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Мобильная версия сайта&lt;/a>&lt;/div>
+                  &lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/requirements-tech.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Технические ошибки при создании баннера&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/required-docs-rules/restricted-categories.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Запрещенные категории товаров и услуг&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">
+                  &lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>
+                  &lt;span class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" role=\"button\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Размещение рекламы&lt;/span>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/log-in.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 1. Авторизуйтесь&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/add-client.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 2. Добавьте клиента (рекламодателя)&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/add-campaign.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 3. Добавьте рекламную кампанию&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/add-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 4. Добавьте и настройте размещение&lt;/a>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/product.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Группа продуктов&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/buying.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Параметры покупки&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/placement.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Место показа&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/banner.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Баннер&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/geo.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>География&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/users.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Пользователи&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/segments-audience.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Сегменты Яндекс.Аудиторий&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/schedule.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Расписание показов&lt;/a>&lt;/div>
+                  &lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/booking.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 5. Отправьте размещение на подтверждение&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/billing.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 6. Оплатите размещение&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/order/add-banner.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Шаг 7. Добавьте баннер&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>
+                  &lt;span class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" role=\"button\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Статистика&lt;/span>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/stat/view-stat.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Статистика в Дисплее&lt;/a>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/stat/diagram-stat.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Формат отображения статистики&lt;/a>&lt;/div>
+                    &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/stat/slice-factors-stat.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Срезы и показатели&lt;/a>&lt;/div>
+                  &lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/stat/stat-other-systems.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Статистика в Яндекс.Метрике&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>
+                  &lt;span class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" role=\"button\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Аукцион&lt;/span>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/auction-questions.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Общие вопросы&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/prediction.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Прогноз в аукционе&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu doc-c-doc-menu__item_opener_yes\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/edit-data.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Показатели в аукционе&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/faq-banners.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Баннеры&lt;/a>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/click.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Есть ли в Дисплее защита от недобросовестных показов?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/start.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как запустить баннер?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/view.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Какие показы баннера засчитываются (проверка видимости)?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/copy.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как создать несколько одинаковых баннеров?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/stop.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как остановить баннер?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/edit.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как отредактировать баннер?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/info-banners.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как узнать, что происходит с моими баннерами?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/schedule-banner-quest.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Почему не удается назначить расписания для баннера?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/status.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Что означает статус баннера?&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">&lt;div class=\"doc-c-doc-menu__switcher\">&lt;/div>&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/faq-lines.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Размещения&lt;/a>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/start-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как запустить остановленное размещение?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/edit-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как изменить параметры размещения?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/stop-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как остановить размещение?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/rename-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как переименовать размещение?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/line-delayed.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как понять, размещение крутится по расписанию или опаздывает?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/advert_watch.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как проверить, что моя реклама показывается?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/delete.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как удалить размещение?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/info-lines.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как узнать, что происходит с моими размещениями?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/how-cost-bird.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Как формируется стоимость в расписании «Жаворонок»?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/cpm-bird.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Может ли прогнозируемый CPM отличаться от CPM брони (расписание «Жаворонок»)?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/edit-line-denied.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Почему недоступно редактирование размещения с фиксированной ценой показа?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/delta-stat.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Почему одобренные и фактические значения могут отличаться?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/status-line.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Что означает статус размещения?&lt;/a>&lt;/div>
+                  &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_type_submenu\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/auto-prolongation.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Что такое автопродление расписания?&lt;/a>&lt;/div>
+                &lt;/div>
+                &lt;div class=\"doc-c-doc-menu__item doc-c-doc-menu__item_opener_yes\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/qanda/faq.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Частые вопросы&lt;/a>
+                  &lt;/div>&lt;div class=\"doc-c-doc-menu__item\">&lt;a class=\"doc-c-link doc-c-link_theme_black doc-c-doc-menu__link doc-c-i-bem\" tabindex=\"0\" href=\"/support/display/troubleshooting/feedback.html\" doc-data-bem='{\"link\":{}}'>&lt;div class=\"doc-c-doc-menu__border-left\">&lt;/div>Обратная связь&lt;/a>&lt;/div>
+                &lt;/div>
+              &lt;/div>"
+  }"
+}</codeblock> 
+                                </dd>
+                            </dlentry>
+                        </dl>
+                    </dd>
+                    <dd>
+                        
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="html_heads">
+            <title>html_heads</title>
+            <p>Мета-информация и стили документа. </p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["html_heads"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"html_heads\":{\"sources\":{\"meta\":{\"copyright\":\"(C) Copyright 2018\",\"DC.rights.owner\":\"(C) Copyright 2018\",\"DC.Type\":\"concept\",\"DC.Relation\":\"https://www.yandex.ru/adv/requirements\",\"prodname\":\"Дисплей\",\"DC.Format\":\"XHTML\",\"DC.Identifier\":\"full-version\",\"DC.Language\":\"ru\",\"generator\":\"Yandex Yoda DITA\",\"topic_id\":\"full-version\",\"topic_name\":\"Полная версия сайта\",\"doc_id\":\"display-guide\",\"doc_name\":\"Помощь\",\"component_id\":\"\",\"component_name\":\"\",\"product_id\":\"display-guide\",\"product_name\":\"Дисплей\",\"product\":\"display-guide\",\"product_realname\":\"Дисплей\",\"doc_group\":\"display-guide\",\"doc_group_name\":\"display-guide\",\"section_name\":\"Полная версия сайта\",\"langs\":\"ru\"},\"title\":\"Полная версия сайта\",\"js\":[\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ru.no-bem.js\"],\"inlineJs\":[],\"css\":[\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.css\"],\"common\":{\"js\":[]},\"legacy\":{\"js\":[\"//yastatic.net/es5-shims/0.0.1/es5-shims.min.js\"],\"css\":[\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ie8.css\"]}},\"meta\":\"&lt;meta name=\\\"copyright\\\" content=\\\"(C) Copyright 2018\\\"/>\\n&lt;meta name=\\\"DC.rights.owner\\\" content=\\\"(C) Copyright 2018\\\"/>\\n&lt;meta name=\\\"DC.Type\\\" content=\\\"concept\\\"/>\\n&lt;meta name=\\\"DC.Relation\\\" content=\\\"https://www.yandex.ru/adv/requirements\\\"/>\\n&lt;meta name=\\\"prodname\\\" content=\\\"Дисплей\\\"/>\\n&lt;meta name=\\\"DC.Format\\\" content=\\\"XHTML\\\"/>\\n&lt;meta name=\\\"DC.Identifier\\\" content=\\\"full-version\\\"/>\\n&lt;meta name=\\\"DC.Language\\\" content=\\\"ru\\\"/>\\n&lt;meta name=\\\"generator\\\" content=\\\"Yandex Yoda DITA\\\"/>\\n&lt;meta name=\\\"topic_id\\\" content=\\\"full-version\\\"/>\\n&lt;meta name=\\\"topic_name\\\" content=\\\"Полная версия сайта\\\"/>\\n&lt;meta name=\\\"doc_id\\\" content=\\\"display-guide\\\"/>\\n&lt;meta name=\\\"doc_name\\\" content=\\\"Помощь\\\"/>\\n&lt;meta name=\\\"product_id\\\" content=\\\"display-guide\\\"/>\\n&lt;meta name=\\\"product_name\\\" content=\\\"Дисплей\\\"/>\\n&lt;meta name=\\\"product\\\" content=\\\"display-guide\\\"/>\\n&lt;meta name=\\\"product_realname\\\" content=\\\"Дисплей\\\"/>\\n&lt;meta name=\\\"doc_group\\\" content=\\\"display-guide\\\"/>\\n&lt;meta name=\\\"doc_group_name\\\" content=\\\"display-guide\\\"/>\\n&lt;meta name=\\\"section_name\\\" content=\\\"Полная версия сайта\\\"/>\\n&lt;meta name=\\\"langs\\\" content=\\\"ru\\\"/>\",\"bundle\":{\"styles\":\"&lt;!--[if IE 8]>&lt;link rel=\\\"stylesheet\\\" href=\\\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ie8.css\\\"/>&lt;![endif]-->\\n&lt;link rel=\\\"stylesheet\\\" href=\\\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.css\\\"/>\",\"js\":\"&lt;!--[if IE 8]>&lt;script src=\\\"//yastatic.net/es5-shims/0.0.1/es5-shims.min.js\\\">&lt;/script>&lt;![endif]-->\\n&lt;script src=\\\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ru.no-bem.js\\\">&lt;/script>\"},\"lang\":\"ru\",\"title\":\"Полная версия сайта\"}}"}</codeblock>
+                    <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="java" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "html_heads":{
+      "sources":{
+        "meta":{
+          "copyright":"(C) Copyright 2018",
+          "DC.rights.owner":"(C) Copyright 2018",
+          "DC.Type":"concept",
+          "DC.Relation":"https://www.yandex.ru/adv/requirements",
+          "prodname":"Дисплей",
+          "DC.Format":"XHTML",
+          "DC.Identifier":"full-version",
+          "DC.Language":"ru",
+          "generator":"Yandex Yoda DITA",
+          "topic_id":"full-version",
+          "topic_name":"Полная версия сайта",
+          "doc_id":"display-guide",
+          "doc_name":"Помощь",
+          "component_id":"",
+          "component_name":"",
+          "product_id":"display-guide",
+          "product_name":"Дисплей",
+          "product":"display-guide",
+          "product_realname":"Дисплей",
+          "doc_group":"display-guide",
+          "doc_group_name":"display-guide",
+          "section_name":"Полная версия сайта",
+          "langs":"ru"
+        },
+        "title":"Полная версия сайта",
+        "js":["//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ru.no-bem.js"],
+        "inlineJs":[],
+        "css":["//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.css"],
+        "common":{
+          "js":[]
+        },
+        "legacy":{
+          "js":["//yastatic.net/es5-shims/0.0.1/es5-shims.min.js"],
+          "css":["//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ie8.css"]
+        }
+      },
+      "meta":"&lt;meta name=\"copyright\" content=\"(C) Copyright 2018\"/>\
+              &lt;meta name=\"DC.rights.owner\" content=\"(C) Copyright 2018\"/>\
+              &lt;meta name=\"DC.Type\" content=\"concept\"/>\
+              &lt;meta name=\"DC.Relation\" content=\"https://www.yandex.ru/adv/requirements\"/>\
+              &lt;meta name=\"prodname\" content=\"Дисплей\"/>\
+              &lt;meta name=\"DC.Format\" content=\"XHTML\"/>\
+              &lt;meta name=\"DC.Identifier\" content=\"full-version\"/>\
+              &lt;meta name=\"DC.Language\" content=\"ru\"/>\
+              &lt;meta name=\"generator\" content=\"Yandex Yoda DITA\"/>\
+              &lt;meta name=\"topic_id\" content=\"full-version\"/>\
+              &lt;meta name=\"topic_name\" content=\"Полная версия сайта\"/>\
+              &lt;meta name=\"doc_id\" content=\"display-guide\"/>\
+              &lt;meta name=\"doc_name\" content=\"Помощь\"/>\
+              &lt;meta name=\"product_id\" content=\"display-guide\"/>\
+              &lt;meta name=\"product_name\" content=\"Дисплей\"/>\
+              &lt;meta name=\"product\" content=\"display-guide\"/>\
+              &lt;meta name=\"product_realname\" content=\"Дисплей\"/>\
+              &lt;meta name=\"doc_group\" content=\"display-guide\"/>\
+              &lt;meta name=\"doc_group_name\" content=\"display-guide\"/>\
+              &lt;meta name=\"section_name\" content=\"Полная версия сайта\"/>\
+              &lt;meta name=\"langs\" content=\"ru\"/>",
+      "bundle":{
+        "styles":"&lt;!--[if IE 8]>&lt;link rel=\"stylesheet\" href=\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ie8.css\"/>&lt;![endif]-->\
+        &lt;link rel=\"stylesheet\" href=\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.css\"/>","js":"&lt;!--[if IE 8]>&lt;script src=\"//yastatic.net/es5-shims/0.0.1/es5-shims.min.js\">&lt;/script>&lt;![endif]-->\
+        &lt;script src=\"//yastatic.net/doccenter-new/2.163.0/bundles/isolated/_isolated.ru.no-bem.js\">&lt;/script>"
+      },
+      "lang":"ru","title":"Полная версия сайта"
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="minitoc">
+            <title>minitoc</title>
+            <p>Блок с оглавлением <xref href="../../service/concepts/glossary.dita#glossary/document" popup="yes">документа</xref>. Отображается в правом верхнем углу.</p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="#components/output">
+                            <entry></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd>
+                        <dl display-style="cut">
+                            <dlentry>
+                                <dt>JSON</dt>
+                                <dd>
+                                    <p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["minitoc(output=json)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"minitoc\":[{\"text\":\"Основные требования по оформлению баннеров\",\"href\":\"#design-banner-desktop\"},{\"text\":\"Дополнительные рекомендации для полной и мобильной версий сайта\",\"href\":\"#optional\"}]}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "minitoc":[
+      {
+        "text":"Основные требования по оформлению баннеров",
+        "href":"#design-banner-desktop"
+      },
+      {
+        "text":"Дополнительные рекомендации для полной и мобильной версий сайта",
+        "href":"#optional"
+      }
+    ]
+  }"
+}</codeblock>
+                                </dd>   
+                            </dlentry>
+                            <dlentry>
+                                <dt>HTML</dt>
+                                <dd>
+                                    <p>Запрос:</p>
+                                    <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["minitoc(output=html)"]}}'</codeblock>
+                                    <p>Ответ:</p>
+                                    <codeblock code-lang="html" wrap="yes">HTTP/1.1 200 OK
+
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"minitoc\":\"&lt;ol class=\\\"doc-c-ol doc-c-minitoc doc-c-sl doc-c-list doc-c-list_type_ol doc-c-list_type_minitoc doc-c-list_type_sl\\\">&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e298\\\">Читаемость шрифта&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e384\\\">Не используйте эффекты и украшательства&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e402\\\">Уменьшите количество шрифтов&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e442\\\">Не используйте изображения/фото низкого качества&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e464\\\">Выберите главное&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e479\\\">Не мельчите&lt;/a>&lt;/li>&lt;li class=\\\"doc-c-li doc-c-list doc-c-list__li\\\">&lt;a class=\\\"doc-c-xref doc-c-link\\\" href=\\\"/support/display/required-docs-rules/full-version.html#d177e501\\\">Оформление обязательной юридической информации&lt;/a>&lt;/li>&lt;/ol>\"}"}</codeblock>
+                                    <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                                    <codeblock code-lang="html" wrap="yes">HTTP/1.1 200 OK
+
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":
+    "{"minitoc":
+      "&lt;ol class=\"doc-c-ol doc-c-minitoc doc-c-sl doc-c-list doc-c-list_type_ol doc-c-list_type_minitoc doc-c-list_type_sl\">
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e298\">Читаемость шрифта&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e384\">Не используйте эффекты и украшательства&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e402\">Уменьшите количество шрифтов&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e442\">Не используйте изображения/фото низкого качества&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e464\">Выберите главное&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e479\">Не мельчите&lt;/a>
+         &lt;/li>
+         &lt;li class=\"doc-c-li doc-c-list doc-c-list__li\">
+           &lt;a class=\"doc-c-xref doc-c-link\" href=\"/support/display/required-docs-rules/full-version.html#d177e501\">Оформление обязательной юридической информации&lt;/a>
+         &lt;/li>
+       &lt;/ol>"
+    }"
+}</codeblock>
+                                </dd>
+                            </dlentry>
+                        </dl>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="breadcrumbs">
+            <title>breadcrumbs</title>
+            <p>Блок с хлебными крошками (путь до документа в файловой системе). Отображается в верхней части страницы в виде горизонтальной строки с описанием пути до документа.</p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="#components/menuDir">
+                            <entry/>
+                            <entry/>
+                        </row>
+                        <row id="output">
+                            <entry><codeph>output</codeph></entry>
+                            <entry><p>Формат ответа. Допустимые значения:<ul id="ul_v3l_fkm_2gb">
+                                        <li><codeph>json</codeph>;</li>
+                                        <li><codeph>html/непустая строка</codeph>. Является значением по умолчанию.</li>
+                                    </ul></p></entry>
+                        </row>
+                        <row>
+                            <entry><codeph>excludeCurrent</codeph></entry>
+                            <entry><p>Исключает текущую страницу из хлебных крошек. Допустимые значения: <ul>
+                                        <li><codeph>непустая строка</codeph> — исключить текущую страницу.</li>
+                                    </ul></p></entry>
+                        </row>
+                        <row>
+                            <entry><codeph>includeNotLinks</codeph></entry>
+                            <entry><p>Включает в хлебные крошки элементы, у которых нет ссылки (например, заголовки/узлы деревьев в меню слева, которые имеют названия и раскрываются, но не являются ссылками). В HTML представлении выводится как простой текст в элементе <codeph>&lt;span></codeph>. Допустимые значения: <ul id="breadcrumbs-include-not-links">
+                    <li><codeph>непустая строка</codeph> — включить в хлебные крошки элементы без ссылок.</li>
+                  </ul></p></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["breadcrumbs(output=json)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"breadcrumbs\":[{\"url\":\"/support/display/required-docs-rules/adv-rules.html\",\"title\":\"Требования модерации\"},{\"url\":\"/support/display/required-docs-rules/main-page-required.html\",\"title\":\"Требования к оформлению баннеров на главной странице\"},{\"url\":\"/support/display/required-docs-rules/full-version.html\",\"title\":\"Полная версия сайта\"}]}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "breadcrumbs":[
+      {
+        "url":"/support/display/required-docs-rules/adv-rules.html",
+         "title":"Требования модерации"
+      },
+      {
+        "url":"/support/display/required-docs-rules/main-page-required.html",
+        "title":"Требования к оформлению баннеров на главной странице"
+      },
+      {
+        "url":"/support/display/required-docs-rules/full-version.html",
+         "title":"Полная версия сайта"
+      }
+    ]
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="prev_next">
+            <title>prev_next</title>
+            <p>Блок переключения между документами в книге (предыдущий/следующий документ). Отображается в правом нижнем углу.</p>
+            <table>
+                <title>Входные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="#components/menuDir">
+                            <entry/>
+                            <entry/>
+                        </row>
+                        <row conref="#components/output">
+                            <entry/>
+                            <entry/>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["prev_next(output=json)"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"prev_next\":{\"prevItem\":{\"disabled\":false,\"title\":\"Требования к оформлению баннеров на главной странице\",\"link\":\"/support/display/required-docs-rules/main-page-required.html\"},\"nextItem\":{\"disabled\":false,\"title\":\"Мобильная версия сайта\",\"link\":\"/support/display/required-docs-rules/mobile-version.html\"}}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "prev_next":{
+      "prevItem":{
+        "disabled":false,
+        "title":"Требования к оформлению баннеров на главной странице",
+        "link":"/support/display/required-docs-rules/main-page-required.html"
+      },
+      "nextItem":{
+        "disabled":false,
+        "title":"Мобильная версия сайта",
+        "link":"/support/display/required-docs-rules/mobile-version.html"
+      }
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="info">
+            <title>info</title>
+            <p>Прочая информация о документе.</p>
+            <table>
+                <title>Выходные параметры</title>
+                <tgroup cols="2">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <thead>
+                        <row>
+                            <entry>Параметр</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry><codeph>isCacheable</codeph></entry>
+                            <entry>
+                                <p>Признак. Возможность кэширования контента документа. Допустимые значения:<ul id="ul_kxj_nl3_vgb">
+                                        <li><codeph>true</codeph> — контент документ не зависит от пользователя и его можно закэшировать на непродолжительное время (несколько минут);</li>
+                                        <li><codeph>false</codeph> — контент документа зависит от пользователя и его нельзя закэшировать.</li>
+                                    </ul></p>
+                            </entry>
+                        </row>
+                        <row>
+                            <entry>csp</entry>
+                            <entry>CSP-директива, которую нужно добавить к директивам сервиса.</entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["info"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"info\":{\"props\":{\"isCacheable\":true},\"csp\":{\"script-src\":[]}}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "info":{
+      "props":{
+        "isCacheable":true
+      },
+      "csp":{
+        "script-src":[]
+      }
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="voter">
+            <title>voter</title>
+            <p>Блок голосования. Возвращает html без стилей и скриптов. Отображается в нижней части странницы после основной статьи.</p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["voter"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"voter\":\"&lt;div class=\\\"doc-c-voter doc-c doc-c-i-bem\\\" doc-data-bem='{\\\"doc-c-voter\\\":{}}'>&lt;div class=\\\"doc-c-voter__title\\\">Была ли статья полезна?&lt;/div>&lt;div class=\\\"doc-c-voter__buttons\\\">&lt;button class=\\\"doc-c-button doc-c-button_type_no doc-c-button_size_s doc-c-button_theme_normal doc-c-button_pseudo_yes doc-c-button_side_left doc-c-voter__button doc-c-i-bem\\\" type=\\\"button\\\" autocomplete=\\\"off\\\" doc-data-bem='{\\\"button\\\":{}}'>&lt;span class=\\\"doc-c-button__text\\\">&lt;i class=\\\"doc-c-icon doc-c-icon_type_thumb-down\\\" aria-hidden=\\\"true\\\">&lt;/i>Нет&lt;/span>&lt;/button>&lt;button class=\\\"doc-c-button doc-c-button_type_yes doc-c-button_size_s doc-c-button_theme_normal doc-c-button_pseudo_yes doc-c-button_side_right doc-c-voter__button doc-c-i-bem\\\" type=\\\"button\\\" autocomplete=\\\"off\\\" doc-data-bem='{\\\"button\\\":{}}'>&lt;span class=\\\"doc-c-button__text\\\">&lt;i class=\\\"doc-c-icon doc-c-icon_type_thumb-up\\\" aria-hidden=\\\"true\\\">&lt;/i>Да&lt;/span>&lt;/button>&lt;/div>&lt;div class=\\\"doc-c-voter__negative-popup doc-c-i-bem\\\" doc-data-bem='{\\\"doc-c-voter__negative-popup\\\":{}}'>&lt;div class=\\\"doc-c-popup2 doc-c-popup2_type_negative doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\\\" doc-data-bem='{\\\"popup2\\\":{}}'>&lt;div class=\\\"doc-c-b-menu-vert\\\">&lt;div class=\\\"doc-c-b-menu-vert__title\\\">Уточните, почему:&lt;/div>&lt;ul class=\\\"doc-c-b-menu-vert__layout\\\">&lt;li class=\\\"doc-c-b-menu-vert__layout-unit doc-c-b-menu-vert__layout-unit_position_first\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"content-header-correlation\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">содержание статьи не соответствует заголовку&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;li class=\\\"doc-c-b-menu-vert__layout-unit\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"dont-like\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">мне не нравится, как это работает&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;li class=\\\"doc-c-b-menu-vert__layout-unit\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"difficult-text\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">текст трудно понять&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;li class=\\\"doc-c-b-menu-vert__layout-unit\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"recommendation-doesnt-work\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">рекомендации не помогли&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;li class=\\\"doc-c-b-menu-vert__layout-unit\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"no-answer\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">нет ответа на мой вопрос&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;li class=\\\"doc-c-b-menu-vert__layout-unit doc-c-b-menu-vert__layout-unit_position_last\\\">&lt;div class=\\\"doc-c-b-menu-vert__item\\\">&lt;span class=\\\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\\\" tabindex=\\\"0\\\" role=\\\"button\\\" reason-type=\\\"other\\\" doc-data-bem='{\\\"link\\\":{}}'>&lt;span class=\\\"doc-c-link__inner\\\">другая причина&lt;/span>&lt;/span>&lt;/div>&lt;/li>&lt;/ul>&lt;/div>&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-voter__positive-popup\\\">&lt;div class=\\\"doc-c-popup2 doc-c-popup2_type_positive doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\\\" doc-data-bem='{\\\"popup2\\\":{\\\"directions\\\":[\\\"top-left\\\",\\\"top-center\\\",\\\"top-right\\\"]}}'>Спасибо за ваш отзыв!&lt;/div>&lt;/div>&lt;div class=\\\"doc-c-popup2 doc-c-popup2_type_voter-form doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\\\" doc-data-bem='{\\\"popup2\\\":{}}'>&lt;div class=\\\"doc-c-popup2__title\\\">Расскажите, что вам не понравилось в статье:&lt;/div>&lt;div class=\\\"doc-c-x-area doc-c-x-area_bg_squares\\\">&lt;span class=\\\"doc-c-textarea doc-c-textarea_theme_normal doc-c-textarea_size_s doc-c-i-bem\\\" doc-data-bem='{\\\"textarea\\\":{}}'>&lt;span class=\\\"doc-c-textarea__wrap\\\">&lt;textarea class=\\\"doc-c-textarea__control\\\" cols=\\\"10\\\" rows=\\\"10\\\">&lt;/textarea>&lt;/span>&lt;span class=\\\"doc-c-textarea__box\\\">&lt;/span>&lt;/span>&lt;/div>&lt;div class=\\\"doc-c-popup2__submit\\\">&lt;button class=\\\"doc-c-button doc-c-button_theme_action doc-c-button_size_s doc-c-voter__negative-other-reason-submit doc-c-i-bem\\\" type=\\\"submit\\\" autocomplete=\\\"off\\\" name=\\\"my-submit\\\" doc-data-bem='{\\\"button\\\":{}}'>&lt;span class=\\\"doc-c-button__text\\\">Отправить&lt;/span>&lt;/button>&lt;/div>&lt;/div>&lt;/div>\"}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "voter":"&lt;div class=\"doc-c-voter doc-c doc-c-i-bem\" doc-data-bem='{\"doc-c-voter\":{}}'>
+               &lt;div class=\"doc-c-voter__title\">Была ли статья полезна?&lt;/div>
+               &lt;div class=\"doc-c-voter__buttons\">
+                 &lt;button class=\"doc-c-button doc-c-button_type_no doc-c-button_size_s doc-c-button_theme_normal doc-c-button_pseudo_yes doc-c-button_side_left doc-c-voter__button doc-c-i-bem\" type=\"button\" autocomplete=\"off\" doc-data-bem='{\"button\":{}}'>
+                   &lt;span class=\"doc-c-button__text\">&lt;i class=\"doc-c-icon doc-c-icon_type_thumb-down\" aria-hidden=\"true\">&lt;/i>Нет&lt;/span>
+                 &lt;/button>
+                 &lt;button class=\"doc-c-button doc-c-button_type_yes doc-c-button_size_s doc-c-button_theme_normal doc-c-button_pseudo_yes doc-c-button_side_right doc-c-voter__button doc-c-i-bem\" type=\"button\" autocomplete=\"off\" doc-data-bem='{\"button\":{}}'>
+                   &lt;span class=\"doc-c-button__text\">&lt;i class=\"doc-c-icon doc-c-icon_type_thumb-up\" aria-hidden=\"true\">&lt;/i>Да&lt;/span>
+                 &lt;/button>
+               &lt;/div>
+               &lt;div class=\"doc-c-voter__negative-popup doc-c-i-bem\" doc-data-bem='{\"doc-c-voter__negative-popup\":{}}'>
+                 &lt;div class=\"doc-c-popup2 doc-c-popup2_type_negative doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\" doc-data-bem='{\"popup2\":{}}'>
+                   &lt;div class=\"doc-c-b-menu-vert\">
+                     &lt;div class=\"doc-c-b-menu-vert__title\">Уточните, почему:&lt;/div>
+                     &lt;ul class=\"doc-c-b-menu-vert__layout\">
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit doc-c-b-menu-vert__layout-unit_position_first\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"content-header-correlation\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">содержание статьи не соответствует заголовку&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"dont-like\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">мне не нравится, как это работает&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"difficult-text\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">текст трудно понять&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"recommendation-doesnt-work\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">рекомендации не помогли&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"no-answer\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">нет ответа на мой вопрос&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                       &lt;li class=\"doc-c-b-menu-vert__layout-unit doc-c-b-menu-vert__layout-unit_position_last\">
+                         &lt;div class=\"doc-c-b-menu-vert__item\">
+                           &lt;span class=\"doc-c-link doc-c-link_theme_pseudo doc-c-link_pseudo_yes doc-c-voter__negative-reason doc-c-i-bem\" tabindex=\"0\" role=\"button\" reason-type=\"other\" doc-data-bem='{\"link\":{}}'>
+                             &lt;span class=\"doc-c-link__inner\">другая причина&lt;/span>
+                           &lt;/span>
+                         &lt;/div>
+                       &lt;/li>
+                     &lt;/ul>
+                   &lt;/div>
+                 &lt;/div>
+               &lt;/div>
+               &lt;div class=\"doc-c-voter__positive-popup\">
+                 &lt;div class=\"doc-c-popup2 doc-c-popup2_type_positive doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\" doc-data-bem='{\"popup2\":{\"directions\":[\"top-left\",\"top-center\",\"top-right\"]}}'>Спасибо за ваш отзыв!&lt;/div>
+               &lt;/div>
+               &lt;div class=\"doc-c-popup2 doc-c-popup2_type_voter-form doc-c-popup2_target_anchor doc-c-popup2_theme_normal doc-c-popup2_autoclosable_yes doc-c-i-bem\" doc-data-bem='{\"popup2\":{}}'>
+                 &lt;div class=\"doc-c-popup2__title\">Расскажите, что вам не понравилось в статье:&lt;/div>
+                 &lt;div class=\"doc-c-x-area doc-c-x-area_bg_squares\">
+                   &lt;span class=\"doc-c-textarea doc-c-textarea_theme_normal doc-c-textarea_size_s doc-c-i-bem\" doc-data-bem='{\"textarea\":{}}'>
+                     &lt;span class=\"doc-c-textarea__wrap\">&lt;textarea class=\"doc-c-textarea__control\" cols=\"10\" rows=\"10\">&lt;/textarea>&lt;/span>
+                     &lt;span class=\"doc-c-textarea__box\">&lt;/span>
+                   &lt;/span>
+                 &lt;/div>
+                 &lt;div class=\"doc-c-popup2__submit\">
+                   &lt;button class=\"doc-c-button doc-c-button_theme_action doc-c-button_size_s doc-c-voter__negative-other-reason-submit doc-c-i-bem\" type=\"submit\" autocomplete=\"off\" name=\"my-submit\" doc-data-bem='{\"button\":{}}'>
+                     &lt;span class=\"doc-c-button__text\">Отправить&lt;/span>
+                   &lt;/button>
+                 &lt;/div>
+               &lt;/div>
+             &lt;/div>"
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <!-- <section id="generator_name">
+            <title>generator_name</title>
+            <p>Имя генератора документа, YODA или PIP. Документы, сгенерированные при помощи PIP, не поддерживают компоненты <codeph>breadcrumbs</codeph>, <codeph>menu</codeph>, <codeph>prev_next</codeph>, <codeph>info</codeph>, <codeph>voter</codeph>.</p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/required-docs-rules/full-version.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["generator_name"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"generator_name\":\"DITA\"}"}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section> -->
+        <section id="useful_links">
+            <title>useful_links</title>
+            <p>Возвращает блок полезных ссылок в html-формате (например, блок <q>Правовые документы</q>). Название блока и его содержимое формируется автором документа. Отображается в нижней части страницы.</p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/troubleshooting/feedback.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["useful_links"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"useful_links\":\"&lt;div class=\\\"doc-c doc-c-useful-links-container\\\">&lt;div class=\\\"doc-c-linklist doc-c-block-useful doc-c-useful-links\\\">&lt;div class=\\\"doc-c-linkset-title\\\">Правовые документы&lt;/div>&lt;div class=\\\"doc-c-linklist-item\\\">&lt;a class=\\\"doc-c-link doc-c-link\\\" href=\\\"https://www.yandex.ru/adv/requirements\\\" target=\\\"_blank\\\">Требования к рекламным материалам&lt;/a>&lt;/div>&lt;/div>&lt;/div>\"}}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "useful_links":"&lt;div class=\"doc-c doc-c-useful-links-container\">
+                      &lt;div class=\"doc-c-linklist doc-c-block-useful doc-c-useful-links\">
+                        &lt;div class=\"doc-c-linkset-title\">Правовые документы&lt;/div>
+                        &lt;div class=\"doc-c-linklist-item\">
+                          &lt;a class=\"doc-c-link doc-c-link\" href=\"https://www.yandex.ru/adv/requirements\" target=\"_blank\">Требования к рекламным материалам&lt;/a>
+                        &lt;/div>
+                      &lt;/div>
+                    &lt;/div>"
+  }
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="lang">
+            <title>lang</title>
+            <p>Возвращает текущий язык документа и все доступные языки на домене (входной параметр <codeph>tld</codeph>).</p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/troubleshooting/feedback.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["lang"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"lang\":{\"current\":\"ru\",\"available\":[\"ru\"]}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "lang":{
+      "current":"ru",
+      "available":["ru"]
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+        <section id="forms">
+            <title>forms</title>
+            <p>Возвращает параметры всех форм, которые присутствуют в документе.</p>
+            <dl display-style="cut">
+                <dlentry>
+                    <dt>Пример</dt>
+                    <dd><p>Запрос:</p>
+                        <codeblock code-lang="json" wrap="yes">curl -i -X POST https://support.daas-backend.yandex.net/v1/documents/load/display/troubleshooting/feedback.html -H 'Content-Type: application/json' -d '{"tld": "ru","doccenterParams":{"components":["forms"]}}'</codeblock>
+                        <p>Ответ:</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{"doccenterResponse":"{\"forms\":{\"3159\":{\"media-type\":null,\"form_title\":\"Задать вопрос\",\"lang\":\"ru\",\"title\":\"Обратная связь\",\"iframe\":1}}}"}</codeblock>
+                        <p>Человекочитаемый вариант ответа (без экранирования):</p>
+                        <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: RetrieveDocumentResponse
+
+{
+  "doccenterResponse":"{
+    "forms":{
+      "3159":{
+        "media-type":null,
+        "form_title":"Задать вопрос",
+        "lang":"ru",
+        "title":"Обратная связь",
+        "iframe":1
+      }
+    }
+  }"
+}</codeblock>
+                    </dd>
+                </dlentry>
+            </dl>
+        </section>
+    </conbody>
+</concept>

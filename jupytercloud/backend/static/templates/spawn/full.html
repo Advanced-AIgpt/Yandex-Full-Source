@@ -1,0 +1,161 @@
+{% import "utils.jinja" as utils %}
+
+{% set ns = namespace(first_tab=None) -%}
+{% set quota_types = [
+  ('personal', 'Personal', user_quota.have_personal),
+  ('service', 'Service', user_quota.have_service),
+  ('jupyter', 'JupyterCloud', True),
+] -%}
+
+{% macro get_active(tab_name) -%}
+  {% if ns.first_tab == tab_name -%}
+    active
+  {%- endif %}
+{%- endmacro %}
+
+{% macro tab(name, label) -%}
+  {% if not ns.first_tab -%}
+    {% set ns.first_tab = name %}
+  {%- endif %}
+
+  <li role="presentation" class="{{ get_active(name) }}">
+    <a href="#{{ name }}" aria-controls="{{ name }}" role="tab" data-toggle="tab"
+      id='tab-header-{{ name }}'>
+      {{ label }}
+    </a>
+  </li>
+{%- endmacro %}
+
+{% macro select_with_title(group, name, title, values, default) -%}
+  <div class="form-group">
+    <label class="col-sm-2 control-label" for="select-{{ name }}">{{ title }}</label>
+    <div class="col-sm-8">
+      <select class="form-control" id="select-{{ group }}-{{name}}" name="{{ name }}">
+        {% for value in values -%}
+          <option value="{{ value }}" {% if value == default %}selected{% endif %} >
+            {{ value }}
+          </option>
+        {%- endfor %}
+      </select>
+    </div>
+    <span class="col-sm-2" id="select-info-{{ group }}-{{ name }}">
+        {{ caller() }}
+    </span>
+  </div>
+{%- endmacro %}
+
+{% macro simple_select_with_title(group, name, title) -%}
+  {% call select_with_title(group, name, title, ['null'], ['null']) -%}
+  {%- endcall %}
+{%- endmacro %}
+
+{% macro tab_content(name, is_present) -%}
+  {% if is_present -%}
+    <div role="tabpanel" class="tab-pane {{ get_active(name) }}" id="{{ name }}">
+      {% if last_backup -%}
+        <div class="alert alert-info text-center" role="alert">
+          You can restore VM from a
+          <a href="{{ backup_url }}" class="alert-link">{{ last_backup['age'] }} days old backup</a>.
+        </div>
+      {%- elif restoring_from_backup -%}
+        <div class="alert alert-info text-center" role="alert">
+          Backup will be applied to your VM after spawn,
+          and you will get an email when it finishes.
+        </div>
+      {%- endif %}
+
+      {{ caller() }}
+
+      <form enctype="multipart/form-data" id="spawn-form-{{ name }}" class="form-horizontal"
+        action="{{url}}" method="post" role="form">
+
+        {{ simple_select_with_title(name, 'cluster', 'Data Center') }}
+
+        {{ simple_select_with_title(name, 'account', 'Account') }}
+
+        {{ simple_select_with_title(name, 'segment', 'Segment') }}
+
+        {{ simple_select_with_title(name, 'preset', 'VM Size') }}
+
+        {% call select_with_title(name, 'network_id', 'Network Macro', available_networks, default_network) -%}
+          <a href="{{ networks_doc_url }}" target="_blank">
+              {% if available_networks %}
+                {% set level = 'info' %}
+              {% else %}
+                {% set level = 'danger' %}
+              {% endif %}
+              <span class="form-control-static mdi mdi-24px mdi-information-outline text-{{ level }}">
+              </span>
+          </a>
+        {%- endcall %}
+
+        {{ utils.settings_panel(name, settings_registry) }}
+
+        <div id="message-box-{{ name }}"></div>
+
+        <input type="hidden" name="quota_type" value="{{ name }}">
+
+        <input type="submit" value="Spawn"
+          id="submit-button-{{ name }}" class="btn btn-primary col-sm-6 col-sm-offset-3">
+      </form>
+    </div>
+  {%- endif %}
+{%- endmacro %}
+
+{% macro oauth_message(quota_name, have_token) -%}
+  {% if not have_token -%}
+    <div class="alert alert-warning text-center" role="alert">
+      <span style="vertical-align: center">
+          If you want to spawn VM in your {{ quota_name }} quota, you have to
+      </span>
+      <a href="{{ oauth_url }}" class="btn btn-warning btn-sm">approve OAuth access</a>
+    </div>
+  {% else %}
+    <br />
+  {%- endif %}
+{%- endmacro %}
+
+<div>
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li><p class="panel-heading"><strong>Select quota type:</strong></p></li>
+    {% for tab_name, tab_label, is_present in quota_types -%}
+      {% if is_present -%}
+        {{ tab(tab_name, tab_label) }}
+      {%- endif %}
+    {%- endfor %}
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    {% call tab_content('personal', user_quota.have_personal) -%}
+      <div class="alert alert-info text-center" role="alert">
+        When you use personal quota,
+        you get significantly more resources (RAM and faster SSD)
+        and help us utilize resources more efficiently.
+      </div>
+      {{ oauth_message('personal', user_quota.have_oauth_token) }}
+    {%- endcall %}
+
+    {% call tab_content('service', user_quota.have_service) -%}
+        <br />
+    {%- endcall %}
+
+    {% call tab_content('jupyter', True) -%}
+      {% if not user_quota.have_any_idm_role -%}
+        <div class="alert alert-warning text-center" role="alert">
+          If you want to use JupyterCloud quota to spawn VM, you need to have
+          an <a href={{ idm_url }}>IDM role</a>.
+        </div>
+      {% else %}
+        <br />
+      {%- endif %}
+    {%- endcall %}
+  </div>
+</div>
+
+<script type="text/javascript">
+const QUOTA = {{ user_quota.as_json() }};
+const AVAILABLE_NETWORKS = {{ available_networks | tojson }};
+const NETWORKS_DOC_URL = {{ networks_doc_url | tojson }};
+</script>

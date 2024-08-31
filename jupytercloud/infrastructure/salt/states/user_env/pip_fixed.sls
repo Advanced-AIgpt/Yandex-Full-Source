@@ -1,0 +1,31 @@
+python2.7-fixed-packages:
+  pip.installed:
+  - pkgs:
+    - branca==0.3.1
+    - cryptography==3.3
+    - decorator==4.4.2
+    - Fiona==1.8.18
+    - jsonschema==3.2.0
+    - markdown==3.1.1
+    - nirvana-api==2.4.0.post8754573
+    - pygeoplot==0.6
+    - pyrsistent==0.16.1
+    - pytz==2020.5
+    - rsa==4.5
+    - scikit-learn<=0.20
+    - sklearn-pandas==1.8.0
+    - statsmodels==0.10.2
+    - unidecode<1.3.0
+  - ignore_installed: True
+  - force_reinstall: True
+  - update: False
+  - bin_env: /usr/local/bin/pip2.7
+  - index_url: https://pypi.yandex-team.ru/simple
+  - require:
+    - pip: python2.7-pip-essentials
+    - pip: python2.7-misc-packages
+    - pip: python2.7-analytilcs-packages
+    - pip: python2.7-yandex-packages
+    - pip: python2.7-jupytercloud-packages
+    - pip: python2-statinfra-packages
+    - pip: python2.7-spyt-packages

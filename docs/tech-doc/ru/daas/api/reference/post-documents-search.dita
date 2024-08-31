@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<concept xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xml:lang="ru" 
+    xsi:noNamespaceSchemaLocation="urn:yandex:names:tc:dita:xsd:yandexConcept.xsd:1.3"
+    id="post-documents-search">
+    <title>Поиск по документам кластера</title>
+    <abstract>
+        <p>Ищет в кластере документы с учетом указанных параметров.</p>
+        <minitoc/>
+    </abstract>
+    <prolog>
+        <metadata>
+            <othermeta name="vcs_source_url" content="https://a.yandex-team.ru/arc/trunk/arcadia/docs/tech-doc/ru/daas/api/reference/post-documents-search.dita"/>
+        </metadata>
+    </prolog>
+    <concept id="input">
+        <title>Формат запроса</title>
+        <conbody>
+            <url-syntax>
+                <url-origin>POST <keyword keyref="http"/><keyword keyref="cluster"/>.<keyword keyref="stable-url"/>/<keyword keyref="version-stable"/></url-origin>
+                <url-pathgroup>
+                    <url-pathparam>
+                        <url-paramname>documents</url-paramname>
+                        <url-paramdesc/>
+                    </url-pathparam>
+                    <url-pathparam>
+                        <url-paramname>search</url-paramname>
+                        <url-paramdesc/>
+                    </url-pathparam>
+                </url-pathgroup>
+            </url-syntax>
+            <section id="structure-in">
+                <title>Формат тела запроса</title>
+                <codeblock code-lang="json" href="#input/spec-in">{
+  "text":{string},
+  "tld":{string},
+  "page":{int32},
+  "projectAlias":{string},
+  "lang":{string}
+}</codeblock>             
+            </section>
+            <section id="spec-in">
+                <tree conref="structures.dita#structures/SearchRequest">
+                    <tree-item>
+                        <tree-itemname/>
+                    </tree-item>
+                </tree>
+            </section>
+            <section minitoc="no">
+                <title/>
+                <p><ph keyref="note"/></p>
+            </section>
+        </conbody>
+    </concept>
+    <concept id="output-structure">
+        <title>Формат ответа</title>
+        <conbody>
+            <codeblock code-lang="json" href="#output-structure/spec-output">{
+  "documents":[
+    {
+      "matchedFragments":[{array of string}],
+      "title":{string},
+      "url":{string},
+      "path":{string},
+      "projectAlias":{string},
+      "projectName":{string}
+    },
+    {
+      ...
+    }
+  ],
+  "projects":[{array of string}]
+}</codeblock>
+            <section id="spec-output">
+                <tree conref="structures.dita#structures/SearchResponse">
+                    <tree-item>
+                        <tree-itemname/>
+                    </tree-item>
+                </tree>
+            </section>
+        </conbody>
+    </concept>
+    <concept id="response-codes">
+        <title>Коды ответа</title>
+        <conbody>
+            <table>
+                <tgroup cols="3">
+                    <colspec colnum="1"/>
+                    <colspec colnum="2"/>
+                    <colspec colnum="3"/>
+                    <thead>
+                        <row>
+                            <entry>Код</entry>
+                            <entry>Причина</entry>
+                            <entry>Описание</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row conref="../concepts/response-codes.dita#response-codes/200">
+                            <entry></entry>
+                        </row>
+                        <row conref="../concepts/response-codes.dita#response-codes/400">
+                            <entry></entry>
+                        </row>
+                        <row conref="../concepts/response-codes.dita#response-codes/404">
+                            <entry></entry>
+                        </row>
+                        <row conref="../concepts/response-codes.dita#response-codes/500">
+                            <entry></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </conbody>
+    </concept>
+    <concept id="example-JSON">
+        <title>Пример</title>
+        <conbody>
+            <example>
+                <p>Запрос:</p>
+                <codeblock code-lang="http" wrap="yes">curl -i -X POST https://kassa.daas-backend.yandex.net/v1/documents/search -H 'Content-Type: application/json' -d '{"text":"Форма для Email-уведомлений","tld": "ru", "lang":"ru"}'</codeblock>
+                <p>Ответ:</p>
+                <codeblock code-lang="json" wrap="yes">HTTP/1.1 200 OK
+Content-Type: application/json
+X-Protobuf-Message: SearchResponse
+
+{
+  "documents":[
+    {
+      "matchedFragments":["\\007[Форма\\007] \\007[для\\007] \\007[Email\\007]-\\007[уведомлений\\007] Адрес для отправки \\007[формы\\007] Attention. Это старая версия API.","Адрес электронной почты плательщика, только для отправки в \\007[email\\007]-\\007[уведомлениях\\007] orderDetails. string. ."],
+      "title":"Форма для Email-уведомлений",
+      "url":"https://kassa.yandex.ru/tech/payment-form/payment-form-email.html",
+      "path":"/tech/payment-form/payment-form-email.html",
+      "projectAlias":"tech",
+      "projectName":"Протокол приема платежей для магазинов"
+    },
+    {
+      "matchedFragments":["Поля \\007[email\\007]-\\007[уведомления\\007] о переводе Во второй колонке указан параметр из платежной \\007[формы\\007], значение которого приходит в этом поле.","заказа: какое-то описание заказа Смотрите также Платежная \\007[форма\\007] \\007[Форма\\007] \\007[для\\007] \\007[Email\\007]-\\007[уведомлений\\007]."],
+      "title":"Email-уведомления о переводах",
+      "url":"https://kassa.yandex.ru/tech/payment-notifications/payment-notifications-email.html",
+      "path":"/tech/payment-notifications/payment-notifications-email.html",
+      "projectAlias":"tech",
+      "projectName":"Протокол приема платежей для магазинов"
+    },
+    {
+      "matchedFragments":["\\007[Форма\\007] с выбором способа оплаты на сайте магазина. Платежная \\007[форма\\007] Attention. Это старая версия API.","* \\007[Форма\\007] \\007[для\\007] HTTP-уведомлений * \\007[Форма\\007] \\007[для\\007] \\007[Email\\007]-\\007[уведомлений\\007] * Параметры для формирования чека."],
+      "title":"Платежная форма",
+      "url":"https://kassa.yandex.ru/tech/payment-form/payment-form.html",
+      "path":"/tech/payment-form/payment-form.html",
+      "projectAlias":"tech",
+      "projectName":"Протокол приема платежей для магазинов"
+    },
+    {
+      "matchedFragments":["Назначение платежа передается: * HTTP-протокол — в параметре orderDetails запросов Проверка заказа (checkOrder) и Уведомление о переводе (paymentAviso); * Email-протокол — в поле Содержание заказа \\007[email\\007]-\\007[уведомления\\007]. Смотрите также Платежная \\007[форма\\007] Общее..."],
+      "title":"Оплата через мобильный терминал",
+      "url":"https://kassa.yandex.ru/tech/payment-process/payments-mpos.html",
+      "path":"/tech/payment-process/payments-mpos.html",
+      "projectAlias":"tech",
+      "projectName":"Протокол приема платежей для магазинов"
+    },
+    {
+      ...
+    }
+  ],
+  "projects":["tech"]
+}</codeblock>
+            </example>
+        </conbody>
+    </concept>
+</concept>

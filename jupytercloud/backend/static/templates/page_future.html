@@ -1,0 +1,134 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+
+    <title>{% block title %}JupyterCloud{% endblock %}</title>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% block stylesheet %}
+      {{ webpack_assets.build_css() | safe }}
+    {% endblock %}
+    {% block favicon %}
+      <link rel="icon" href="{{ static_url("favicon.ico") }}" type="image/x-icon">
+    {% endblock %}
+    {% block scripts %}
+      {{ webpack_assets.build_external_js() | safe }}
+    {% endblock %}
+
+    <script type="text/javascript">
+      window.jhdata = {
+        base_url: "{{base_url}}",
+        prefix: "{{prefix}}",
+        {% if user %}
+        user: "{{user.json_escaped_name}}",
+        {% endif %}
+        {% if admin_access %}
+        admin_access: true,
+        {% else %}
+        admin_access: false,
+        {% endif %}
+        {% if not no_spawner_check and user and user.spawner.options_form %}
+        options_form: true,
+        {% else %}
+        options_form: false,
+        {% endif %}
+      }
+    </script>
+    {% if jcdata %}
+      <script type="text/javascript">
+         window.jcdata = {{ jcdata | safe }};
+      </script>
+    {% endif %}
+
+    {% block meta %}
+    {% endblock %}
+
+</head>
+
+<body>
+
+<noscript>
+  <div id='noscript'>
+    JupyterHub requires JavaScript.<br>
+    Please enable it to proceed.
+  </div>
+</noscript>
+
+{% block nav_bar %}
+  <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+    <div class="container-fluid">
+      {% block logo %}
+      <span id="jupyterhub-logo" class="navbar-brand">
+          <a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a>
+          <span id="jc_holiday" title="{{jc_holiday_title}}">
+            {{jc_holiday}}
+          </span>
+      </span>
+      {% endblock %}
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#thenavbar" aria-controls="thenavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="thenavbar">
+        {% if user %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% if jc_holiday %}
+            <li class="nav-item">
+            </li>
+          {% endif %}
+          {% block nav_bar_left_items %}
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}home">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}token">Token</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{documentation_link}}" target="_blank">Documentation</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{chat_link}}" target="_blank">Chat</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}feature_board">Feature requests</a></li>
+            {% if user.admin %}
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}admin">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{deploy_link}}" target="_blank">Y.Deploy</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}handlers" target="_blank">Handlers</a></li>
+            {% endif %}
+          {% endblock %}
+        </ul>
+        {% endif %}
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          {% block nav_bar_right_items %}
+            {% if user.admin %}
+              <span class="navbar-text">{{version}}</span>
+              <span class="navbar-text">{{dc}}</span>
+            {% endif %}
+          {% endblock %}
+        </ul>
+      </div>
+
+      {% block header %}
+      {% endblock %}
+    </div>
+  </nav>
+{% endblock %}
+
+
+{% block announcement %}
+{% if announcement %}
+<div class="container text-center announcement alert alert-warning">
+  {{ announcement | safe }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block main %}
+{% endblock %}
+
+{% block footer %}
+{% endblock %}
+
+{% block script %}
+  {{ webpack_assets.build_js() | safe }}
+{% endblock %}
+
+</body>
+
+</html>

@@ -1,0 +1,59 @@
+title: Arcadia Python docs
+service: committeepython
+
+ci:
+  secret: sec-01e0d4agf6pfvwdjwxp61n3fvg
+  runtime:
+    sandbox-owner: YATOOL
+
+  actions:
+    docs:
+      title: Deploy docs
+      flow: deploy-pr-docs
+      triggers:
+        - on: pr
+
+  releases:
+    release-docs:
+      title: Release docs
+      flow: release-docs
+      auto: true
+      filters:
+      - sub-paths: ['**']
+      - abs-paths: ['build/platform/yfm']
+
+      stages:
+      - id: build
+        title: Build
+        displace: true
+      - id: stable
+        title: Stable
+
+  flows:
+    deploy-pr-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          input:
+            targets: docs/python
+            arcanum_review_id: ${context.launch_pull_request_info.pull_request.id}
+            notify: true
+
+    release-docs:
+      jobs:
+        deploy:
+            title: Deploy docs
+            task: common/docs/deploy
+            stage: build
+            input:
+              targets: docs/python
+
+        release-to-stable:
+          title: Release docs to stable
+          task: common/docs/release
+          needs: deploy
+          stage: stable
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: production

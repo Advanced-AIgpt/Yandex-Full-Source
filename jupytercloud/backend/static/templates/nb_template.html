@@ -1,0 +1,96 @@
+{% extends "page.html" %}
+
+{% set PLACEHOLDER_URL = "https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.5.8/ajax-loader.gif" %}
+
+{% macro panel(title, cls) -%}
+<div class="panel panel-default {{ cls }}">
+
+  <div class="panel-heading">
+    <h3 class="panel-title">{{ title }}</h3>
+  </div>
+
+  <div class="panel-body">
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}
+
+{% block stylesheet %}
+
+{{ super() }}
+
+<style>
+{{ highlight_css }}
+</style>
+
+{% endblock %}
+
+{% block main %}
+
+<div class="container">
+  <div class="col-md-3" id="left-pane">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Select template</h3>
+      </div>
+
+      <div class="list-group" id="template-group">
+        {% for template, info in nb_templates.items() -%}
+        {% set id = info['id'] %}
+        {% set active = 'active' if template == default_template_name else '' %}
+
+        <a href="#{{ id }}" data-target="{{ id }}" class="list-group-item {{active}}">
+          {{ info['name'] }}
+        </a>
+        {%- endfor %}
+      </div>
+    </div>
+
+    <a role="button" id="deploy-button" class="btn btn-info form-control" href="#">
+      Create Notebook
+    </a>
+  </div>
+
+  <!-- Tab panes -->
+  <div class="tab-content col-md-9" id="right-pane">
+    {% for template, info in nb_templates.items() -%}
+    {% set id = info['id'] %}
+    {% set active = 'active' if template == default_template_name else '' %}
+    <div role="tabpanel" class="tab-pane {{ active }}" id="tab-{{ id }}">
+      {% if info['description'] -%}
+        {% call panel('Description', 'description') -%}
+          {{ info['description'] | replace('\n', '<br/>') | safe }}
+        {%- endcall %}
+      {%- endif %}
+
+      {% call panel('Preview', 'preview') -%}
+        {{ preview[template] | safe }}
+      {%- endcall %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="modal fade" id="placeholder-dialog" tabindex="-1" role="dialog" aria-labelledby="placeholder-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="placeholder-label">Creating Notebook...</h4>
+      </div>
+      <div class="modal-body">
+        It may takes up to one minute...
+        <img src={{ PLACEHOLDER_URL }} />
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+
+{{ super() }}
+
+<script src="{{ jc_static_url('js/nb_template.js') }}"></script>
+
+{% endblock %}

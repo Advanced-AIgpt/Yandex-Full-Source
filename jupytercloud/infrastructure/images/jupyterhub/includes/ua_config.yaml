@@ -1,0 +1,62 @@
+import: /srv/ua_service_config.yaml
+
+status:
+  port: 16301
+
+storages:
+- name: metrics_storage
+  plugin: fs
+  config:
+    directory: /var/cache/unified_agent
+    max_partition_size: 100mb
+
+routes:
+- input:
+    plugin: metrics_pull
+    config:
+      url: http://localhost:8081/hub/api/solomon
+      format:
+        solomon_json: {}
+      metric_name_label: sensor
+
+      project: jupyter-cloud
+      service: hub
+  channel:
+    channel_ref:
+      name: solomon_output
+
+- input:
+    plugin: metrics_pull
+    config:
+      url: http://localhost:8081/hub/api/metrics
+      format:
+        prometheus: {}
+
+      project: jupyter-cloud
+      service: hub
+  channel:
+    channel_ref:
+      name: transform_prometheus
+
+channels:
+- name: transform_prometheus
+  channel:
+    pipe:
+    - filter:
+        plugin: transform_metric_labels
+        config:
+          labels:
+          - sensor: "prom.{name}"
+          - name: "-"
+    channel_ref:
+      name: solomon_output
+
+- name: solomon_output
+  channel:
+    pipe:
+    - storage_ref:
+        name: metrics_storage
+    output:
+      plugin: metrics_pull
+      config:
+        port: 8900

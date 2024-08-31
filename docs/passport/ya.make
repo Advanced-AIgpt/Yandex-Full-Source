@@ -1,0 +1,7 @@
+DOCS()
+
+OWNER(
+     avstaim
+)
+
+END()

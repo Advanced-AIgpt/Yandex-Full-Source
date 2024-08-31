@@ -1,0 +1,104 @@
+title: Deploy docs
+# slug вашего сервиса в ABC. Его можно узнать из url страницы
+# вашего сервиса в ABC, например для адреса
+# https://abc.yandex-team.ru/services/market/, market - это slug
+service: beruapps
+
+ci:
+  secret: sec-01d2mn5fn7x4b6q22fbyqv6gwq  # https://docs.yandex-team.ru/ci/quick-start-guide#get-token 
+  runtime:
+    # Sandbox-группа (https://sandbox.yandex-team.ru/admin/groups),
+    # в которую должен входить ваш робот
+    # Создать группу можно по инструкции https://docs.yandex-team.ru/ci/quick-start-guide#get-token 
+    sandbox:
+      owner: BERU_ANDROID
+      # Настройки уведомлений при падении сборки (https://docs.yandex-team.ru/ci/runtime)
+      notifications:
+        - statuses: FAILURE
+          transport: email # доступные транспорты: telegram, email, jabber, q
+          # логины сотрудников, Sandbox-группы, рассылки (рассылки только для email уведомлений) и др.
+          recipients: BERU_ANDROID
+
+  actions:
+    docs:
+      title: Deploy docs
+      flow: deploy-pr-docs
+      triggers:
+        - on: pr
+
+  releases:
+    release-docs:
+      title: Release docs
+      flow: release-docs
+      auto: true
+      filters:
+      - sub-paths: ['**']
+      - abs-paths: ['build/platform/yfm']
+
+      stages:
+      - id: start
+        title: start
+        displace:
+          on-status:
+            - FAILURE
+            - WAITING_FOR_STAGE
+      - id: build
+        title: Build
+        displace:
+          on-status:
+            - FAILURE
+            - WAITING_FOR_STAGE
+      - id: testing
+        title: Testing
+        displace:
+          on-status:
+            - FAILURE
+            - WAITING_FOR_STAGE
+            - WAITING_FOR_MANUAL_TRIGGER
+      - id: stable
+        title: Stable
+
+  flows:
+    deploy-pr-docs:
+      jobs:
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          input:
+            targets: docs/market/mobile # путь до вашего проекта от корня Аркадии
+            arcanum_review_id: ${context.launch_pull_request_info.pull_request.id}
+            notify: true # отставлять комментарий к ПР с ссылкой на выложенную документацию
+
+    release-docs:
+      jobs:
+        start:
+          title: Start
+          task: dummy
+          stage: start
+
+        deploy:
+          title: Deploy docs
+          task: common/docs/deploy
+          needs: start
+          stage: build
+          input:
+            targets: docs/market/mobile # путь до вашего проекта от корня Аркадии
+
+        release-to-testing:
+          title: Release docs to testing
+          task: common/docs/release
+          needs: deploy
+          stage: testing
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: testing
+
+        release-to-stable:
+          title: Release docs to stable
+          task: common/docs/release
+          needs: release-to-testing
+          manual: true
+          stage: stable
+          input:
+            projects: ${tasks.deploy.output_params.projects}
+            environments: production
