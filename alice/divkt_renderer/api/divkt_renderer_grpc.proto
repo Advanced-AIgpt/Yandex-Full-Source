@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package NAlice.NRenderer;
+
+option java_package = "ru.yandex.alice.divktrenderer.grpc";
+option java_multiple_files = true;
+
+import "alice/megamind/protos/scenarios/combinator_request.proto";
+import "alice/megamind/protos/scenarios/response.proto";
+import "alice/megamind/protos/scenarios/request.proto";
+import "alice/protos/api/renderer/api.proto";
+
+import "apphost/proto/extensions/extensions.proto";
+
+message TDivktRendererRequest {
+    NAlice.NScenarios.TScenarioRunResponse Response = 1 [(typing_apphost_type) = 'mm_scenario_response'];
+    NAlice.NScenarios.TScenarioRunResponse RunResponse = 2 [(typing_apphost_type) = 'mm_scenario_run_response'];
+    NAlice.NScenarios.TScenarioContinueResponse ContinueResponse = 3 [(typing_apphost_type) = 'mm_scenario_continue_response'];
+    NAlice.NScenarios.TScenarioApplyResponse ApplyResponse = 4 [(typing_apphost_type) = 'mm_scenario_apply_response'];
+
+    NAlice.NScenarios.TScenarioRunRequest Request = 5 [(typing_apphost_type) = 'mm_scenario_request'];
+    NAlice.NScenarios.TScenarioRunRequest RunRequest = 6 [(typing_apphost_type) = 'mm_scenario_run_request'];
+    NAlice.NScenarios.TScenarioApplyRequest ApplyRequest = 7 [(typing_apphost_type) = 'mm_scenario_apply_request'];
+    NAlice.NScenarios.TCombinatorRequest CombinatorRequest = 8 [(typing_apphost_type) = 'mm_combinator_request'];
+
+    repeated NAlice.NRenderer.TDivRenderData RenderData = 100 [(typing_apphost_type) = 'render_data'];
+}
+
+message TDivktRendererResponse {
+    repeated NAlice.NRenderer.TRenderResponse RenderResult = 1 [(typing_apphost_type) = 'render_result'];
+
+}
+
+service DivktRendererGrpcService {
+    rpc Render(TDivktRendererRequest) returns (TDivktRendererResponse) {
+        option (path) = '/render';
+    }
+}

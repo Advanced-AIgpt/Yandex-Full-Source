@@ -1,0 +1,152 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "GPROXY_INPUT->INIT@session_context"
+            ]
+        },
+        "CONTEXT_SAVE": {
+            "inputDeps": [
+                "CONTEXT_LOAD->INIT@!tvm_user_ticket,!blackbox_uid",
+                "GPROXY_OUTPUT->INIT@!context_save_request,!session_context,!request_context"
+            ]
+        },
+        "GPROXY_DATASOURCES": {
+            "inputDeps": [
+                "GPROXY_MM_RPC_SETUP@rpc_datasource_app_info"
+            ]
+        },
+        "GPROXY_INPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_MM_RPC_SETUP": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "GPROXY_INPUT@!session_context",
+                "INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_OUTPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info",
+                "MEGAMIND_RPC"
+            ]
+        },
+        "GPROXY_REQUEST_META_SETUP": {
+            "inputDeps": [
+                "CONTEXT_LOAD@tvm_user_ticket",
+                "INIT@!metadata,!request_info,!request"
+            ]
+        },
+        "MEGAMIND_RPC": {
+            "inputDeps": [
+                "!GPROXY_REQUEST_META_SETUP@scenario_request_meta->mm_scenario_request_meta",
+                "CONTEXT_LOAD@context_load_response",
+                "GPROXY_DATASOURCES",
+                "GPROXY_MM_RPC_SETUP"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "GPROXY_INPUT@error",
+                "GPROXY_MM_RPC_SETUP@error",
+                "GPROXY_OUTPUT@response,error"
+            ]
+        }
+    },
+    "nodes": {
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "7s"
+            }
+        },
+        "CONTEXT_SAVE": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_DATASOURCES": {
+            "nodeType": "TRANSPARENT_STREAMING"
+        },
+        "GPROXY_INPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/input",
+                "timeout": "100ms"
+            }
+        },
+        "GPROXY_MM_RPC_SETUP": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/mm_rpc_setup",
+                "timeout": "150ms"
+            }
+        },
+        "GPROXY_OUTPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/mm_rpc_output",
+                "timeout": "200ms"
+            }
+        },
+        "GPROXY_REQUEST_META_SETUP": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/request_meta_setup",
+                "timeout": "100ms"
+            }
+        },
+        "MEGAMIND_RPC": {
+            "backendName": "ALICE_APPHOST",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "handler": "/_subhost/rpc_megamind",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 10
+                },
+                "softTimeout": "2000ms",
+                "timeout": "5000ms"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

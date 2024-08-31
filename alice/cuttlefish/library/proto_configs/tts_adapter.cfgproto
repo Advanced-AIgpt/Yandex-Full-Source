@@ -1,0 +1,33 @@
+package NAliceTtsAdapterConfig;
+
+import "alice/cuttlefish/library/proto_configs/service.cfgproto";
+import "library/cpp/proto_config/protos/extensions.proto";
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+message Tts {
+    option (NProtoConfig.ConfigClass) = "TTts";
+    enum EProtocolVersion {
+        INTERNAL_FAKE = 0;
+        REAL_TTS = 1;
+    };
+
+    // like proto_config library not support enum, so use uint32 instead:
+    optional uint32 protocol_version = 1 [(NProtoConfig.Help) = "used protocol version", default=1];
+    optional string host = 2 [(NProtoConfig.Help) = "hostname tts-server", default="localhost"];
+    optional uint32 port = 3 [(NProtoConfig.Help) = "port tts-server", default=80];
+    optional string path = 4 [(NProtoConfig.Help) = "path in http request to tts-server", default="/tts"];
+    optional uint32 client_threads = 5 [(NProtoConfig.Help) = "count tts client threads (neh/asio executors)", default=12];
+    optional string connect_timeout = 6 [
+        (NProtoConfig.Help) = "timelimit for tcp connect to tts-server",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(100)"
+    ];
+
+    optional uint32 parallel_request_execution_limit_for_one_apphost_request = 7 [(NProtoConfig.Help) = "maximum number of tts-server requests which will be executed in parallel for a single apphost request", default=3];
+};
+
+message Config {
+    option (NProtoConfig.ConfigClass) = "TConfig";
+    optional NAliceServiceConfig.Server server = 1 [(NProtoConfig.Help) = "common apphost servant options"];
+    optional Tts tts = 2 [(NProtoConfig.Help) = "client options for work with tts-server"];
+};

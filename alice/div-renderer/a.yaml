@@ -1,0 +1,198 @@
+service: div-renderer
+title: Alice Div Renderer
+
+arcanum:
+  review:
+    groups:
+      - name: "reviewers_smart_display_frontend"
+        roles:
+          - "smart_display:frontend_developer"
+    override_policy: "override"
+    rules:
+      - reviewers:
+          - name: "reviewers_smart_display_frontend"
+            ship: 1
+            assign: 1
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: st_issue_linked
+
+ci:
+  secret: sec-01crfgwyybj70jjrgcj1jfkehn
+  runtime:
+    sandbox:
+      owner: PASKILLS
+      tags: CI_ALICE_DIV_RENDERER
+      notifications:
+        - statuses: [ TIMEOUT, FAILURE, EXCEPTION ]
+          transport: telegram
+          recipients: ALICE_DIV_RENDERER_ADMINS
+
+  releases:
+    release:
+      title: Create production release
+      flow: release-to-production-flow
+      auto: false
+      start-version: 5
+      branches:
+        pattern: releases/alice/div-renderer/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: create-release-ticket
+          title: Create Release ticket
+        - id: deploy
+          title: Release to Stable
+
+  actions:
+    pre-merge:
+      flow: pre-merge-checks-flow
+      triggers:
+        - on: pr
+          into: trunk
+    per-commit:
+      flow: per-commit-update-ci-flow
+      triggers:
+        - on: commit
+
+  flows:
+    release-to-production-flow:
+      title: Div-Renderer Release flow (over CI)
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/div-renderer/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+        create-release-ticket:
+          title: Create ticket in ALICERELEASE
+          task: common/tracker/create_issue
+          stage: create-release-ticket
+          needs: build
+          input:
+            config:
+              secret:
+                key: st.token
+              link:
+                queues:
+                  - CENTAUR
+                  - ALICE
+                  - HOLLYWOOD
+                  - PASKILLS
+            rules:
+              on_duplicate: UPDATE
+            template:
+              type: Задача
+              summary: Релиз ALICE/DIV-RENDERER ${context.version_info.major}
+              assignee: kapitonovaj
+              queue: ALICERELEASE
+              fixVersion: div-renderer ${context.version_info.major}
+              tags:
+                - div-renderer
+                - release_number_${context.version_info.major}
+            update_template:
+              comment: |
+                Новые тикеты и коммиты в ((${context.ci_url} ${context.title}))
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+
+        release-to-stable-approve:
+          title: Start activate
+          task: dummy
+          stage: deploy
+          needs:
+            - create-release-ticket
+          manual:
+            enabled: true
+            prompt: Activate div-renderer STABLE?
+
+        release-to-stable:
+          title: Release to stable
+          task: common/deploy/create_release
+          needs: release-to-stable-approve
+          stage: deploy
+          input:
+            config:
+              stage_id: div-renderer-stable
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: div-renderer
+                      box_id: div-renderer
+                    image_name: "paskills/div-renderer:release-r${context.target_commit.revision.number}-${context.version_info.major}.${to_string(not_null(context.version_info.minor, '0'))}"
+
+    pre-merge-checks-flow:
+      title: Pre-merge check ups
+      jobs:
+        lint-and-test:
+          title: Lint and test stage
+          task: common/misc/run_command
+          requirements:
+            cores: 4
+            sandbox:
+              client_tags: GENERIC & LINUX & SSD & LXC
+              container_resource: 3036016634
+              dns: dns64
+          input:
+            config:
+              arc_mount_config:
+                enabled: true
+              cmd_line: |
+                set -ex
+
+                source /usr/local/share/nvm/nvm.sh || echo -n
+                nvm install 16.13.2
+                nvm use 16.13.2
+
+                npm i -g npm@6.14.5
+
+                cd $ARCADIA_PATH/alice/div-renderer
+
+                npm ci
+                npm run ci:unit && npm run lint
+
+    per-commit-update-ci-flow:
+      title: Per commit into trunk
+      jobs:
+        build:
+          title: Build docker
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/div-renderer/pkg.json
+            package_type: docker
+            docker_image_repository: paskills
+            docker_user: robot-paskills-ci
+            docker_token_vault_name: ROBOT_PASKILLS_CI_DOCKER_OAUTH2
+            docker_push_image: true
+            custom_version: "trunk-${context.version_info.full}.r${context.target_commit.revision.number}"
+        release-to-priemka:
+          title: Release to priemka
+          task: common/deploy/create_release
+          needs: build
+          stage: deploy
+          input:
+            config:
+              stage_id: div-renderer-prestable
+              patches:
+                - docker:
+                    docker_image_ref:
+                      deploy_unit_id: div-renderer
+                      box_id: div-renderer
+                    image_name: "paskills/div-renderer:trunk-${context.version_info.full}.r${context.target_commit.revision.number}"

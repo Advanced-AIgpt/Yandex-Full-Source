@@ -1,0 +1,3 @@
+export const WIDGETS_LIST_COLLUMNS_GAP = 20;
+export const WIDGETS_LIST_ROWS_GAP = 20;
+export const WIDGETS_LIST_WIDGETS_PER_ROW = 3;

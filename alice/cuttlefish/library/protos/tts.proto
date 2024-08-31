@@ -1,0 +1,305 @@
+package NTts;
+
+import "apphost/lib/proto_answers/http.proto";
+import "voicetech/library/proto_api/ttsbackend.proto";
+
+
+message TBackendRequest {
+    oneof Message {
+        TTS.Generate Generate = 1;
+
+        // WARNING: Will be ignored for now
+        // If you want to cancel request just close apphost stream
+        // apphost adapter will do all the necessary actions and requests for you
+        TTS.StopGeneration StopGeneration = 2;
+    }
+
+    // We allow multiply generate requests in one apphost stream
+    // all of them are processed in parallel
+    // This number is used to match input request and output audio chunks
+    // All output audio chunks will have TtsBackendResponse meta info with this number
+    // These numbers do not have to go in a row, you can send requests in any order
+    // i.e. 7, 4, 10, 17 is correct order
+    // The only limitation is that all numbers must be different in one apphost stream
+    optional uint32 ReqSeqNo = 3;
+
+    // Do not log any info about texts to generate
+    optional bool DoNotLogTexts = 4;
+}
+
+message TBackendResponse {
+    oneof Message {
+        TTS.GenerateResponse GenerateResponse = 1;
+    }
+
+    // All output audio chunks will have TtsBackendResponse meta info with this number
+    // Correspond to the number in generate request
+    optional uint32 ReqSeqNo = 2;
+}
+
+message TRequest {
+    reserved 10, 12;
+    reserved "UseTtsAdapterForVoices", "OutputAudioStreamer";
+
+    // It is /voice_response/output_speech/text from megamind response
+    // https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/vins/vinsadapter.py?rev=r7919644#L850
+    optional string Text = 1;
+
+    optional uint32 PartialNumber = 2;
+
+    optional string RequestId = 3;
+
+    // Legacy logic from https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/backends_tts/ttsutils.py?rev=r7996225#L211-218
+    // if voice has shitova as substring replace it with shitova.gpu
+    optional bool ReplaceShitovaWithShitovaGpu = 4;
+
+    // https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/processors/tts.py?rev=r7978885#L428-431
+    // Add tts backend timings to response if they are present in tts backend response
+    // This option is useless if "EnableTtsBackendTimings" is false
+    optional bool NeedTtsBackendTimings = 5;
+
+    // Request timings from tts backends
+    // WARNING: if disabled, data without timings may be written to the cache
+    optional bool EnableTtsBackendTimings = 6;
+
+    // Try to get audio part from cache first
+    // and send request to tts backend if and only if we have cache miss or error
+    optional bool EnableGetFromCache = 7;
+
+    // Send TCacheWarmUpRequests for tts partial requests
+    optional bool EnableCacheWarmUp = 8;
+
+    // Save autio part to cache if it was generated from scratch
+    optional bool EnableSaveToCache = 9;
+
+    // Do not log any info about texts to generate
+    // WARNING: this option also disable saving to cache
+    optional bool DoNotLogTexts = 11;
+
+    // Add to tts chunks timings (for use in RealTimeStreamer)
+    optional bool NeedRtsTimings = 13;
+
+    // for first Nsec audio chunks build Rts Timings with zero duration (for create anti-jitter audio buffer on client side)
+    optional uint32 RtsBufferSeconds = 14;
+}
+
+message TAudioPartToGenerate {
+    reserved 12, 13, 14, 15;
+    reserved "StrVolume", "StrSpeed", "Format", "Quality";
+
+    optional uint32 PartialNumber = 1;
+    optional uint32 SequenceNumber = 2;
+
+    // Parsed text from https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/backends_tts/ttsutils.py?rev=r7920271#L90
+    // WARNING: UTF8 encoded
+    optional string Text = 3;
+
+    optional string Lang = 4;
+    optional string Voice = 5;
+    optional double Volume = 6;
+    optional double Speed = 7;
+    optional string Effect = 8;
+    optional string Emotion = 9;
+
+    // If present, this request will be convetered to http request to s3 storage
+    optional string Audio = 10;
+    optional string S3AudioBucket = 18;
+
+    // Hash of some fields combination
+    optional string CacheKey = 11;
+
+    // Audio mime
+    // i.e. audio/opus, audio/x-pcm;bit=16;rate=8000, etc
+    optional string Mime = 16;
+
+    optional bool IsWhisper = 17;
+
+    // next free value: 19
+}
+
+message TRequestSenderRequest {
+    message TAudioPartGenerateRequest {
+        message TSendCondition {
+            // For example tts cache is disabled
+            // and we want to forward this request directly to tts backends
+            message TAlwaysSend {
+            }
+            message TCacheMissOrError {
+                optional string Key = 1;
+            }
+
+            oneof Condition {
+                TAlwaysSend AlwaysSend = 1;
+                TCacheMissOrError CacheMissOrError = 2;
+            }
+        }
+
+        message TRequest {
+            optional string ItemType = 1;
+            oneof Request {
+                NAppHostHttp.THttpRequest HttpRequest = 2;
+                TBackendRequest BackendRequest = 3;
+            }
+        }
+
+        optional TSendCondition SendCondition = 1;
+        optional TRequest Request = 2;
+    }
+
+    repeated TAudioPartGenerateRequest AudioPartGenerateRequests = 1;
+
+    // Do not log any info about texts to generate
+    optional bool DoNotLogTexts = 2;
+}
+
+message TAggregatorRequest {
+    reserved 7;
+    reserved "OutputAudioStreamer";
+
+    message TAudioSource {
+        message THttpResponse {
+            optional string ItemType = 1;
+        }
+        message TCacheGetResponse {
+        }
+        message TAudio {
+            optional uint32 ReqSeqNo = 1;
+        }
+
+        oneof SourceType {
+            THttpResponse HttpResponse = 1;
+            TCacheGetResponse CacheGetResponse = 2;
+            TAudio Audio = 3;
+        }
+    }
+
+    message TAudioPart {
+        // Aggregator waits for begin of data stream from one of the sources
+        // As soon as the aggregator sends the first correct chunk with data from some source
+        // it stops waiting for other sources and only works with the one whose data it started sending
+        // For example, if there are two sources: THttpResponse and TCacheGetResponse and TCacheGetResponse with HIT status came first, then it will
+        // sent, and THttpResponse will be ignored even if it arrives later
+        // If TCacheGetResponse contains MISS or ERROR status, the aggregator will continue to wait for THttpResponse
+        // If all sources failed for one audio part, aggragator will be failed too
+        repeated TAudioSource AudioSources = 1;
+
+        // The key the audio part is written to the cache with
+        // Not in TCacheGetResponse source because we can disable getting from cache, but enable saving
+        optional string CacheKey = 2;
+    }
+
+    repeated TAudioPart AudioParts = 1;
+    optional string Mime = 2;
+
+    // Add tts backend timings to response if they are present in tts backend response
+    optional bool NeedTtsBackendTimings = 3;
+
+    // Save autio part to cache if it was generated from scratch
+    optional bool EnableSaveToCache = 4;
+
+    // Do not log any info about texts to generate
+    optional bool DoNotLogTexts = 5;
+
+    // Source for background audio
+    // TODO(VOICESERV-4090) fix this
+    // Now it's only mvp, so there are some limitations
+    //     1) Only audio/x-pcm;bit=16;rate=48000 format allowed
+    //     2) Output stream starts only when all background audio chunks received (merge of two streams not implemented, only merge of static background with stream implemented)
+    optional TAudioSource BackgroundAudio = 6;
+
+    // Add to tts chunks timings (for use in RealTimeStreamer)
+    optional bool NeedRtsTimings = 8;
+
+    // for first Nsec audio chunks build Rts Timings with zero duration (for create anti-jitter audio buffer on client side)
+    optional uint32 RtsBufferSeconds = 9;
+}
+
+message TTimings {
+    repeated TTS.GenerateResponse.Timings Timings = 1;
+
+    // https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/processors/tts.py?rev=r8177632#L516
+    // Is audio part that corresponds to this timings gotten from cache
+    optional bool IsFromCache = 2;
+}
+
+// WARNING: Keep in sync with https://a.yandex-team.ru/arc/trunk/arcadia/alice/uniproxy/library/protos/ttscache.proto?rev=r8187011#L7
+// We need possibility of rollback/combined use
+message TCacheEntry {
+    reserved 2;
+    reserved "LookupRate";
+
+    // Full audio data (simple concatenation of all audio parts from tts backend response)
+    optional bytes Audio = 1;
+
+    // Original tts backend timings without duration patch
+    repeated TTS.GenerateResponse.Timings Timings = 3;
+
+    // Duration of the audio received from tts backend response (in seconds)
+    // If tts backend response doesn't contain duration, equals zero
+    optional float Duration = 4;
+}
+
+message TCacheSetRequest {
+    optional string Key = 1;
+    optional TCacheEntry CacheEntry = 2;
+}
+
+message TCacheGetRequest {
+    optional string Key = 1;
+}
+
+// Touch data to extend its live time and copy to in-memory cache from external storage
+// There will be no response to this request (even in case of cache miss or error)
+message TCacheWarmUpRequest {
+    optional string Key = 1;
+}
+
+enum ECacheGetResponseStatus {
+    HIT = 1;
+    MISS = 2;
+    ERROR = 3;
+}
+
+message TCacheGetResponse {
+    optional string Key = 1;
+    optional ECacheGetResponseStatus Status = 2;
+
+    // Empty if Status == MISS or ERROR
+    optional TCacheEntry CacheEntry = 3;
+
+    // Non-empty only if Status == ERROR
+    optional string ErrorMessage = 4;
+}
+
+// TCacheGetResponse but without CacheEntry (for less network usage)
+message TCacheGetResponseStatus {
+    reserved 3;
+    reserved "CacheEntry";
+
+    optional string Key = 1;
+    optional ECacheGetResponseStatus Status = 2;
+
+    // Non-empty only if Status == ERROR
+    optional string ErrorMessage = 4;
+}
+
+// Aggregator meta info for TAudio type (in fact TTS subgraph audio meta info)
+message TAggregatorAudioMetaInfo {
+    enum EAudioSource {
+        NOT_SET = 0;
+        S3_AUDIO = 1;
+        TTS_CACHE = 2;
+        TTS_BACKEND = 3;
+
+        // Audio merged by aggregator and we can't determine real source
+        // Only for CurrentChunkAudioSource, FirstChunkAudioSource will be always correct
+        MERGED = 4;
+    }
+
+    // Sent only with TBeginStream, with other TAudio types will be NOT_SET
+    // For correct TTS.Speak directive fill (backward compatibility with metrics)
+    optional EAudioSource FirstChunkAudioSource = 1;
+
+    // Sent with TAudioChunk, with other TAudio types will be NOT_SET
+    optional EAudioSource CurrentChunkAudioSource = 2;
+}

@@ -1,0 +1,120 @@
+HttpServerConfig {
+  # Port: MUST BE SET VIA PARAM
+  Threads: 40
+  MaxConnections: 40
+  MaxQueueSize: 10
+}
+RTLog {
+  Async: true
+  #CopyOutputTo: "cerr"
+  Filename: "./current-generative-boltalka-rtlog"
+  FlushPeriodSecs: 1
+  ServiceName: "ZelibobaProductionApi"
+  FileStatCheckPeriodSecs: 1
+}
+PtuneStorage {
+}
+ExternalInfoGenerativeBoltalkas: {
+  RetrieverConfig: {
+    PathPrefix: "/home/leshanbog//MK3-API/great_wiki_v3"
+    DocsPath: "/home/leshanbog//MK3-API/great_wiki_v3.json"
+    SearchNeighborhoodSize: 270
+    DistanceCalcLimit: 300000
+  }
+
+  EmbedderConfig: {
+    ServiceEndpointSuffixScoring: "DUMMY_VALUE"  # just to trigger 
+
+    Folder: "/home/leshanbog//MK3-API/models/embedder/"  # folder with model and vocabularies
+    GpuBackend: {  # GPU ids to host the model
+      GpuIds: 2
+    }
+    BatchSize: 16
+    BeamSize: 1   # for "stochastic_beam_search" it is the number of parallel generated hypothesis
+
+    ModelMaxOutLen: 292
+    MaxInputLen: 1500
+    MaxPtuneLen: 200
+
+    # Enabling standard LM behaviour
+    UsePrefixedInference: true
+    TokenizerType: ZELIBOBA_PREFIX
+
+    MaxGenerationMsModel: 4000  # after 10 seconds generation is stopped
+    MaxGenerationMsExecutor: 4000  # 10 seconds for inqueue waiting
+
+    # Remove preprocessing of removing "-" symbol
+    RemoveHyphensFromInput: false
+
+    HeadMode: OutTokensRepresentations
+    HeadWeightsName: "layers_0_query_head"
+  }
+
+  GeneratorConfig: {
+    ServiceEndpointSuffixGenerative: "/external_info_generative"
+
+    Folder: "/home/leshanbog//MK3-API/models/generator/"  # folder with model and vocabularies
+    GpuBackend: {  # GPU ids to host the model
+      GpuIds: 3
+    }
+    BatchSize: 16
+    BeamSize: 1   # for "stochastic_beam_search" it is the number of parallel generated hypothesis
+
+    ModelMaxOutLen: 128
+    MaxInputLen: 1500
+    MaxPtuneLen: 200
+
+    # Enabling standard LM behaviour
+    UsePrefixedInference: true
+    TokenizerType: ZELIBOBA_SEP_NAMES
+    HasSnippetInContext: true
+
+    # SamplingStrategy: "sampling"
+    SamplingStrategy: "beam_search"
+
+    # Top-k sampling, 0 means switched off
+    # SamplingTopNLogits: 50
+
+    # Temperature for logits
+    # SamplingTemperature: 0.8
+
+    # Nucleus sampling, 1.0 means switched off
+    # SamplingNucleus: 0.9
+    
+    MaxGenerationMsModel: 500  # after 10 seconds generation is stopped
+    MaxGenerationMsExecutor: 550  # 10 seconds for inqueue waiting
+    IncludeLateHypotheses: true  # return hypotheses if they did not generate in time
+    ReturnUnfinishedHypotheses: true  # return hypotheses if they did not generated _EOS_ within ModelMaxOutLen
+
+    # Remove preprocessing of removing "-" symbol
+    RemoveHyphensFromInput: false
+
+    # Banning the generation of _UNK_ token
+    BannedTokensToGenerate: "_UNK_"
+    # Explicitly permitting to ban _UNK_
+    AllowBanUnkTokenToGenerate: true
+    
+    # Another list of banned token ids
+    # FileForBannedTokenIdsToGenerate: "banned_token_ids.txt"
+
+    # Removing postprocessing except for [SEP]
+    PostProcessorParams: {
+      AddHyphens: false
+      FixPunctuation: false
+      Capitalize: false
+
+      # All generated [SEP] tokens will be changed to \n
+      PostProcessMapping: {
+        key: "\\s*\\[SEP\\]\\s*"
+        value: "\n"
+      }
+    }
+
+    # Disable postprocessing filtering
+    FilterDuplicateWords: false
+    FilterEmptyHypotheses: false
+  }
+
+  NumTopDocs: 2
+  NumHypsFromDoc: 1
+}

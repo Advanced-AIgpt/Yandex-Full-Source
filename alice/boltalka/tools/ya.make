@@ -1,0 +1,21 @@
+RECURSE(
+    build_invmi
+    build_mx_pool
+    build_shards
+    calc_factors
+    calc_reranker_metrics
+    dssm_preprocessing
+    exact_replier
+    knn_index
+    make_items_table_from_shards
+    nlgsearch_proxy
+    punctuate
+    static_factors
+    train_bpe
+    train_ibpe
+    reply_rewriter
+    train_respect_classifier
+    local_nlgsearch
+    quantizer
+    suggest_topics
+)

@@ -1,0 +1,1 @@
+ya tool dctl release docker paskills/div-renderer -t $TAG --release-type $1

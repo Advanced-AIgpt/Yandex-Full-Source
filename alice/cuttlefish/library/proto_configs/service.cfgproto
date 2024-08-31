@@ -1,0 +1,43 @@
+import "alice/cuttlefish/library/proto_configs/rtlog.cfgproto";
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+package NAliceServiceConfig;
+
+message Http {
+    option (NProtoConfig.ConfigClass) = "THttp";
+    optional uint32 port = 1 [(NProtoConfig.Help) = "servant will be listen this port for HTTP request", default=10000];
+    optional uint32 apphost_threads = 2 [(NProtoConfig.Help) = "number apphost threads/workers", default=16];
+    optional uint32 max_queue_size = 3 [(NProtoConfig.Help) = "apphost loop MaxQueueSize (0 means no overflow checks)", default=0];
+};
+
+message Grpc {
+    option (NProtoConfig.ConfigClass) = "TGrpc";
+    optional uint32 port = 1 [(NProtoConfig.Help) = "servant will be listen this port for GRPC request", default=10001];
+    optional int32 threads = 2 [(NProtoConfig.Help) = "number of apphost grpc threads/workers (-1 means default apphost lib value)", default=-1];
+};
+
+message Log {
+    option (NProtoConfig.ConfigClass) = "TLog";
+    optional string eventlog = 1 [(NProtoConfig.Help) = "file for write log (voicetech eventlog format)", default="eventlog"];
+    optional bool debug = 2 [(NProtoConfig.Help) = "eventlog Logger option Debug", default=false];
+    optional uint32 num_threads = 3 [(NProtoConfig.Help) = "eventlog Logger option NumThreads", default=1];
+    optional uint32 queue_size = 4 [(NProtoConfig.Help) = "eventlog Logger option QueueSize", default=10240];
+    optional bool drop_on_overflow = 5 [(NProtoConfig.Help) = "eventlog Logger option EnableDropOnOverflow", default=true];
+};
+
+message Metrics {
+    option (NProtoConfig.ConfigClass) = "TMetrics";
+    optional string service_name = 1 [(NProtoConfig.Help) = "service name (service label)", default="unknown_service"];
+    optional bool mask_host = 2 [(NProtoConfig.Help) = "mask hostname with ANY", default=false];
+}
+
+message Server {
+    option (NProtoConfig.ConfigClass) = "TServer";
+    optional Http http = 1 [(NProtoConfig.Help) = "options for HTTP server"];
+    optional Grpc grpc = 2 [(NProtoConfig.Help) = "options for GRPC server"];
+    optional Log log = 3 [(NProtoConfig.Help) = "options for generated logs"];
+    optional RtLog rtlog = 4 [(NProtoConfig.Help) = "options for rt log (data for setrace)"];
+    optional bool lock_memory = 5 [(NProtoConfig.Help) = "mlock everything on launch", default=true];
+    optional Metrics metrics = 6 [(NProtoConfig.Help) = "options for metrics"];
+};

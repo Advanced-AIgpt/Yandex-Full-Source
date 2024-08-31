@@ -1,0 +1,70 @@
+ci:
+  flows:
+    deploy_fast_data_to_ci_flow:
+      title: Deploy Fast Data To CI
+      jobs:
+        dummy_start_cube:
+          title: DummyStartCube
+          task: dummy
+          input: {}
+          stage: dummy_start_stage
+        deploy_begemot_fresh:
+          title: DeployBegemotFresh
+          task: projects/begemot/tasks/deploy_begemot_fresh
+          needs:
+          - dummy_start_cube
+          input:
+            services:
+              - begemot_megamind_yp_ci
+            shard: Megamind
+            resource_type: BEGEMOT_REALTIME_PACKAGE
+            build_task_type: BUILD_ALICE_BEGEMOT_REALTIME_PACKAGE
+            check_child_resource: true
+            deploy_parallel: false
+            check_attrs: true
+            deploy_timeout: 7200
+            geo:
+              - sas
+              - vla
+              - man
+            deployer: Fast data deployer
+            nanny_token: Megabegemoter nanny token
+            yt_token: yt_token_for_testenv
+            data_type: runtime
+          stage: single
+
+  releases:
+    deploy_fast_data_to_ci:
+      title: Deploy Fast data To CI
+      description: 'Deploy Megabegemot realtime data to begemot_megamind_yp_ci
+        Info: MEGAMIND-3716'
+      flow: deploy_fast_data_to_ci_flow
+      auto:
+        conditions:
+        - min-commits: 1
+      stages:
+      - id: dummy_start_stage
+        title: DummyStartStage
+        rollback: false
+      - id: single
+        title: Single
+        displace:
+          on-status:
+            - WAITING_FOR_STAGE
+            - FAILURE
+        rollback: false
+      filters:
+      - discovery: dir
+        abs-paths:
+          - alice/begemot/**
+          - alice/beggins/**
+          - alice/nlu/**
+          - search/begemot/rules/**
+          - search/wizard/data/wizard/**
+  actions: {}
+  secret: sec-01g44v6fp7gbq9s1tye6x44w2m
+  runtime:
+    sandbox:
+      owner: BASS
+service: megabegemot
+title: Begemot Megamind Fast Data CI

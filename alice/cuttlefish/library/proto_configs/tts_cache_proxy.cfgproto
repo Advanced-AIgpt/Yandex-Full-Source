@@ -1,0 +1,36 @@
+package NAliceTtsCacheProxyConfig;
+
+import "alice/cuttlefish/library/proto_configs/service.cfgproto";
+import "library/cpp/proto_config/protos/extensions.proto";
+
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+message Cachalot {
+    option (NProtoConfig.ConfigClass) = "TCachalot";
+
+    optional string host = 1 [(NProtoConfig.Help) = "hostname for cachalot backend", default="localhost"];
+    optional uint32 port = 2 [(NProtoConfig.Help) = "port cachalot backend", default=80];
+
+    optional string get_path = 3 [(NProtoConfig.Help) = "get path in http request to cachalot backend", default="/cache_get"];
+    optional string set_path = 4 [(NProtoConfig.Help) = "set path in http request to cachalot backend", default="/cache_set"];
+    optional string warm_up_path = 5 [(NProtoConfig.Help) = "warm up path in http request to cachalot backend", default="/cache_warm_up"];
+
+    optional uint32 client_threads = 6 [(NProtoConfig.Help) = "count cachalot backend client threads (neh/asio executors)", default=12];
+    optional string connect_timeout = 7 [
+        (NProtoConfig.Help) = "timelimit for tcp connect to cachalot backend",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(100)"
+    ];
+}
+
+message TtsCache {
+    option (NProtoConfig.ConfigClass) = "TTtsCache";
+
+    optional Cachalot cachalot = 1 [(NProtoConfig.Help) = "cachalot options"];
+}
+
+message Config {
+    option (NProtoConfig.ConfigClass) = "TConfig";
+    optional NAliceServiceConfig.Server server = 1 [(NProtoConfig.Help) = "common apphost servant options"];
+    optional TtsCache tts_cache = 2 [(NProtoConfig.Help) = "client options for work with tts cache backend"];
+}

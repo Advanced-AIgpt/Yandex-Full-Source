@@ -1,0 +1,32 @@
+package NAliceServiceConfig;
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+// ?! arcadia magic: without this line (include from balancer) we got error on build voicetech/uniproxy2:
+// /home/and42/.ya/build/build_root/xv75/000037/balancer/kernel/client_request/backend_config.cfgproto.pb.h:740:33: note: in instantiation of function template specialization 'NProtoConfig::ParseConfigValue<unsigned short, unsigned int>' requested here
+option (NProtoConfig.Include) = "balancer/kernel/client_request/port.h";
+
+message RtLog {
+    option (NProtoConfig.ConfigClass) = "TRtLog";
+    optional string file = 1 [(NProtoConfig.Help) = "rtlog output file"];
+    optional string service = 2 [(NProtoConfig.Help) = "service name", default="uniproxy2"];
+    optional string flush_period = 3 [
+        (NProtoConfig.Help) = "flush period",
+        (NProtoConfig.Type) = "TDuration"
+    ];
+    optional string file_stat_check_period = 4 [
+        (NProtoConfig.Help) = "file stat check period",
+        (NProtoConfig.Type) = "TDuration"
+    ];
+    optional uint64 flush_size = 5 [(NProtoConfig.Help) = "flush fize", default=1048576];
+    optional string unified_agent_uri = 6 [
+        (NProtoConfig.Help) = "Unified agent uri, for exmaple, localhost:12380",
+        default = ""
+    ];
+    optional string unified_agent_log_file = 7 [
+        (NProtoConfig.Help) = "Path to Unified Agent log",
+        default = ""
+    ];
+};

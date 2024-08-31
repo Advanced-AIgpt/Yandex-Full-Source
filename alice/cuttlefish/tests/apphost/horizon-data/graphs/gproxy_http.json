@@ -1,0 +1,126 @@
+{
+    "edgeExpressions": {
+        "GPROXY_SELECT_GRAPH_TRANSPARENT->GPROXY_CALL": "GPROXY_HTTP_INIT[gproxy_call]",
+        "GPROXY_SELECT_GRAPH_TRANSPARENT->GPROXY_COMMON_CALL": "GPROXY_HTTP_INIT[common_call]",
+        "GPROXY_SELECT_GRAPH_TRANSPARENT->GPROXY_MM_RPC_CALL": "GPROXY_HTTP_INIT[mm_rpc_call]"
+    },
+    "inputDeps": [
+        "PROTO_HTTP_REQUEST"
+    ],
+    "nodeDeps": {
+        "GPROXY_CALL": {
+            "inputDeps": [
+                "!GPROXY_SELECT_GRAPH_TRANSPARENT->INIT@metadata,request_info,!request"
+            ]
+        },
+        "GPROXY_COMMON_CALL": {
+            "inputDeps": [
+                "!GPROXY_SELECT_GRAPH_TRANSPARENT->INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_HTTP_INIT": {
+            "inputDeps": [
+                "PROTO_HTTP_REQUEST@proto_http_request"
+            ]
+        },
+        "GPROXY_HTTP_OUTPUT": {
+            "inputDeps": [
+                "GPROXY_HTTP_INIT@metadata,error",
+                "GPROXY_OUTPUT_TRANSPARENT@response,error",
+                "PROTO_HTTP_REQUEST@proto_http_request"
+            ]
+        },
+        "GPROXY_MM_RPC_CALL": {
+            "inputDeps": [
+                "!GPROXY_SELECT_GRAPH_TRANSPARENT->INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_OUTPUT_TRANSPARENT": {
+            "inputDeps": [
+                "GPROXY_CALL@response,error",
+                "GPROXY_COMMON_CALL@response,error",
+                "GPROXY_MM_RPC_CALL@response,error"
+            ]
+        },
+        "GPROXY_SELECT_GRAPH_TRANSPARENT": {
+            "inputDeps": [
+                "!GPROXY_HTTP_INIT@metadata,request_info,request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "GPROXY_HTTP_OUTPUT"
+            ]
+        }
+    },
+    "nodes": {
+        "GPROXY_CALL": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/gproxy",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_COMMON_CALL": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/gproxy_common",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_HTTP_INIT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/http_init",
+                "timeout": "100ms"
+            }
+        },
+        "GPROXY_HTTP_OUTPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/http_output",
+                "timeout": "100ms"
+            }
+        },
+        "GPROXY_MM_RPC_CALL": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/gproxy_mm_rpc",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_OUTPUT_TRANSPARENT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GPROXY_SELECT_GRAPH_TRANSPARENT": {
+            "nodeType": "TRANSPARENT"
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

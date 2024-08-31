@@ -1,0 +1,5 @@
+RECURSE(
+    bebeder
+    classifier
+    manifestator
+)

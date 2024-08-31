@@ -1,0 +1,84 @@
+defaults:
+  dense_layer: &base_dense_layer
+    activation: relu
+    kernel_initializer: he_normal
+
+model:
+  layers:
+    - name: Dense
+      params:
+        <<: *base_dense_layer
+        units: 512
+        input_dim: 1024
+        name: features
+    - name: Dropout
+      params:
+        rate: 0.5
+    - name: LayerNormalization
+    - name: Dense
+      params:
+        <<: *base_dense_layer
+        units: 256
+    - name: Dropout
+      params:
+        rate: 0.5
+    - name: LayerNormalization
+    - name: Dense
+      params:
+        units: 1
+        activation: sigmoid
+        name: score
+  optimizer:
+    name: Adam
+  loss:
+    name: BinaryCrossentropy
+  metrics:
+    - name: AUC
+    - name: Accuracy
+    - name: Precision
+    - name: Recall
+    - name: FalsePositives
+
+learning_stages:
+  - train_dataset: train
+    batch_size: 128
+    epochs: 2
+    verbose: 1
+    callbacks:
+      - name: TensorBoard
+        params:
+          log_dir: "{output/logs}/tensorboard"
+          histogram_freq: 1
+      - name: ModelCheckpoint
+        params:
+          filepath: "{output/data}/best_model/model.h5"
+          monitor: val_loss
+          verbose: 1
+          save_best_only: True
+          mode: min
+    validation_dataset: val
+    validation_freq: 1
+
+datasets:
+  - name: train
+    source:
+      type: npz
+      filename: "{input/data}/train.npz"
+  - name: val
+    source:
+      type: npz
+      filename: "{input/data}/validation.npz"
+
+export:
+  models:
+    - name: "model_name" # see in output/data/export/models/model_name
+      filename: "{output/data}/best_model/model.h5"
+
+eval:
+  models:
+    - name: best_model_train
+      filename: "{output/data}/best_model/model.h5"
+      dataset: train
+    - name: best_model_val
+      filename: "{output/data}/best_model/model.h5"
+      dataset: val

@@ -1,0 +1,85 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "RESPONSE": {
+            "inputDeps": [
+                "TTS@uniproxy2_directive",
+                "WS_ADAPTER_OUT@ws_message,uniproxy2_directive"
+            ]
+        },
+        "TTS": {
+            "inputDeps": [
+                "INIT@session_context",
+                "WS_ADAPTER_IN->INIT@request_context,tts_request,tts_partial_request"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "INIT@session_context,directive",
+                "TTS@audio,tts_timings",
+                "WS_ADAPTER_IN@request_context,directive"
+            ]
+        }
+    },
+    "nodes": {
+        "TTS": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "15s",
+                "handler": "/_streaming_no_block_outputs/_subhost/tts",
+                "timeout": "60s"
+            }
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "15s",
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "60s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "15s",
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "60s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

@@ -1,0 +1,35 @@
+title: Cuttlefish-n-Co
+service: speechkit_ops
+ci:
+  release-title-source: flow
+  secret: sec-01d6atny1pqf3p5x4kbqk11evc
+  runtime:
+    sandbox-owner: VOICESERV_RELEASERS
+
+  releases:
+    cuttlefish-simple-release:
+      title: Just build Cuttlefish binary
+      flow: cuttlefish-simple-flow
+      stages:
+        single:
+          title: The Only Build Stage
+
+  triggers:
+    - on: pr
+      flow: cuttlefish-simple-flow
+
+  flows:
+    cuttlefish-simple-flow:
+      title: Cuttlefish simple flow
+      jobs:
+        build:
+          title: Build
+          task: common/arcadia/ya_make
+          stage: single
+          input:
+            targets: alice/cuttlefish/bin/cuttlefish
+            arts: alice/cuttlefish/bin/cuttlefish/cuttlefish
+            result_rt: VOICETECH_CUTTLEFISH_BINARY
+            result_rd: "Cuttlefish binary (arc#${context.target_revision.hash})"
+            test: true
+            result_single_file: true

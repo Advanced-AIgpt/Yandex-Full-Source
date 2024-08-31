@@ -1,0 +1,77 @@
+agent_log:
+    priority: INFO
+monitoring:
+    port: 85
+status:
+    port: 84
+storages:
+-   name: logs_storage_setrace
+    plugin: fs
+    config:
+        directory: ./logs/storage
+        max_partition_size: 4gb
+        data_retention:
+            by_age: 4h
+        api:
+            port: 22123
+routes:
+-   input:
+        plugin: grpc
+        config:
+            uri: localhost:83
+    channel:
+        pipe:
+            - storage_ref:
+                storage: logs_storage_setrace
+        fanout:
+            - channel:
+                pipe:
+                    - filter:
+                        plugin: split_session
+                        config:
+                            sessions_count: 5
+                    - filter:
+                        plugin: batch
+                        config:
+                            limit:
+                                count: 20
+                                bytes: 2000kb
+                            delimiter: ""
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/gsetup
+                        tvm:
+                            client_id: 2034163
+                            secret:
+                                env: PUSH_CLIENT_TVM_SECRET
+                            disk_cache_directory: ./logs/monitoring_tvm_cache
+            - channel:
+                pipe:
+                    - filter:
+                        plugin: alice_rtlog
+                        config:
+                            port: 22123
+                            service_name: gsetup
+                    - filter:
+                        plugin: split_session
+                        config:
+                            sessions_count: 2
+                    - filter:
+                        plugin: batch
+                        config:
+                            limit:
+                                count: 20
+                                bytes: 2000kb
+                            delimiter: "\n"
+                output:
+                    plugin: logbroker
+                    config:
+                        endpoint: logbroker.yandex.net
+                        topic: /alicelogs/prod/rtlog-index/gsetup
+                        tvm:
+                            client_id: 2034163
+                            secret:
+                                env: PUSH_CLIENT_TVM_SECRET
+                            disk_cache_directory: ./logs/monitoring_tvm_cache

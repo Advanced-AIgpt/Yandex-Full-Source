@@ -1,0 +1,220 @@
+{
+    "edgeExpressions": {
+        "WS_ADAPTER_IN->SMARTHOME_UID_SYNC": "^WS_ADAPTER_IN[has_smarthome_uid]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "INIT@^session_context",
+                "SMARTHOME_UID_SYNC->INIT@smarthome_uid",
+                "WS_ADAPTER_IN->INIT@^mm_session_request"
+            ]
+        },
+        "CONTEXT_SAVE": {
+            "inputDeps": [
+                "CONTEXT_SAVE_WAIT->INIT"
+            ]
+        },
+        "CONTEXT_SAVE_WAIT": {
+            "inputDeps": [
+                "CONTEXT_LOAD@^context_load_response",
+                "MEGAMIND_WAIT@^context_save_request,^mm_session_request",
+                "WS_ADAPTER_IN@^session_context,^request_context"
+            ]
+        },
+        "MEGAMIND_APPLY": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "MEGAMIND_RUN@!mm_apply_request,mm_apply_request_tag",
+                "WS_ADAPTER_IN@^session_context,^request_context"
+            ]
+        },
+        "MEGAMIND_RUN": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "WS_ADAPTER_IN@^session_context,^request_context,^mm_request"
+            ]
+        },
+        "MEGAMIND_WAIT": {
+            "inputDeps": [
+                "MEGAMIND_APPLY@mm_response,tts_request,context_save_request,mm_session_request",
+                "MEGAMIND_RUN@mm_response,tts_request,context_save_request,mm_session_request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "MEGAMIND_APPLY@uniproxy2_directive",
+                "MEGAMIND_RUN@uniproxy2_directive",
+                "TTS@uniproxy2_directive",
+                "WS_ADAPTER_OUT@ws_message,uniproxy2_directive"
+            ]
+        },
+        "SMARTHOME_UID_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^smarthome_uid"
+            ]
+        },
+        "TTS": {
+            "inputDeps": [
+                "WAIT_TTS_REQUEST_PARTS->INIT@!session_context,!request_context,!tts_request"
+            ]
+        },
+        "WAIT_FINAL_RESPONSE_PARTS": {
+            "inputDeps": [
+                "MEGAMIND_WAIT@mm_response,tts_request"
+            ]
+        },
+        "WAIT_TTS_REQUEST_PARTS": {
+            "inputDeps": [
+                "INIT@^session_context",
+                "WAIT_FINAL_RESPONSE_PARTS->INIT@!tts_request",
+                "WS_ADAPTER_IN->INIT@^request_context"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "INIT@directive",
+                "MEGAMIND_APPLY@directive",
+                "MEGAMIND_RUN@directive",
+                "TTS@audio,tts_timings",
+                "WAIT_FINAL_RESPONSE_PARTS",
+                "WS_ADAPTER_IN@session_context,request_context,directive"
+            ]
+        }
+    },
+    "nodes": {
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "5s"
+            }
+        },
+        "CONTEXT_SAVE": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "5s"
+            }
+        },
+        "CONTEXT_SAVE_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "MEGAMIND_APPLY": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/megamind_apply",
+                "timeout": "7s"
+            }
+        },
+        "MEGAMIND_RUN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/megamind_run",
+                "timeout": "7s"
+            }
+        },
+        "MEGAMIND_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "SMARTHOME_UID_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "TTS": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/_streaming_no_block_outputs/_subhost/tts",
+                "timeout": "15s"
+            }
+        },
+        "WAIT_FINAL_RESPONSE_PARTS": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WAIT_TTS_REQUEST_PARTS": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "15s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

@@ -1,0 +1,602 @@
+import "google/protobuf/timestamp.proto";
+import "library/cpp/eventlog/proto/events_extension.proto";
+
+package NCachalotProtocol;
+
+message TCacheRequestOptions {
+    option (message_id) = 28080001;
+
+    optional bool   ForceRedisStorage = 1 [default=false];
+    optional bool   ForceYdbStorage = 2 [default=false];
+    optional bool   ForceInternalStorage = 3 [default=false];
+    optional float  ChanceToMiss = 4 [default=0.0];
+}
+
+message TSetRequest {
+    option (message_id) = 28080002;
+
+    required string Key = 1;
+    required bytes Data = 2;
+    optional uint64 TTL = 3;
+    optional string StorageTag = 5 [default="Tts"];
+
+    optional TCacheRequestOptions Options = 4;
+}
+
+
+message TSetResponse {
+    option (message_id) = 28080003;
+
+    required string Key = 1;
+    optional string Error = 2;
+}
+
+
+message TGetRequest {
+    option (message_id) = 28080004;
+
+    required string Key = 1;
+    optional bool   Touch = 2;
+    optional int64  MaxAge = 3;
+    optional string StorageTag = 5 [default="Tts"];
+
+    optional TCacheRequestOptions Options = 4;
+}
+
+
+message TGetResponse {
+    option (message_id) = 28080005;
+
+    required string Key = 1;
+    optional string Error = 2;
+    optional bytes  Data = 3;
+    optional bool   NotFound = 4 [default=false];
+}
+
+
+message TDeleteRequest {
+    option (message_id) = 28080006;
+
+    required string Key = 1;
+    optional string StorageTag = 2 [default="Tts"];
+    optional TCacheRequestOptions Options = 3;
+}
+
+
+message TDeleteResponse {
+    option (message_id) = 28080007;
+
+    required string Key = 1;
+    optional string Error = 2;
+}
+
+
+message TLocation {
+    option (message_id) = 28080008;
+
+    required string PUid = 1;
+    required string DeviceId = 2;
+    required string Hostname = 3;
+};
+
+
+message TStoreLocationRequest {
+    option (message_id) = 28080009;
+
+    required TLocation Location = 1;
+};
+
+
+message TStoreLocationResponse {
+    option (message_id) = 28080010;
+
+    required TLocation Location = 1;
+};
+
+
+message TLocationsRequest {
+    option (message_id) = 28080011;
+
+    required string PUid = 1;
+    optional string DeviceId = 2;
+};
+
+
+message TLocationsResponse {
+    option (message_id) = 28080012;
+
+    repeated TLocation Locations = 1;
+}
+
+message TSpotterFeatures {
+    option (message_id) = 28080013;
+
+    optional float AvgRMS = 1 [default=0.0];
+    optional bool Validated = 2 [default=false];
+};
+
+message TActivationSubjectInfo {
+    // option (message_id) = 28080014;
+
+    optional bytes UserId = 1;
+    optional bytes DeviceId = 2;
+    optional google.protobuf.Timestamp ActivationAttemptTime = 3;
+    optional TSpotterFeatures SpotterFeatures = 4;
+};
+
+message TActivationAnnouncementRequest {
+    // option (message_id) = 28080015;
+
+    optional TActivationSubjectInfo Info = 1;
+    optional int64 FreshnessDeltaMilliSeconds = 2;
+
+    reserved 3, 4;
+    reserved "AllowActivationByUnvalidatedSpotter", "UseSchemaWithUserIdHash";
+};
+
+message TMMRunResponseForActivation {
+    option (message_id) = 28080016;
+
+    // Space for future extentions.
+};
+
+message TActivationAnnouncementResponse {
+    // option (message_id) = 28080017;
+
+    optional bool ContinuationAllowed = 1;
+    optional bytes Error = 2;
+    optional TActivationSubjectInfo BestCompetitor = 3;
+    optional bool ZeroRmsFound = 4;
+    optional bool LeaderFound = 5;
+};
+
+message TActivationFinalRequest {
+    // option (message_id) = 28080018;
+
+    optional TActivationSubjectInfo Info = 1;
+    optional bool IgnoreRms = 2;
+    optional int64 FreshnessDeltaMilliSeconds = 3;
+    optional bool NeedCleanup = 4 [default=true];
+
+    reserved 5, 6;
+    reserved "AllowActivationByUnvalidatedSpotter", "UseSchemaWithUserIdHash";
+};
+
+message TActivationFinalResponse {
+    // option (message_id) = 28080019;
+
+    optional bool ActivationAllowed = 1;
+    optional bytes Error = 2;
+    optional TActivationSubjectInfo LeaderInfo = 3;
+    optional bytes SpotterValidatedBy = 4;
+};
+
+message TActivationSuccessful {
+    option (message_id) = 28080020;
+
+    // Nothing here. Just stub for apphost edge condition.
+}
+
+message TActivationLog {
+    // option (message_id) = 28080021;
+
+    optional bool ThisSpotterIsValid = 1;
+    optional bytes ActivatedDeviceId = 2;
+    optional bytes DeviceId = 4;
+    optional bytes MultiActivationReason = 5;
+    optional bytes SpotterValidatedBy = 6;
+    optional bytes YandexUid = 7;
+    optional float ActivatedRMS = 8;
+    optional float AvgRMS = 9;
+    optional google.protobuf.Timestamp ActivatedTimestamp = 3;
+    optional google.protobuf.Timestamp FinishTimestamp = 10;
+    optional google.protobuf.Timestamp Timestamp = 11;
+    optional int64 FreshnessDeltaMilliSeconds = 12;
+}
+
+message TTakeoutResult {
+    option (message_id) = 28080022;
+
+    required string JobId = 1;
+    required string Puid = 2;
+    repeated string Texts = 3;
+}
+
+message TTakeoutSetResultsRequest {
+    option (message_id) = 28080023;
+
+    repeated TTakeoutResult Results = 1;
+}
+
+message TTakeoutGetResultsRequest {
+    option (message_id) = 28080024;
+
+    required string JobId = 1;
+    required uint64 Limit = 2;
+    required uint64 Offset = 3;
+}
+
+message TTakeoutError {
+    option (message_id) = 28080025;
+
+    optional string Text = 1;
+    optional EResponseStatus Status = 2;
+}
+
+message TTakeoutSetResultsSuccess {
+    option (message_id) = 28080026;
+}
+
+message TTakeoutGetResultsSuccess {
+    option (message_id) = 28080027;
+
+    required string Puid = 1;
+    repeated string Texts = 2;
+}
+
+message TTakeoutSetResultsResponse {
+    option (message_id) = 28080028;
+
+    oneof Response {
+        TTakeoutError Error = 1;
+        TTakeoutSetResultsSuccess Success = 2;
+    }
+}
+
+message TTakeoutGetResultsResponse {
+    option (message_id) = 28080029;
+
+    oneof Response {
+        TTakeoutError Error = 1;
+        TTakeoutGetResultsSuccess Success = 2;
+    }
+}
+
+message TGDPRKey {
+    option (message_id) = 28080030;
+
+    optional string Puid = 1;
+}
+
+message TGDPRStatus {
+    option (message_id) = 28080031;
+
+    optional string Service = 1;
+    optional string Status = 2;
+    optional string Timestamp = 3;
+}
+
+message TGDPRData {
+    option (message_id) = 28080032;
+
+    repeated TGDPRStatus Statuses = 1;
+}
+
+message TGDPRSetUserDataRequest {
+    option (message_id) = 28080033;
+
+    required TGDPRKey Key = 1;
+    required TGDPRStatus Status = 2;
+}
+
+message TGDPRGetUserDataRequest {
+    option (message_id) = 28080034;
+
+    required TGDPRKey Key = 1;
+}
+
+message TGDPRGetRequestsRequest {
+    option (message_id) = 28080035;
+
+    required uint64 Limit = 1;
+    required uint64 Offset = 2;
+}
+
+message TGDPRError {
+    option (message_id) = 28080036;
+
+    optional string Text = 1;
+    optional EResponseStatus Status = 2;
+}
+
+message TGDPRGetSuccess {
+    option (message_id) = 28080037;
+
+    optional TGDPRData Data = 1;
+}
+
+message TGDPRGetUserDataResponse {
+    option (message_id) = 28080038;
+
+    oneof Response {
+        TGDPRError Error = 1;
+        TGDPRGetSuccess Success = 2;
+    }
+}
+
+message TGDPRSetSuccess {
+    option (message_id) = 28080039;
+
+    optional TGDPRKey Key = 1;
+}
+
+message TGDPRSetUserDataResponse {
+    option (message_id) = 28080040;
+
+    oneof Response {
+        TGDPRError Error = 1;
+        TGDPRSetSuccess Success = 2;
+    }
+}
+
+message TGDPRPersonalizedData {
+    option (message_id) = 28080041;
+
+    optional string Puid = 1;
+    optional TGDPRData Data = 2;
+}
+
+message TGDPRGetRequestsSuccess {
+    option (message_id) = 28080042;
+
+    repeated TGDPRPersonalizedData Data = 1;
+    required uint64 Limit = 2;
+    required uint64 Offset = 3;
+}
+
+message TGDPRGetRequestsResponse {
+    option (message_id) = 28080043;
+
+    oneof Response {
+        TGDPRError Error = 1;
+        TGDPRGetRequestsSuccess Success = 2;
+    }
+}
+
+message TVinsContextKey {
+    option (message_id) = 28080044;
+
+    optional string Key = 1;
+    optional string Puid = 2;
+}
+
+message TVinsContextDelete {
+    option (message_id) = 28080045;
+
+    required TVinsContextKey Key = 1;
+}
+
+message TVinsContextRequest {
+    option (message_id) = 28080046;
+
+    oneof Request {
+        TVinsContextDelete Delete = 1;
+    }
+}
+
+message TVinsContextError {
+    option (message_id) = 28080047;
+
+    optional string Text = 1;
+    optional EResponseStatus Status = 2;
+}
+
+message TVinsContextSuccess {
+    option (message_id) = 28080048;
+
+    // context can be filled for load request, but we can not has data here, if load request executed without errors, but record with such key not exist
+    optional bytes Context = 1;
+    optional bool Ok = 2;
+    optional int32 NumDeleted = 3;
+}
+
+message TVinsContextResponse {
+    option (message_id) = 28080049;
+
+    oneof Response {
+        TVinsContextError Error = 1;
+        TVinsContextSuccess Success = 2;
+    }
+}
+
+message TYabioContextKey {
+    option (message_id) = 28080050;
+
+    optional string GroupId = 1;
+    optional string DevModel = 2;
+    optional string DevManuf = 3;
+}
+
+message TYabioContextSave {
+    option (message_id) = 28080051;
+
+    required TYabioContextKey Key = 1;
+    required bytes Context = 2;
+}
+
+message TYabioContextLoad {
+    option (message_id) = 28080052;
+
+    required TYabioContextKey Key = 1;
+}
+
+message TYabioContextDelete {
+    option (message_id) = 28080053;
+
+    required TYabioContextKey Key = 1;
+}
+
+message TYabioContextRequest {
+    option (message_id) = 28080054;
+
+    oneof Request {
+        TYabioContextSave Save = 1;
+        TYabioContextLoad Load = 2;
+        TYabioContextDelete Delete = 3;
+    }
+}
+
+message TYabioContextError {
+    option (message_id) = 28080055;
+
+    optional string Text = 1;
+    optional EResponseStatus Status = 2;
+}
+
+message TYabioContextSuccess {
+    option (message_id) = 28080056;
+
+    // context can be filled for load request, but we can not has data here, if load request executed without errors, but record with such key not exist
+    optional bytes Context = 1;
+    optional bool Ok = 2;
+}
+
+message TYabioContextResponse {
+    option (message_id) = 28080057;
+
+    oneof Response {
+        TYabioContextError Error = 1;
+        TYabioContextSuccess Success = 2;
+    }
+}
+
+
+message TMegamindSessionLoadRequest {
+    option (message_id) = 28080061;
+
+    required string Uuid = 1;
+    optional string DialogId = 2;
+    optional string RequestId = 3;
+    optional string Location = 4;
+}
+
+message TMegamindSessionLoadResponse {
+    option (message_id) = 28080062;
+
+    required bytes Data = 1;
+}
+
+message TMegamindSessionStoreRequest {
+    option (message_id) = 28080063;
+
+    required string Uuid = 1;
+    optional string DialogId = 2;
+    optional string RequestId = 3;
+    required bytes Data = 4;
+    optional string Puid = 5;
+    optional string Location = 6;
+}
+
+message TMegamindSessionRequest {
+    // option (message_id) = 28080064;
+
+    oneof Request {
+        TMegamindSessionLoadRequest LoadRequest = 1;
+        TMegamindSessionStoreRequest StoreRequest = 2;
+    }
+}
+
+
+message TRequest {
+    // option (message_id) = 28080058;
+
+    oneof Request {
+        TSetRequest SetReq = 10 [json_name="Set"];
+
+        TGetRequest GetReq = 11 [json_name="Get"];
+
+        TDeleteRequest DeleteReq = 24 [json_name="Delete"];
+
+        TStoreLocationRequest StoreLocationReq = 12 [json_name="StoreLocation"];
+
+        TLocationsRequest LocationsReq = 13 [json_name="Locations"];
+
+        TActivationAnnouncementRequest ActivationAnnouncement = 14 [json_name="ActivationAnnouncement"];
+        TActivationFinalRequest ActivationFinal = 15 [json_name="ActivationFinal"];
+
+        TGDPRGetUserDataRequest GDPRGetReq = 16 [json_name="GDPRGet"];
+        TGDPRSetUserDataRequest GDPRSetReq = 17 [json_name="GDPRSet"];
+        TGDPRGetRequestsRequest GDPRGetRequestsReq = 18 [json_name="GDPRGetRequests"];
+
+        TYabioContextRequest YabioContextReq = 19 [json_name="YabioContext"];
+
+        TMegamindSessionRequest MegamindSessionReq = 20 [json_name="MegamindSession"];
+        TVinsContextRequest VinsContextReq = 21 [json_name="VinsContext"];
+
+        TTakeoutGetResultsRequest TakeoutGetResultsReq = 22 [json_name="TakeoutGetResults"];
+        TTakeoutSetResultsRequest TakeoutSetResultsReq = 23 [json_name="TakeoutSetResults"];
+    } // last is 24
+}
+
+
+enum EResponseStatus {
+    // Values are important!
+    // The higher the value, the worse the error.
+
+    PENDING = 0;
+    OK = 200;
+    CREATED = 201;
+    NO_CONTENT = 204;
+    BAD_REQUEST = 400;
+    UNAUTHORIZED = 401;
+    NOT_FOUND = 404;
+    REQUEST_TOO_LARGE = 413;
+    TOO_MANY_REQUESTS = 429;
+    INTERNAL_ERROR = 500;
+    NOT_IMPLEMENTED = 501;
+    BAD_GATEWAY = 502;
+    SERVICE_UNAVAILABLE = 503;
+    GATEWAY_TIMEOUT = 504;
+
+    QUERY_PREPARE_FAILED = 1001;
+    QUERY_EXECUTE_FAILED = 1002;
+    QUERY_ASSERTION_FAILED = 1003;
+}
+
+
+message TBackendStats {
+    option (message_id) = 28080059;
+
+    required string             Backend = 1;
+    required EResponseStatus    Status = 2;
+    optional float              SchedulingTime = 3;
+    optional float              FetchingTime = 4;
+}
+
+
+message TRequestStats {
+    // option (message_id) = 28080060;
+
+    optional int64 RequestSize = 1;
+    optional int64 ResponseSize = 2;
+    optional float WaitingTime = 3;
+    optional float ServeTime = 4;
+    repeated TBackendStats BackendStats = 5;
+}
+
+
+message TResponse {
+    // option (message_id) = 28080065;
+
+    required EResponseStatus    Status = 1;
+    optional string             StatusMessage = 2;
+    optional TRequestStats      Stats = 3;
+
+    oneof Response {
+        TSetResponse SetResp = 10 [json_name="Set"];
+        TGetResponse GetResp = 11 [json_name="Get"];
+        TDeleteResponse DeleteResp = 25 [json_name="Delete"];
+        TStoreLocationResponse StoreLocationResp = 12 [json_name="StoreLocation"];
+        TLocationsResponse LocationsResp = 13 [json_name="Locations"];
+        TMegamindSessionLoadResponse MegamindSessionLoadResp = 15 [json_name="MegamindSessionLoad"];
+        TActivationAnnouncementResponse ActivationAnnouncement = 16 [json_name="ActivationAnnouncement"];
+        TActivationFinalResponse ActivationFinal = 17 [json_name="ActivationFinal"];
+        TGDPRGetUserDataResponse GDPRGetUserDataResp = 18 [json_name="GDPRGetUserData"];
+        TGDPRGetRequestsResponse GDPRGetRequestsResp = 19 [json_name="GDPRGetRequests"];
+        TGDPRSetUserDataResponse GDPRSetUserDataResp = 20 [json_name="GDPRSetUserData"];
+        TYabioContextResponse YabioContextResp = 21 [json_name="YabioContext"];
+        TVinsContextResponse VinsContextResp = 22 [json_name="VinsContext"];
+        TTakeoutGetResultsResponse TakeoutGetResultsResp = 23 [json_name="TakeoutGetResults"];
+        TTakeoutSetResultsResponse TakeoutSetResultsResp = 24 [json_name="TakeoutSetResults"];
+    } // last is 25
+}

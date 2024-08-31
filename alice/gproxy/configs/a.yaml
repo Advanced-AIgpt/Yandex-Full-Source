@@ -1,0 +1,84 @@
+service: speechkit_ops_alice_uniproxy
+title: GRPCproxy config packs
+ci:
+  release-title-source: flow
+  secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+  runtime:
+    sandbox:
+      owner: VOICESERV_RELEASERS
+      tags:
+        - ARCADIA-CI-TASK
+
+  releases:
+    pack-prod-gproxy:
+      title: Pack prod GProxy configs
+      flow: config-pack-flow
+      flow-vars:
+        title: prod gproxy configs
+        package: alice/gproxy/configs/prod/gproxy/package.json
+        resource-type: ALICE_GPROXY_CONFIGS
+      auto: true
+      filters:
+        - sub-paths:
+          - 'prod/gproxy/**'
+      stages:
+        build:
+          title: Packing
+
+    pack-prod-gsetup:
+      title: Pack prod GProxy setup configs
+      flow: config-pack-flow
+      flow-vars:
+        title: prod gproxy setup configs
+        package: alice/gproxy/configs/prod/gsetup/package.json
+        resource-type: ALICE_GPROXY_SETUP_CONFIGS
+      auto: true
+      filters:
+        - sub-paths:
+          - 'prod/gsetup/**'
+      stages:
+        build:
+          title: Packing
+
+  flows:
+    config-pack-flow:
+      title: Pack config files
+      jobs:
+        start-packing:
+          title: Start packing
+          task: dummy
+          stage: build
+
+        pack-config:
+          title: Packing ${flow-vars.title}
+          task: common/arcadia/ya_package_2
+          needs: start-packing
+          attempts: 3
+          input:
+            build_type: stable
+            run_tests: False
+            packages: ${flow-vars.package}
+            resource_type: ${flow-vars.resource-type}
+            raw_package: True
+            compress_package_archive: False
+
+        release-configs:
+          title: Release all items
+          task: common/releases/simple_releaser
+          needs: pack-config
+          input:
+            config:
+              deploy_system: NANNY
+              release_token_yav_key: sandbox.token
+              wait_for_deploy: False
+              common_release_data:
+                nanny_common_release_data:
+                  release_stage: stable
+                  release_notes: Release ${flow-vars.title} with CI
+                  release_subject: ${flow-vars.title} CI release ${context.version_info.major}
+            context:
+              secret_uid: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+            release_items:
+              - sandbox_release_item:
+                  id: ${(tasks.pack-config.resources[?type == root().flow-vars.resource-type])[0].id}
+                  type: ${flow-vars.resource-type}

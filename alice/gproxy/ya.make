@@ -1,0 +1,5 @@
+RECURSE(
+    library
+    tools
+    bin
+)

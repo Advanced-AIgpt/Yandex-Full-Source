@@ -1,0 +1,167 @@
+{
+    "inputDeps": [
+        "HTTP_REQUEST"
+    ],
+    "nodeDeps": {
+        "BEGEMOT_INIT": {
+            "inputDeps": [
+                "BEGEMOT_INIT_CONFIG",
+                "HTTP_REQUEST",
+                "USER_CONNECTION_PARAMS"
+            ]
+        },
+        "FLAGS_PROVIDER": {
+            "inputDeps": [
+                "BEGEMOT_INIT@parsed_request->request,exp_params,access,user_connection,region,device",
+                "CONFLAGEXP_PARAMS",
+                "UAAS"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "FLAGS_PROVIDER"
+            ]
+        },
+        "UAAS": {
+            "inputDeps": [
+                "CONFLAGEXP_PARAMS",
+                "HTTP_REQUEST"
+            ]
+        }
+    },
+    "nodes": {
+        "BEGEMOT_INIT": {
+            "backendName": "VOICE__REQUEST_INIT",
+            "monitoring": [
+                {
+                    "crit": 0.7,
+                    "operation": "perc",
+                    "prior": 150,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "codecs": [
+                    "lz4"
+                ],
+                "loadControlConfig": {
+                    "maxReaskBudget": 8.0,
+                    "requestsPerReask": 15
+                },
+                "loggingConfig": {
+                    "dumpErrorRequests": true,
+                    "dumpRequestProbability": 0.001
+                },
+                "softTimeout": "20ms",
+                "timeout": "100ms"
+            }
+        },
+        "BEGEMOT_INIT_CONFIG": {
+            "embed": [
+                {
+                    "requested_rules": [
+                        "ExpParams",
+                        "InitAccess",
+                        "InitDevice",
+                        "InitParseRequest",
+                        "InitRegion",
+                        "InitUserConnection"
+                    ],
+                    "type": "begemot_config"
+                }
+            ],
+            "nodeType": "EMBED",
+            "params": {
+                "codecs": [
+                    "lz4"
+                ]
+            }
+        },
+        "CONFLAGEXP_PARAMS": {
+            "embed": [
+                {
+                    "make-apphost-params": false,
+                    "name": "uniproxy",
+                    "type": "exphandler"
+                }
+            ],
+            "nodeType": "EMBED"
+        },
+        "FLAGS_PROVIDER": {
+            "aliasConfig": {
+                "addrAlias": [
+                    "FLAGS_PROVIDER:+1"
+                ]
+            },
+            "backendName": "VOICE__FLAGS_PROVIDER",
+            "monitoring": [
+                {
+                    "crit": 0.7,
+                    "operation": "perc",
+                    "prior": 150,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "codecs": [
+                    "lz4"
+                ],
+                "loadControlConfig": {
+                    "maxReaskBudget": 8.0,
+                    "requestsPerReask": 15
+                },
+                "loggingConfig": {
+                    "dumpErrorRequests": true,
+                    "dumpRequestProbability": 0.001
+                },
+                "softTimeout": "12ms",
+                "timeout": "100ms"
+            }
+        },
+        "UAAS": {
+            "backendName": "UAAS_YP",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 110,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "loadControlConfig": {
+                    "maxReaskBudget": 8.0,
+                    "requestsPerReask": 15
+                },
+                "softTimeout": "15ms",
+                "timeout": "100ms"
+            }
+        },
+        "USER_CONNECTION_PARAMS": {
+            "embed": [
+                {
+                    "enable_save_data": true,
+                    "thresholds": {
+                        "sslinfo": {
+                            "handshake_negative_threshold": 450.0,
+                            "handshake_negative_weight": 1.0,
+                            "handshake_threshold": 650.0,
+                            "handshake_weight": 1.0
+                        },
+                        "tcpinfo": {
+                            "rtt_negative_threshold": 0.0,
+                            "rtt_negative_weight": 0.0,
+                            "rtt_threshold": 500.0,
+                            "rtt_weight": 1.0
+                        }
+                    },
+                    "type": "user_connection-config"
+                }
+            ],
+            "nodeType": "EMBED"
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

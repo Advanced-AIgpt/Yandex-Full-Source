@@ -1,0 +1,140 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "LOAD_BIOMETRY_CONTEXT": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^yabio_context_request"
+            ]
+        },
+        "LOAD_BIOMETRY_CONTEXT_POST": {
+            "inputDeps": [
+                "LOAD_BIOMETRY_CONTEXT@^yabio_context_response",
+                "WS_ADAPTER_IN@^request_context,^yabio_context_request"
+            ]
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "inputDeps": [
+                "INIT@^session_context",
+                "LOAD_BIOMETRY_CONTEXT_POST@^yabio_context",
+                "WS_ADAPTER_IN@^request_context,^request_bio_context_update"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "WS_ADAPTER_OUT@ws_message"
+            ]
+        },
+        "SAVE_BIOMETRY_CONTEXT": {
+            "inputDeps": [
+                "NON_STREAM_ITEMS_SYNC->INIT"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "INIT@session_context",
+                "SAVE_BIOMETRY_CONTEXT",
+                "WS_ADAPTER_IN@request_context,directive"
+            ]
+        }
+    },
+    "nodes": {
+        "LOAD_BIOMETRY_CONTEXT": {
+            "backendName": "VOICE__CACHALOT_BIO",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2,
+                    "maxRequestErrorAttempts": 5
+                },
+                "handler": "/yabio_context",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 7
+                },
+                "softTimeout": "35ms",
+                "timeout": "5s"
+            }
+        },
+        "LOAD_BIOMETRY_CONTEXT_POST": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 0.2,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.05
+                }
+            ],
+            "params": {
+                "handler": "/bio_context_load-post",
+                "timeout": "1s"
+            }
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "SAVE_BIOMETRY_CONTEXT": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.2,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.05
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/bio_context_save",
+                "timeout": "6s"
+            }
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "15s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

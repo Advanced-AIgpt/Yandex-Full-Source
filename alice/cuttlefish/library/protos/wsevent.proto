@@ -1,0 +1,79 @@
+package NAliceProtocol;
+
+import "alice/cuttlefish/library/protos/audio.proto";
+import "alice/cuttlefish/library/protos/session.proto";
+
+message TEventHeader {
+    enum EMessageNamespace {
+        UNKNOWN_NAMESPACE = 0;
+        SYSTEM = 1;
+        ASR = 2;
+        TTS = 3;
+        VINS = 4;
+        STREAM_CONTROL = 5;
+        SPOTTER = 6;
+        LOG = 7;
+        BIOMETRY = 8;
+    };
+    enum EMessageName {
+        UNKNOWN_NAME = 0;
+        SYNCHRONIZE_STATE = 1;  // SYSTEM
+        EVENT_EXCEPTION = 2;    // SYSTEM
+        INVALID_AUTH = 3;
+        SYNCHRONIZE_STATE_RESPONSE = 4;
+        RECOGNIZE = 5;  // ASR
+        RESULT = 6;     // ASR
+        GENERATE = 7;   // TTS
+        SPEAK = 8;      // TTS
+        META = 9;       // TTS
+        VOICE_INPUT = 10;  // VINS
+        TEXT_INPUT = 11;   // VINS
+        MUSIC_INPUT = 12;  // VINS
+        VALIDATION = 13;  // SPOTTER
+        NM_SPOTTER = 14;  // LOG
+        ACK = 15;         // LOG
+        MUSIC_RESULT = 16; // ASR
+        HEART_BEAT = 17;  // ASR
+        CLASSIFY = 18;  // BIOMETRY
+        SCORE = 19;     // BIOMETRY (NOT USE)
+        CLASSIFICATION = 20;    // BIOMETRY
+        IDENTIFY_COMPLETE = 21; // BIOMETRY
+        IDENTIFY = 22;          // BIOMETRY
+        VINS_RESPONSE = 23;     // VINS
+        CREATE_OR_UPDATE_USER = 24;  // BIOMETRY
+        GET_USERS = 25;         // BIOMETRY
+        REMOVE_USER = 26;       // BIOMETRY
+        USER_CREATION = 27;     // BIOMETRY
+        USER_REMOVED = 28;      // BIOMETRY
+        USERS = 29;             // BIOMETRY
+        UNIPROXY_VINS_TIMINGS = 30; // VINS
+        TIMINGS = 31;           // TTS
+        UNIPROXY_TTS_TIMINGS = 32; // TTS
+        VOICEPRINT = 33; // SYSTEM
+        UPDATE_VOICEPRINT = 34; // SYSTEM
+        MATCHED_USER = 35; // SYSTEM
+    };
+
+    optional EMessageNamespace Namespace = 1;
+    optional EMessageName Name = 2;
+    optional string MessageId = 3;
+    optional string RefMessageId = 4;
+    optional int64  StreamId = 5;
+    optional int64  Action = 6;          /* streamcontrol event action */
+    optional int64  Reason = 7;          /* streamcontrol event reason */
+    optional string Description = 8;     /* description event data */
+    optional int64  RefStreamId = 9;
+};
+
+
+message TWsEvent {
+    optional TEventHeader    Header = 1;
+
+    optional string          Text = 2;
+
+    optional bytes           Binary = 3;
+
+    optional TSessionContext Context = 4;
+
+    optional TAudioChunk.TTimings AudioChunkTimings = 5;
+};

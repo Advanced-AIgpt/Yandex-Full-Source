@@ -1,0 +1,58 @@
+syntax = "proto2";
+
+package NGProxy;
+
+
+message TEndpointSetConfig {
+    required string Ctype = 1;           /* endpoint set will be used on instances with this ctype */
+    required string EndpointSet = 2;     /* endpoint set name */
+}
+
+message TFixedEndpoint {
+    required string Host = 1;
+    required uint32 Port = 2;
+}
+
+message TVerticalConfig {
+    required string             Vertical = 1;       /* vertical name */
+    repeated TEndpointSetConfig EndpointSets = 2;   /* endpoint sets for this vertical */
+    optional TFixedEndpoint     FixedEndpoint = 3;  /* fixed endpoint for this vertical, overrides EndpointSets */
+}
+
+
+message TAppHostClientConfig {
+    repeated TVerticalConfig Verticals = 1;
+}
+
+
+message TGrpcServerConfig {
+    optional uint32  Port                       = 1 [default=80];
+    optional uint32  Threads                    = 2 [default=2];
+    optional bool    AllowSrcrwr                = 3 [default=false];
+    optional bool    AllowDumpRequestsResponses = 4 [default=false];
+}
+
+
+message THttpServerConfig {
+    optional uint32  Port       = 1 [default=8080];
+    optional uint32  Threads    = 2 [default=2];
+}
+
+
+message TLoggingConfig {
+    optional string EventLogPath        = 1 [default="/logs/current-gproxy.evlog"];
+    optional string RtLogPath           = 2 [default="/logs/current-gproxy.rtlog"];
+    optional bool WriteInfoToEventLog   = 3 [default=true];
+    optional bool WriteInfoToRtLog      = 4 [default=true];
+    optional string UnifiedAgentLogPath = 5 [default="/logs/unified-agent-client.log"];
+    optional string UnifiedAgentUri     = 6 [default="localhost:83"];
+}
+
+
+message TServiceConfig {
+    required TGrpcServerConfig      Grpc = 1;
+    required TAppHostClientConfig   AppHost = 2;
+    required THttpServerConfig      Http = 3;
+    required TLoggingConfig         Logging = 4;
+    optional bool                   NoMLock = 5;
+}

@@ -1,0 +1,36 @@
+package NAliceYabioAdapterConfig;
+
+import "alice/cuttlefish/library/proto_configs/service.cfgproto";
+import "library/cpp/proto_config/protos/extensions.proto";
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+message Yabio {
+    option (NProtoConfig.ConfigClass) = "TYabio";
+    enum EProtocolVersion {
+        INTERNAL_FAKE = 0;
+        YABIO = 1;
+    };
+    // like proto_config library not support enum, so use uint32 instead:
+    optional uint32 protocol_version = 1 [(NProtoConfig.Help) = "used protocol version", default=2];
+    optional string host = 2 [(NProtoConfig.Help) = "hostname yabio-server", default="localhost"];
+    optional uint32 port = 3 [(NProtoConfig.Help) = "port yabio-server", default=80];
+    optional string path = 4 [(NProtoConfig.Help) = "path in http request to yabio-server", default="/bio"];
+    // optional bool ignore_parsing_protobuf_error = 5 [(NProtoConfig.Help) = "new yabio-server engine generate protobuf without _required_ field (this crutch allow suppress parsing errors)", default=false];
+    optional uint32 client_threads = 7 [(NProtoConfig.Help) = "count yabio client threads (neh/asio executors)", default=12];
+    optional string connect_timeout = 8 [
+        (NProtoConfig.Help) = "timelimit for tcp connect to yabio-server",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(100)"
+    ];
+    optional string need_result_step = 9 [
+        (NProtoConfig.Help) = "step after which we add needResult flag to relayed chunk",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(200)"
+    ];
+};
+
+message Config {
+    option (NProtoConfig.ConfigClass) = "TConfig";
+    optional NAliceServiceConfig.Server server = 1 [(NProtoConfig.Help) = "common apphost servant options"];
+    optional Yabio yabio = 2 [(NProtoConfig.Help) = "client options for work with yabio-server"];
+};

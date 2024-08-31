@@ -1,0 +1,18 @@
+RECURSE(
+    bert
+    emoji
+    extsearch
+    generative
+    hnsw
+    libs
+    memory
+    py_libs
+    nlg_client
+    nlg_server
+    nlg_server2
+    rl
+    saas
+    telegram_bot
+    tf
+    tools
+)

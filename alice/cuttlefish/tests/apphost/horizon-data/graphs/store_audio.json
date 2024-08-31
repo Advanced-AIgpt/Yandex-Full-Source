@@ -1,0 +1,107 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "MDS_STORE_SPOTTER": {
+            "inputDeps": [
+                "STORE_AUDIO_PRE@^mds_store_spotter_http_request->http_request"
+            ]
+        },
+        "MDS_STORE_STREAM": {
+            "inputDeps": [
+                "STORE_AUDIO_PRE@^mds_store_stream_http_request->http_request"
+            ]
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "inputDeps": [
+                "INIT@^request_context"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "STORE_AUDIO_POST@store_audio_response,store_audio_response_spotter"
+            ]
+        },
+        "STORE_AUDIO_POST": {
+            "inputDeps": [
+                "MDS_STORE_SPOTTER@http_response->mds_store_spotter_http_response",
+                "MDS_STORE_STREAM@http_response->mds_store_stream_http_response"
+            ]
+        },
+        "STORE_AUDIO_PRE": {
+            "inputDeps": [
+                "!NON_STREAM_ITEMS_SYNC",
+                "INIT@audio,asr_finished"
+            ]
+        }
+    },
+    "nodes": {
+        "MDS_STORE_SPOTTER": {
+            "backendName": "VOICE__MDS_STORE_HTTP",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "timeout": "20s"
+            }
+        },
+        "MDS_STORE_STREAM": {
+            "backendName": "VOICE__MDS_STORE_HTTP",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "timeout": "20s"
+            }
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "STORE_AUDIO_POST": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/store_audio-post",
+                "timeout": "1s"
+            }
+        },
+        "STORE_AUDIO_PRE": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "45s",
+                "handler": "/store_audio-pre",
+                "timeout": "1s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

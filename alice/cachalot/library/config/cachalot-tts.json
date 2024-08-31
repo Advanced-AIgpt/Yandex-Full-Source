@@ -1,0 +1,80 @@
+{
+    "Server": {
+        "Port": 80,
+        "GrpcPort": 81,
+        "Threads": 3,
+        "GrpcThreads": 3
+    },
+    "Log": {
+        "Filename": "/logs/cachalot.evlog",
+        "RtLogFilename": "/logs/current-cachalot.rtlog"
+    },
+    "YabioContext": {
+        "Enabled": true,
+        "Storage": {
+            "YdbClient": {
+                "ClientThreads": 0,
+                "NetworkThreads": 2,
+                "Endpoint": "ydb-ru.yandex.net:2135",
+                "Database": "/ru/alice/prod/vins-context",
+                "ReadTimeoutSeconds": 0.5,
+                "WriteTimeoutSeconds": 1.4,
+                "MaxActiveSessions": 500
+            },
+            "Save": {
+                "Base": {
+                    "Table": "yabio_storage_restyled",
+                    "TimeoutMilliseconds": 300,
+                    "MaxRetriesCount": 5
+                }
+            },
+            "Load": {
+                "Base": {
+                    "Table": "yabio_storage_restyled",
+                    "TimeoutMilliseconds": 300,
+                    "MaxRetriesCount": 5
+                }
+            },
+            "Remove": {
+                "Base": {
+                    "Table": "yabio_storage_restyled",
+                    "TimeoutMilliseconds": 300,
+                    "MaxRetriesCount": 5
+                }
+            }
+        }
+    },
+    "Cache": {
+        "Enabled": true,
+        "Storages": {
+            "Tts": {
+                "AllowedTtlVariationSeconds": 600,
+                "EnableInterCacheUpdates": true,
+                "Ydb": {
+                    "ClientThreads": 0,
+                    "NetworkThreads": 2,
+                    "Endpoint": "ydb-ru.yandex.net:2135",
+                    "Database": "/ru/alice/prod/ttscache",
+                    "Table": "ttsaudio",
+                    "TimeToLiveSeconds": 9000
+                },
+                "Imdb": {
+                    "Enabled": true,
+                    "NumberOfBuckets": 4,
+                    "MaxNumberOfElements": 100000,
+                    "MaxMemoryUsageBytes": 12884901888,
+                    "RemovalPolicy": "LFU",
+                    "ThreadPoolConfig": {
+                        "NumberOfThreads": 4,
+                        "QueueSize": 100
+                    },
+                    "TimeToLiveSeconds": 5400
+                },
+                "YdbOperationSettings": {
+                    "DataColumnName": "Audio"
+                }
+            }
+        }
+    },
+    "LockMemory": true
+}

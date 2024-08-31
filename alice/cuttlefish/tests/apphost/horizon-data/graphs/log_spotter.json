@@ -1,0 +1,101 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "LOG_SPOTTER": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@audio"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "WS_ADAPTER_OUT@ws_message,uniproxy2_directive"
+            ]
+        },
+        "STORE_AUDIO": {
+            "inputDeps": [
+                "WS_ADAPTER_IN->INIT@audio,request_context"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "INIT@session_context",
+                "LOG_SPOTTER@directive",
+                "STORE_AUDIO@store_audio_response",
+                "WS_ADAPTER_IN@request_context,directive"
+            ]
+        }
+    },
+    "nodes": {
+        "LOG_SPOTTER": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/log_spotter",
+                "timeout": "1s"
+            }
+        },
+        "STORE_AUDIO": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/_streaming_no_block_outputs/_subhost/store_audio",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "15s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

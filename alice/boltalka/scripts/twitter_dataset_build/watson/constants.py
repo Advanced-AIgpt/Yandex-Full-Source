@@ -1,0 +1,1 @@
+EMPTY_TOKEN = '_EMPTY_'

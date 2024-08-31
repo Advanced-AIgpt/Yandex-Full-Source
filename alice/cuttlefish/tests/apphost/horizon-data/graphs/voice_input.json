@@ -1,0 +1,978 @@
+{
+    "edgeExpressions": {
+        "ACTIVATION_SUCCESS->WAIT_ACTIVATION": "!^WS_ADAPTER_IN[has_smart_activation] || (ACTIVATION_FIRST_ANNOUNCEMENT[noans] || ACTIVATION_SECOND_ANNOUNCEMENT[noans] || ACTIVATION_FINAL[noans])",
+        "ACTIVATION_SUCCESS->WS_ADAPTER_OUT": "^WS_ADAPTER_IN[has_smart_activation] && (ACTIVATION_FIRST_ANNOUNCEMENT[noans] || ACTIVATION_SECOND_ANNOUNCEMENT[noans] || ACTIVATION_FINAL[noans])",
+        "ASR->BIOMETRY_CLASSIFY": "^WS_ADAPTER_IN[has_bio_classify]",
+        "ASR->BIOMETRY_SCORE": "^WS_ADAPTER_IN[has_bio_score]",
+        "AUDIO_SEPARATOR->CONTEXT_SAVE_IMPORTANT_WAIT": "MEGAMIND_RUN[context_save_important_need_full_incoming_audio] || MEGAMIND_APPLY[context_save_important_need_full_incoming_audio]",
+        "AUDIO_SEPARATOR->CONTEXT_SAVE_WAIT": "MEGAMIND_RUN[context_save_need_full_incoming_audio] || MEGAMIND_APPLY[context_save_need_full_incoming_audio]",
+        "BIOMETRY_SCORE->WS_ADAPTER_OUT": "^WS_ADAPTER_IN[enrollment_headers]",
+        "CONTEXT_SAVE_IMPORTANT_WAIT->CONTEXT_SAVE_IMPORTANT": "CONTEXT_SAVE_IMPORTANT_WAIT[context_save_request]",
+        "CONTEXT_SAVE_WAIT->CONTEXT_SAVE": "CONTEXT_SAVE_WAIT[context_save_request] || CONTEXT_SAVE_WAIT[mm_session_request]",
+        "GUEST_CONTEXT_SAVE_WAIT_1->GUEST_CONTEXT_SAVE_1": "GUEST_CONTEXT_SAVE_WAIT_1[context_save_request] || GUEST_CONTEXT_SAVE_WAIT_1[mm_session_request]",
+        "GUEST_CONTEXT_SAVE_WAIT_2->GUEST_CONTEXT_SAVE_2": "GUEST_CONTEXT_SAVE_WAIT_2[context_save_request] || GUEST_CONTEXT_SAVE_WAIT_2[mm_session_request]",
+        "GUEST_CONTEXT_SAVE_WAIT_3->GUEST_CONTEXT_SAVE_3": "GUEST_CONTEXT_SAVE_WAIT_3[context_save_request] || GUEST_CONTEXT_SAVE_WAIT_3[mm_session_request]",
+        "GUEST_CONTEXT_SAVE_WAIT_4->GUEST_CONTEXT_SAVE_4": "GUEST_CONTEXT_SAVE_WAIT_4[context_save_request] || GUEST_CONTEXT_SAVE_WAIT_4[mm_session_request]",
+        "GUEST_CONTEXT_SAVE_WAIT_5->GUEST_CONTEXT_SAVE_5": "GUEST_CONTEXT_SAVE_WAIT_5[context_save_request] || GUEST_CONTEXT_SAVE_WAIT_5[mm_session_request]",
+        "SAVE_BIOMETRY_CONTEXT->WAIT_FINAL_RESPONSE_PARTS": "^WS_ADAPTER_IN[has_bio_score] && SAVE_BIOMETRY_CONTEXT_WAIT[request_bio_context_update]",
+        "WS_ADAPTER_IN->ACTIVATION_FIRST_ANNOUNCEMENT": "^WS_ADAPTER_IN[has_smart_activation]",
+        "WS_ADAPTER_IN->ASR": "^WS_ADAPTER_IN[audio]",
+        "WS_ADAPTER_IN->AUDIO_SEPARATOR": "^WS_ADAPTER_IN[audio]",
+        "WS_ADAPTER_IN->BIOMETRY_CLASSIFY": "^WS_ADAPTER_IN[has_bio_classify]",
+        "WS_ADAPTER_IN->BIOMETRY_SCORE": "^WS_ADAPTER_IN[has_bio_score]",
+        "WS_ADAPTER_IN->GUEST_BLACKBOX_HTTP_REQUEST_SYNC": "^WS_ADAPTER_IN[guest_blackbox_http_request]",
+        "WS_ADAPTER_IN->GUEST_CONTEXT_LOAD_WAIT_1": "WS_ADAPTER_IN[guest_blackbox_http_request_1]",
+        "WS_ADAPTER_IN->GUEST_CONTEXT_LOAD_WAIT_2": "WS_ADAPTER_IN[guest_blackbox_http_request_2]",
+        "WS_ADAPTER_IN->GUEST_CONTEXT_LOAD_WAIT_3": "WS_ADAPTER_IN[guest_blackbox_http_request_3]",
+        "WS_ADAPTER_IN->GUEST_CONTEXT_LOAD_WAIT_4": "WS_ADAPTER_IN[guest_blackbox_http_request_4]",
+        "WS_ADAPTER_IN->GUEST_CONTEXT_LOAD_WAIT_5": "WS_ADAPTER_IN[guest_blackbox_http_request_5]",
+        "WS_ADAPTER_IN->LOAD_BIOMETRY_CONTEXT": "^WS_ADAPTER_IN[has_bio_score]",
+        "WS_ADAPTER_IN->LOAD_BIOMETRY_CONTEXT_POST": "^WS_ADAPTER_IN[has_bio_score]",
+        "WS_ADAPTER_IN->MEGAMIND_RUN": "^WS_ADAPTER_IN[enrollment_headers]",
+        "WS_ADAPTER_IN->MM_SESSION_REQUEST_SYNC": "^WS_ADAPTER_IN[mm_session_request]",
+        "WS_ADAPTER_IN->PREDEFINED_CONTACTS_SYNC": "^WS_ADAPTER_IN[has_predefined_contacts]",
+        "WS_ADAPTER_IN->PREDEFINED_IOT_CONFIG_SYNC": "^WS_ADAPTER_IN[predefined_iot_config]",
+        "WS_ADAPTER_IN->SAVE_BIOMETRY_CONTEXT_WAIT": "^WS_ADAPTER_IN[has_bio_score]",
+        "WS_ADAPTER_IN->SMARTHOME_UID_SYNC": "^WS_ADAPTER_IN[has_smarthome_uid]",
+        "WS_ADAPTER_IN->SYNC_BIOMETRY_CONTEXT": "^WS_ADAPTER_IN[enrollment_headers]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "ACTIVATION_FINAL": {
+            "inputDeps": [
+                "ACTIVATION_SECOND_ANNOUNCEMENT@!activation_final_request,activation_log",
+                "MEGAMIND_RUN@mm_run_ready"
+            ]
+        },
+        "ACTIVATION_FIRST_ANNOUNCEMENT": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^activation_announcement_request"
+            ]
+        },
+        "ACTIVATION_SECOND_ANNOUNCEMENT": {
+            "inputDeps": [
+                "ACTIVATION_FIRST_ANNOUNCEMENT@!activation_announcement_request",
+                "ASR@^asr_spotter_validation"
+            ]
+        },
+        "ACTIVATION_SUCCESS": {
+            "inputDeps": [
+                "ACTIVATION_FINAL@just_wait_finish_on_nonexisting_item",
+                "WS_ADAPTER_IN@^activation_successful"
+            ]
+        },
+        "ASR": {
+            "inputDeps": [
+                "CONTEXT_LOAD@!context_load_response",
+                "WS_ADAPTER_IN@audio,^flag_use_contacts_in_asr"
+            ]
+        },
+        "AUDIO_SEPARATOR": {
+            "inputDeps": [
+                "ASR@asr_finished",
+                "WS_ADAPTER_IN@audio,request_context"
+            ]
+        },
+        "BIOMETRY_CLASSIFY": {
+            "inputDeps": [
+                "ASR@asr_finished",
+                "WS_ADAPTER_IN@audio->bio_classify_audio"
+            ]
+        },
+        "BIOMETRY_SCORE": {
+            "inputDeps": [
+                "ASR@asr_finished",
+                "LOAD_BIOMETRY_CONTEXT@yabio_context_response",
+                "WS_ADAPTER_IN@audio->bio_score_audio"
+            ]
+        },
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "GUEST_BLACKBOX_HTTP_REQUEST_SYNC->INIT@guest_blackbox_http_request",
+                "INIT@^session_context,^logger_options",
+                "MM_SESSION_REQUEST_SYNC->INIT@mm_session_request",
+                "PREDEFINED_CONTACTS_SYNC->INIT@predefined_contacts",
+                "PREDEFINED_IOT_CONFIG_SYNC->INIT@predefined_iot_config",
+                "SMARTHOME_UID_SYNC->INIT@smarthome_uid",
+                "WS_ADAPTER_IN->INIT@^ab_experiments_options,^laas_request_options,^request_context"
+            ]
+        },
+        "CONTEXT_SAVE": {
+            "inputDeps": [
+                "CONTEXT_SAVE_WAIT->INIT"
+            ]
+        },
+        "CONTEXT_SAVE_COMMON_WAIT": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^session_context,^request_context"
+            ]
+        },
+        "CONTEXT_SAVE_IMPORTANT": {
+            "inputDeps": [
+                "CONTEXT_SAVE_IMPORTANT_WAIT->INIT"
+            ]
+        },
+        "CONTEXT_SAVE_IMPORTANT_WAIT": {
+            "inputDeps": [
+                "AUDIO_SEPARATOR@^full_incoming_audio",
+                "CONTEXT_LOAD@tvm_user_ticket,blackbox_uid",
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "MEGAMIND_WAIT@^context_save_important_request->context_save_request"
+            ]
+        },
+        "CONTEXT_SAVE_WAIT": {
+            "inputDeps": [
+                "AUDIO_SEPARATOR@^full_incoming_audio",
+                "CONTEXT_LOAD@tvm_user_ticket,blackbox_uid",
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "MEGAMIND_WAIT@^context_save_request,mm_session_request"
+            ]
+        },
+        "GUEST_BLACKBOX_HTTP_REQUEST_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_1": {
+            "inputDeps": [
+                "GUEST_CONTEXT_LOAD_WAIT_1->INIT@guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_2": {
+            "inputDeps": [
+                "GUEST_CONTEXT_LOAD_WAIT_2->INIT@guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_3": {
+            "inputDeps": [
+                "GUEST_CONTEXT_LOAD_WAIT_3->INIT@guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_4": {
+            "inputDeps": [
+                "GUEST_CONTEXT_LOAD_WAIT_4->INIT@guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_5": {
+            "inputDeps": [
+                "GUEST_CONTEXT_LOAD_WAIT_5->INIT@guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_1": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request_1->guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_2": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request_2->guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_3": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request_3->guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_4": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request_4->guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_5": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^guest_blackbox_http_request_5->guest_blackbox_http_request"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_1": {
+            "inputDeps": [
+                "GUEST_CONTEXT_SAVE_WAIT_1->INIT"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_2": {
+            "inputDeps": [
+                "GUEST_CONTEXT_SAVE_WAIT_2->INIT"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_3": {
+            "inputDeps": [
+                "GUEST_CONTEXT_SAVE_WAIT_3->INIT"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_4": {
+            "inputDeps": [
+                "GUEST_CONTEXT_SAVE_WAIT_4->INIT"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_5": {
+            "inputDeps": [
+                "GUEST_CONTEXT_SAVE_WAIT_5->INIT"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_1": {
+            "inputDeps": [
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "GUEST_CONTEXT_LOAD_1@!tvm_user_ticket,!blackbox_uid",
+                "MEGAMIND_WAIT@^context_save_request_1->context_save_request,mm_session_request_1->mm_session_request"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_2": {
+            "inputDeps": [
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "GUEST_CONTEXT_LOAD_2@!tvm_user_ticket,!blackbox_uid",
+                "MEGAMIND_WAIT@^context_save_request_2->context_save_request,mm_session_request_2->mm_session_request"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_3": {
+            "inputDeps": [
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "GUEST_CONTEXT_LOAD_3@!tvm_user_ticket,!blackbox_uid",
+                "MEGAMIND_WAIT@^context_save_request_3->context_save_request,mm_session_request_3->mm_session_request"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_4": {
+            "inputDeps": [
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "GUEST_CONTEXT_LOAD_4@!tvm_user_ticket,!blackbox_uid",
+                "MEGAMIND_WAIT@^context_save_request_4->context_save_request,mm_session_request_4->mm_session_request"
+            ]
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_5": {
+            "inputDeps": [
+                "CONTEXT_SAVE_COMMON_WAIT",
+                "GUEST_CONTEXT_LOAD_5@!tvm_user_ticket,!blackbox_uid",
+                "MEGAMIND_WAIT@^context_save_request_5->context_save_request,mm_session_request_5->mm_session_request"
+            ]
+        },
+        "LOAD_BIOMETRY_CONTEXT": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^yabio_context_request"
+            ]
+        },
+        "LOAD_BIOMETRY_CONTEXT_POST": {
+            "inputDeps": [
+                "LOAD_BIOMETRY_CONTEXT@^yabio_context_response",
+                "WS_ADAPTER_IN@^yabio_context_request"
+            ]
+        },
+        "MEGAMIND_APPLY": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response,alice_logger_options",
+                "WAIT_MEGAMIND_RUN_AND_ACTIVATION@!mm_apply_request,mm_apply_request_tag",
+                "WS_ADAPTER_IN@^session_context,^request_context"
+            ]
+        },
+        "MEGAMIND_RUN": {
+            "inputDeps": [
+                "!MEGAMIND_RUN_FIRST_CHUNK",
+                "ASR@asr_proto_response",
+                "BIOMETRY_CLASSIFY@yabio_proto_response",
+                "BIOMETRY_SCORE@yabio_proto_response",
+                "CONTEXT_LOAD@context_load_response,alice_logger_options",
+                "GUEST_CONTEXT_LOAD_1@guest_blackbox_http_response->guest_blackbox_http_response_1,guest_datasync_http_response->guest_datasync_http_response_1",
+                "GUEST_CONTEXT_LOAD_2@guest_blackbox_http_response->guest_blackbox_http_response_2,guest_datasync_http_response->guest_datasync_http_response_2",
+                "GUEST_CONTEXT_LOAD_3@guest_blackbox_http_response->guest_blackbox_http_response_3,guest_datasync_http_response->guest_datasync_http_response_3",
+                "GUEST_CONTEXT_LOAD_4@guest_blackbox_http_response->guest_blackbox_http_response_4,guest_datasync_http_response->guest_datasync_http_response_4",
+                "GUEST_CONTEXT_LOAD_5@guest_blackbox_http_response->guest_blackbox_http_response_5,guest_datasync_http_response->guest_datasync_http_response_5",
+                "WS_ADAPTER_IN@voiceprint_match_result_1,voiceprint_match_result_2,voiceprint_match_result_3,voiceprint_match_result_4,voiceprint_match_result_5,voiceprint_no_match_result"
+            ]
+        },
+        "MEGAMIND_RUN_FIRST_CHUNK": {
+            "inputDeps": [
+                "!WS_ADAPTER_IN@^session_context,^request_context,^mm_request",
+                "INIT@^logger_options"
+            ]
+        },
+        "MEGAMIND_WAIT": {
+            "inputDeps": [
+                "MEGAMIND_APPLY@mm_response,tts_request,context_save_request,context_save_request_1,context_save_request_2,context_save_request_3,context_save_request_4,context_save_request_5,context_save_important_request,mm_session_request,mm_session_request_1,mm_session_request_2,mm_session_request_3,mm_session_request_4,mm_session_request_5",
+                "WAIT_MEGAMIND_RUN_AND_ACTIVATION@mm_response,tts_request,context_save_request,context_save_request_1,context_save_request_2,context_save_request_3,context_save_request_4,context_save_request_5,context_save_important_request,mm_session_request,mm_session_request_1,mm_session_request_2,mm_session_request_3,mm_session_request_4,mm_session_request_5"
+            ]
+        },
+        "MM_SESSION_REQUEST_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^mm_session_request"
+            ]
+        },
+        "PREDEFINED_CONTACTS_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^predefined_contacts"
+            ]
+        },
+        "PREDEFINED_IOT_CONFIG_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^predefined_iot_config"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "ASR@uniproxy2_directive",
+                "CONTEXT_LOAD@uniproxy2_directive",
+                "TTS@uniproxy2_directive",
+                "WS_ADAPTER_OUT@ws_message,uniproxy2_directive"
+            ]
+        },
+        "SAVE_BIOMETRY_CONTEXT": {
+            "inputDeps": [
+                "SAVE_BIOMETRY_CONTEXT_WAIT->INIT"
+            ]
+        },
+        "SAVE_BIOMETRY_CONTEXT_WAIT": {
+            "inputDeps": [
+                "BIOMETRY_SCORE@!yabio_new_enrolling",
+                "INIT@^session_context",
+                "LOAD_BIOMETRY_CONTEXT_POST@!yabio_context",
+                "MEGAMIND_APPLY@request_bio_context_update",
+                "STORE_AUDIO@store_audio_response,store_audio_response_spotter->store_audio_response",
+                "WS_ADAPTER_IN@^request_context"
+            ]
+        },
+        "SESSION_LOGS_COLLECTOR": {
+            "inputDeps": [
+                "MEGAMIND_APPLY@uniproxy2_directive_session_log->uniproxy2_directive_session_log_from_mm_apply",
+                "MEGAMIND_RUN@uniproxy2_directive_session_log->uniproxy2_directive_session_log_from_mm_run",
+                "^WS_ADAPTER_IN@session_context"
+            ]
+        },
+        "SMARTHOME_UID_SYNC": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@^smarthome_uid"
+            ]
+        },
+        "STORE_AUDIO": {
+            "inputDeps": [
+                "ASR->INIT@asr_finished",
+                "WS_ADAPTER_IN->INIT@audio,request_context"
+            ]
+        },
+        "SYNC_BIOMETRY_CONTEXT": {
+            "inputDeps": [
+                "LOAD_BIOMETRY_CONTEXT_POST@!yabio_context",
+                "WS_ADAPTER_IN@^enrollment_headers"
+            ]
+        },
+        "TTS": {
+            "inputDeps": [
+                "WAIT_TTS_REQUEST_PARTS->INIT@!session_context,!request_context,!tts_request"
+            ]
+        },
+        "WAIT_ACTIVATION": {
+            "inputDeps": [
+                "ACTIVATION_FINAL@activation_successful",
+                "ACTIVATION_SUCCESS@activation_successful"
+            ]
+        },
+        "WAIT_FINAL_RESPONSE_PARTS": {
+            "inputDeps": [
+                "CONTEXT_SAVE_IMPORTANT@context_save_response->context_save_important_response",
+                "MEGAMIND_WAIT@mm_response,tts_request",
+                "SAVE_BIOMETRY_CONTEXT@directive"
+            ]
+        },
+        "WAIT_MEGAMIND_RUN_AND_ACTIVATION": {
+            "inputDeps": [
+                "MEGAMIND_RUN@mm_apply_request,mm_response,tts_request,context_save_request,context_save_request_1,context_save_request_2,context_save_request_3,context_save_request_4,context_save_request_5,context_save_important_request,mm_session_request,mm_session_request_1,mm_session_request_2,mm_session_request_3,mm_session_request_4,mm_session_request_5",
+                "WAIT_ACTIVATION@!activation_successful"
+            ]
+        },
+        "WAIT_TTS_REQUEST_PARTS": {
+            "inputDeps": [
+                "INIT@^session_context",
+                "WAIT_FINAL_RESPONSE_PARTS->INIT@!tts_request",
+                "WS_ADAPTER_IN->INIT@^request_context"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message,logger_options"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "ACTIVATION_FINAL@activation_final_response,activation_log_final",
+                "ACTIVATION_SECOND_ANNOUNCEMENT@activation_log",
+                "ACTIVATION_SUCCESS@activation_successful",
+                "ASR@asr_proto_response",
+                "BIOMETRY_CLASSIFY@yabio_proto_response",
+                "BIOMETRY_SCORE@yabio_proto_response",
+                "INIT@directive",
+                "MEGAMIND_APPLY@directive",
+                "MEGAMIND_RUN@directive",
+                "SESSION_LOGS_COLLECTOR@uniproxy2_directives_session_logs",
+                "STORE_AUDIO@store_audio_response,store_audio_response_spotter",
+                "SYNC_BIOMETRY_CONTEXT@update_client_enrollment_directive",
+                "TTS@audio,tts_timings",
+                "WAIT_FINAL_RESPONSE_PARTS",
+                "WS_ADAPTER_IN@session_context,request_context,directive,predefined_asr_result"
+            ]
+        }
+    },
+    "nodes": {
+        "ACTIVATION_FINAL": {
+            "backendName": "VOICE__CACHALOT_ACTIVATION",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "handler": "/activation_voice_input_final",
+                "timeout": "2s"
+            }
+        },
+        "ACTIVATION_FIRST_ANNOUNCEMENT": {
+            "backendName": "VOICE__CACHALOT_ACTIVATION",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "handler": "/activation_voice_input_first_announcement",
+                "timeout": "2s"
+            }
+        },
+        "ACTIVATION_SECOND_ANNOUNCEMENT": {
+            "backendName": "VOICE__CACHALOT_ACTIVATION",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "handler": "/activation_voice_input_second_announcement",
+                "timeout": "2s"
+            }
+        },
+        "ACTIVATION_SUCCESS": {
+            "nodeType": "TRANSPARENT"
+        },
+        "ASR": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_streaming_no_block_outputs/_subhost/asr",
+                "timeout": "15s"
+            }
+        },
+        "AUDIO_SEPARATOR": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/audio_separator",
+                "timeout": "15s"
+            }
+        },
+        "BIOMETRY_CLASSIFY": {
+            "backendName": "VOICE__YABIO",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/bio",
+                "timeout": "15s"
+            }
+        },
+        "BIOMETRY_SCORE": {
+            "backendName": "VOICE__YABIO",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/bio",
+                "timeout": "15s"
+            }
+        },
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "7s"
+            }
+        },
+        "CONTEXT_SAVE": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "CONTEXT_SAVE_COMMON_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "CONTEXT_SAVE_IMPORTANT": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "CONTEXT_SAVE_IMPORTANT_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "CONTEXT_SAVE_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_BLACKBOX_HTTP_REQUEST_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_LOAD_1": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/guest_context_load",
+                "timeout": "7s"
+            }
+        },
+        "GUEST_CONTEXT_LOAD_2": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/guest_context_load",
+                "timeout": "7s"
+            }
+        },
+        "GUEST_CONTEXT_LOAD_3": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/guest_context_load",
+                "timeout": "7s"
+            }
+        },
+        "GUEST_CONTEXT_LOAD_4": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/guest_context_load",
+                "timeout": "7s"
+            }
+        },
+        "GUEST_CONTEXT_LOAD_5": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/guest_context_load",
+                "timeout": "7s"
+            }
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_1": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_2": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_3": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_4": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_LOAD_WAIT_5": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_SAVE_1": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "GUEST_CONTEXT_SAVE_2": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "GUEST_CONTEXT_SAVE_3": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "GUEST_CONTEXT_SAVE_4": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "GUEST_CONTEXT_SAVE_5": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "11s"
+            }
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_1": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_2": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_3": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_4": {
+            "nodeType": "TRANSPARENT"
+        },
+        "GUEST_CONTEXT_SAVE_WAIT_5": {
+            "nodeType": "TRANSPARENT"
+        },
+        "LOAD_BIOMETRY_CONTEXT": {
+            "backendName": "VOICE__CACHALOT_BIO",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2,
+                    "maxRequestErrorAttempts": 5
+                },
+                "handler": "/yabio_context",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 7
+                },
+                "softTimeout": "60ms",
+                "timeout": "600ms"
+            }
+        },
+        "LOAD_BIOMETRY_CONTEXT_POST": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "handler": "/bio_context_load-post",
+                "timeout": "500ms"
+            }
+        },
+        "MEGAMIND_APPLY": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/megamind_apply",
+                "timeout": "7s"
+            }
+        },
+        "MEGAMIND_RUN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "45s",
+                "handler": "/megamind_run",
+                "timeout": "7s"
+            }
+        },
+        "MEGAMIND_RUN_FIRST_CHUNK": {
+            "nodeType": "TRANSPARENT"
+        },
+        "MEGAMIND_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "MM_SESSION_REQUEST_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "PREDEFINED_CONTACTS_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "PREDEFINED_IOT_CONFIG_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "SAVE_BIOMETRY_CONTEXT": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.2,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.05
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/bio_context_save",
+                "timeout": "2000ms"
+            }
+        },
+        "SAVE_BIOMETRY_CONTEXT_WAIT": {
+            "nodeType": "TRANSPARENT"
+        },
+        "SESSION_LOGS_COLLECTOR": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.2
+                }
+            ],
+            "params": {
+                "handler": "/session_logs_collector",
+                "timeout": "7s"
+            }
+        },
+        "SMARTHOME_UID_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "STORE_AUDIO": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.05
+                }
+            ],
+            "params": {
+                "handler": "/_streaming_no_block_outputs/_subhost/store_audio",
+                "timeout": "23s"
+            }
+        },
+        "SYNC_BIOMETRY_CONTEXT": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 0.1,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.02
+                }
+            ],
+            "params": {
+                "handler": "/bio_context_sync",
+                "timeout": "500ms"
+            }
+        },
+        "TTS": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "chunkWaitTimeout": "15s",
+                "handler": "/_streaming_no_block_outputs/_subhost/tts",
+                "timeout": "60s"
+            }
+        },
+        "WAIT_ACTIVATION": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WAIT_FINAL_RESPONSE_PARTS": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WAIT_MEGAMIND_RUN_AND_ACTIVATION": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WAIT_TTS_REQUEST_PARTS": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "15s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

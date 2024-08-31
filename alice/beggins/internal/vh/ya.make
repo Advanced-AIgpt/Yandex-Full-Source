@@ -1,0 +1,9 @@
+RECURSE(
+    artifacts
+    cmd
+    flows
+    meta
+    operations
+    scripts
+    ut
+)

@@ -1,0 +1,5 @@
+RECURSE(
+    buttons
+    patterns
+    replies
+)

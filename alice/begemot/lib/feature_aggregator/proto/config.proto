@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package NAlice;
+
+option go_package = "a.yandex-team.ru/alice/begemot/lib/feature_aggregator/proto";
+option java_package = "ru.yandex.alice.alice.begemot.lib.feature_aggregator.proto";
+
+message TFeatureAggregatorConfig {
+    message TIntervalMapping {
+        // represents feature value mapping with semi-intervals
+        // (-inf, Points[0].Threshold) -> ValueBefore
+        // [Points[0].Threshold, Points[1].Threshold) -> Points[0].ValueAfter
+        // ...
+        // [Points[-1].Threshold, +inf) -> Points[-1].ValueAfter
+
+        message TPoint {
+            float Threshold = 1;
+            float ValueAfter = 2;
+        }
+
+        float ValueBefore = 1;
+        repeated TPoint Points = 2;
+    }
+
+    message TRule {
+        message TEntitiesRule {
+            string EntityType = 1;
+        }
+
+        message TGranetFrameRule {
+            string FrameName = 1;
+        }
+
+        message TMultiIntentClassifierRule {
+            string Classifier = 1;
+            string IntentName = 2;
+
+            oneof FeatureValue {
+                bool UseRawValue = 3;
+                TIntervalMapping IntervalMapping = 4;
+            }
+        }
+
+        message TBinaryClassifierRule {
+            enum EClassifier {
+                ALICE_GC_DSSM = 0;
+            }
+            EClassifier Classifier = 1;
+
+            oneof FeatureValue {
+                bool UseRawValue = 3;
+                TIntervalMapping IntervalMapping = 4;
+            }
+        }
+
+        message TAliceWizDetectionRule {
+            string FeatureName = 1;
+        }
+
+        message TPornQueryRule {}
+
+        repeated string Experiments = 1;
+
+        oneof Source {
+            TEntitiesRule Entity = 100;
+            TGranetFrameRule GranetFrame = 101;
+            TMultiIntentClassifierRule MultiIntentClassifier = 102;
+            TBinaryClassifierRule BinaryClassifier = 103;
+            TAliceWizDetectionRule WizDetection = 104;
+            TPornQueryRule PornQuery = 105;
+        }
+    }
+
+    message TFeature {
+        int32 Index = 1;
+        string Name = 2;
+        bool IsDisabled = 3;
+        repeated TRule Rules = 4;
+    }
+
+    repeated TFeature Features = 1;
+}

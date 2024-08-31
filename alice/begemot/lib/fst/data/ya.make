@@ -1,0 +1,4 @@
+RECURSE(
+    denormalizer
+    normalizer
+)

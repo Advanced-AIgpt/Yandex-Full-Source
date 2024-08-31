@@ -1,0 +1,74 @@
+package NAliceProtocol;
+
+import "alice/cuttlefish/library/protos/music_match.proto";
+import "alice/cuttlefish/library/protos/tts.proto";
+
+import "voicetech/asr/engine/proto_api/request.proto";
+import "voicetech/library/proto_api/yabio.proto";
+
+
+message TAudio {
+    oneof Message {
+        TBeginStream BeginStream = 1;
+        TAudioChunk Chunk = 2;
+        TEndStream EndStream = 3;
+
+        // Костыль для spotter-а
+        TBeginSpotter BeginSpotter = 4;
+        TEndSpotter EndSpotter = 5;
+
+        TMetaInfoOnly MetaInfoOnly = 10;
+    }
+
+    // Specific services meta-info
+    // WARNING: For now you can't send Asr/Yabio/MusicMatch request with something other than TMetaInfoOnly,
+    // if you do so, behavior is undefined
+    // TODO(VOICESERV-3973, VOICESERV-3974, VOICESERV-3975, VOICESERV-3976) fix this
+    oneof MetaInfo {
+        // Meta info for ASR
+        AsrEngineRequestProtobuf.TInitRequest AsrInitRequest = 6;
+
+        // Meta info from TTS backend
+        NTts.TBackendResponse TtsBackendResponse = 7;
+
+        // Meta info for Yabio
+        YabioProtobuf.YabioRequest YabioInitRequest = 8;
+
+        // Meta info for music_match (Headers for websocket)
+        NMusicMatch.TInitRequest MusicMatchInitRequest = 9;
+
+        // Meta info from TTS subgraph
+        NTts.TAggregatorAudioMetaInfo TtsAggregatorAudioMetaInfo = 11;
+
+        // Meta info for MDS
+        //TODO:? TMdsRequest = 12;
+    }
+}
+
+message TBeginStream {
+    optional string Mime = 1;
+}
+
+message TAudioChunk {
+    message TTimings {
+        message TRecord {
+            optional uint64 Size = 1;          // subchunk size (bytes)
+            optional uint64 Milliseconds = 2;  // milliseconds in this subchunk
+        }
+        repeated TRecord Records = 1;  // (sum all Record.Size MUST be equal TAudioChunk.Data.size)
+    }
+    optional bytes Data = 1;
+    optional TTimings Timings = 2;
+}
+
+message TEndStream {
+}
+
+message TBeginSpotter {
+}
+
+message TEndSpotter {
+}
+
+message TMetaInfoOnly {
+}

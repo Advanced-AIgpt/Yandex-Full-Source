@@ -1,0 +1,510 @@
+ci:
+  flows:
+    release_megabegemot-flow:
+      title: ReleaseMegabegemot
+      jobs:
+        new_tag:
+          title: NewTag
+          task: projects/release_machine/create_arc_tag
+          needs: []
+          input:
+            config:
+              component_name: megabegemot
+          stage: new_tag
+          needs-type: all
+        main_graph_entry:
+          title: MainGraphEntry
+          task: dummy
+          needs:
+          - new_tag
+          input: {}
+          stage: build
+          needs-type: all
+        create_changelog:
+          title: CreateChangelog
+          task: projects/release_machine/release_machine_changelog
+          needs:
+          - main_graph_entry
+          input:
+            candidate_path: ${tasks.new_tag.svn_data.svn_paths.tag}
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+            use_previous_branch_as_baseline: true
+            component_name: megabegemot
+          stage: build
+          needs-type: all
+        create_startrek_ticket:
+          title: CreateStartrekTicket
+          task: projects/release_machine/get_or_create_st_ticket
+          needs:
+          - main_graph_entry
+          input:
+            config:
+              component_name: megabegemot
+          stage: build
+          needs-type: all
+        link_feature_tickets:
+          title: LinkFeatureTickets
+          task: projects/release_machine/link_feature_tickets_from_changelog
+          needs:
+          - create_changelog
+          - create_startrek_ticket
+          input:
+            config:
+              ticket_key: ${tasks.create_startrek_ticket.st_ticket.key}
+              changelog_resource: ${tasks.create_changelog.resources | [?type == 'RELEASE_MACHINE_CHANGELOG'] | [0]}
+              component_name: megabegemot
+          stage: build
+          needs-type: all
+        format_changelog:
+          title: FormatChangelog
+          task: projects/release_machine/format_rm_changelog
+          needs:
+          - create_changelog
+          input:
+            config:
+              changelog_resource: ${tasks.create_changelog.resources | [?type == 'RELEASE_MACHINE_CHANGELOG'] | [0]}
+              component_name: megabegemot
+          stage: build
+          needs-type: all
+        post_changelog_to_startrek:
+          title: PostChangelogToStartrek
+          task: projects/release_machine/post_startrek_comment
+          needs:
+          - create_startrek_ticket
+          - format_changelog
+          input:
+            comment_marker: '<# <!-- CHANGELOG --> #>'
+            place_comment: ticket_description
+            issue_key: ${tasks.create_startrek_ticket.st_ticket.key}
+            comment_text: ${tasks.format_changelog.formatted_changelog.wiki}
+            component_name: megabegemot
+          stage: build
+          needs-type: all
+        release_begemot_megamind_resources:
+          title: BuildMegamind
+          task: projects/alice/begemot/release_begemot_megamind_resources
+          needs:
+          - main_graph_entry
+          input:
+            checkout_arcadia_from_url: ${tasks.new_tag.svn_data.svn_paths.tag}/arcadia
+          needs-type: all
+        test_stage_entry:
+          title: TestStageEntry
+          task: dummy
+          needs:
+          - build_beggins
+          - link_feature_tickets
+          - post_changelog_to_startrek
+          - release_begemot_megamind_resources
+          input: {}
+          stage: test
+          needs-type: all
+        release_stage_entry:
+          title: ReleaseStageEntry
+          task: dummy
+          needs:
+          - hack_5
+          input: {}
+          stage: release
+          needs-type: all
+        generate_beta__megabegemot__beta:
+          title: GenerateBeta Megabegemot Beta
+          task: projects/release_machine/generate_yappy_beta
+          needs:
+          - test_stage_entry
+          input:
+            component_name: megabegemot
+            beta_conf_type: beta
+            release_number: ${context.version_info.major}
+            component_resources:
+              args: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_ARGUMENTS_PARSER'] | [0].id}
+              bstr: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR'] | [0].id}
+              bstr_caller: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR_CALLER'] | [0].id}
+              eventlog_uploader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOG_UPLOADER'] | [0].id}
+              evlogdump: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOGDUMP'] | [0].id}
+              fast_build_data_downloader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_DOWNLOADER'] | [0].id}
+              fast_data_callback: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_DATA_CALLBACK'] | [0].id}
+              instancectl.conf: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_INSTANCECTL_CONF'] | [0].id}
+              worker.cfg: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_CONFIG'] | [0].id}
+              begemot: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_MEGAMIND_EXECUTABLE'] | [0].id}
+              fast_build_config.json: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_CONFIG_MEGAMIND'] | [0].id}
+            force_start_beta: true
+          stage: test
+          needs-type: all
+        release_stable_nanny:
+          title: ReleaseStableNanny
+          task: common/releases/release_rm_component_2
+          needs:
+          - release_stage_entry
+          input:
+            component_resources:
+              args: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_ARGUMENTS_PARSER'] | [0].id}
+              bstr: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR'] | [0].id}
+              bstr_caller: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR_CALLER'] | [0].id}
+              eventlog_uploader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOG_UPLOADER'] | [0].id}
+              evlogdump: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOGDUMP'] | [0].id}
+              fast_build_data_downloader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_DOWNLOADER'] | [0].id}
+              fast_data_callback: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_DATA_CALLBACK'] | [0].id}
+              instancectl.conf: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_INSTANCECTL_CONF'] | [0].id}
+              worker.cfg: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_CONFIG'] | [0].id}
+              begemot: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_MEGAMIND_EXECUTABLE'] | [0].id}
+              fast_build_config.json: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_CONFIG_MEGAMIND'] | [0].id}
+            deploy_system: nanny
+            component_name: megabegemot
+            where_to_release: stable
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+          manual: true
+          stage: release
+          needs-type: all
+        build_beggins:
+          title: BuildBeggins
+          task: projects/alice/begemot/build_beggins
+          needs:
+          - main_graph_entry
+          input:
+            checkout_arcadia_from_url: ${tasks.new_tag.svn_data.svn_paths.tag}/arcadia
+          needs-type: all
+        begemot_megamind_evo_context:
+          title: EvoContext
+          task: projects/alice/begemot/begemot_megamind_evo_context
+          needs:
+          - generate_beta__megabegemot__beta
+          input:
+            backend_name: ALICE__BEGEMOT_WORKER_MEGAMIND
+            evo_in_component_name: megabegemot
+          needs-type: all
+        check_beta_coredumps:
+          title: CheckBetaCoredumps
+          task: projects/begemot/tasks/check_beta_coredumps
+          needs:
+          - begemot_megamind_evo_context
+          input:
+            name: ${tasks.begemot_megamind_evo_context.output_params.evo_out_beta_name}
+            itype: begemot
+            signals:
+            - instancectl-exit_signal_9_mmmm
+            - instancectl-exit_signal_11_mmmm
+            - instancectl-exit_signal_15_mmmm
+            - instancectl-exit_signal_6_mmmm
+            exclude_substrings:
+            - mmeta
+          stage: test
+          needs-type: all
+        make_begemot_ammo:
+          title: MakeAmmo
+          task: projects/alice/begemot/make_begemot_ammo
+          needs:
+          - test_stage_entry
+          input:
+            yt_token_vault_key: robot-megabegemoter-yt-token
+            remote_temp_tables_directory: //home/alice/begemot/tmp/tables
+            remote_temp_files_directory: //home/alice/begemot/tmp/files
+          needs-type: all
+        begemot_tank_load_test_old:
+          title: PerfTestOld
+          task: projects/begemot/tasks/begemot_tank_load_test
+          needs:
+          - begemot_megamind_evo_context
+          - make_begemot_ammo
+          input:
+            tank_names:
+            - megabegemot-tank-yp-1.sas.yp-c.yandex.net:8083
+            - megabegemot-tank-yp-1.vla.yp-c.yandex.net:8083
+            type_or_quota: alice-begemot-megamind
+            queries_prefix: /wizard?
+            load_plan: line(1, 300, 400s)
+            rps_to_survive: 145
+            time_threshold: 80
+            retries: 3
+            report_to_release_ticket: false
+            rm_component: megabegemot
+            make_yasm_panel: true
+            yasm_panel_type: megamind
+            report_to_mail: true
+            force_same_dc: true
+            mail_recepients:
+            - g-kostin
+            - yagafarov
+            ah_queries: ${tasks.make_begemot_ammo.resources | [?type == 'BEGEMOT_APPHOST_QUERIES'] | [0].id}
+            ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            default_release_ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            beta: ${tasks.begemot_megamind_evo_context.output_params.last_released_beta_name}
+            benchmark_task: null
+            shard: MEGAMIND
+          stage: test
+          needs-type: all
+        begemot_tank_load_test_new:
+          title: PerfTestNew
+          task: projects/begemot/tasks/begemot_tank_load_test
+          needs:
+          - begemot_tank_load_test_old
+          input:
+            tank_names:
+            - megabegemot-tank-yp-1.sas.yp-c.yandex.net:8083
+            - megabegemot-tank-yp-1.vla.yp-c.yandex.net:8083
+            type_or_quota: alice-begemot-megamind
+            queries_prefix: /wizard?
+            load_plan: line(1, 300, 400s)
+            rps_to_survive: 145
+            time_threshold: 80
+            retries: 3
+            report_to_release_ticket: true
+            rm_component: megabegemot
+            make_yasm_panel: true
+            yasm_panel_type: megamind
+            report_to_mail: true
+            force_same_dc: true
+            mail_recepients:
+            - g-kostin
+            - yagafarov
+            ah_queries: ${tasks.make_begemot_ammo.resources | [?type == 'BEGEMOT_APPHOST_QUERIES'] | [0].id}
+            ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            default_release_ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            beta: ${tasks.begemot_megamind_evo_context.output_params.evo_out_beta_name}
+            benchmark_task: ${tasks.begemot_tank_load_test_old.resources | [?type == 'TASK_LOGS'] | [0].task_id}
+            shard: MEGAMIND
+          stage: test
+          needs-type: all
+        perf_stage_fail:
+          title: PerfStageFail
+          task: dummy
+          needs:
+          - begemot_tank_load_test_new
+          - begemot_tank_load_test_old
+          - make_begemot_ammo
+          input: {}
+          needs-type: fail
+        perf_stage_success:
+          title: PerfStageSuccess
+          task: dummy
+          needs:
+          - begemot_tank_load_test_new
+          input: {}
+          needs-type: all
+        perf_stage_finish:
+          title: PerfStageFinish
+          task: dummy
+          needs:
+          - perf_stage_fail
+          - perf_stage_success
+          input: {}
+          needs-type: any
+        alice_evo_integration_tests_wrapper:
+          title: EvoTests
+          task: projects/alice/alice_evo_integration_tests_wrapper
+          needs:
+          - perf_stage_finish
+          input:
+            launch_type: megabegemot
+            branch_number: ${context.version_info.major}
+            tag_number: ${not_null(context.version_info.minor, `0`)}
+            beta_name: ${tasks.begemot_megamind_evo_context.output_params.evo_out_beta_name}
+            release_ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            megamind_url: ${tasks.begemot_megamind_evo_context.output_params.evo_out_begemot_megamind_url}
+            repeat_failed_test: true
+            run_call_owner_subtask: true
+            fail_threshold: 10000
+          stage: test
+          needs-type: all
+        alice_evo_ue2e:
+          title: Ue2e
+          task: projects/alice/alice_evo_ue2e
+          needs:
+          - perf_stage_finish
+          input:
+            component_name: begemot_megamind
+            branch_num: ${context.version_info.major}
+            tag_num: ${not_null(context.version_info.minor, `0`)}
+            release_ticket: ${tasks.begemot_megamind_evo_context.output_params.evo_out_release_ticket}
+            megamind_url: ${tasks.begemot_megamind_evo_context.output_params.evo_out_begemot_megamind_url}
+            first_tag_num: 0
+          stage: test
+          needs-type: all
+        test_stage_finish:
+          title: TestStageFinish
+          task: dummy
+          needs:
+          - alice_evo_integration_tests_wrapper
+          - alice_evo_ue2e
+          - check_beta_coredumps
+          input: {}
+          stage: test
+          needs-type: all
+        hack_0:
+          title: Hack0
+          task: dummy
+          needs:
+          - test_stage_finish
+          input: {}
+          stage: hack_0
+          needs-type: all
+        hack_1:
+          title: Hack1
+          task: dummy
+          needs:
+          - hack_0
+          input: {}
+          stage: hack_1
+          needs-type: all
+        hack_2:
+          title: Hack2
+          task: dummy
+          needs:
+          - hack_1
+          input: {}
+          stage: hack_2
+          needs-type: all
+        hack_3:
+          title: Hack3
+          task: dummy
+          needs:
+          - hack_2
+          input: {}
+          stage: hack_3
+          needs-type: all
+        hack_4:
+          title: Hack4
+          task: dummy
+          needs:
+          - hack_3
+          input: {}
+          stage: hack_4
+          needs-type: all
+        hack_5:
+          title: Hack5
+          task: dummy
+          needs:
+          - hack_4
+          input: {}
+          stage: hack_5
+          needs-type: all
+        generate_beta__megabegemot__ci_beta:
+          title: GenerateBeta Megabegemot CiBeta
+          task: projects/release_machine/generate_yappy_beta
+          needs:
+          - release_stable_nanny
+          input:
+            component_name: megabegemot
+            beta_conf_type: ci_beta
+            release_number: ${context.version_info.major}
+            component_resources:
+              args: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_ARGUMENTS_PARSER'] | [0].id}
+              bstr: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR'] | [0].id}
+              bstr_caller: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_BSTR_CALLER'] | [0].id}
+              eventlog_uploader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOG_UPLOADER'] | [0].id}
+              evlogdump: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_EVLOGDUMP'] | [0].id}
+              fast_build_data_downloader: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_DOWNLOADER'] | [0].id}
+              fast_data_callback: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_DATA_CALLBACK'] | [0].id}
+              instancectl.conf: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_INSTANCECTL_CONF'] | [0].id}
+              worker.cfg: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_CONFIG'] | [0].id}
+              begemot: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_MEGAMIND_EXECUTABLE'] | [0].id}
+              fast_build_config.json: ${tasks.release_begemot_megamind_resources.resources | [?type == 'BEGEMOT_FAST_BUILD_CONFIG_MEGAMIND'] | [0].id}
+            get_beta_names_from_state: true
+            force_start_beta: true
+            patch_name: 0-0
+            beta_name_source: STRING
+          stage: release
+          needs-type: all
+        release_beggins_stable_nanny:
+          title: ReleaseBegginsStableNanny
+          task: common/releases/release_rm_component_2
+          needs:
+          - release_stable_nanny
+          input:
+            component_resources:
+              args: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_ARGUMENTS_PARSER'] | [0].id}
+              bstr: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_BSTR'] | [0].id}
+              bstr_caller: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_BSTR_CALLER'] | [0].id}
+              eventlog_uploader: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_EVLOG_UPLOADER'] | [0].id}
+              evlogdump: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_EVLOGDUMP'] | [0].id}
+              fast_build_data_downloader: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_FAST_BUILD_DOWNLOADER'] | [0].id}
+              fast_data_callback: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_FAST_DATA_CALLBACK'] | [0].id}
+              instancectl.conf: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_INSTANCECTL_CONF'] | [0].id}
+              worker.cfg: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_CONFIG'] | [0].id}
+              begemot: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_BEGGINS_EXECUTABLE'] | [0].id}
+              fast_build_config.json: ${tasks.build_beggins.resources | [?type == 'BEGEMOT_FAST_BUILD_CONFIG_BEGGINS'] | [0].id}
+            deploy_system: nanny
+            component_name: megabegemot
+            where_to_release: stable
+            major_release_num: ${context.version_info.major}
+            minor_release_num: ${not_null(context.version_info.minor, `0`)}
+          stage: release
+          needs-type: all
+  releases:
+    release_megabegemot:
+      title: release_megabegemot
+      description: ''
+      flow: release_megabegemot-flow
+      auto:
+        conditions:
+        - since-last-release: 2h
+          schedule:
+            time: 22:00 - 23:00 MSK
+            days: MON, THU
+      branches:
+        pattern: releases/alice/megabegemot/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+        independent-stages: true
+        auto: false
+      stages:
+      - id: new_tag
+        title: New_Tag
+        displace: false
+        rollback: false
+      - id: build
+        title: Build
+        displace: false
+        rollback: false
+      - id: test
+        title: Test
+        displace: false
+        rollback: false
+      - id: hack_0
+        title: Hack_0
+        displace: false
+        rollback: false
+      - id: hack_1
+        title: Hack_1
+        displace: false
+        rollback: false
+      - id: hack_2
+        title: Hack_2
+        displace: false
+        rollback: false
+      - id: hack_3
+        title: Hack_3
+        displace: false
+        rollback: false
+      - id: hack_4
+        title: Hack_4
+        displace: false
+        rollback: false
+      - id: hack_5
+        title: Hack_5
+        displace: false
+        rollback: false
+      - id: release
+        title: Release
+        displace: false
+        rollback: false
+      start-version: 182
+      filters:
+      - discovery: any
+        abs-paths:
+        - alice/begemot/**
+        - alice/nlu/**
+        - search/begemot/rules/**
+        - search/wizard/data/wizard/**
+  actions: {}
+  secret: sec-01g44v6fp7gbq9s1tye6x44w2m
+  runtime:
+    sandbox:
+      owner: BASS
+      tags:
+      - RM_CI
+      - RM_COMPONENT:megabegemot
+service: megabegemot
+title: Begemot Megamind Shard

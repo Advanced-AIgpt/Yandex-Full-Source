@@ -1,0 +1,81 @@
+package NAliceCuttlefishConfig;
+
+import "alice/cuttlefish/library/proto_configs/service.cfgproto";
+import "library/cpp/proto_config/protos/extensions.proto";
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+message ApiKeys {
+    option (NProtoConfig.ConfigClass) = "TApiKeys";
+
+    optional string url = 1 [(NProtoConfig.Help) = "api keys url", default="http://apikeys-ipv6.yandex.net:8666/api"];
+    optional string mobile_token = 2 [(NProtoConfig.Help) = "mobile token", default="speechkitmobile_cad5058d5cf684e2ab5442a77d2a52871aa825ef"];
+    optional string js_token = 3 [(NProtoConfig.Help) = "js token", default="speechkitjsapi_f7a2fe0af6e463003bc2070c215d038140c6f0ec"];
+    repeated string whitelist = 4 [(NProtoConfig.Help) = "api keys whitlist"];
+};
+
+message Messenger {
+    option (NProtoConfig.ConfigClass) = "TMessenger";
+
+    optional string anonymous_guid = 1 [(NProtoConfig.Help) = "anonymous guid", default="dd5c2917-cc6d-4d34-bad7-b0cbc6175a57"];
+};
+
+message Mds {
+    option (NProtoConfig.ConfigClass) = "TMds";
+
+    optional string download_url = 1 [(NProtoConfig.Help) = "download url", default="http://storage-int.mds.yandex.net:80/"];
+    optional string upload_namespace = 2 [(NProtoConfig.Help) = "upload namespace", default="speechbase"];
+    optional string ttl = 3 [
+        (NProtoConfig.Help) = "resource ttl",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::Days(220)"
+    ];
+};
+
+message Megamind {
+    option (NProtoConfig.ConfigClass) = "TMegamind";
+
+    optional string default_url = 1 [(NProtoConfig.Help) = "default url", default="http://vins.alice.yandex.net"];
+    optional string default_run_suffix = 2 [(NProtoConfig.Help) = "default run suffix", default="/speechkit/app/pa/"];
+    optional string default_apply_suffix = 3 [(NProtoConfig.Help) = "default apply suffix", default="/speechkit/apply/"];
+    optional string timeout = 4 [
+        (NProtoConfig.Help) = "request timeout",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::Seconds(12)"
+    ];
+    optional uint32 additional_attempts = 5 [(NProtoConfig.Help) = "additional request attempts (after http503 & or network errors)", default=4];
+};
+
+message S3Config {
+    option (NProtoConfig.ConfigClass) = "TS3Config";
+
+    optional uint32 max_audio_items = 1 [(NProtoConfig.Help) = "maximum number of s3 audio http request items in one request", default=32];
+    optional string default_bucket = 2 [(NProtoConfig.Help) = "default s3 bucket", default="tts-audio"];
+    repeated string allowed_buckets = 3 [(NProtoConfig.Help) = "whitelist of s3 buckets, not required to contain default_bucket"];
+}
+
+message Tts {
+    option (NProtoConfig.ConfigClass) = "TTts";
+
+    optional uint32 max_tts_backend_items = 2 [(NProtoConfig.Help) = "maximum number of tts backend request items in one request", default=32];
+    optional uint32 max_cache_warm_up_items = 3 [(NProtoConfig.Help) = "maximum number of cache warm up request items in one request", default=32];
+    optional string cache_key_prefix = 4 [(NProtoConfig.Help) = "prefix for audio part cache keys, useful for separation of production and development caches", default="trunk_tts_cache"];
+    optional S3Config s3_config = 5 [(NProtoConfig.Help) = "s3 options for tts"];
+};
+
+message AppTypes {
+    option (NProtoConfig.ConfigClass) = "TAppTypes";
+
+    map<string, string> mapper = 1 [(NProtoConfig.Help) = "map from app_id to client type"];
+};
+
+message Config {
+    option (NProtoConfig.ConfigClass) = "TConfig";
+
+    optional NAliceServiceConfig.Server server = 1 [(NProtoConfig.Help) = "common apphost servant options"];
+    optional ApiKeys api_keys = 2 [(NProtoConfig.Help) = "api keys options"];
+    optional Messenger messenger = 3 [(NProtoConfig.Help) = "messenger options"];
+    optional Mds mds = 4 [(NProtoConfig.Help) = "mds options"];
+    optional Megamind megamind = 5 [(NProtoConfig.Help) = "megamind options"];
+    optional Tts tts = 6 [(NProtoConfig.Help) = "tts options"];
+    optional AppTypes app_types = 7 [(NProtoConfig.Help) = "app types options"];
+};

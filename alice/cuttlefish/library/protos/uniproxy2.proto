@@ -1,0 +1,66 @@
+package NAliceProtocol;
+
+
+/**
+ * @brief close graph input
+ */
+message TCloseGraphDirective {
+
+};
+
+
+/**
+ * @brief send event to python uniproxy and pass responses to client
+ */
+message TSendEventDirective {
+    optional string SessionId = 1;
+
+    optional string MessageId = 2;
+
+    optional int32  StreamId  = 3;
+
+    optional string Text      = 4;  /* text message to send */
+
+    repeated bytes  Binary    = 5;  /* binary messages to send */
+};
+
+
+/**
+ * @brief send uniproxy2 data for SessionLog (Directive type)
+ */
+message TSessionLogRecord {
+    optional string Name = 1;  // name (Directive|Event|Stream)
+    optional string Value = 2;  // json data for assign to %Name% field
+    optional string Action = 3;  // value for SessonLog/Session/Action field (default = response)
+};
+
+/**
+ * @brief for future use, e.g. start notificator graph in async mode after syncstate
+ */
+message TRunGraphDirective {
+    optional string GraphName = 1;
+    /* TODO: message */
+};
+
+
+/**
+ * @brief one directive
+ */
+message TUniproxyDirective {
+    reserved 40;
+    reserved "RequestDebugInfo";
+    oneof Directives {
+        TCloseGraphDirective CloseGraph = 20;
+        TSendEventDirective  SendEvent  = 21;
+        TRunGraphDirective   RunGraph   = 22;
+        TSessionLogRecord    SessionLog = 30;
+    }
+};
+
+
+/**
+ * @brief list of directives to execute on uniproxy2
+ */
+message TUniproxyDirectives {
+    repeated TUniproxyDirective Directives = 1;
+};

@@ -1,0 +1,227 @@
+package NGenerativeBoltalka;
+
+import "alice/library/logger/proto/config.proto";
+import "kernel/server/protos/serverconf.proto";
+import "alice/boltalka/generative/inference/core/proto/tokenizer_type.proto";
+
+message TNGramPenaltyParams {
+    required uint32 NGramSize = 1 [ default = 1 ];
+    required float MaxPenalty = 2 [ default = 0 ];
+    optional float MinPenalty = 3 [ default = 0 ];
+    optional float ExpDecayRate = 4 [ default = 1.0 ];
+    optional float LinearDecayRate = 5 [ default = 0 ];
+}
+
+message TConfig {
+    message TGenerativeBoltalka {
+        message TGpuBackend {
+            repeated int32 GpuIds = 1;
+        };
+
+        message TCpuBackend {
+            optional uint32 NumBackends = 1 [ default = 1 ];
+        };
+
+        reserved 2, 3, 6, 13, 20, 30, 47;
+        optional string Folder = 1;
+        optional uint32 NumThreadsPerSession = 4 [ default = 1 ];
+        optional uint32 BatchSize = 5 [ default = 1 ];
+        optional uint32 BeamSize = 7 [ default = 1 ];
+        optional uint32 ModelMaxOutLen = 8 [ default = 256 ];
+        optional string SamplingStrategy = 9 [ default = "stochastic_beam_search" ];
+        optional bool IgnoreSeed = 10 [ default = false ];
+        optional uint32 SamplingTopNLogits = 11 [ default = 50 ];
+        optional float SamplingTemperature = 12 [ default = 0.6 ];
+
+        oneof Backend {
+            TGpuBackend GpuBackend = 14;
+            TCpuBackend CpuBackend = 15;
+        };
+
+        optional uint32 ModelMinOutLen = 16 [ default = 0 ];
+        optional bool FilterDuplicateWords = 17 [ default = true ];
+        optional bool FilterDuplicateNGrams = 18 [ default = false ];
+        optional bool FilterByUniqueWordsRatio = 19 [ default = false ];
+        optional bool ReturnAllBeamSearchHypothesis = 21 [ default = true ];
+        optional bool IncludeLateHypotheses = 22 [ default = false ];
+        optional uint32 ContextLen = 23 [ default = 3 ];
+        optional bool RemoveHyphensFromInput = 24 [ default = true ];
+        optional ETokenizerType TokenizerType = 25 [ default = GENERATIVE ];
+        optional bool UsePrefixedInference = 26 [ default = false];
+        optional bool NormalizeInput = 27 [ default = true];
+        optional uint32 MaxInputLen = 28 [ default = 64];
+        optional bool ReturnUnfinishedHypotheses = 29 [ default = false ];
+
+        message TPostProcessorParams {
+            optional bool AddHyphens = 1 [ default = true ];
+            optional bool FixPunctuation = 2 [ default = true ];
+            optional bool Capitalize = 3 [ default = true ];
+            map<string, string> PostProcessMapping = 4;
+        }
+
+        optional TPostProcessorParams PostProcessorParams = 31;
+        optional bool FilterEmptyHypotheses = 32 [ default = true ];
+        optional float SamplingNucleus = 33 [ default = 1.0 ];
+        repeated string BannedTokensToGenerate = 34;
+        optional bool AllowBanUnkTokenToGenerate = 35 [ default = false ];
+
+        optional bool ShouldAddCTRLToken = 36 [ default = false ];
+        optional string CTRLToken = 37 [ default = "[PLACEHOLDER] "];
+
+        // path is relative to Folder param
+        optional string FileForBannedTokensToGenerate = 38 [ default = "" ];
+        repeated uint32 BannedTokenIdsToGenerate = 39;
+        // path is relative to Folder param
+        optional string FileForBannedTokenIdsToGenerate = 40 [ default = "" ];
+
+        optional bool HasSnippetInContext = 41 [ default = false ];
+
+        optional string ServiceEndpointSuffixGenerative = 42 [ default = "/generative" ];
+        optional string ServiceEndpointSuffixScoring = 43 [ default = "/score" ];
+        optional string ServiceEndpointSuffixEmbedding = 72 [ default = "/embedding" ];
+        optional string ServiceEndpointSuffixPHead = 76 [ default = "/classify" ];
+
+        optional uint32 MaxGenerationMsModel = 44 [ default = 1000 ];
+        optional uint32 MaxGenerationMsExecutor = 45 [ default = 1000 ];
+
+        optional bool PrechargeModelBlob = 46 [ default = false ];
+
+        optional bool FilterBadWords = 48 [ default = true ];
+        optional bool BadWordsAreRegexps = 49 [ default = false ];
+
+        optional bool GenerateShorter = 50 [default = false];
+        optional float BoostEos = 51 [default = 10];
+        optional uint32 MaxPtuneLen = 52 [ default = 0 ];
+
+        optional bool SawtoothBoost = 53 [ default = false ];
+        optional int32 SawtoothTokenId = 54 [ default = 0 ];
+        optional float SawtoothBoostMin = 55 [ default = -10.0 ];
+        optional float SawtoothBoostStep = 56 [ default = 1.0 ];
+        optional float SawtoothBoostMax = 57 [ default = 10.0 ];
+        optional bool SawtoothConsumePrefix = 58 [ default = false ];
+
+        optional string TokenizerPrefix = 59 [ default = "" ];
+        optional string TokenizerAliceName = 60 [ default = "Алиса" ];
+        optional string TokenizerUserName = 61 [ default = "Пользователь" ];
+        optional string TokenizerTurnSeparator = 62 [ default = " [SEP] " ];
+        optional string TokenizerNameSeparator = 63 [ default = ": " ];
+
+        repeated TNGramPenaltyParams NGramPenalty = 64;
+        optional uint32 ForceNumHypos = 65 [ default = 0 ];
+
+        message TFilter {
+            optional bool FilterDuplicateWords = 1 [ default = true ];
+            optional bool FilterDuplicateNGrams = 2 [ default = false ];
+            optional bool FilterByUniqueWordsRatio = 3 [ default = false ];
+            optional bool FilterEmptyHypotheses = 4 [ default = true ];
+            optional bool FilterBadWordsAreRegexps = 5 [ default = true ];
+            optional string FileName = 6 [ default = "bad_dict.txt" ];
+            optional bool FilterBadWords = 7 [ default = true ];
+        };
+
+        optional TFilter RequestPreFilter = 66;
+
+        enum EHeadMode {
+            Scoring = 0;
+            Linear = 1;
+            OutTokensRepresentations = 2;
+            LastLayerTokensRepresentation = 3;
+        }
+
+        optional EHeadMode HeadMode = 67;
+        optional string HeadWeightsName = 68;
+
+        optional bool PrefixOnlyPtune = 69;
+
+        optional bool NormalizeOutTokensRepresentations = 70 [ default = true ];
+
+        optional ETruncatePolicy TruncatePolicy = 71 [ default = KeepSuffix ];
+
+        optional bool EmbeddingsAddMask = 73 [ default = true ];
+        optional bool EmbeddingsAddSep = 74 [ default = false ];
+        optional bool EmbeddingsDoReverseContext = 75 [ default = false ];
+
+        optional uint32 MaxLinearHeadOutputDim = 77;
+
+        optional string TokenizerBeforeInfoText = 78;
+        optional string TokenizerBeforePrefixText = 79;
+        optional string TokenizerBeforeSuffixText = 80;
+    };
+
+    message TBertFactor {
+        optional string Folder = 1;
+        repeated int32 GpuIds = 2;
+        optional uint32 BatchSize = 3 [ default = 512 ];
+        optional uint32 MaxInputLen = 4 [ default = 128 ];
+        optional string ServiceEndpointSuffix = 5 [ default = "/bert_factor" ];
+        optional uint32 ContextLen = 6 [ default = 3 ];
+        optional bool TruncateAsDialogue = 7 [ default = false ];
+
+        enum EEncoderHead {
+            Regression = 0;
+            Multitarget = 1;
+            Classification = 2;
+        }
+
+        optional EEncoderHead EncoderHead = 8 [ default = Regression ];
+
+        enum ETargetType {
+            Mse = 0;
+            Ce = 1;
+        }
+
+        message TOutputParams {
+            optional float Scale = 1 [ default = 1.0 ];
+            optional float Bias = 2 [ default = 0.0 ];
+            optional ETargetType TargetType = 3 [ default = Mse ];
+            optional bool DoBinarization = 4 [ default = false ];
+            optional float BinarizeThreshold = 5 [ default = 0.0 ];
+        }
+
+        optional TOutputParams RelevParams = 9;
+        optional TOutputParams InterestParams = 10;
+        optional TOutputParams NotMaleParams = 11;
+        optional TOutputParams NotRudeParams = 12;
+        optional TOutputParams RespectParams = 13;
+        optional TOutputParams InformativenessParams = 14;
+    };
+
+    message TPtunePrecharged {
+        required string YtPath = 1;
+        required string LocalPath = 2;
+    }
+
+    message TPtuneStorage {
+        optional uint32 Size = 1 [ default = 100 ];
+        repeated TPtunePrecharged PtunePrecharged = 2;
+    }
+
+    message TEmbeddingRetriever {
+        required string PathPrefix = 1;
+        required string DocsPath = 2;
+        optional uint32 SearchNeighborhoodSize = 3 [ default = 270 ];
+        optional uint32 DistanceCalcLimit = 4 [ default = 100000 ];
+    };
+
+    message TExternalInfoGenerativeBoltalka {
+        required TGenerativeBoltalka EmbedderConfig = 1;
+        required TEmbeddingRetriever RetrieverConfig = 2;
+        required TGenerativeBoltalka GeneratorConfig = 3;
+
+        optional uint32 NumTopDocs = 4 [ default = 1 ];
+        optional uint32 NumHypsFromDoc = 5 [ default = 1 ];
+    };
+
+    message TAppHostConfig {
+        optional uint32 Port = 1 [ default = 80 ];
+        optional uint32 Threads = 2 [ default = 50 ];
+    }
+
+    optional NServer.THttpServerConfig HttpServerConfig = 1;
+    optional NAlice.TRTLog RTLog = 2;
+    repeated TGenerativeBoltalka GenerativeBoltalkas = 3;
+    repeated TBertFactor BertFactors = 4;
+    optional TPtuneStorage PtuneStorage = 5;
+    repeated TExternalInfoGenerativeBoltalka ExternalInfoGenerativeBoltalkas = 6;
+    optional TAppHostConfig AppHostConfig = 7;
+}

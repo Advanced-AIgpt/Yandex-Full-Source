@@ -1,0 +1,101 @@
+title: Cachalot
+service: speechkit_ops
+ci:
+  release-title-source: flow
+  secret: sec-01d6atth8mwde0073ak28kfpwn
+  runtime:
+    sandbox-owner: VOICESERV_RELEASERS
+
+  releases:
+    cachalot-release:
+      title: Cachalot release
+      flow: cachalot-release-flow
+      auto: true
+      stages:
+        single:
+          title: Single
+
+    cachalot-configs-release:
+      title: Pack cachalot configs
+      flow: config-pack-flow
+      auto: true
+      filters:
+        - sub-paths:
+            - 'configs/**'
+      stages:
+        build:
+          title: Packing
+
+  flows:
+    cachalot-release-flow:
+      title: Cachalot release flow
+      jobs:
+        build:
+          title: Build
+          task: common/arcadia/ya_make
+          stage: single
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            targets: alice/cachalot
+            result_rd: Voicetech Cachalot binary
+            arts: alice/cachalot/bin/cachalot
+            result_rt: VOICETECH_CACHALOT_BINARY
+            result_single_file: true
+            test: true
+        release:
+          title: Release to stable
+          task: common/releases/release_to_sandbox
+          needs: build
+          manual:
+            enabled: true
+            prompt: Release?
+          input:
+            config:
+              sandbox_resource_type: VOICETECH_CACHALOT_BINARY
+              common_release_data:
+                release_stage: stable
+                release_notes: Release cachalot ${context.version_info.full}
+                release_subject: Cachalot release ${context.version_info.full}
+            context:
+              secret_uid: sec-01d2ffwrdbwyj37zkj4r8zegsn
+            sb_resources:
+              - id: ${(tasks.build.resources[?type == 'VOICETECH_CACHALOT_BINARY'])[0].id}
+                type: VOICETECH_CACHALOT_BINARY
+
+    config-pack-flow:
+      title: Pack config files
+      jobs:
+        pack-config:
+          title: Packing cachalot configs
+          task: common/arcadia/ya_package_2
+          attempts: 3
+          stage: build
+          input:
+            build_type: stable
+            run_tests: False
+            packages: alice/cachalot/configs-package.json
+            resource_type: VOICETECH_CACHALOT_CONFIGS
+            raw_package: True
+            compress_package_archive: False
+
+        release-configs:
+          title: Release all items
+          task: common/releases/simple_releaser
+          needs: pack-config
+          input:
+            config:
+              deploy_system: NANNY
+              release_token_yav_key: sandbox.token
+              wait_for_deploy: False
+              common_release_data:
+                nanny_common_release_data:
+                  release_stage: stable
+                  release_notes: Release cachalot configs
+                  release_subject: Cachalot configs release ${context.version_info.major}
+            context:
+              secret_uid: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+            release_items:
+              - sandbox_release_item:
+                  id: ${(tasks.pack-config.resources[?type == 'VOICETECH_CACHALOT_CONFIGS'])[0].id}
+                  type: VOICETECH_CACHALOT_CONFIGS

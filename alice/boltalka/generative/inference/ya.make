@@ -1,0 +1,5 @@
+RECURSE(
+    core
+    example
+    nirvana
+)

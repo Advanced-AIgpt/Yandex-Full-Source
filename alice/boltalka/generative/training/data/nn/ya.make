@@ -1,0 +1,9 @@
+RECURSE(
+    assessors
+    bart
+    filtered_twitter
+    finetune_bart
+    movies
+    respect_twitter
+    util
+)

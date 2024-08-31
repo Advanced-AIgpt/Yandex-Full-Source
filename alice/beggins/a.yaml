@@ -1,0 +1,271 @@
+service: megamind
+title: Beggins
+arcanum:
+# 
+# Review the commented section, replace logins and other texts inside !!! blocks and uncomment "review" section.
+# If your a.yaml file has settings of 'arcanum\approve' merge requirement - remove it.
+# Remove .devexp.json file with commiting your changes.
+# In case of any questions:
+# 1. Look at documentation:
+#     https://docs.yandex-team.ru/arcanum/pr/devexp
+#     https://docs.yandex-team.ru/arcanum/pr/review_configuration
+# 2. Write to devtools support https://forms.yandex-team.ru/surveys/devtools/?service=arcanum
+# 3. Join telegram channel https://t.me/+5mNt-TYK_fozNWEy
+# 
+#  review:
+#    groups:
+#    - name: "reviewers_group_1"
+#      roles:
+#      - "!!!!!! insert abc role code for members: alkapov !!!!!!"
+#    override_policy: "override"
+#    rules:
+#    - reviewers:
+#      - name: "reviewers_group_1"
+#        ship: 1
+#        assign: 1
+  auto_merge:
+    enabled: false
+    requirements:
+      - system: arcanum
+        type: approved
+        data:
+          min_approvers_count: 1
+          ignore_self_ship: false
+      - system: arcanum
+        type: comment_issues_closed
+      - system: arcanum
+        type: st_issue_linked
+
+ci:
+  release-title-source: flow
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+  autocheck:
+    strong: true
+  triggers:
+    - on: pr
+      flow: precommit-checks
+
+  releases:
+    begemot-beggins-ci:
+      title: Release Begemot Beggins CI
+      flow: begemot-beggins-ci-release-flow
+      auto: true
+      stages:
+        - id: start-stage
+          title: Starting
+          displace:
+            on-status:
+              - FAILURE
+        - id: build-stage
+          title: Building
+        - id: deploy-stage
+          title: Deploying
+          rollback: true
+      filters:
+        - abs-paths: 
+            - 'alice/begemot/**'
+            - 'alice/beggins/**'
+            - 'alice/nlu/**'
+            - 'search/begemot/rules/**'
+            - 'search/wizard/data/wizard/**'
+    begemot-beggins-stable:
+      title: Release Begemot Beggins Stable
+      flow: begemot-beggins-stable-release-flow
+      stages:
+        - id: start-stage
+          title: Starting
+          displace:
+            on-status:
+              - FAILURE
+        - id: build-stage
+          title: Building
+        - id: deploy-stage
+          title: Deploying
+          rollback: true
+      filters:
+        - abs-paths: 
+            - 'alice/begemot/**'
+            - 'alice/beggins/**'
+            - 'alice/nlu/**'
+            - 'search/begemot/rules/**'
+            - 'search/wizard/data/wizard/**'
+
+  flows:
+    precommit-checks:
+      title: Precommit Checks
+      jobs:
+        # isort:
+        #   title: isort
+        #   task: projects/finsrv/isort
+        #   input:
+        #     project_path: /alice/beggins
+        #     project_import_path: beggins
+        #     isort_check_path: /alice/beggins/internal/nirvana
+        #     requirements:
+        #       - isort==5.6.4 --hash=sha256:dcab1d98b469a12a1a624ead220584391648790275560e1a43e54c5dceae65e7
+        flake8:
+          title: flake8
+          task: projects/finsrv/flake8
+          input:
+            project_path: /alice/beggins
+            project_import_path: beggins
+            flake8_check_path: /alice/beggins/internal/nirvana
+            requirements:
+              - flake8==3.8.4 --hash=sha256:749dbbd6bfd0cf1318af27bf97a14e28e5ff548ef8e5b1566ccfb25a11e7c839
+              - mccabe==0.6.1 --hash=sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42
+              - pycodestyle==2.6.0 --hash=sha256:2295e7b2f6b5bd100585ebcb1f616591b652db8a741695b3d8f5d28bdc934367
+              - pyflakes==2.2.0 --hash=sha256:0d94e0e05a19e57a99444b6ddcf9a6eb2e5c68d3ca1e98e90707af8152c90a92
+
+    begemot-beggins-ci-release-flow:
+      title: Release Begemot Beggins CI
+      jobs:
+        start:
+          title: Start
+          task: dummy
+          stage: start-stage
+        start-build:
+          title: Start build
+          task: dummy
+          stage: build-stage
+          needs: start
+        build-executable:
+          title: Build Beggins Executable
+          task: common/arcadia/ya_make
+          input:
+            targets: search/daemons/begemot/beggins
+            arts: search/daemons/begemot/beggins/beggins
+            result_rt: BEGEMOT_BEGGINS_EXECUTABLE
+            musl: false
+            use_aapi_fuse: true
+            use_arc_instead_of_aapi: true
+            aapi_fallback: true
+            build_system: semi_distbuild
+            build_type: release
+            result_single_file: true
+            definition_flags: -DCUDA_VERSION=11.4 -DCUDNN_VERSION=8.0.5
+          needs: start-build
+        build-data:
+          title: Build Begemot Data
+          task: projects/alice/beggins/build_begemot_data
+          input:
+            ShardName: Beggins
+            UseFastBuild: true
+            build_system: semi_distbuild
+            build_type: release
+          needs: start-build
+        start-deploy:
+          title: Start deploy
+          task: dummy
+          needs: 
+            - build-executable
+            - build-data
+          stage: deploy-stage
+        deploy-to-nanny:
+          task: common/nanny/update_service
+          title: Deploy to CI
+          needs: start-deploy
+          input:
+            config:
+              service_id: alice_begemot_beggins_ci
+              patches: &deploy-patches
+                - sandbox:
+                    resource_type: BEGEMOT_BEGGINS_EXECUTABLE
+                    resource:
+                      local_path: begemot
+                - sandbox:
+                    resource_type: BEGEMOT_FAST_BUILD_CONFIG_BEGGINS
+                    resource:
+                      local_path: fast_build_config.json
+
+    begemot-beggins-stable-release-flow:
+      title: Release Begemot Beggins Stable
+      jobs:
+        start:
+          title: Start
+          task: dummy
+          stage: start-stage
+        start-build:
+          title: Start build
+          task: dummy
+          stage: build-stage
+          needs: start
+        build-executable:
+          title: Build Beggins Executable
+          task: common/arcadia/ya_make
+          input:
+            targets: search/daemons/begemot/beggins
+            arts: search/daemons/begemot/beggins/beggins
+            result_rt: BEGEMOT_BEGGINS_EXECUTABLE
+            musl: false
+            use_aapi_fuse: true
+            use_arc_instead_of_aapi: true
+            aapi_fallback: true
+            build_system: semi_distbuild
+            build_type: release
+            result_single_file: true
+            definition_flags: -DCUDA_VERSION=11.4 -DCUDNN_VERSION=8.0.5
+          needs: start-build
+        build-data:
+          title: Build Begemot Data
+          task: projects/alice/beggins/build_begemot_data
+          input:
+            ShardName: Beggins
+            UseFastBuild: true
+            build_system: semi_distbuild
+            build_type: release
+          needs: start-build
+        start-deploy:
+          title: Start deploy
+          manual: yes
+          task: dummy
+          needs: 
+            - build-executable
+            - build-data
+          stage: deploy-stage
+
+        deploy-to-sas:
+          task: common/nanny/update_service
+          title: Deploy to SAS
+          manual: true
+          needs: start-deploy
+          input:
+            config:
+              service_id: alice_begemot_beggins_sas
+              patches: &deploy-patches
+                - sandbox:
+                    resource_type: BEGEMOT_BEGGINS_EXECUTABLE
+                    resource:
+                      local_path: begemot
+                - sandbox:
+                    resource_type: BEGEMOT_FAST_BUILD_CONFIG_BEGGINS
+                    resource:
+                      local_path: fast_build_config.json
+        deploy-to-man:
+          task: common/nanny/update_service
+          title: Deploy to MAN
+          manual: true
+          needs: deploy-to-sas
+          input:
+            config:
+              service_id: alice_begemot_beggins_man
+              patches: *deploy-patches
+        deploy-to-vla:
+          task: common/nanny/update_service
+          title: Deploy to VLA
+          manual: true
+          needs: deploy-to-man
+          input:
+            config:
+              service_id: alice_begemot_beggins_vla
+              patches: *deploy-patches
+        deploy-to-hamster:
+          task: common/nanny/update_service
+          title: Deploy to HAMSTER
+          manual: false
+          needs: deploy-to-vla
+          input:
+            config:
+              service_id: alice_begemot_beggins_hamster
+              patches: *deploy-patches

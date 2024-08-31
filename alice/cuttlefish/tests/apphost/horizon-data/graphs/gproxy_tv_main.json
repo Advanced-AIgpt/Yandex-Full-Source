@@ -1,0 +1,75 @@
+{
+    "edgeExpressions": {
+        "GPROXY_INPUT->CONTEXT_LOAD": "!GPROXY_INPUT[error]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "!GPROXY_INPUT->INIT@session_context"
+            ]
+        },
+        "GPROXY_INPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info,!request"
+            ]
+        },
+        "GRPC_HANDLER": {
+            "inputDeps": [
+                "!GRPC_HANDLER_SETUP"
+            ]
+        },
+        "GRPC_HANDLER_SETUP": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "INIT@metadata,request_info,!request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "GPROXY_INPUT@error",
+                "GRPC_HANDLER@response,error"
+            ]
+        }
+    },
+    "nodes": {
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_INPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/input",
+                "timeout": "100ms"
+            }
+        },
+        "GRPC_HANDLER": {
+            "backendName": "ALICE_APPHOST",
+            "params": {
+                "handler": "/_subhost/tv_main",
+                "timeout": "3s"
+            }
+        },
+        "GRPC_HANDLER_SETUP": {
+            "nodeType": "TRANSPARENT"
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

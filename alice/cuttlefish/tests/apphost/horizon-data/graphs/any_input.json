@@ -1,0 +1,147 @@
+{
+    "edgeExpressions": {
+        "CONTEXT_LOAD->MUSIC_MATCH": "^WS_ADAPTER_IN[has_music_match]",
+        "INIT->MM_SESSION_REQUEST_SYNC": "^INIT[has_mm_session_request]",
+        "INIT->SMARTHOME_UID_SYNC": "^INIT[has_smarthome_uid]",
+        "WS_ADAPTER_IN->ASR": "^WS_ADAPTER_IN[has_asr]",
+        "WS_ADAPTER_IN->MUSIC_MATCH": "^WS_ADAPTER_IN[has_music_match]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "ASR": {
+            "inputDeps": [
+                "WS_ADAPTER_IN@audio"
+            ]
+        },
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "INIT@^session_context",
+                "MM_SESSION_REQUEST_SYNC->INIT@mm_session_request",
+                "SMARTHOME_UID_SYNC->INIT@smarthome_uid"
+            ]
+        },
+        "MM_SESSION_REQUEST_SYNC": {
+            "inputDeps": [
+                "INIT@^mm_session_request"
+            ]
+        },
+        "MUSIC_MATCH": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "INIT@session_context",
+                "WS_ADAPTER_IN@audio"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "WS_ADAPTER_OUT@ws_message"
+            ]
+        },
+        "SMARTHOME_UID_SYNC": {
+            "inputDeps": [
+                "INIT@^smarthome_uid"
+            ]
+        },
+        "WS_ADAPTER_IN": {
+            "inputDeps": [
+                "INIT@session_context,settings_from_manager,ws_message"
+            ]
+        },
+        "WS_ADAPTER_OUT": {
+            "inputDeps": [
+                "ASR@asr_proto_response",
+                "MUSIC_MATCH@music_match_init_response,music_match_stream_response",
+                "WS_ADAPTER_IN@session_context,request_context,directive"
+            ]
+        }
+    },
+    "nodes": {
+        "ASR": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/asr",
+                "timeout": "15s"
+            }
+        },
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "15s"
+            }
+        },
+        "MM_SESSION_REQUEST_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "MUSIC_MATCH": {
+            "backendName": "GRPC_SELF__VOICE__child_2",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/music_match",
+                "timeout": "15s"
+            }
+        },
+        "SMARTHOME_UID_SYNC": {
+            "nodeType": "TRANSPARENT"
+        },
+        "WS_ADAPTER_IN": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_raw_to_protobuf",
+                "timeout": "15s"
+            }
+        },
+        "WS_ADAPTER_OUT": {
+            "backendName": "VOICE__CUTTLEFISH_BIDIRECTIONAL",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/stream_protobuf_to_raw",
+                "timeout": "15s"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

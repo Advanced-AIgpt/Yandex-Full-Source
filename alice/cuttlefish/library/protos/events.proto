@@ -1,0 +1,303 @@
+package NAliceProtocol;
+
+import "alice/cuttlefish/library/protos/wsevent.proto";
+import "alice/cuttlefish/library/protos/session.proto";
+import "alice/megamind/protos/common/experiments.proto";
+
+message TApplicationInfo {
+    optional string Id = 1;
+    optional string Version = 2;
+    optional string SpeechkitVersion = 3;
+    optional string Lang = 4;
+}
+
+message TMessengerInfo {
+    optional bool Anonymous = 1 [default = false];
+    optional string Version = 2;
+    optional bool FanoutAuth = 3 [default = false];
+}
+
+
+message TSynchronizeStateEvent {
+    reserved 3;
+    reserved "VoiceSettings";
+
+    optional string              AppToken = 8;
+    optional TUserInfo           UserInfo = 1;
+    optional TUserOptions        UserOptions = 6;
+    optional TDeviceInfo         DeviceInfo = 2;
+    optional TAudioOptions       AudioOptions = 13;
+    optional TVoiceOptions       VoiceOptions = 14;
+    optional TBiometryOptions    BiometryOptions = 15;
+    optional TApplicationInfo    ApplicationInfo = 4;
+    optional TMessengerInfo      MessengerInfo = 7;
+
+    optional NAlice.TExperimentsProto Experiments = 5;
+
+    // misc
+    optional string UserAgent = 9;
+    repeated string UaasTests = 10;
+    optional string ICookie = 11;  // encrypted
+    optional string ServiceName = 12;  // event/payload/service_name
+
+    // last is 15
+};
+
+
+message TEchoRequestEvent {
+
+};
+
+
+message TStreamControl {
+    optional bool Flush = 1;
+    optional bool Close = 2;
+};
+
+
+message TVoiceInputEvent {
+
+};
+
+
+message TTextInputEvent {
+
+};
+
+
+message TMusicInputEvent {
+
+};
+
+
+message TCustomInputEvent {
+
+};
+
+
+message TRecognizeEvent {
+
+};
+
+
+message TSpeechStartedEvent {
+
+};
+
+
+message TSpeechFinishedEvent {
+
+};
+
+
+message TListVoices {
+
+};
+
+
+message TGenerateEvent {
+
+};
+
+
+message TRequestStatEvent {
+
+};
+
+
+message TLogSpotterEvent {
+
+};
+
+
+message TPostMessageEvent {
+
+};
+
+
+message THistoryRequestEvent {
+
+};
+
+
+message TEditHistoryRequestEvent {
+
+};
+
+
+message TSubscribeRequestEvent {
+
+};
+
+
+message TWhoamiRequestEvent {
+
+};
+
+
+message TEvent {
+    optional TEventHeader Header = 1;
+
+    oneof Payload {
+        TStreamControl              StreamControl = 100;        // streamcontrol
+
+        TSynchronizeStateEvent      SyncState = 101;            // System.SynchronizeState
+
+        TVoiceInputEvent            VoiceInput = 102;           // Vins.VoiceInput
+
+        TTextInputEvent             TextInput = 103;            // Vins.TextInput
+
+        TMusicInputEvent            MusicInput = 104;           // Vins.MusicInput
+
+        TCustomInputEvent           CustomInput = 105;          // Vins.CustomInput
+
+        TRecognizeEvent             Recognize = 106;            // ASR.Recognize
+
+        TGenerateEvent              Generate = 107;             // TTS.Generate
+
+        TSpeechStartedEvent         SpeechStarted = 108;        // TTS.SpeechStarted
+
+        TSpeechFinishedEvent        SpeechFinished = 109;       // TTS.SpeechStarted
+
+        TRequestStatEvent           RequestState = 110;         // Log.RequestStat
+
+        TLogSpotterEvent            LogSpotter = 111;           // Log.Spotter
+
+        TEchoRequestEvent           EchoRequest = 112;          // System.EchoRequest
+
+        TPostMessageEvent           PostMessage = 113;          // Messenger.PostMessage
+
+        THistoryRequestEvent        HistoryRequest = 114;       // Messenger.HistoryRequest
+
+        TEditHistoryRequestEvent    EditHistoryRequest = 115;   // Messenger.EditHistoryRequest
+
+        TSubscribeRequestEvent      SubscribeRequest = 116;     // Messenger.SubscribeRequest
+
+        TWhoamiRequestEvent         WhoamiRequest = 117;        // Messenger.WhoamiRequest
+
+        // TAudioChunk                 AudioChunk = 120;
+    }
+};
+
+
+message TRequest {
+    optional TSessionContext Context = 1;
+
+    repeated TEvent Events = 2;
+};
+
+
+// ------------------------------------------------------------------------------------------------
+
+message TEventException {
+    reserved 4;
+    reserved "Message";
+    optional string Scope = 1;       // error scope (source)
+    optional string Code = 2;        // error code (source service MUST increment error metric with code=%Code% when emit this exception(directive))
+    optional string Text = 3;        // verbose description
+};
+
+message TMessengerStateResponse {
+
+};
+
+message TSynchronizeStateResponse {
+    optional string SessionId = 1;
+    optional string Guid = 2;
+};
+
+message TGoAwayResponse { };
+
+message TInvalidAuth { };
+
+message TLogAckResponse { };
+
+/**
+ * @brief collected info for build/send/save Directive UniproxyVinsTimings
+ */
+message TRequestDebugInfo {
+    message TUniproxy2 {
+        // all timings here (ui64) contain milliseconds
+        optional uint64 Start = 1;                      // epoch timestamp
+    }
+    optional TUniproxy2 Uniproxy2 = 1;
+    message TMegamindRun {
+        reserved 40;
+        reserved "HasUsefulPartial";
+        // all timings here (ui64) contain milliseconds
+        optional uint64 Start = 1;                      // epoch timestamp
+        optional uint64 ContextsLoaded = 10;            // lag from Start
+        optional string RequestName = 11;
+        optional uint64 FirstPartialAsrResult = 20;     // lag from Start
+        optional uint64 FirstNotEmptyPartialAsrResult = 21;  // lag from Start
+        optional uint64 FirstSubrequest = 22;           // lag from Start
+        optional uint64 UsefulPartialAsrResult = 23;    // lag from Start
+        optional uint64 LastPartialAsrResult = 24;      // lag from Start
+        optional uint64 EouReceived = 30;               // lag from Start
+        optional uint64 UseEouResult = 31;              // lag from Start
+        // optional bool HasUsefulPartial = 40;  // use HasUsefulPartialAsrResult() instead
+        optional bool EmptyEouResult = 41;
+        optional bool RequestCanceled = 42;
+        optional bool NeedApply = 43;
+        optional bool UsefulPartialTrashedByMM = 44;
+        optional uint64 UsefulSubrequestStart = 50;     // lag from Start
+        optional uint64 UsefulSubrequestFinish = 51;    // lag from Start
+        optional uint32 SubrequestsCount = 90;
+        optional string ResponseIntentName = 95;
+        optional string ErrorCode = 100;
+        optional string ErrorText = 101;
+        optional uint64 Finish = 1000;                  // epoch timestamp
+    }
+    optional TMegamindRun MegamindRun = 10;
+    message TMegamindApply {
+        // all timings here (ui64) contain milliseconds
+        optional uint64 Start = 1;                      // epoch timestamp
+        optional uint64 ContextsLoaded = 10;            // lag from Start
+        optional uint64 SubrequestStart = 20;           // lag from Start
+        optional uint64 SubrequestFinish = 21;          // lag from Start
+        optional bool RequestCanceled = 30;
+        optional string ErrorCode = 100;
+        optional string ErrorText = 101;
+        optional uint64 Finish = 1000;                  // epoch timestamp
+    }
+    optional TMegamindApply MegamindApply = 11;
+    message TWsAdapterOut {
+        // all timings here (ui64) contain milliseconds
+        optional uint64 Start = 1;                      // epoch timestamp
+        optional uint64 FirstTtsChunk = 10;             // lag from Start
+        optional uint64 MegamindResponse = 80;
+        optional uint64 ContextSaveResponse = 90;
+        optional string ErrorCode = 100;
+        optional string ErrorText = 101;
+        optional uint64 Finish = 1000;                  // epoch timestamp
+    }
+    optional TWsAdapterOut WsAdapterOut = 50;
+}
+
+message TDirective {
+    optional TEventHeader    Header = 1;     /* hints to translate this response to directive */
+
+    oneof Payload {
+        TSynchronizeStateResponse   SyncStateResponse = 101;        /* System.SynchronizeStateResponse */
+
+        TMessengerStateResponse     MessengerStateResponse = 102;   /* Messenge.SynchronizeStateResponse */
+
+        TEventException             Exception = 103;                /* System.EventException */
+
+        TGoAwayResponse             GoAway = 104;                   /* System.GoAway */
+
+        TInvalidAuth                InvalidAuth = 105;              /* System.InvalidAuth */
+
+        TLogAckResponse             LogAckResponse = 106;           /* Log.Ack */
+
+        TRequestDebugInfo           RequestDebugInfo = 107;         /* data for Vins.VinsTimings */
+    };
+};
+
+message TResponse {
+    optional TSessionContext     Context = 1;        /* session context update */
+
+    optional bool                Final = 2;          /* this is the final message in the stream */
+
+    repeated TDirective Directives = 3;     /* list of client directives */
+};

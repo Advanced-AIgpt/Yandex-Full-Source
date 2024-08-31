@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package api;
+option go_package = "a.yandex-team.ru/alice/gamma/sdk/api";
+
+import "alice/gamma/sdk/api/card.proto";
+import "google/protobuf/struct.proto";
+
+service Skill {
+    rpc Handle (SkillRequest) returns (SkillResponse) {}
+}
+
+message Meta {
+    string locale = 1;
+    string timezone = 2;
+    string clientId = 3;
+    Interfaces interfaces = 4;
+}
+
+message Interfaces {
+    // todo: in original webhook request it is empty dict, but wtf?
+    bool screen = 1;
+}
+
+message RequestBody {
+    string command = 1;
+    string originalUtterance = 2;
+    string type = 3;
+    bytes payload = 4;
+    Nlu nlu = 5;
+}
+
+message Nlu {
+    repeated Entity entities = 1;
+    repeated string tokens = 2;
+}
+
+message Entity {
+    int64 start = 1;
+    int64 end = 2;
+    string type = 3;
+    bytes value = 4;
+    google.protobuf.Value protoValue = 5;
+}
+
+message Session {
+    bool new = 1;
+    int64 messageId = 2;
+    string sessionId = 3;
+    string userId = 4;
+    string skillId = 5;
+}
+
+message Button {
+    string title = 1;
+    bytes payload = 2;
+    string url = 3;
+    bool hide = 4;
+}
+
+message ResponseBody {
+    string text = 1;
+    string tts = 2;
+    repeated Button buttons = 3;
+    bool endSession = 4;
+    Card card = 5;
+}
+
+message State {
+    bytes storage = 1;
+}
+
+message SkillRequest {
+    Meta meta = 1;
+    RequestBody request = 2;
+    Session session = 3;
+    State state = 4;
+}
+
+message SkillResponse {
+    ResponseBody response = 1;
+    Session session = 2;
+    State state = 4;
+}

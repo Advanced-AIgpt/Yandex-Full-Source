@@ -1,0 +1,158 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "APIKEYS": {
+            "inputDeps": [
+                "SYNCHRONIZE_STATE_PRE@!apikeys_http_request->http_request"
+            ]
+        },
+        "BLACKBOX": {
+            "inputDeps": [
+                "SYNCHRONIZE_STATE_PRE@!blackbox_http_request->http_request"
+            ]
+        },
+        "BLACKBOX_SETDOWN": {
+            "inputDeps": [
+                "BLACKBOX@http_response->blackbox_http_response",
+                "SYNCHRONIZE_STATE_PRE@!session_context,http_request_draft"
+            ]
+        },
+        "DATASYNC": {
+            "inputDeps": [
+                "BLACKBOX_SETDOWN@!datasync_http_request->http_request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "SYNCHRONIZE_STATE_POST@session_context,ws_message"
+            ]
+        },
+        "SYNCHRONIZE_STATE_POST": {
+            "inputDeps": [
+                "APIKEYS@http_response->apikeys_http_response",
+                "BLACKBOX@http_response->blackbox_http_response",
+                "DATASYNC@http_response->datasync_http_response",
+                "SYNCHRONIZE_STATE_PRE@!session_context,directive"
+            ]
+        },
+        "SYNCHRONIZE_STATE_PRE": {
+            "inputDeps": [
+                "INIT@!session_context,!ws_message"
+            ]
+        }
+    },
+    "nodes": {
+        "APIKEYS": {
+            "backendName": "APIKEYS",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 5
+                },
+                "softTimeout": "150ms",
+                "timeout": "250ms"
+            }
+        },
+        "BLACKBOX": {
+            "aliasConfig": {
+                "addrAlias": [
+                    "BLACKBOX"
+                ]
+            },
+            "backendName": "BLACKBOX__VOICE",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 5
+                },
+                "softTimeout": "150ms",
+                "timeout": "250ms"
+            }
+        },
+        "BLACKBOX_SETDOWN": {
+            "aliasConfig": {
+                "addrAlias": [
+                    "SELF"
+                ]
+            },
+            "backendName": "VOICE__CUTTLEFISH",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "handler": "/synchronize_state-blackbox_setdown",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 8
+                },
+                "softTimeout": "150ms",
+                "timeout": "250ms"
+            }
+        },
+        "DATASYNC": {
+            "backendName": "VOICE__DATASYNC",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 5
+                },
+                "softTimeout": "200ms",
+                "timeout": "600ms"
+            }
+        },
+        "SYNCHRONIZE_STATE_POST": {
+            "aliasConfig": {
+                "addrAlias": [
+                    "SELF"
+                ]
+            },
+            "backendName": "VOICE__CUTTLEFISH",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "handler": "/synchronize_state-post",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 8
+                },
+                "softTimeout": "150ms",
+                "timeout": "250ms"
+            }
+        },
+        "SYNCHRONIZE_STATE_PRE": {
+            "aliasConfig": {
+                "addrAlias": [
+                    "SELF"
+                ]
+            },
+            "backendName": "VOICE__CUTTLEFISH",
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "handler": "/synchronize_state-pre",
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 8
+                },
+                "softTimeout": "150ms",
+                "timeout": "250ms"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

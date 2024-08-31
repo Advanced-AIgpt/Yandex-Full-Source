@@ -1,0 +1,66 @@
+service: megamind
+title: Beggins
+
+ci:
+  release-title-source: flow
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  actions:
+    release-nirvana-operations:
+      flow: nirvana-release-operation-flow
+      triggers:
+        - on: commit
+
+  releases:
+    release-nirvana-classification-flow:
+      title: Release Classification Flow
+      flow: nirvana-classification-flow
+      auto: true
+      flow-vars:
+        target: alice/beggins/internal/vh/cmd/classification
+        artifact: alice/beggins/internal/vh/cmd/classification/flow
+    release-nirvana-evaluation-flow:
+      title: Release Evaluation Flow
+      flow: nirvana-classification-flow
+      auto: true
+      flow-vars:
+        target: alice/beggins/internal/vh/cmd/evaluation
+        artifact: alice/beggins/internal/vh/cmd/evaluation/flow
+
+  flows:
+    nirvana-release-operation-flow:
+      title: Release Operation Flow
+      jobs:
+        run-nirvana-auto-release:
+          title: run-nirvana-auto-release
+          task: projects/nirvana/check_operation_release
+          input:
+            nirvana_token:
+              uuid: ${context.secret_uid}
+              key: nirvana.token
+            nirvana_quota:
+              quota_name: alice_ue2e
+    nirvana-classification-flow:
+      title: Release Classification Flow
+      jobs:
+        release-graphs:
+          title: Release Classification Flow
+          task: common/misc/run_command
+          input:
+            config:
+              cmd_line: |
+                "$ARCADIA_PATH/ya" make "$ARCADIA_PATH/${flow-vars.target}" &&
+                VH3_RELEASE_GRAPHS=1 VH3_ARCADIA_REVISION=${context.target_revision.number} "$ARCADIA_PATH/${flow-vars.artifact}" draft-all
+              arc_mount_config:
+                enabled: true
+              secret_environment_variables:
+                - key: YA_TOKEN
+                  secret_spec:
+                    uuid: ${context.secret_uid}
+                    key: ci.token
+                - key: NIRVANA_TOKEN
+                  secret_spec:
+                    uuid: ${context.secret_uid}
+                    key: nirvana.token

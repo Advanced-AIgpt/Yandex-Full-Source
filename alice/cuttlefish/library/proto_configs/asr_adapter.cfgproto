@@ -1,0 +1,42 @@
+package NAliceAsrAdapterConfig;
+
+import "alice/cuttlefish/library/proto_configs/service.cfgproto";
+import "library/cpp/proto_config/protos/extensions.proto";
+option (NProtoConfig.Include) = "util/datetime/base.h";
+
+message Asr1 {
+    option (NProtoConfig.ConfigClass) = "TAsr1";
+    optional string wait_spotter_after_eou = 1 [
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(500)"
+    ];
+    optional bool use_fake_topic_in_response = 2 [(NProtoConfig.Help) = "for local testing with ftest we can set metainfo topic to expected (but not real)", default=false];
+};
+
+message Asr {
+    option (NProtoConfig.ConfigClass) = "TAsr";
+    enum EProtocolVersion {
+        INTERNAL_FAKE = 0;
+        YALDI = 1;
+        ASR = 2;
+    };
+    // like proto_config library not support enum, so use uint32 instead:
+    optional uint32 protocol_version = 1 [(NProtoConfig.Help) = "used protocol version", default=2];
+    optional string host = 2 [(NProtoConfig.Help) = "hostname asr-server(or yaldi)", default="localhost"];
+    optional uint32 port = 3 [(NProtoConfig.Help) = "port asr-server(or yaldi)", default=80];
+    optional string path = 4 [(NProtoConfig.Help) = "path in http request to asr-server(or yaldi)", default="/asr"];
+    optional bool ignore_parsing_protobuf_error = 5 [(NProtoConfig.Help) = "new asr-server engine generate protobuf without _required_ field (this crutch allow suppress parsing errors)", default=false];
+    optional Asr1 asr1 = 6 [(NProtoConfig.Help) = "options for asr protocol 1 version (yaldi)"];
+    optional uint32 client_threads = 7 [(NProtoConfig.Help) = "count asr client threads (neh/asio executors)", default=12];
+    optional string connect_timeout = 8 [
+        (NProtoConfig.Help) = "timelimit for tcp connect to yaldi|asr-server",
+        (NProtoConfig.Type) = "TDuration",
+        (NProtoConfig.DefaultValue) = "TDuration::MilliSeconds(100)"
+    ];
+};
+
+message Config {
+    option (NProtoConfig.ConfigClass) = "TConfig";
+    optional NAliceServiceConfig.Server server = 1 [(NProtoConfig.Help) = "common apphost servant options"];
+    optional Asr asr = 2 [(NProtoConfig.Help) = "client options for work with  asr-server(or yaldi-server)"];
+};

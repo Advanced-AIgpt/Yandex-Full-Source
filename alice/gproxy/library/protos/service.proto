@@ -1,0 +1,169 @@
+syntax = "proto2";
+
+package NGProxy;
+
+/**
+ *  Common types import section
+ */
+import "alice/gproxy/library/protos/annotations/graph.proto";
+import "alice/gproxy/library/protos/metadata.proto";
+
+
+/**
+ *  Request and response types import section
+ */
+import "alice/gproxy/library/protos/echo.proto";    //!< for EchoResponse
+
+import "alice/protos/data/video/card_detail.proto";
+import "alice/protos/data/tv_feature_boarding/template.proto";
+import "alice/protos/data/search_result/search_result.proto";
+import "alice/protos/data/search_result/tv_search_result.proto";
+import "alice/protos/data/tv/channels/check_license.proto";
+import "alice/protos/data/tv/home/request.proto";
+import "alice/protos/data/tv/home/result.proto";
+import "alice/protos/data/tv/watch_list/wl_answer.proto";
+import "alice/protos/data/tv/watch_list/wl_requests.proto";
+import "alice/protos/data/tv/tags/catalog_tag.proto";
+
+/**
+ *  Main service section
+ */
+service GProxy {
+
+/**
+ *  Service section with methods
+ */
+    rpc Example(EchoRequest) returns (EchoResponse) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.http_path) = "/example";
+    }
+
+    /**
+     *  Yandex TV API
+     */
+    rpc GetTvCardDetail(NAlice.TTvCardDetailsRequest) returns (NAlice.TTvCardDetailResponse) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "VideoCardDetailSemanticFrame";
+        option (gproxy.graph.http_path) = "/card_detail";
+    }
+
+    rpc GetTvFeatureBoarding(NAlice.NSmartTv.TTemplateRequest) returns (NAlice.NSmartTv.TTemplateResponse) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "TvPromoTemplateRequestSemanticFrame";
+        option (gproxy.graph.http_path) = "/get_feature_boarding";
+    }
+
+    rpc ReportTvFeatureBoardingTemplateShown(NAlice.NSmartTv.TTemplateRequest) returns (NAlice.NSmartTv.TReportShownTemplateResponse){
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "TvPromoTemplateShownReportSemanticFrame";
+        option (gproxy.graph.http_path) = "/report_feature_boarding_shown";
+    }
+
+    rpc GetFakeGalleries(NAlice.TGetVideoGalleriesRequest) returns (NAlice.TSearchResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "GetVideoGalleries";
+        option (gproxy.graph.http_path) = "/fake_galleries";
+    }
+
+    rpc GetFake2Galleries(NAlice.TGetVideoGalleriesRequest) returns (NAlice.TSearchResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.name) = "gproxy_tv_main";
+        option (gproxy.graph.apphost_flags) = "flag1";
+        option (gproxy.graph.apphost_flags) = "flag2";
+        option (gproxy.graph.http_path) = "/fake_2galleries";
+    }
+
+    rpc GetTvSearchResult(NAlice.TTvSearchRequest) returns (NAlice.TTvSearchResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "GetTvSearchResult";
+        option (gproxy.graph.http_path) = "/search";
+    }
+
+    rpc GetTvSearchResultRpc(NAlice.TTvSearchRequest) returns (NAlice.TTvSearchResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.name) = "gproxy_mm_rpc";
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.http_path) = "/search_rpc";
+    }
+
+    rpc GetCatalogTags(NAlice.NTv.TGetTagsRequest) returns (NAlice.NTv.TGetTagsResponse) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.name) = "gproxy_common";
+        option (gproxy.graph.apphost_flags) = "alice_graph___tv_get_catalog_tags";
+        option (gproxy.graph.http_path) = "/catalog_tags";
+    }
+
+    rpc TvWatchListAdd(NAlice.NTv.TTvWatchListAddItemRequest) returns (NAlice.NTv.TTvWatchListSwitchItemResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.name) = "gproxy_common";
+        option (gproxy.graph.apphost_flags) = "alice_graph___tv_watch_list_add";
+        option (gproxy.graph.http_path) = "/watch_list_add";
+    }
+
+    rpc TvWatchListDelete(NAlice.NTv.TTvWatchListDeleteItemRequest) returns (NAlice.NTv.TTvWatchListSwitchItemResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.name) = "gproxy_common";
+        option (gproxy.graph.apphost_flags) = "alice_graph___tv_watch_list_del";
+        option (gproxy.graph.http_path) = "/watch_list_del";
+    }
+
+    rpc TvGetGalleries(NAlice.NTv.TGetGalleriesRequest) returns (NAlice.NTv.TTvFeedResultData) {
+        option (gproxy.graph.timeout) = 5000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "GetVideoGalleries";
+        option (gproxy.graph.http_path) = "/get_galleries";
+    }
+
+    rpc TvGetGallery(NAlice.NTv.TGetGalleryRequest) returns (NAlice.NTv.TTvCarouselResultData) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.semantic_frame_message_name) = "GetVideoGallerySemanticFrame";
+        option (gproxy.graph.http_path) = "/get_gallery";
+    }
+
+    rpc TvCheckChannelLicense(NAlice.NTv.TTvCheckChannelLicenseRequest) returns (NAlice.NTv.TTvCheckChannelLicenseResponse) {
+        option (gproxy.graph.timeout) = 3000;
+        option (gproxy.graph.retries) = 1;
+        option (gproxy.graph.raw_request) = true;
+        option (gproxy.graph.name) = "gproxy_common";
+        option (gproxy.graph.apphost_flags) = "alice_graph___tv_channels_check_license";
+        option (gproxy.graph.http_path) = "/check_cannel_license";
+    }
+
+    /**
+     *  Quasar Manufacturing API
+     */
+    /*
+    rpc SignChallenge(NFactorio.TSignerRequest) returns (NFactorio.TSignerResponse) {
+        option (gproxy.http.only) = true;                    // generate only http handler (no grpc)
+        option (gproxy.http.url) = "/factorio/signer";       // http url
+        option (gproxy.graph.name) = "factorio_challenge";   // graph in VOICE vertical
+        option (gproxy.simple) = true;                       // request is not a typed semantic frame
+        option (gproxy.graph.http_path) = "/sign_challenge";
+    }
+
+    rpc Telemetry(NFactorio.TTelemetryRequest) returns (NFactorio.TTelemetryResponse) {
+        option (gproxy.http.only) = true;                    // generate only http handler (no grpc)
+        option (gproxy.http.url) = "/factorio/telemetry";    // http url
+        option (gproxy.graph.name) = "factorio_telemetry";   // graph in VOICE vertical
+        option (gproxy.simple) = true;                       // request is not a typed semantic frame
+        option (gproxy.graph.http_path) = "/telemetry";
+    }
+    */
+
+};

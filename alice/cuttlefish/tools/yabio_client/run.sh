@@ -1,0 +1,3 @@
+#./yabio_client --file=sessions/data/whathaveyoudone.opus --debug=1 --request-id=test-reqid --mime-format="audio/opus" --apphost-graph=false --method=classify --tag=gender --tag=children --path=/bio --uuid=aaaa
+./yabio_client --file=sessions/data/privet.opus --debug=1 --request-id=test-reqid --mime-format="audio/opus" --apphost-graph=false --method=classify --tag=gender --tag=children --path=/bio --uuid=aaaa
+#./yabio_client --file=sessions/data/privet.opus --debug=1 --request-id=test-reqid --mime-format="audio/opus" --apphost-graph=false --method=score --group-id=test_group1 --user-id=test_user1 --uuid=aaaa

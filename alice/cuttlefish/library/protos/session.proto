@@ -1,0 +1,356 @@
+import "alice/megamind/protos/common/experiments.proto";
+import "alice/megamind/protos/speechkit/request.proto";
+import "google/protobuf/timestamp.proto";
+import "voicetech/library/settings_manager/proto/settings.proto";
+
+package NAliceProtocol;
+
+
+message TFlagsInfo {
+    reserved 7;
+    reserved "TestIds";
+
+    optional int32 ExpConfigVersion = 1;
+    optional string RequestId = 2;
+    optional string ExpBoxes = 3;
+
+    // Map {"flag_from_array": "1", "flag_str": "value", "flag_double": 0.1} (safe_experiments_vins_format).
+    optional NAlice.TExperimentsProto VoiceFlags = 4;
+
+    // '{"ASR": {"flags": [strings]}}' (voicetech/asr/server/lib/engine_modern_handle_protobuf.cpp:L66, r8472776)
+    optional string AsrFlagsJson = 5;
+
+    // '{"BIO": {"flags": [strings]}}' (no usages in arcadia, but abezhin@ has some plans)
+    optional string BioFlagsJson = 6;
+
+    repeated string AllTestIds = 8;
+    repeated string ExperimentalTestIds = 9;
+};
+
+
+message TFlagsJsonData {
+    optional string Data = 1;
+    optional string AppInfo = 2;
+    optional TFlagsInfo FlagsInfo = 3;
+};
+
+
+message TExperimentsContext {
+    reserved 1;
+    reserved "UaasData";
+    optional TFlagsJsonData FlagsJsonData = 2;
+    repeated string UaasTests = 3;
+    optional bool DisregardUaasForSession = 4 [default=false];
+    optional bool Only100PercentFlagsForSession = 5 [default=false];
+};
+
+
+message TAbFlagsProviderOptions {
+    repeated string TestIds = 1;
+    optional bool DisregardUaas = 2 [default=false];
+    optional bool Only100PercentFlags = 3 [default=false];
+    optional bool IsYandexStaff = 4;
+    optional int32 RegionId = 5;
+    optional string Puid = 6;
+    optional bool IsBetaTester = 7;
+};
+
+
+message TSourceRewrite {
+    optional string ASR = 1;
+
+    optional string TTS = 2;
+
+    optional string BIO = 3;
+
+    optional string VINS = 4;
+
+    optional string AppHost = 5;
+};
+
+message TVoiceOptions {
+    reserved 5;
+    reserved "Emotion";
+
+    enum EVoiceQuality {
+        DEFAULT_QUALITY = 0;
+        LOW = 1;
+        HIGH = 2;
+        ULTRAHIGH = 3;
+    }
+
+    optional double Volume = 1;
+    optional double Speed = 2;
+    // "ru"|"ru-RU"|"tr"|"tr-TR"|"uk-UA"|"he"
+    optional string Lang = 3;
+    optional string Voice = 4;
+
+    optional EVoiceQuality Quality = 6;
+
+    // VOICESERV-4018
+    // Emotion is no longer limited to neutral, good, evil
+    optional string UnrestrictedEmotion = 7;
+}
+
+message TAudioOptions {
+    // "audio/opus"|"audio/ogg;codecs=opus"|"audio/webm;codecs=opus"|"audio/x-pcm;bit=16;rate=48000"
+    optional string Format = 1;
+    optional bool HasSpotter = 2;
+    // TODO:? RealTimeStreamer = 3;
+    optional uint32 RtsBufferSeconds = 4;
+    optional bool OpusRealTimeStreamer = 5;  // support backward compat.
+}
+
+message TBiometryOptions {
+    optional string Classify = 1;  // tags for classification
+    optional bool Score = 2 [default = false];
+    optional string Group = 3;  // scoring group_id
+    optional bool SendScoreToMM = 4 [default = false];
+}
+
+message TUserOptions {
+    optional bool SaveToMds = 1 [default = true];
+    optional bool DisableLocalExperiments = 2 [default = false];
+    optional bool DisableUtteranceLogging = 3 [default = false];
+    optional bool DoNotUseLogs = 4 [default = false];
+    optional bool AcceptInvalidAuth = 5 [default = false];
+}
+
+message TMegamindOptions {
+    optional bool UseAsrPartials = 1 [default = false];
+}
+
+message TDeviceInfo {
+    message TWifiNetwork {
+        optional string Mac = 1;
+        optional int32 SignalStrength = 2;
+    }
+
+    optional string DeviceManufacturer = 1;
+    optional string DeviceModel = 2;
+    optional string DeviceId = 3;
+    optional string Platform = 4;
+    optional string OsVersion = 5;
+    optional string NetworkType = 6;
+    repeated string SupportedFeatures = 7;
+    repeated TWifiNetwork WifiNetworks = 8;
+    optional string Device = 9;
+    optional string DeviceModification = 10;
+    optional string DeviceColor = 11;
+};
+
+
+message TUserInfo {
+    enum ETokenType {
+        INVALID = 0;
+        OAUTH = 1;
+        OAUTH_TEAM = 2;
+        YAMB_AUTH = 3;
+    };
+
+    enum EMessengerUserType {
+        MESSENGER_USER_TYPE_INVALID = 0;
+        MESSENGER_USER_TYPE_REAL = 1;
+        MESSENGER_USER_TYPE_ANONYMOUS = 2;
+        MESSENGER_USER_TYPE_FAKE = 3;
+    }
+
+    optional string Uuid = 1;   // unique ID produced by AppMetrica that identifies user and device
+    optional string Yuid = 2;   // (YandexUid) - pseudo unique cookie that identifies client's browser
+    optional string Puid = 13;  // (PasportUid) user ID derived from OAuth token by BlackBox
+
+    optional string             Guid = 9;   // Messenger's user ID
+    optional EMessengerUserType GuidType = 15;  // Messenger's user type
+
+    optional string AuthToken = 4;
+    optional ETokenType AuthTokenType = 11;
+
+    optional string TvmServiceTicket = 10;  // may be used to set Guid in a very few cases of load testing
+
+    optional string Cookie = 5;
+    optional string ICookie = 6;  // plain (decrypted) ICookie - either from event/payload/icookie OR generated from UUID
+
+    optional string CsrfToken = 12;
+
+    optional string StaffLogin = 8;  // user's login on Staff derived from OAuth token by Blackbox
+
+    optional string LaasRegion = 14;  // raw JSON contains LaaS region
+
+    optional string VinsApplicationUuid = 16;  // CRUTCH: original UUID string (not lowercased) taken from 'vins/application/uuid'
+
+    enum EUuidKind {
+        USER = 1;
+        ROBOT = 2;
+        TEST = 4;
+    };
+    optional EUuidKind UuidKind = 17 [default = USER];
+
+    optional double Longitude = 18;
+    optional double Latitude = 19;
+    // last is 19
+};
+
+
+message TConnectionInfo {
+    optional string IpAddress = 1;
+    optional string PredefinedIpAddress = 9;
+    repeated string TestIds = 8;  // test-id of original request
+
+    // content of original request's HTTP headers
+    optional string Origin = 7;             // X-Forwarded-Host or Host
+    optional string UserAgent = 2;          // User-Agent
+    optional string Cookie = 3;             // Cookie
+    optional string XYambCookie = 4;        // X-Yamb-Cookie
+    optional string XYambToken = 5;         // X-Yamb-Token
+    optional string XYambTokenType = 6;     // X-Yamb-Token-Type
+
+    // last is 9
+};
+
+
+message TLoggerOptions {
+    // VOICESERV-4168, VOICESERV-4188
+    optional bool WriteInfoToRtLog = 1 [default = true];
+    optional bool WriteInfoToEventLog = 2 [default = true];
+};
+
+
+message TSessionContext {
+    reserved 8, 9, 21;  // deprecated/removed fields
+    reserved "ASR", "TTS", "VoiceSettings";  // deprecated/removed fields
+
+    enum ESurfaceType {
+        T_UNKNOWN = 0;
+        T_DEV = 1;
+        T_BETA = 2;
+        T_NONPROD = 3;
+        T_PROD = 4;
+        T_PUBLIC = 6;
+        T_ALL = 7;
+    };
+
+    enum EClientType {
+        CLIENT_TYPE_UNDEFINED = 0;
+        CLIENT_TYPE_QUASAR = 1;
+    };
+
+    enum ECtype {
+        CTYPE_UNDEFINED = 0;
+        CTYPE_TESTING = 1;
+        CTYPE_BETA = 2;
+        CTYPE_PRESTABLE = 3;
+        CTYPE_PRODUCTION = 4;
+    };
+
+    optional string                 SessionId = 1;
+    optional string                 InitialMessageId = 14;
+    optional TConnectionInfo        ConnectionInfo = 15;
+    optional ECtype                 Ctype = 19;
+
+    optional string                 AppToken = 3;
+    optional string                 AppId = 11;
+    optional string                 AppType = 16;
+    optional string                 AppVersion = 27;
+    optional string                 AppLang = 28;
+    optional string                 SpeechkitVersion = 17;
+    optional EClientType            ClientType = 18;
+    optional string                 Surface = 22;
+    optional ESurfaceType           SurfaceType = 23;
+
+    optional string                 Language = 5;
+    optional TUserInfo              UserInfo = 6;
+    optional TUserOptions           UserOptions = 12;
+    optional TDeviceInfo            DeviceInfo = 13;
+
+    optional TSourceRewrite         SourceRewrite = 7;
+    optional TExperimentsContext    Experiments = 10;
+    optional bool                   LaasResponseHasWifiInfo = 20 [default = false];
+    optional TAudioOptions          AudioOptions = 25;
+    optional TVoiceOptions          VoiceOptions = 26;
+    optional TBiometryOptions       BiometryOptions = 29;
+
+    // keep here parsed SyncronizeState (as base for build mm_request from VoiceInput/TextInput)
+    // TODO: remove later - use another TSessionContext fields for build mm_request
+    optional NAlice.TSpeechKitRequestProto      RequestBase = 24;
+
+    // last is 29
+};
+
+
+message TRequestContext {
+    message THeader {
+        optional string SessionId = 1;
+        optional string MessageId = 2;
+        optional int64 StreamId = 3;
+        optional string DialogId = 4;
+        optional string PrevReqId = 5;
+        optional string ReqId = 6;
+        optional string FullName = 7; // "vins.textinput", "tts.listvoices" and so on
+        optional int64 RefStreamId = 8;
+    };
+
+    message TAdditionalOptions {
+        message TChannelRmsData {
+            repeated double Values = 1;
+        };
+
+        message TSpotterFeaturesV0 {
+            repeated TChannelRmsData RmsData = 1;
+        };
+
+        message TSpotterFeaturesV1 {
+            optional int32 Version = 1;
+            map<string, TChannelRmsData> RmsData = 2;
+            optional double AvgRMS = 3;
+            optional double RawAvgRMS = 4;
+        };
+
+        message TSpotterFeatures {
+            oneof Features {
+                TSpotterFeaturesV0 Ver0 = 1;
+                TSpotterFeaturesV1 Ver1 = 2;
+            };
+        };
+
+        optional string SmarthomeUid = 1;
+        optional int32 SpeakersCount = 2;
+        optional TSpotterFeatures SpotterFeatures = 3;
+        optional bool IgnoreSecondaryContext = 4;
+        optional bool IgnoreGuestContext = 5;
+    };
+
+    message TDeviceState {
+        optional bool SmartActivation = 4;
+        optional string DeviceId = 5;  // from request.device_state
+    }
+
+    message TPredefinedResults {
+        optional bool Asr = 1;
+        optional bool BioScoring = 2;
+        optional bool BioClassify = 3;
+        optional bool IotConfig = 4;
+        optional bool MegamindSession = 5;
+    }
+
+    reserved 1 to 4, 6 to 10, 13;
+    reserved "SessionId", "MessageId", "StreamId", "Format", "DialogId", "PrevReqId", "SmarthomeUid", "SpeakersCount", "SpotterRms";
+
+    map<string, string> ExpFlags = 5;
+
+    optional THeader Header = 11;
+    optional TAdditionalOptions AdditionalOptions = 12;
+    optional string VinsUrl = 14;
+    optional TAudioOptions AudioOptions = 15;
+    optional TVoiceOptions VoiceOptions = 16;
+    optional NVoicetech.NSettings.TManagedSettings SettingsFromManager = 17;
+    optional TBiometryOptions BiometryOptions = 18;
+    optional TPredefinedResults PredefinedResults = 19;
+    optional TMegamindOptions MegamindOptions = 20;
+    optional TDeviceState DeviceState = 21;
+    optional google.protobuf.Timestamp CreatingTimestamp = 22;
+};
+
+
+message TPredefinedAsrResult {
+    optional string Payload = 1;
+}

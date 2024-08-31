@@ -1,0 +1,152 @@
+flows:
+  common:
+    required_data:
+    - russian_name
+    - model_name
+    - beggins
+    - meta_evaluation.data.accept.sources
+    - manifest.classification_task_question
+    - manifest.classification_project_instructions
+    - manifest.positive_honeypots
+    - manifest.negative_honeypots
+    defaults:
+      beggins:
+        embedder: Beggins
+        smart_threshold_selection: false
+        catboost_params: '{"loss_function": "Logloss", "iterations": 1000}'
+
+  stable_generator:
+    parent:
+    - common
+    required_data:
+    - manifest.data
+
+  stable_generator_repeatable:
+    parent:
+    - stable_generator
+    repeatable_training: true
+
+  custom_generator:
+    parent:
+    - common
+
+  dc_miner:
+    parent:
+    - common
+    defaults:
+      miner:
+        mode: "grep + classification"
+
+  dc_miner_new_dates:
+    parent:
+    - dc_miner
+    override:
+      miner:
+        dt1: "2022-05-01"
+        dt2: "2022-05-30"
+        basket_size: 4000
+        use-alice-logs-miner: true
+
+  dc_miner_old_dates:
+    parent:
+    - dc_miner
+    override:
+      miner:
+        dt1: "2021-06-01"
+        dt2: "2021-06-30"
+        basket_size: 4000
+
+  dc_miner_old_dates_regex_only:
+    parent:
+    - dc_miner_old_dates
+    required_data:
+    - tags.has_miner_regexp
+    override:
+      miner:
+        use-alice-logs-miner: false
+
+  dc_miner_old_dates_similar_only:
+    parent:
+    - dc_miner_old_dates
+    required_data:
+    - tags.has_miner_regexp
+    override:
+      miner:
+        regexp: []
+        use-alice-logs-miner: true
+
+  dc_miner_old_dates_regex_and_similar:
+    parent:
+    - dc_miner_old_dates
+    required_data:
+    - tags.has_miner_regexp
+    override:
+      miner:
+        use-alice-logs-miner: true
+
+  dc_tom:
+    parent:
+    - common
+    required_data:
+    - manifest.tom_task_questions
+
+  dc_tom_no_logs:
+    parent:
+    - dc_tom
+    required_data:
+    - tags.create_toloka_tom
+    override:
+      miner:
+        use-alice-logs-miner: false
+        regexp: []
+        basket_size: 0
+        dt1: "2022-05-01"
+        dt2: "2022-05-30"
+      tom:
+        basket_logs: false
+        queries_count: 1000
+        toloka_queries_count: 1000
+        zeliboba_queries_count: 300
+
+  tom_with_cache:
+    parent:
+    - dc_tom
+    required_data:
+    - tom.cached_toloka_tom.dev
+    - tom.cached_toloka_tom.accept
+    override:
+      tom:
+        toloka_queries_count: 0
+
+  tom_with_cache_old_dates:
+    parent:
+    - tom_with_cache
+    override:
+      miner:
+        use-alice-logs-miner: true
+        regexp: []
+        dt1: "2021-06-01"
+        dt2: "2021-06-30"
+      tom:
+        basket_logs: true
+        zeliboba_queries_count: 300
+        basket_logs_size: 4000
+
+  tom_with_cache_old_dates_repeatable:
+    parent:
+    - tom_with_cache_old_dates
+    repeatable_training: true
+
+intents:
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_call_block.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_dark_theme.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_fines.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_keyboard.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_module_purchase.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_pedometer.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_qr_code.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_read_page.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_reader_open.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_receipts.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_video_editor.yaml
+  - config_path: alice/beggins/data/meta/configs/apps_fixlist_video_translate.yaml

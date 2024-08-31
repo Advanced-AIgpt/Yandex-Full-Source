@@ -1,0 +1,90 @@
+{
+    "edgeExpressions": {
+        "GPROXY_INPUT->CONTEXT_LOAD": "!GPROXY_INPUT[error]",
+        "GPROXY_REQUEST_META_SETUP->GRPC_HANDLER_SETUP": "!GPROXY_REQUEST_META_SETUP[error]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "ALICE_GRPC_DISPATCHER": {
+            "inputDeps": [
+                "!GRPC_HANDLER_SETUP"
+            ]
+        },
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "GPROXY_INPUT->INIT@session_context"
+            ]
+        },
+        "GPROXY_INPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info,!request"
+            ]
+        },
+        "GPROXY_REQUEST_META_SETUP": {
+            "inputDeps": [
+                "CONTEXT_LOAD@tvm_user_ticket",
+                "INIT@!metadata,!request_info,!request"
+            ]
+        },
+        "GRPC_HANDLER_SETUP": {
+            "inputDeps": [
+                "!GPROXY_REQUEST_META_SETUP@scenario_request_meta->mm_scenario_request_meta",
+                "CONTEXT_LOAD@context_load_response",
+                "INIT"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "ALICE_GRPC_DISPATCHER@response,grpc_error",
+                "GPROXY_INPUT@error",
+                "GPROXY_REQUEST_META_SETUP@error"
+            ]
+        }
+    },
+    "nodes": {
+        "ALICE_GRPC_DISPATCHER": {
+            "backendName": "ALICE_APPHOST",
+            "params": {
+                "handler": "/_subhost/grpc_dispatcher",
+                "timeout": "3s"
+            }
+        },
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_INPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/input",
+                "timeout": "100ms"
+            }
+        },
+        "GPROXY_REQUEST_META_SETUP": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/request_meta_setup",
+                "timeout": "100ms"
+            }
+        },
+        "GRPC_HANDLER_SETUP": {
+            "nodeType": "TRANSPARENT"
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

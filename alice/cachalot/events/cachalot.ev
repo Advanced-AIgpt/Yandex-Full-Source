@@ -1,0 +1,428 @@
+option optimize_for = SPEED;
+
+import "alice/cachalot/api/protos/cachalot.proto";
+import "library/cpp/eventlog/proto/events_extension.proto";
+
+package NEvClass;
+
+
+// Server vvv
+
+message ServerStarting {
+    option(message_id) = 550;
+    required int32 Port = 1;
+};
+
+
+message ServerError {
+    option(message_id) = 551;
+    required string Message = 1;
+};
+
+message CachalotInfo {
+    option(message_id) = 560;
+    required string Message = 2;
+    optional int64  Integer = 3;
+    optional float  Float = 4;
+};
+
+
+// ^^^ Server // Http-transport statuses vvv
+
+
+message HttpStatusUnknownContentType {
+    option(message_id) = 613;
+};
+message HttpStatusFailedToSerializeProtoResponse {
+    option(message_id) = 614;
+};
+message HttpStatusFailedToSerializeJsonResponse {
+    option(message_id) = 615;
+};
+message HttpStatusOk {
+    option(message_id) = 616;
+};
+message HttpStatusBadRequest {
+    option(message_id) = 617;
+};
+message HttpStatusNotFound {
+    option(message_id) = 618;
+};
+message HttpStatusInternalError {
+    option(message_id) = 619;
+};
+message HttpStatusBadGateway {
+    option(message_id) = 620;
+};
+message HttpStatusQueueFull {
+    option(message_id) = 621;
+};
+message HttpStatusServiceUnavailable {
+    option(message_id) = 622;
+};
+message HttpStatusUnexpected {
+    option(message_id) = 623;
+};
+
+
+// ^^^ Http-transport statuses // Cache vvv
+
+
+message RequestStarted {
+    option(message_id) = 552;
+    required string ReqId = 1;
+    required string ContentType = 2;
+};
+
+
+message RequestFinished {
+    option(message_id) = 553;
+    required string ReqId = 1;
+    required int64  Status = 2;
+};
+
+
+message CacheHit {
+    option(message_id) = 554;
+    required string StorageTag = 2;
+};
+
+
+message CacheMiss {
+    option(message_id) = 555;
+    required string StorageTag = 2;
+};
+
+
+message SendingReply {
+    option(message_id) = 558;
+    reserved 1;
+    reserved 2;
+    reserved 3;
+    reserved 4;
+};
+
+message RequestKey {
+    option(message_id) = 610;
+    required string Key = 1;
+};
+
+message CacheInfo {
+    option(message_id) = 559;
+    required string ReqId = 1;
+    required string Source = 2;
+    required string Message = 3;
+};
+
+message CacheManualTtl {
+    option(message_id) = 611;
+    required string ReqId = 1;
+    required uint64 Ttl = 2;
+};
+
+message CacheSetOk {
+    option(message_id) = 624;
+    required string StorageTag = 1;
+};
+
+message CacheSetFail {
+    option(message_id) = 625;
+    required string StorageTag = 1;
+    required string Error = 2;
+    required NCachalotProtocol.EResponseStatus Status = 3;
+};
+
+message CacheGetError {
+    option(message_id) = 612;
+    required string StorageTag = 1;
+    required string Error = 2;
+    required NCachalotProtocol.EResponseStatus Status = 3;
+};
+
+message CacheDelOk {
+    option(message_id) = 637;
+    required string StorageTag = 1;
+};
+
+message CacheDelNotFound {
+    option(message_id) = 638;
+    required string StorageTag = 1;
+};
+
+message CacheDelError {
+    option(message_id) = 639;
+    required string StorageTag = 1;
+    required string Error = 2;
+    required NCachalotProtocol.EResponseStatus Status = 3;
+};
+
+// ^^^ Cache // Activation vvv
+
+
+message ActivationAnnouncementStarted {
+    option(message_id) = 574;
+    required string UserId = 1;
+    required string DeviceId = 2;
+    reserved 3;
+    required bool SpotterValidated = 4;
+    required float AvgRms = 5;
+}
+
+message ActivationAnnouncementBetterRecordWasNotFound {
+    option(message_id) = 628;
+}
+
+message ActivationAnnouncementRejected {
+    option(message_id) = 629;
+    required string BetterCompetitor = 1;
+}
+
+message ActivationAnnouncementAllowed {
+    option(message_id) = 630;
+    required string BestCompetitor = 1;
+}
+
+message ActivationAnnouncementError {
+    option(message_id) = 561;
+    reserved 1;
+    reserved 2;
+    required string Message = 3;
+}
+
+
+message ActivationLeadershipAcquisitionStarted {
+    option(message_id) = 575;
+    required string UserId = 1;
+    required string DeviceId = 2;
+    reserved 3;
+}
+
+message ActivationLeadershipAcquisitionGotYdbRsp {
+    option(message_id) = 632;
+}
+
+message ActivationLeadershipAcquisitionGotLeader {
+    option(message_id) = 633;
+    required string DeviceId = 1;
+}
+
+message ActivationLeadershipAcquisitionIAmLeader {
+    option(message_id) = 634;
+}
+
+message ActivationLeadershipAcquisitionError {
+    option(message_id) = 562;
+    reserved 1;
+    reserved 2;
+    required string Message = 3;
+}
+
+message ActivationLeadershipAcquisitionErrorLeaderWasNotFound {
+    option(message_id) = 631;
+}
+
+message ActivationCleanupStarted {
+    option(message_id) = 635;
+}
+
+message ActivationCleanupFinished {
+    option(message_id) = 636;
+}
+
+message ActivationYdbOperationResponse {
+    option(message_id) = 643;
+
+    required NCachalotProtocol.EResponseStatus Status = 1;
+    required string UserId = 2;
+    required string DeviceId = 3;
+    required string ActivationAttemptTime = 4;
+    required float AvgRMS = 5;
+    required bool Validated = 6;
+    required bool RecordWithZeroRmsFound = 7;
+    required bool LeaderFound = 8;
+    required string SpotterValidatedBy = 9;
+    required float SchedulingTime = 10;
+    required float FetchingTime = 11;
+    required string ErrorMessage = 12;
+}
+
+
+// ^^^ Activation // MMSession vvv
+
+
+message MMLoadNotFound {
+    option(message_id) = 563;
+    reserved 1;
+}
+
+message MMLoadFail {
+    option(message_id) = 564;
+    reserved 1;
+    required string Error = 2;
+    required NCachalotProtocol.EResponseStatus Status = 3;
+}
+
+message MMLoadInternalError {
+    option(message_id) = 565;
+    required string Error = 1;
+}
+
+message MMStoreFail {
+    option(message_id) = 566;
+    reserved 1;
+    required string Error = 2;
+    required NCachalotProtocol.EResponseStatus Status = 3;
+}
+
+message MMStoreInternalError {
+    option(message_id) = 567;
+    required string Error = 1;
+}
+
+message MMLoadStarted {
+    option(message_id) = 626;
+}
+
+message MMLoadSuccess {
+    option(message_id) = 568;
+    reserved 1;
+}
+
+message MMStoreStarted {
+    option(message_id) = 627;
+}
+
+message MMStoreSuccess {
+    option(message_id) = 569;
+    reserved 1;
+}
+
+message MMBadRequest {
+    option(message_id) = 570;
+    required string Uuid = 1;
+}
+
+message MMStart {
+    option(message_id) = 571;
+}
+
+message MMFinish {
+    option(message_id) = 573;
+    required int32 Code = 1;
+}
+
+message MMUnknownError {
+    option(message_id) = 577;
+    required string Message = 1;
+}
+
+message MMRedisGetStart {
+    option(message_id) = 578;
+}
+message MMRedisGetProcessing {
+    option(message_id) = 579;
+}
+message MMRedisGetNotFound {
+    option(message_id) = 580;
+}
+message MMRedisGetFound {
+    option(message_id) = 581;
+}
+message MMRedisGetFinish {
+    option(message_id) = 582;
+}
+message MMRedisGetErorr {
+    option(message_id) = 583;
+    required string Message = 1;
+}
+
+message MMRedisSetStart {
+    option(message_id) = 584;
+}
+message MMRedisSetProcessing {
+    option(message_id) = 585;
+}
+message MMRedisSetFinish {
+    option(message_id) = 586;
+}
+message MMRedisSetErorr {
+    option(message_id) = 587;
+    required string Message = 1;
+}
+
+message MMYdbGetProcessing {
+    option(message_id) = 600;
+}
+message MMYdbGetNotFound {
+    option(message_id) = 602;
+}
+message MMYdbGetFound {
+    option(message_id) = 601;
+}
+message MMYdbGetErorr {
+    option(message_id) = 603;
+}
+
+message MMYdbSetStart {
+    option(message_id) = 605;
+}
+message MMYdbSetProcessing {
+    option(message_id) = 606;
+}
+message MMYdbSetFinish {
+    option(message_id) = 607;
+}
+message MMYdbSetErorr {
+    option(message_id) = 608;
+    required string Message = 1;
+}
+
+
+// ^^^ MMSession // Ydb vvv
+
+
+message YdbOperationStart {
+    option(message_id) = 589;
+}
+message YdbOperationExecuteError {
+    option(message_id) = 590;
+    required string Issues = 1;
+}
+message YdbOperationNotFound {
+    option(message_id) = 591;
+}
+message YdbOperationOk {
+    option(message_id) = 592;
+}
+message YdbOperationOperationStarted {
+    option(message_id) = 593;
+}
+message YdbOperationRetryError {
+    option(message_id) = 598;
+}
+message YdbOperationAssertionError {
+    option(message_id) = 604;
+    optional string Error = 1;
+}
+message YdbOperationHorribleMistake {
+    option(message_id) = 599;
+    required string Message = 1;
+}
+message YdbOperationExecuteException {
+    option(message_id) = 641;
+    required string Message = 1;
+}
+message YdbOperationExecuteResponse {
+    option(message_id) = 642;
+}
+
+// ^^^ Ydb // YabioContext vvv
+
+
+message YabioContextBadRequest {
+    option(message_id) = 640;
+    required string Message = 1;
+}
+
+
+// last message_id = 643

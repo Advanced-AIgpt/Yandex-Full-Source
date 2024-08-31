@@ -1,0 +1,157 @@
+syntax = "proto2";
+
+import "alice/cachalot/library/config/common.cfgproto";
+import "alice/cachalot/library/config/yabio_context.cfgproto";
+
+import "library/cpp/proto_config/protos/extensions.proto";
+
+package NCachalot;
+
+
+message ServerSettings {
+    option (NProtoConfig.ConfigClass) = "TServerSettings";
+
+    optional int32 Port = 1 [default = 8080];
+    optional int32 Threads = 2 [default = 2];
+    optional int32 GrpcPort = 3 [default = 0];
+    optional int32 GrpcThreads = 4 [default = 2];
+    optional int32 AdminThreads = 5 [default = 1];
+}
+
+
+message RedisSettings {
+    option (NProtoConfig.ConfigClass) = "TRedisSettings";
+
+    optional int32 Port = 1 [default = 6379];
+    optional int32 PoolSize = 2 [default = 32];
+    optional int32 QueueSize = 3 [default = 50];
+    optional bool IsFake = 4 [default = false];
+}
+
+message ThreadPoolSettings {
+    option (NProtoConfig.ConfigClass) = "TThreadPoolSettings";
+
+    optional uint64 NumberOfThreads = 1 [default = 1];
+    optional uint64 QueueSize = 2 [default = 100];
+}
+
+message InmemoryStorageSettings {
+    option (NProtoConfig.ConfigClass) = "TInmemoryStorageSettings";
+
+    enum ERemovalPolicy {
+        FIFO = 1;
+        LRU = 2;
+        LFU = 3;
+        READ_ONCE = 4;
+    };
+
+    optional bool Enabled = 1 [default = true];
+    optional uint64 NumberOfBuckets = 2 [default = 8];
+    optional uint64 MaxNumberOfElements = 3 [default = 100];
+    optional uint64 MaxMemoryUsageBytes = 4 [default = 8589934592];  // 8GB
+    optional ERemovalPolicy RemovalPolicy = 5;
+    optional ThreadPoolSettings ThreadPoolConfig = 6;
+    optional uint64 TimeToLiveSeconds = 7 [default = 900];
+    optional bool RenewExpirationTimeOnLoad = 8 [default = false];
+    optional uint64 MaxTimeToLiveSeconds = 9 [default = 172800]; // 2 days
+}
+
+message CacheYdbOperationSettings {
+    option (NProtoConfig.ConfigClass) = "TCacheYdbOperationSettings";
+
+    // TTS-cache base historically has "Audio" column.
+    optional string DataColumnName = 1 [default = "Data"];
+}
+
+message CacheSettings {
+    option (NProtoConfig.ConfigClass) = "TCacheSettings";
+
+    optional YdbSettings Ydb = 1;
+    optional InmemoryStorageSettings Imdb = 3;
+    optional ThreadPoolSettings ThreadPoolConfig = 4;
+    optional bool EnableInterCacheUpdates = 7 [default = true];
+    optional uint64 AllowedTtlVariationSeconds = 8 [default = 30];
+    optional CacheYdbOperationSettings YdbOperationSettings = 9;
+}
+
+
+message CacheServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TCacheServiceSettings";
+
+    optional bool Enabled = 1 [default = false];
+    map<string, CacheSettings> Storages = 2;
+}
+
+message MegamindSessionServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TMegamindSessionServiceSettings";
+
+    // TtlSecondsForYdb is not used in code since `expire-after = 172800` is set on table.
+    // Check it with `ya ydb -e ydb-ru.yandex.net:2135 -d /ru/alice/prod/vins-context scheme describe data2`
+
+    optional bool Enabled = 1 [default = false];
+    optional CacheSettings Storage = 2;
+}
+
+message ActivationServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TActivationServiceSettings";
+
+    optional bool Enabled = 1 [default = false];
+    optional YdbSettings Ydb = 2;
+    optional int64 TtlSeconds = 3 [default = 345600]; // 4 days
+    optional int64 FreshnessDeltaMilliSeconds = 4 [default = 2500];
+}
+
+message GDPRServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TGDPRServiceSettings";
+
+    optional bool Enabled = 1 [default = false];
+    optional YdbSettings Ydb = 2;
+    optional YdbSettings OldYdb = 3;
+    optional YdbSettings NewYdb = 4;
+}
+
+message TakeoutServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TTakeoutServiceSettings";
+
+    optional bool Enabled = 1 [default = false];
+    optional YdbSettings Ydb = 2;
+}
+
+message VinsContextServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TVinsContextServiceSettings";
+
+    optional bool Enabled = 1 [default = false];
+    optional YdbSettings Ydb = 2;
+}
+
+message StatsServiceSettings {
+    option (NProtoConfig.ConfigClass) = "TStatsServiceSettings";
+
+    optional bool Enabled = 1 [default = true];
+}
+
+
+message LoggerSettings {
+    option (NProtoConfig.ConfigClass) = "TLoggerSettings";
+
+    optional string Filename = 1 [default = "cachalot.evlog"];
+    optional string RtLogFilename = 2 [default = "cachalot.rtlog"];
+};
+
+
+message ApplicationSettings {
+    option (NProtoConfig.ConfigClass) = "TApplicationSettings";
+
+    optional ServerSettings Server = 1;
+    optional LoggerSettings Log = 2;
+    optional bool LockMemory = 3 [default = false];
+
+    optional ActivationServiceSettings Activation = 4;
+    optional CacheServiceSettings Cache = 5;
+    optional GDPRServiceSettings GDPR = 6;
+    optional MegamindSessionServiceSettings MegamindSession = 8;
+    optional StatsServiceSettings Stats = 9;
+    optional TakeoutServiceSettings Takeout = 10;
+    optional VinsContextServiceSettings VinsContext = 11;
+    optional YabioContextServiceSettings YabioContext = 12;
+}

@@ -1,0 +1,47 @@
+service: alice-divkit-renderer
+title: DivKit-Renderer
+
+ci:
+  release-title-source: release
+  secret: sec-01g1659hrm2c97gth3839tpqjp
+  runtime:
+    sandbox-owner: SMARTTV
+  actions:
+    testing_autodeploy:
+      title: Autodeploy DivKit-Renderer to testing
+      flow: divkit-renderer-testing-flow
+      triggers:
+        - on: commit
+          into:
+            - trunk
+
+  flows:
+    divkit-renderer-testing-flow:
+      title: Deploy divkit-renderer to testing
+      jobs:
+        build:
+          title: Build DivKit Renderer
+          task: common/arcadia/ya_package_2
+          stage: testing-deploy
+          input:
+            packages: alice/divkt_renderer/pkg.json
+            package_type: tarball
+            compress_package_archive: true
+            do_not_remove_resources: true
+            release_to_ya_deploy: false
+            resource_type: ALICE_DIV_KT_RENDERER_BINARY
+            build_type: release
+            build_system: semi_distbuild
+        deploy:
+          title: Deploy to testing
+          task: common/nanny/update_service
+          needs: build
+          stage: testing-deploy
+          input:
+            config:
+              service_id: divkit-renderer-testing
+              patches:
+                - sandbox:
+                    resource_type: ALICE_DIV_KT_RENDERER_BINARY
+                    resource:
+                      local_path: divkit-renderer.tar.gz

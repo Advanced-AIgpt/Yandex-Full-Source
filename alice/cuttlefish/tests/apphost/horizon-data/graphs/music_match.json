@@ -1,0 +1,54 @@
+{
+    "edgeExpressions": {
+        "NON_STREAM_ITEMS_SYNC->MUSIC_MATCH_ADAPTER": "^WS_ADAPTER_IN[has_music_match]",
+        "WS_ADAPTER_IN->MUSIC_MATCH_ADAPTER": "^WS_ADAPTER_IN[has_music_match]"
+    },
+    "inputDeps": [
+        "CONTEXT_LOAD",
+        "INIT",
+        "WS_ADAPTER_IN"
+    ],
+    "nodeDeps": {
+        "MUSIC_MATCH_ADAPTER": {
+            "inputDeps": [
+                "!NON_STREAM_ITEMS_SYNC",
+                "WS_ADAPTER_IN@audio"
+            ]
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "inputDeps": [
+                "CONTEXT_LOAD@^context_load_response",
+                "INIT@^session_context"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "MUSIC_MATCH_ADAPTER"
+            ]
+        }
+    },
+    "nodes": {
+        "MUSIC_MATCH_ADAPTER": {
+            "backendName": "VOICE__MUSIC_MATCH_ADAPTER",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/music_match",
+                "timeout": "15s"
+            }
+        },
+        "NON_STREAM_ITEMS_SYNC": {
+            "nodeType": "TRANSPARENT"
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ],
+    "streamingNoBlockOutputs": true
+}

@@ -1,0 +1,127 @@
+{
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "CONTEXT_LOAD": {
+            "inputDeps": [
+                "GPROXY_INPUT->INIT@session_context"
+            ]
+        },
+        "CONTEXT_SAVE": {
+            "inputDeps": [
+                "CONTEXT_LOAD->INIT@!tvm_user_ticket,!blackbox_uid",
+                "GPROXY_OUTPUT->INIT@!context_save_request,!session_context,!request_context"
+            ]
+        },
+        "GPROXY_INPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_MM_SETUP": {
+            "inputDeps": [
+                "CONTEXT_LOAD@context_load_response",
+                "GPROXY_INPUT@!session_context",
+                "INIT@metadata,request_info,request"
+            ]
+        },
+        "GPROXY_OUTPUT": {
+            "inputDeps": [
+                "INIT@metadata,request_info",
+                "MEGAMIND@http_response->mm_response"
+            ]
+        },
+        "MEGAMIND": {
+            "inputDeps": [
+                "GPROXY_MM_SETUP@mm_request->http_request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "GPROXY_INPUT@error",
+                "GPROXY_MM_SETUP@error",
+                "GPROXY_OUTPUT@response,error"
+            ]
+        }
+    },
+    "nodes": {
+        "CONTEXT_LOAD": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "params": {
+                "handler": "/_subhost/context_load",
+                "timeout": "7s"
+            }
+        },
+        "CONTEXT_SAVE": {
+            "backendName": "GRPC_SELF__VOICE",
+            "monitoring": [
+                {
+                    "crit": 1.0,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.5
+                }
+            ],
+            "neverDiscard": true,
+            "params": {
+                "handler": "/_subhost/context_save",
+                "timeout": "7s"
+            }
+        },
+        "GPROXY_INPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/input",
+                "timeout": "100ms"
+            }
+        },
+        "GPROXY_MM_SETUP": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/mm_setup",
+                "timeout": "150ms"
+            }
+        },
+        "GPROXY_OUTPUT": {
+            "backendName": "VOICE__GPROXY",
+            "params": {
+                "handler": "/output",
+                "timeout": "200ms"
+            }
+        },
+        "MEGAMIND": {
+            "backendName": "VOICE__MEGAMIND_HTTP",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 10
+                },
+                "softTimeout": "2000ms",
+                "timeout": "5000ms"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}

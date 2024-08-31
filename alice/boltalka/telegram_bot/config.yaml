@@ -1,0 +1,186 @@
+global:
+    use_variants: True
+    entity_id: 447301
+modules:
+    ugc_base_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=ugc
+    otzovik_base_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=otzovik
+    irecommend_base_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=irecommend
+
+    ugc_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=ugc_dssm_withReview_b200;BaseKnnIndexName=ugc
+    otzovik_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=otzovik_dssm_withReview_b200;BaseKnnIndexName=otzovik
+    irecommend_review:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3674
+        ranker: ''
+        extra_params: BaseDssmModelName=irecommend_withReview_b200;BaseKnnIndexName=irecommend
+
+    ugc_base:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=ugc
+    otzovik_base:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=otzovik
+    irecommend_base:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=insight_c3_rus_lister;BaseKnnIndexName=irecommend
+
+    ugc:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=ugc_dssm_b10;BaseKnnIndexName=ugc
+    otzovik:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=otzovik_dssm_b10;BaseKnnIndexName=otzovik
+    irecommend:
+        type: NlgsearchHttpSource
+        host: nikola10.search.yandex.net
+        port: 3670
+        ranker: ''
+        extra_params: BaseDssmModelName=irecommend_dssm_b10;BaseKnnIndexName=irecommend
+
+    specific:
+        type: NlgsearchHttpSourceWithEntity
+        host: nikola10.search.yandex.net
+        port: 42243
+        entity_type: specific
+        entity_id: $entity_id
+        ranker: ''
+        extra_params:
+            Seq2SeqExternalUri: bad
+    specific_ugc:
+        type: NlgsearchHttpSourceWithEntity
+        host: nikola10.search.yandex.net
+        port: 42243
+        entity_type: specific
+        entity_id: $entity_id
+        ranker: ''
+        extra_params:
+            Seq2SeqExternalUri: bad
+            BaseDssmModelName: all_ugc_data
+    general:
+        type: NlgsearchHttpSourceWithEntity
+        host: nikola10.search.yandex.net
+        port: 42243
+        entity_type: general
+        entity_id: $entity_id
+        ranker: ''
+        extra_params:
+            Seq2SeqExternalUri: bad
+    general_ugc:
+        type: NlgsearchHttpSourceWithEntity
+        host: nikola10.search.yandex.net
+        port: 42243
+        entity_type: general
+        entity_id: $entity_id
+        ranker: ''
+        extra_params:
+            Seq2SeqExternalUri: bad
+            BaseDssmModelName: all_ugc_data
+    
+    md_all:
+        type: RpcSource
+        addr: http://localhost:5555/
+        source_type: TfnnModelSource
+        model_type: md_all
+        entity_id: $entity_id
+    md_all_empty_ctx:
+        type: RpcSource
+        addr: http://localhost:5555/
+        source_type: TfnnModelSource
+        model_type: md_all_empty_ctx
+        entity_id: $entity_id
+    pretrain_md_all:
+        type: RpcSource
+        addr: http://localhost:5555/
+        source_type: TfnnModelSource
+        model_type: pretrain_md_all
+        entity_id: $entity_id
+    after_prerain_md_all_empty_ctx:
+        type: RpcSource
+        addr: http://localhost:5555/
+        source_type: TfnnModelSource
+        model_type: after_prerain_md_all_empty_ctx
+        entity_id: $entity_id
+    movie_data_to_review:
+        type: RpcSource
+        addr: http://localhost:5555/
+        source_type: TfnnModelSource
+        model_type: movie_data_to_review
+        entity_id: $entity_id
+
+    basic_source:
+        type: NlgsearchHttpSource
+    basic_ranker:
+        type: NlgsearchRanker
+        weight: 1
+    basic_replier:
+        type:
+            Replier
+        sources:
+            - basic_source
+            - ugc_base
+            - otzovik_base
+            - irecommend_base
+            - ugc
+            - otzovik
+            - irecommend
+            - specific
+            - specific_ugc
+            - general
+            - general_ugc
+            - ugc_base_review
+            - otzovik_base_review
+            - irecommend_base_review
+            - ugc_review
+            - otzovik_review
+            - irecommend_review
+            - md_all
+            - md_all_empty_ctx
+            - pretrain_md_all
+            - after_prerain_md_all_empty_ctx
+            - movie_data_to_review
+        rankers:
+            - basic_ranker
+repliers:
+    - basic_replier
+replier: basic_replier

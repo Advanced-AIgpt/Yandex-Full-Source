@@ -1,0 +1,93 @@
+{
+    "edgeExpressions": {
+        "DATASYNC->RESPONSE": "INIT[load_guest_context_source_datasync]"
+    },
+    "inputDeps": [
+        "INIT"
+    ],
+    "nodeDeps": {
+        "BLACKBOX": {
+            "inputDeps": [
+                "INIT@!guest_blackbox_http_request->http_request"
+            ]
+        },
+        "BLACKBOX_SETDOWN": {
+            "inputDeps": [
+                "BLACKBOX@!http_response->guest_blackbox_http_response"
+            ]
+        },
+        "DATASYNC": {
+            "inputDeps": [
+                "BLACKBOX_SETDOWN@!guest_datasync_http_request->http_request"
+            ]
+        },
+        "RESPONSE": {
+            "inputDeps": [
+                "BLACKBOX@http_response->guest_blackbox_http_response",
+                "BLACKBOX_SETDOWN@tvm_user_ticket,blackbox_uid",
+                "DATASYNC@http_response->guest_datasync_http_response"
+            ]
+        }
+    },
+    "nodes": {
+        "BLACKBOX": {
+            "backendName": "BLACKBOX__VOICE",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 7
+                },
+                "softTimeout": "50ms",
+                "timeout": "500ms"
+            }
+        },
+        "BLACKBOX_SETDOWN": {
+            "backendName": "VOICE__CUTTLEFISH",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "handler": "/guest_context_load-blackbox_setdown",
+                "timeout": "1s"
+            }
+        },
+        "DATASYNC": {
+            "backendName": "VOICE__DATASYNC",
+            "monitoring": [
+                {
+                    "crit": 0.5,
+                    "operation": "perc",
+                    "prior": 101,
+                    "warn": 0.25
+                }
+            ],
+            "params": {
+                "attempts": {
+                    "maxAttempts": 2
+                },
+                "loadControlConfig": {
+                    "maxReaskBudget": 10.0,
+                    "requestsPerReask": 10
+                },
+                "softTimeout": "200ms",
+                "timeout": "600ms"
+            }
+        }
+    },
+    "outputDeps": [
+        "RESPONSE"
+    ]
+}
