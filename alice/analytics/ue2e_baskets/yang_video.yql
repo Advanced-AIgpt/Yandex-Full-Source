@@ -1,0 +1,62 @@
+USE hahn;
+PRAGMA RegexUseRe2='true';
+
+$input1 = "//home/voice/jdkondratenko/VA-2304/sampled_data/quasar_annotation_1";
+
+$data1 = "//home/alice/jdkondratenko/VA-2304/sampled_data/quasar_accept_empty_asr";
+$data2 = "//home/alice/jdkondratenko/VA-2304/sampled_data/quasar_accept_with_asr";
+$data3 = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/sampled_data/quasar_kpi_empty_asr";
+$data4 = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/sampled_data/quasar_kpi_with_asr";
+$data5 = "//home/alice/jdkondratenko/VA-2304/sampled_data/quasar_dev_empty_asr";
+$data6 = "//home/alice/jdkondratenko/VA-2304/sampled_data/quasar_dev_with_asr";
+
+$translation1 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_1";
+$translation2 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_2";
+$translation3 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_3";
+$translation4 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_4";
+
+$output = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/video/video_1";
+
+$translation = (
+(SELECT * FROM $translation1)
+UNION ALL
+(SELECT * FROM $translation2)
+UNION ALL
+(SELECT * FROM $translation3)
+UNION ALL
+(SELECT * FROM $translation4)
+);
+
+$all_data = (
+(SELECT * FROM $data1)
+UNION ALL
+(SELECT * FROM $data2)
+UNION ALL
+(SELECT * FROM $data3)
+UNION ALL
+(SELECT * FROM $data4)
+UNION ALL
+(SELECT * FROM $data5)
+UNION ALL
+(SELECT * FROM $data6)
+);
+
+$annotations_with_intent = (
+SELECT a.*, b.intent as intent, ListFlatMap(Yson::ConvertToList(raw_assesments), ($x)->{RETURN Yson::ConvertToString($x.query)}) as query_list
+FROM $input1 as a
+JOIN $all_data as b
+ON a.mds_key = b.mds_key
+);
+
+$video = (
+SELECT *
+FROM $annotations_with_intent
+WHERE intent REGEXP("video"));
+
+$video_filtered = (
+    SELECT * FROM $video AS a LEFT ONLY JOIN $translation AS translation USING (mds_key)
+);
+
+INSERT INTO $output WITH TRUNCATE
+SELECT ListSort(ListUniq(ListFlatMap(Yson::ConvertToList(raw_assesments), ($x)->{RETURN Yson::ConvertToString($x.query)})), ($x)->{RETURN Random($x)}) AS worker_hints, a.*
+FROM $video_filtered as a;

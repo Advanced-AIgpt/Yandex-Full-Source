@@ -1,0 +1,26 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/device_connection/js_api_tmp`
+SELECT APIKey, DeviceID, AccountID, OperatingSystem,
+FROM_UNIXTIME(EventDateTime) AS ts,
+replace(JSONExtractString(EventValue, 'uiUsed'), 'yellow_skin.', '') AS method,
+JSONExtractString(EventValue, 'info') AS info
+FROM concatYtTablesRange('//logs/superapp-metrika-mobile-log/1d', 
+toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+WHERE EventName = 'UI_ACTION_EVENT'
+AND lower(EventValue) LIKE '%yellow_skin%'
+AND method IN ('provide_config', 'get_ble_device_wifi_list', 'start_discovery')
+AND info != ''
+UNION ALL
+SELECT APIKey, DeviceID, AccountID, OperatingSystem,
+FROM_UNIXTIME(EventDateTime) AS ts,
+replace(JSONExtractString(EventValue, 'uiUsed'), 'yellow_skin.', '') AS method,
+JSONExtractString(EventValue, 'info') AS info
+FROM concatYtTablesRange('//logs/appmetrica-yandex-events/1d', 
+toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+WHERE APIKey IN (3970000, 3944830)
+AND EventName = 'UI_ACTION_EVENT'
+AND lower(EventValue) LIKE '%yellow_skin%'
+AND method IN ('provide_config', 'get_ble_device_wifi_list', 'start_discovery')
+AND info != ''
+;

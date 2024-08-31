@@ -1,0 +1,97 @@
+-- first inner cube for Prepare_basket_from_reqids
+-- 1) allows for custom req_id field name
+-- 2) attaches uuid and fielddate cols if missing
+-- 3) adds empty request_source field if missing
+
+-- get list of input fields
+$req = SELECT * FROM
+    {{input1}};
+$req_stream = PROCESS $req;
+$struct_like_row = InstanceOf(ListItemType(TypeOf($req_stream)));
+
+$table_list_clear = (
+    SELECT AGGREGATE_LIST(Path)
+    FROM FOLDER('//home/alice/dialog/prepared_logs_expboxes')
+    WHERE
+        (Type = "table")
+        AND (ListLast(String::SplitToList(Path, "/")) >= {{param["start_date"]}})
+        AND (ListLast(String::SplitToList(Path, "/")) <= {{param["end_date"]}})
+);
+
+$table_list_robot = (
+    SELECT AGGREGATE_LIST(Path)
+    FROM FOLDER('//home/alice/dialog/robot-prepared_logs_expboxes')
+    WHERE
+        (Type = "table")
+        AND (ListLast(String::SplitToList(Path, "/")) >= {{param["start_date"]}})
+        AND (ListLast(String::SplitToList(Path, "/")) <= {{param["end_date"]}})
+);
+
+$table_list = IF(
+    {{param["robot_logs"]}},
+    ListExtend($table_list_clear, $table_list_robot),
+    $table_list_clear
+);
+
+
+DEFINE ACTION $fast_path() AS
+-- if all fields present - pass table to output
+    $requests_table = (
+        SELECT
+            fielddate, `uuid`,
+            {{param["request_id_column_name"]}} AS req_id,
+            session_id, session_sequence,
+            request_source,
+        FROM
+            {{input1}}
+            WITH SCHEMA Struct<`uuid`:String?,
+            {{param["request_id_column_name"]}}:String?,
+            session_id:String?,
+            session_sequence:Int64?,
+            fielddate:String?,
+            request_source:String?>
+    -- schema inserts request_source=NONE if not present
+    );
+    INSERT INTO {{output1}}
+    SELECT * FROM $requests_table;
+END DEFINE;
+
+DEFINE ACTION $slow_path() AS
+-- if only reqids present - get fielddate and uuid from expboxes
+    $requests_table = (
+        SELECT
+            {{param["request_id_column_name"]}} AS req_id,
+            request_source
+        FROM
+            {{input1}}
+            WITH SCHEMA Struct<{{param["request_id_column_name"]}}:String?,
+            request_source:String?>
+    );
+    INSERT INTO {{output1}}
+    SELECT
+        xb.*,
+        rt.request_source AS request_source
+    FROM
+        $requests_table AS rt
+    JOIN
+        ANY
+        (
+            SELECT
+                fielddate, `uuid`, req_id,
+                session_id, session_sequence,
+            FROM
+                EACH($table_list)
+        ) AS xb
+    ON
+        xb.req_id == rt.req_id
+    ;
+END DEFINE;
+
+EVALUATE IF
+    'uuid' IN StructMembers($struct_like_row)
+    AND 'fielddate' IN StructMembers($struct_like_row)
+    AND 'session_id' IN StructMembers($struct_like_row)
+    AND 'session_sequence' IN StructMembers($struct_like_row)
+        DO $fast_path()
+ELSE
+    DO $slow_path();

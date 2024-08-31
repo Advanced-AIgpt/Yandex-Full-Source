@@ -1,0 +1,21 @@
+USE hahn;
+
+INSERT INTO `//home/voice/nadezhda17/common/user_info/wifi_provider` WITH TRUNCATE  
+SELECT device_id, ip, wifi,
+Geo::GetOrgNameByIp(ip) AS provider,
+Geo::RoundRegionByLocation(lat, lon, 'city').name as city, 
+Geo::RoundRegionByLocation(lat, lon, 'country').name as country, 
+CAST(lat AS String) || ', ' || CAST(lon AS String) AS coordinates
+FROM 
+(
+    SELECT device_id, 
+    MAX_BY(ip, ts) AS ip,
+    MAX_BY(lat, ts) AS lat,
+    MAX_BY(lon, ts) AS lon,
+    MAX_BY(wifi, ts) AS wifi
+    FROM `//home/voice/nadezhda17/common/multiroom/geo_devices`
+    WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)
+    GROUP BY device_id
+)
+ORDER BY device_id;
+

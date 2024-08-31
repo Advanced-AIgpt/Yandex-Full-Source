@@ -1,0 +1,130 @@
+-- add above expressions for $include_q and $user_retn_output_table
+-- Example:
+-- $user_retn_output_table =  '//home/alice/cubes/iot/retention/user_retention_test';
+-- $include_q = false;
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$excluded_skills = IF($include_q, ['VIRTUAL', 'QUALITY', 'eacb68b3-27dc-4d8d-bdbb-b4f6fb7babd2'],
+                                  ['VIRTUAL', 'QUALITY', 'eacb68b3-27dc-4d8d-bdbb-b4f6fb7babd2', 'Q']);
+$max_active_weeks = 52;
+
+$events_tables =
+    SELECT * FROM RANGE('//home/alice/cubes/iot/events')
+    WHERE NOT(skill_id IN $excluded_skills)
+          AND FIND(req_id, 'ffffffff-ffff-ffff') IS NULL
+;
+
+$daily_events =
+SELECT
+    a.*,
+    b.init_date AS init_date,
+    DateTime::ToDays(cast(a.fielddate AS Date) - cast(b.init_date AS Date)) / 7 AS week
+FROM
+    (SELECT
+        skill_id, external_id, device_id,
+        fielddate, puid,
+        original_type, device_type AS type,
+        count(*) AS cnt_events
+    FROM $events_tables
+    GROUP BY skill_id, external_id, device_id, fielddate, puid, original_type, device_type
+    ) AS a
+JOIN
+    (SELECT
+        puid,
+        min(fielddate) AS init_date
+    FROM $events_tables
+    GROUP BY puid
+    ) AS b
+ON a.puid == b.puid
+;
+
+-- single line per device/day for days 0..6 after init_date
+$init_period_events =
+SELECT
+    IF (de.type LIKE '%smart_speaker%', 'smart_speaker',
+        String::ReplaceAll(de.type, 'devices.types.', '')) AS type,
+    IF (de.original_type LIKE '%smart_speaker%', 'smart_speaker',
+        String::ReplaceAll(de.original_type, 'devices.types.', '')) AS original_type,
+    IF (de.skill_id == 'Q', 'Quasar',
+            IF (de.skill_id == 'T', 'Yandex',
+                skills.name)) ?? 'undefined' AS skill_name,
+    de.* without de.type, de.original_type,
+FROM
+    (SELECT * FROM $daily_events
+    WHERE cast (fielddate AS Date) - cast(init_date AS Date) < Interval("P7D")
+    ) AS de
+LEFT JOIN
+    (SELECT id, name FROM `//home/paskills/skills/stable`) AS skills
+ON de.skill_id == skills.id
+;
+
+-- weeks when user was active, in list format
+$retention_weeks =
+SELECT
+    puid,
+    AGGREGATE_LIST_DISTINCT(week) AS active_weeks,
+FROM $daily_events
+WHERE week <= $max_active_weeks
+GROUP BY puid
+;
+
+$new_user_feats =
+-- aggregation of $init_period_events
+SELECT
+    puid,
+    SOME(init_date) AS init_date,
+    AGGREGATE_LIST_DISTINCT(skill_id) AS activation_skill_ids,
+    AGGREGATE_LIST_DISTINCT(skill_name) AS activation_skill_names,
+    AGGREGATE_LIST_DISTINCT(original_type) AS activation_otypes,
+    AGGREGATE_LIST_DISTINCT(type) AS activation_types,
+    count(*) AS cnt_devices,
+    IF (count(*) == 1, '1', IF (count(*) <= 4, '2-4', '5+')) AS user_devices_bucket
+FROM $init_period_events
+GROUP BY puid
+;
+
+$user_retn_output =
+SELECT
+    uf.*,
+    rw.active_weeks AS active_weeks,
+FROM $new_user_feats AS uf
+JOIN $retention_weeks AS rw
+ON uf.puid == rw.puid
+;
+
+INSERT INTO $user_retn_output_table WITH TRUNCATE
+SELECT * FROM $user_retn_output ORDER BY init_date, puid
+;
+
+-- ==================== RETENTION CUBE ==============================
+
+$date_format = DateTime::Format("%Y-%m-%d");
+
+$weekly_events =
+SELECT
+    puid, week
+FROM $daily_events
+GROUP BY puid, week
+;
+
+$user_retn_cube =
+SELECT
+    uf.*,
+    we.week AS week,
+    $date_format(DateTime::StartOfWeek(cast (uf.init_date AS Date))) AS cohort_week,
+    $date_format(DateTime::StartOfMonth(cast (uf.init_date AS Date))) AS cohort_month,
+FROM $new_user_feats AS uf
+JOIN $weekly_events AS we
+ON uf.puid == we.puid
+;
+
+$user_retn_output_cube = $user_retn_output_table || "_cube";
+
+INSERT INTO $user_retn_output_cube WITH TRUNCATE
+SELECT * FROM $user_retn_cube ORDER by init_date, puid
+;
+
+-- output for diagnostics
+SELECT * FROM $user_retn_output INTO RESULT `sample_retn` LIMIT 100;
+SELECT * FROM $user_retn_cube   INTO RESULT `sample_cube` LIMIT 100;

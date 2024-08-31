@@ -1,0 +1,124 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$last_date = (SELECT MAX(fielddate) FROM `//home/msdata/user-profiles-cumulative/v1/last`);
+
+$status_table = 
+(
+    SELECT *
+    FROM `//home/msdata/user-profiles-cumulative/v1/last`
+    WHERE puid IN (SELECT DISTINCT puid FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices`)
+    AND fielddate = $last_date
+);
+
+$status_table2 = 
+(
+    SELECT puid, IF(ListHas(AGG_LIST_DISTINCT(status), 'pay_money'), 'pay_money', 'promo_intro') AS status
+    FROM 
+    (
+        SELECT puid, IF(NOT dummy AND is_premium_order, 'pay_money', 'promo_intro') AS status
+        FROM $status_table
+        WHERE state = 'active' AND plus
+    )
+    GROUP BY puid
+);
+
+$all_days = 
+(
+    SELECT DISTINCT puid, $last_date AS fielddate
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices`
+);
+
+$device_status = 
+(
+    SELECT a.*, d.status??'no_plus' AS status
+    FROM $all_days AS a 
+    LEFT JOIN $status_table2 AS d ON d.puid = a.puid
+);
+
+$data = 
+(
+    SELECT app, device, device_id, init_date, promo_activate_day, s.puid AS puid, 
+    Geo::RoundRegionById(CAST(region_id??213 AS Int32), 'country').name AS country,
+    subscription_device, fielddate, status
+    FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status` AS s 
+    INNER JOIN $device_status AS d ON d.puid = s.puid
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/device_payment_status` WITH TRUNCATE
+SELECT app, device, device_id, init_date, promo_activate_day, puid, country,
+subscription_device, fielddate, 
+CASE 
+WHEN status = 'no_plus' AND promo_activate_day IS NULL THEN 'no_plus_has_promo'
+WHEN status = 'no_plus' AND promo_activate_day > fielddate THEN 'no_plus_has_promo'
+WHEN status = 'no_plus' AND promo_activate_day IS NOT NULL THEN 'no_plus_no_promo'
+ELSE status 
+END AS status
+FROM $data
+ORDER BY puid, fielddate;
+
+COMMIT;
+
+$data = 
+(
+    SELECT d.*, 
+    IF(socket_fielddate >= CAST(CAST(fielddate AS Date) - DateTime::IntervalFromDays(7) AS String),  True, False) AS active
+    FROM `//home/voice/nadezhda17/common/plus_metrics/device_payment_status` AS d 
+    LEFT JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a ON a.device_id = d.device_id
+    WHERE a.init_date >= '2020-01-01'
+);
+
+$aggregated = 
+(
+    SELECT app, device, active, country, init_date, status, subscription_device, COUNT(DISTINCT puid) AS amount
+    FROM $data 
+    GROUP BY app, device, active, country, init_date, status, subscription_device
+);
+
+$result = 
+(
+    SELECT init_date, status, 'РБКИ' AS geo,
+    device??'Total' AS device,
+    CAST(active AS String)??'Total' AS active, 
+    CAST(subscription_device AS String)??'Total' AS subscription_device, 
+    SUM(amount) AS amount
+    FROM $aggregated
+    WHERE country IN ('Россия', 'Беларусь', 'Казахстан', 'Израиль')
+    GROUP BY GROUPING SETS (
+        (init_date, status),
+        (init_date, status, active), 
+        (init_date, status, device), 
+        (init_date, status, active, device),
+        (init_date, status, subscription_device),
+        (init_date, status, active, subscription_device),
+        (init_date, status, device, subscription_device),
+        (init_date, status, active, device, subscription_device)
+    )
+    UNION ALL 
+    SELECT init_date, status, 'Total' AS geo, 
+    device??'Total' AS device,
+    CAST(active AS String)??'Total' AS active, 
+    CAST(subscription_device AS String)??'Total' AS subscription_device, 
+    SUM(amount) AS amount
+    FROM $aggregated
+    GROUP BY GROUPING SETS (
+        (init_date, status),
+        (init_date, status, active), 
+        (init_date, status, device), 
+        (init_date, status, active, device),
+        (init_date, status, subscription_device),
+        (init_date, status, active, subscription_device),
+        (init_date, status, device, subscription_device),
+        (init_date, status, active, device, subscription_device)
+    )
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/plus_metrics/payment_status_metric` WITH TRUNCATE 
+SELECT *
+FROM $result;
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/payment_status_kpi_metric` WITH TRUNCATE 
+SELECT init_date, active, geo, device, subscription_device,
+SUM_IF(amount, status = 'pay_money')*1.0/SUM_IF(amount, status IN ('pay_money', 'promo_intro')) AS value
+FROM $result
+GROUP BY init_date, device, active, geo, subscription_device;

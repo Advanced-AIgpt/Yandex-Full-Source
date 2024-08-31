@@ -1,0 +1,225 @@
+USE hahn;
+PRAGMA yt.Pool = "alice-analytics-crons";
+PRAGMA SimpleColumns;
+PRAGMA yt.InferSchema;
+PRAGMA AllowDotInAlias;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = "1";
+PRAGMA yt.PoolTrees = "physical";
+PRAGMA yt.TentativePoolTrees = "cloud";
+PRAGMA AnsiOrderByLimitInUnionAll;
+PRAGMA DisableCoalesceJoinKeysOnQualifiedAll;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA DisableAnsiInForEmptyOrNullableItemsCollections;
+
+DECLARE $date_from as String;
+DECLARE $date_to as String;
+
+-- проекты в толоке с глубоким контекстом, на которых измеряем метрику шума
+$toloka_projects = ['37591', '37020', '34645', '34662', '34665', '34663', '36774', '41053', '34471'];
+
+-- date utils
+$date_format = DateTime::Format("%Y-%m-%d");
+$ts_to_datestr = ($x) -> {RETURN $date_format(DateTime::FromSeconds(CAST($x as Uint32)));};
+$date_range_inclusive = ($start_date, $end_date) -> {
+    RETURN ListCollect(ListFlatMap(ListFromRange(0, (DateTime::ToDays($end_date - $start_date)+1) ?? 0), ($x) -> {
+        RETURN $start_date + DateTime::IntervalFromDays(CAST($x AS Int16))
+    }));
+};
+$date_range_weekday = ($start_date, $end_date, $day_of_week) -> {
+    RETURN ListFilter($date_range_inclusive($start_date, $end_date), ($x) -> {
+        RETURN DateTime::GetDayOfWeek($x) == $day_of_week;
+    });
+};
+$list_filter_not = ($list, $col) -> (ListFilter($list, ($x) -> ($x != $col)));
+
+$standard_answer_arc_path = "arc://alice/analytics/tasks/VA-571/standardize_answer.py?hash=" || "90f7e8244aaf3d6da8a0f32f6286cd7ae51c5ae9";
+PRAGMA File("standardize_answer.py", $standard_answer_arc_path);
+-- generic_scenario, action, answer, app
+$get_answer_standard = Python2::answer_standard(Callable<(String?, String?, String?, String?) -> String?>, FileContent("standardize_answer.py"));
+
+DEFINE SUBQUERY $get_noise_data($date_from_str, $date_to_str) AS
+    -- $day_from_str = $date_format($day_from);
+    -- $day_to_str = $date_format($day_to);
+
+    SELECT
+        tasks.*,
+        pools.priority as priority,
+        '_total_' as total_const_field,
+        (result || '_' || CAST(fraud as String)) as toloka_result,
+    FROM (
+        SELECT *
+        FROM (
+            SELECT *
+            FROM (
+                SELECT
+                    assignment_gs_correct_count,
+                    assignment_gs_count,
+                    $ts_to_datestr(assignment_submit_time) AS fielddate,
+                    assignment_submit_time,
+                    CAST(pool_id as String) as pool_id,
+                    pool_name,
+                    project_id,
+                    project_name,
+                    worker_id,
+                    assignment_assignment_id,
+                    ListMap(
+                        ListZip(
+                            Yson::ConvertToList(Yson::ParseJson(task_suite_raw_tasks)),
+                            Yson::ConvertToList(Yson::ParseJson(assignment_raw_solutions))
+                        ),
+                        ($x) -> {
+                            $input, $output = $x;
+                            RETURN <|
+                                query: Yson::ConvertToString($input.input_values.input.action0.query),
+                                answer: Yson::ConvertToString($input.input_values.input.action0.answer),
+                                action: Yson::ConvertToString($input.input_values.input.action0.action),
+                                generic_scenario: Yson::ConvertToString($input.input_values.input.generic_scenario),
+                                req_id: Yson::ConvertToString($input.input_values.input.req_id),
+                                intent: Yson::ConvertToString($input.input_values.input.intent),
+                                hashsum: Yson::ConvertToString($input.input_values.input.hashsum),
+                                answer_standard: $get_answer_standard(
+                                    Yson::ConvertToString($input.input_values.input.generic_scenario),
+                                    Yson::ConvertToString($input.input_values.input.action0.action),
+                                    Yson::ConvertToString($input.input_values.input.action0.answer),
+                                    'quasar'
+                                ),
+
+                                result: Yson::ConvertToString($output.output_values.result),
+                                fraud: Yson::ConvertToBool($output.output_values.fraud),
+                            |>;
+                        }
+                    ) as result
+                FROM `//home/toloka/prod/export/assignments/results_v56`
+                WHERE
+                    assignment_status == 'APPROVED'
+                    AND assignment_automerged == False
+                    AND project_id IN $toloka_projects
+                    AND $ts_to_datestr(assignment_submit_time) >= $date_from_str
+                    AND $ts_to_datestr(assignment_submit_time) <= $date_to_str
+
+                    -- убираем тренировки и экзамены
+                    AND pool_name NOT ILIKE '%exam%'
+                    AND pool_name NOT ILIKE '%экзам%'
+                    AND pool_name NOT ILIKE '%обучен%'
+                    AND pool_name NOT ILIKE '%тренир%'
+                    AND pool_name NOT ILIKE '%train%'
+                    AND assignment_gs_count <= 4
+            )
+            FLATTEN LIST BY result
+        )
+        FLATTEN COLUMNS
+    ) as tasks
+    INNER JOIN (
+        SELECT
+            id,
+            MAX(priority) as priority
+        FROM `//home/toloka/prod/export/pools/pools`
+        WHERE
+            status == 'CLOSED'
+            AND priority >= 80
+            AND project_id IN $toloka_projects
+            AND $ts_to_datestr(start_date) >= $date_from_str
+            AND $ts_to_datestr(start_date) <= $date_to_str
+        GROUP BY id
+    ) as pools
+        ON tasks.pool_id == pools.id
+    WHERE
+        query IS NOT NULL
+        AND query != ''
+
+END DEFINE;
+
+$data = (
+    SELECT *
+    FROM $get_noise_data(
+        $date_format(CAST($date_from as Date) - 6 * Interval('P1D')),
+        $date_to
+    )
+);
+
+
+DEFINE SUBQUERY $get_marks_agg_data($day_from_str, $day_to_str, $aggregate_type, $aggregate_field) AS
+
+    SELECT
+        aggregate_field,
+        req_id,
+        aggregate_type,
+
+        MODE(toloka_result_mv)[0].Value as toloka_aggr_result_mv,
+        AGGREGATE_LIST(toloka_result_mv) as toloka_aggr_marks,
+        ListLength(
+            $list_filter_not(
+                AGGREGATE_LIST(toloka_result_mv),
+                MODE(toloka_result_mv)[0].Value
+            )
+        ) as toloka_aggr_marks_diff_count,
+
+        COUNT(*) as total_aggregated_marks_count,
+        SUM(marks_cnt) as total_raw_marks_count,
+    FROM (
+        -- аггрегированные оценки
+        SELECT
+            aggregate_field,
+            pool_id,
+            req_id,
+            aggregate_type,
+            AGGREGATE_LIST(toloka_result) as toloka_results,
+            MODE(toloka_result)[0].Value as toloka_result_mv,
+            COUNT(*) as marks_cnt
+        FROM $data
+        WHERE
+            aggregate_type IS NOT NULL
+            AND aggregate_type != ''
+            AND req_id IS NOT NULL
+            AND req_id != ''
+            AND fielddate >= $day_from_str
+            AND fielddate <= $day_to_str
+        GROUP BY
+            TableRow().$aggregate_field AS aggregate_field,
+            pool_id,
+            req_id,
+            TableRow().$aggregate_type AS aggregate_type
+    )
+    GROUP BY aggregate_field, req_id, aggregate_type
+
+
+END DEFINE;
+
+DEFINE ACTION $calc_aggr_data_metrics($day_from, $day_to, $aggregate_type, $aggregate_field) AS
+    UPSERT INTO stat.`VoiceTech/Dialog/E2E/u2e_noise_metrics/daily`
+    SELECT
+        $aggregate_type as aggregate_type,
+        aggregate_field ?? '' as project_id,
+        $date_format($day_to) as fielddate,
+
+        COUNT(*) as cnt_uniq_items,
+        SUM(toloka_aggr_marks_diff_count) as sum_diff_answers_count,
+        SUM(total_aggregated_marks_count) as sum_aggr_answers,
+        SUM(total_raw_marks_count) as sum_raw_marks,
+
+        SUM_IF(total_aggregated_marks_count, total_aggregated_marks_count >= 2) as sum_aggr_answers_with_overlap_2_plus,
+        COUNT_IF(total_aggregated_marks_count >= 2) as cnt_aggr_answers_with_overlap_2_plus,
+    FROM $get_marks_agg_data($date_format($day_from), $date_format($day_to), $aggregate_type, $aggregate_field)
+    GROUP BY aggregate_field
+END DEFINE;
+
+EVALUATE
+    FOR $day
+    IN $date_range_inclusive(CAST($date_from as Date), CAST($date_to as Date))
+    DO $calc_aggr_data_metrics($day - 6 * Interval('P1D'), $day, 'hashsum', 'project_id');
+
+EVALUATE
+    FOR $day
+    IN $date_range_inclusive(CAST($date_from as Date), CAST($date_to as Date))
+    DO $calc_aggr_data_metrics($day - 6 * Interval('P1D'), $day, 'hashsum', 'total_const_field');
+
+EVALUATE
+    FOR $day
+    IN $date_range_inclusive(CAST($date_from as Date), CAST($date_to as Date))
+    DO $calc_aggr_data_metrics($day - 6 * Interval('P1D'), $day, 'answer_standard', 'project_id');
+
+EVALUATE
+    FOR $day
+    IN $date_range_inclusive(CAST($date_from as Date), CAST($date_to as Date))
+    DO $calc_aggr_data_metrics($day - 6 * Interval('P1D'), $day, 'answer_standard', 'total_const_field');

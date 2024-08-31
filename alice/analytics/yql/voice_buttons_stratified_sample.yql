@@ -1,0 +1,178 @@
+PRAGMA yt.InferSchema;
+PRAGMA yson.DisableStrict = 'true';
+
+$date = {{param.date}};
+$sample_size = {{param.sample_size}};
+$sample_path = {{param.sample_path}} || "/" || $date;
+$voice_text_regexp = {{param.voice_text_regexp}};
+$date_start = {{param.date_start}};
+
+$script = @@
+import re
+def clean_voice_text_from_tags(tts_text):
+    voice_text = tts_text
+
+    tech_tags = re.compile('|'.join([
+        "#ord", "#card",
+        "#nom", "#gen", "#dat", "#acc", "#instr", "#loc",
+        "#mas", "#fem", "#neu",
+        "#sg", "#pl",
+        "<\\[[a-zA-Z =\\~\\/\\|]*\\]>",
+        "\\.?sil *<\\[ *[0-9]* *\\]>",
+        "<speaker[^>]*>",
+        "<\\[\\/domain\\]>"
+    ]))
+
+    voice_text = tech_tags.sub('', voice_text)
+    voice_text = voice_text.replace(".\n\n.sil ", ".\n\n").replace(".sil ", ". ") \
+        .replace(" .", ".").replace("  ", " ").strip()
+
+    # remove "+" before russian vowels
+    if '+' in voice_text:
+        splitted = voice_text.split('+')
+        voice_text = splitted[0]
+        for el in splitted[1:]:
+            if (el.startswith("а") or el.startswith("е") or el.startswith("ё") or el.startswith("и")
+                    or el.startswith("о") or el.startswith("у") or el.startswith("ы") or el.startswith("э")
+                    or el.startswith("ю") or el.startswith("я") or el.startswith("А") or el.startswith("Е")
+                    or el.startswith("Ё") or el.startswith("И") or el.startswith("О") or el.startswith("У")
+                    or el.startswith("Э") or el.startswith("Ю") or el.startswith("Я")):
+                voice_text += el
+            else:
+                voice_text += "+" + el
+
+    voice_text = re.sub('\s+', ' ', voice_text)
+    return voice_text
+    @@
+;
+
+$clean_voice_text_from_tags = Python2::clean_voice_text_from_tags(Callable<(String?)->String?>, $script);
+$five_min = 5*60*1000;
+$valid_frame = ($frame_name) -> {
+    RETURN ($frame_name != "fast_command.sound_louder__ellipsis")
+            AND ($frame_name != "fast_command.sound_quiter__ellipsis")
+            AND ($frame_name != "fast_command.sound_set_level__ellipsis")
+}
+;
+
+$frame_name = ($item) -> {
+    RETURN Yson::ConvertToString($item.`1`.nlu_hint.frame_name);
+};
+
+$has_instances = ($item) -> {
+    RETURN $item.`1`.nlu_hint IS NOT NULL;
+};
+
+$expboxes_grep = (
+    SELECT Yson::ConvertToDict(analytics_info.analytics_info[Yson::ConvertToString(analytics_info.winner_scenario.name)?? ""].frame_actions) AS frame_actions,
+        analytics_info, query, reply, app, server_time_ms, generic_scenario, req_id, input_type, voice_text, intent,
+        parent_req_id, parent_scenario, `uuid`, lead(server_time_ms) OVER w AS lead_ts, lead(query) OVER w AS next_query, lead(reply) OVER w AS next_reply, lead(voice_text) OVER w AS next_voice_text,
+        lead(req_id) OVER w AS lead_req_id, Yson::ConvertToString(Yson::Parse(analytics_info)["modifiers_info"]["proactivity"]["item_info"]) AS recommended_intent_v0, Yson::ConvertToString(analytics_info.recognized_action.parent_request_id) AS action_parent_req_id,
+        Yson::ConvertToString(analytics_info.recognized_action.action_id) AS action_id
+
+    FROM range(`//home/alice/dialog/prepared_logs_expboxes`, $date_start, $date)
+    WHERE generic_scenario != 'side_speech' AND do_not_use_user_logs == False
+    WINDOW w AS (
+        PARTITION by `uuid`
+        ORDER BY server_time_ms
+    )
+)
+;
+
+-- кнопки - тут не только рекид, но и всякая интересная инфа про кнопку - потом удобнее отсматривать сэмпл. дополнительно к кнопкам грепаются построллы
+$voice_buttons = (
+    SELECT ListMap(DictItems(frame_actions), $frame_name) AS frame_list, query, reply, voice_text, app, server_time_ms, req_id, frame_actions, input_type, parent_req_id, parent_scenario, ListAny(ListMap(DictItems(frame_actions), $has_instances)) AS has_voice_buttons, generic_scenario, `uuid`, lead_ts, intent, lead_req_id, next_query, next_voice_text, next_reply, recommended_intent_v0, analytics_info
+    FROM $expboxes_grep
+    WHERE app in AsList("quasar", "small_smart_speakers")
+        AND (
+                (
+                    DictHasItems(frame_actions)
+                    AND ListAny(ListMap(DictItems(frame_actions), $has_instances))
+                    AND lead_ts - server_time_ms < $five_min
+                    AND ListAny(ListMap(ListMap(DictItems(frame_actions), $frame_name), $valid_frame))
+                    AND (voice_text ?? "") regexp $voice_text_regexp
+                ) OR (recommended_intent_v0 IS NOT NULL)
+             )
+        AND query IS NOT NULL AND next_query IS NOT NULL
+);
+
+$accept_buttons = (
+    SELECT action_parent_req_id, action_id, req_id
+    FROM $expboxes_grep
+    WHERE action_parent_req_id IS NOT NULL
+)
+;
+
+$input = (
+SELECT t.*, (t.generic_scenario || if (action_id IS NOT NULL, "_accepted_true", "_accepted_false")) AS scenario_and_accept,
+       if (action_id IS NOT NULL, True, False) AS accepted, Digest::MurMurHash(t.next_query ?? "") AS query_hash
+FROM (
+    SELECT *
+    FROM $voice_buttons AS l
+    LEFT JOIN (SELECT action_parent_req_id, action_id FROM $accept_buttons) AS r
+    ON l.req_id == r.action_parent_req_id
+) AS t
+)
+;
+
+-- считаем частоту сценария + факта срабатывания кнопки
+$scenario_and_accept_freqs = (
+    SELECT scenario_and_accept, COUNT(*) AS scenario_and_accept_freq
+    FROM $input
+    GROUP BY scenario_and_accept
+);
+
+-- считаем частоту хеша(запрос) внутри сгруппированных сценариев + факт срабатывания
+$query_hash_freqs = (
+    SELECT scenario_and_accept, query_hash, COUNT(*) AS query_scenario_and_accept_freq
+    FROM $input
+    GROUP BY scenario_and_accept, query_hash
+);
+
+-- считаем знаменатель, чтоб нормировать хеш внутри сценария
+$query_hash_freqs_denom = (
+    SELECT scenario_and_accept, SUM(Math::Sqrt(CAST(query_scenario_and_accept_freq As Double))) AS query_intent_freq_denom
+    FROM $query_hash_freqs
+    GROUP BY scenario_and_accept
+);
+
+-- считаем вес как призведение корней частот, резервируем 100 за маленькими сценариями, корень позволит чуть больше вытянуть хвостовые запросы
+$with_weight = (
+    SELECT p.*,
+        (Math::Sqrt(CAST(ListMax(AsList(scenario_and_accept_freq, 100)) AS Double)))
+        * (Math::Sqrt(CAST(query_scenario_and_accept_freq AS Double)) / (CAST(query_scenario_and_accept_freq * query_intent_freq_denom AS Double))) AS weight
+    FROM $input AS p
+    JOIN $scenario_and_accept_freqs AS intent_freq
+    ON p.scenario_and_accept == intent_freq.scenario_and_accept
+    JOIN $query_hash_freqs AS query_hash
+    ON p.scenario_and_accept == query_hash.scenario_and_accept AND p.query_hash == query_hash.query_hash
+    JOIN $query_hash_freqs_denom AS query_hash_denom
+    ON p.scenario_and_accept == query_hash_denom.scenario_and_accept
+);
+
+-- используем https://en.wikipedia.org/wiki/Reservoir_sampling; request_id должен быть уникальным; но сортировка обратная, т.к. мы своими преобразованиями прибили вес
+$sample = (
+    SELECT *
+    FROM $with_weight
+    ORDER BY Math::Log(RANDOM(COALESCE(WeakField(request_id, String), WeakField(req_id, String)))) / weight DESC
+    LIMIT $sample_size
+)
+;
+
+INSERT INTO $sample_path WITH TRUNCATE
+SELECT *
+FROM $sample
+;
+
+-- создаем таблицу в формате задания в проекте Ответ на предложение Алисы
+INSERT INTO {{output1}} with truncate
+SELECT t.*, cast(Digest::MurMurHash((t.query0 ?? "") || (t.answer0 ?? "") || (t.query1 ?? "") || (t.answer1 ?? "")) AS String) AS item_hash
+FROM (
+    SELECT req_id, query AS query0, if (generic_scenario in AsList('general_conversation', 'external_skill_gc') AND ((reply ?? "") != ""),
+                        reply, voice_text) AS answer0, next_query AS query1, next_voice_text AS answer1
+    FROM (
+        SELECT req_id, query, $clean_voice_text_from_tags(voice_text ?? "") AS voice_text, next_query, $clean_voice_text_from_tags(next_voice_text ?? "") AS next_voice_text, if (Yson::ConvertToString(Yson::Parse(analytics_info)["modifiers_info"]["proactivity"]["item_info"]) IS NOT NULL, reply || " " || $clean_voice_text_from_tags(String::SplitToList(voice_text, '\">')[1]), reply) AS reply, generic_scenario
+        FROM $sample
+    )
+) AS t
+;

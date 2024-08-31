@@ -1,0 +1,87 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.InferSchema = '1';
+
+$yesterday = ($date) -> {RETURN $date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(1) AS String)};
+
+--дата активации промокода
+$used_device_promo = 
+(
+    SELECT device_id, MIN(promo_activate_day) AS promo_activate_day
+    FROM
+    (
+        SELECT deviceid AS device_id, SUBSTRING(CAST(promoactivationtime AS String), 0, 10) AS promo_activate_day
+        FROM FILTER(`//home/paskills/billing/snapshots`, 
+        ($date) -> ($date = CAST(CurrentUtcDate() AS String)), `v_used_device_promo`)
+    )
+    GROUP BY device_id
+);
+
+--последний puid на конкретной колонке и дата активации устройста
+$all_devices = 
+(
+    SELECT app, device, device_id, socket_fielddate AS last_socket_date, init_date, puid, region_id
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices`  
+);
+
+$uniq_device_puid = 
+(
+    SELECT DISTINCT puid 
+    FROM $all_devices
+);
+
+--статус подписки 
+$subscriptions = 
+(
+    SELECT puid, MAX(subscription_state) AS subscription_state, MAX_BY(start_date, subscription_state) AS start_date, 
+    MAX_BY(end_date, subscription_state) AS end_date, MAX_BY(product_name, subscription_state) AS product_name
+    FROM 
+    (
+        SELECT f.puid AS puid, subscription_state, start_date, end_date, product_name
+        FROM `//home/msdata/user-profiles-cumulative/v1/last` AS f 
+        INNER JOIN $uniq_device_puid AS u ON u.puid = f.puid
+        WHERE state = 'active' 
+        --статус подписки на вчера
+        AND $yesterday(fielddate)
+        UNION ALL 
+        SELECT f.puid AS puid, status AS subscription_state, NULL AS start_date, 
+        NULL AS end_date, 'opk_profile' AS product_name
+        FROM `//home/msdata/opk-profiles-cumulative/v1/last` AS f
+        INNER JOIN $uniq_device_puid AS u ON u.puid = f.puid
+        WHERE is_active 
+        --статус подписки на вчера
+        AND $yesterday(fielddate)
+    )
+    GROUP BY puid
+);
+
+$subscription_device = 
+(
+    SELECT DISTINCT device_id
+    FROM `//home/quasar-dev/backend/snapshots/current/device_subscription`
+);
+
+$result = 
+(
+    SELECT device_id, 
+    MAX_BY(app, device) AS app, MAX(device) AS device, 
+    MAX(last_socket_date) AS last_socket_date, MIN(init_date) AS init_date, 
+    MAX_BY(puid, last_socket_date) AS puid, MIN(subscription_state) AS subscription_state, 
+    SOME(product_name) AS product_name, MAX(promo_activate_day) AS promo_activate_day, 
+    MAX(subscription_device) AS subscription_device, SOME(region_id) AS region_id
+    FROM
+    (
+        SELECT app, device, a.device_id AS device_id, last_socket_date, init_date, a.puid AS puid, 
+        subscription_state, product_name, promo_activate_day, 
+        IF(q.device_id IS NOT NULL, true, false) AS subscription_device, region_id
+        FROM $all_devices AS a 
+        LEFT OUTER JOIN $subscription_device AS q ON q.device_id = a.device_id
+        LEFT OUTER JOIN $subscriptions AS s ON s.puid = a.puid 
+        LEFT OUTER JOIN $used_device_promo AS u ON u.device_id = a.device_id
+    )
+    GROUP BY device_id
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/subscription_status` WITH TRUNCATE 
+SELECT *
+FROM $result;

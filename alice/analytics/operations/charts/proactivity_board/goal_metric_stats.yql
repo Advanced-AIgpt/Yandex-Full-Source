@@ -1,0 +1,96 @@
+use hahn;
+
+PRAGMA yt.InferSchema = '100';
+PRAGMA GroupByLimit = "64";
+PRAGMA GroupByCubeLimit = "4";
+
+pragma yson.DisableStrict;
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+$ms_in_minute = 60*1000;
+$success_condition_table = "//home/voice/proactivity/applied_conditions_stats";
+$total_timespent_path = "//home/alice/precomputes/timespent/total_timespent";
+$goal_metric_data_path = {{param.goal_metric_data}};
+$success_condition_timespent_path = {{param.success_conditions_with_timespent}};
+
+$period_looking_back_days = 1;
+$proactivity_apps = ('quasar', 'small_smart_speakers');
+$period_ago = ($date, $period) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays($period))
+};
+
+$success_condition_timespent= (
+    select fielddate, req_id,
+        ListSort(ListExtend(some(base_ids), AsList("_total_"))) as base_ids,
+        ListSort(ListExtend(some(intents), AsList("_total_"))) as intents,
+        some(timespent_app) as app, some(no_postroll) as no_postroll, some(is_new) as is_new,
+        sum(timespent_ms) as timespent_ms, some(child_confidence) as child_confidence
+    from range($success_condition_timespent_path, $period_ago($date_start, $period_looking_back_days), $date_end)
+    group by req_id, fielddate
+)
+;
+
+$total_success_condition_stats = (
+    select fielddate, count(*) as total_success_conditions
+    from range($success_condition_table, $period_ago($date_start, $period_looking_back_days), $date_end)
+    group by tablename() as fielddate
+)
+;
+
+$total_timespent_info = (
+    select *
+    from (
+        select app ?? '_total_' as app, fielddate, 1.0*sum(tlt_tvt + tts)/$ms_in_minute as total_timespent_m
+        from range(`//home/alice/precomputes/timespent/precompute_timespent`, $date_start, $date_end)
+        where app in $proactivity_apps and (expboxes ?? '') != ''
+        group by grouping sets (
+            (fielddate),
+            (fielddate, app)
+        )
+    ) as l join (
+        select app, fielddate, max(devices) as devices, max(weekly_devices) as weekly_devices
+        from range($total_timespent_path, $date_start, $date_end)
+        where scenario == "_total_" and is_tv_plugged_in == "_total_" and device == "_total_" and age_category == '_total_' and cohort == "_total_"
+        group by app, fielddate
+    ) as r on l.app == r.app and l.fielddate == r.fielddate
+)
+;
+
+INSERT INTO $goal_metric_data_path WITH TRUNCATE
+select intents, base_ids, fielddate, app, is_new,
+    some(if (no_postroll == "true", timespent_m)) as timespent_m_no_postroll,
+    some(if (no_postroll == "false", timespent_m)) as timespent_m_yes_postroll,
+    some(if (no_postroll == "true", success_conditions)) as success_conditions_no_postroll,
+    some(if (no_postroll == "false", success_conditions)) as success_conditions_yes_postroll,
+    some(if (no_postroll == "true", median_timespent)) as median_timespent_m_no_postroll,
+    some(if (no_postroll == "false", median_timespent)) as median_timespent_m_yes_postroll,
+    some(total_success_conditions) as total_success_conditions,
+    some(devices) as devices,
+    some(weekly_devices) as weekly_devices,
+    some(total_timespent_m) as total_timespent_m
+from (
+    select *
+    from (
+        select *
+        from (
+            select fielddate, intents, base_ids, is_new ?? "_total_" as is_new, app ?? "_total_" as app, CAST(no_postroll as string) ?? "_total_" as no_postroll,
+                1.0*sum(timespent_ms)/$ms_in_minute as timespent_m, count(*) as success_conditions, 1.0*median(timespent_ms)/$ms_in_minute as median_timespent
+            from (
+                select *
+                from (
+                    select *
+                    from $success_condition_timespent as t
+                    flatten list by intents
+                ) flatten list by base_ids
+            )
+            where app is not null
+            group by intents, base_ids, fielddate, CUBE(app, is_new, no_postroll)
+        ) as l left join $total_timespent_info as r on l.app == r.app and l.fielddate == r.fielddate
+    ) as l left join $total_success_condition_stats as r on l.fielddate == r.fielddate
+)
+group by intents, base_ids, fielddate, app, is_new
+union all
+select *
+from $goal_metric_data_path
+where fielddate < $date_start or fielddate > $date_end
+;

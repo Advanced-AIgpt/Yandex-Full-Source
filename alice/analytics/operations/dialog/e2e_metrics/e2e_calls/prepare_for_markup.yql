@@ -1,0 +1,104 @@
+PRAGMA yson.DisableStrict;
+
+$call_path = '/directive/payload/megamind_analytics_info/analytics_info/MessengerCall/scenario_analytics_info/objects/0/matched_contacts/contacts';
+
+$arc_get_intent_path = 'arc://alice/analytics/utils/yt/extract_intent.py?hash=8a05684edd21c5bb0ae57aa0f5d5dda106002654';
+$arc_get_asr_path = 'arc://alice/analytics/utils/yt/extract_asr.py?hash=8a05684edd21c5bb0ae57aa0f5d5dda106002654';
+
+PRAGMA File("extract_intent.py", $arc_get_intent_path);
+PRAGMA File("extract_asr.py", $arc_get_asr_path);
+
+$intent_script = FileContent("extract_intent.py");
+$asr_script = FileContent("extract_asr.py");
+
+$get_intent = Python3::get_intent(
+    Callable<(String?)->String?>,
+    $intent_script
+);
+
+$get_asr = Python3::get_asr(
+    Callable<(String?, String?)->String>,
+    $asr_script
+);
+
+$parsed_vins_response = (
+    SELECT RequestId AS request_id,
+    Yson::YPath(Yson::ParseJson(VinsResponse), $call_path) AS contacts,
+    $get_asr(VinsResponse, AsrResponses) AS asr,
+    $get_intent(VinsResponse) AS intent,
+    SetraceUrl
+    FROM {{input1}}
+    WHERE VinsResponse is not null
+);
+
+$get_display_name = ($contact_book, $contacts) -> {
+    $lk_book = ListMap($contact_book, ($contact)-> {RETURN Yson::ConvertToString($contact.lookup_key)});
+    $lk_list = ListMap($contacts, ($contact)-> {RETURN Yson::ConvertToString($contact.lookup_key)});
+    RETURN
+        ListMap(
+            ListZip(
+                $lk_list,
+                ListMap($lk_list, ($lk) -> {RETURN Yson::ConvertToString($contact_book[ListIndexOf($lk_book, $lk)].display_name)})
+            ),
+            ($x) -> {RETURN {'lookup_key': $x.0, 'display_name':$x.1}}
+        )
+};
+
+$join_with_downloader_answer = (
+    SELECT
+        r.request_id AS request_id,
+        r.text as text,
+        r.contacts.data.contacts AS contact_book,
+        Yson::ConvertToList(l.contacts) AS contacts,
+        target_contact_id, asr AS asr_text,
+        target_display_name,
+        voice_url,
+        target_lookup_key,
+        l.SetraceUrl AS setrace_url,
+        intent,
+        app_preset
+    FROM $parsed_vins_response AS l
+    LEFT JOIN {{input2}} AS r
+    ON l.request_id == r.request_id
+);
+
+
+$prepare_for_flatten = (
+    SELECT
+        ListEnumerate(
+            $get_display_name(Yson::ConvertToList(contact_book), contacts)
+        ) as contacts,
+        text,
+        request_id,
+        target_lookup_key
+    FROM $join_with_downloader_answer
+);
+
+-- output_for_markup
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    CAST(contacts.1['lookup_key'] AS String) as contact_id,
+    CAST(contacts.1['display_name'] AS String) as display_name,
+    text, request_id
+FROM $prepare_for_flatten
+FLATTEN BY contacts
+WHERE target_lookup_key != contacts.1['lookup_key']
+;
+
+
+--main_output
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT
+    app_preset,
+    asr_text,
+    ListEnumerate(contacts) as contacts,
+    intent,
+    request_id,
+    target_contact_id,
+    target_lookup_key,
+    target_display_name,
+    text,
+    voice_url,
+    setrace_url
+FROM $join_with_downloader_answer
+;

@@ -1,0 +1,90 @@
+USE hahn; 
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$capture_log = Re2::Capture("SESSIONLOG: (.*)");
+
+$activation_type = CASE 
+        WHEN transcript == "Recognizer is started" THEN "Recognizer is started"
+        WHEN transcript REGEXP("^\\*") THEN "Подпороговое срабатывание"
+        ELSE ENSURE("Обычное срабатывание" , transcript IS NOT NULL AND transcript != "", "Empty transcript in logs!")
+    END;
+
+$spotter_type = CASE 
+        WHEN source REGEXP("activation") THEN "Activation"
+        WHEN source REGEXP("confirmation") THEN "Confirmation"
+        ELSE ENSURE("Other", source IS NULL OR source == "", "Unknown source in logs!")
+    END;
+
+$activation_count = CASE 
+    WHEN spotter_type == "Activation" THEN 
+        CASE
+            WHEN (
+                text REGEXP("^(алис |алиса |яндекс ).*(окей алис|окей яндекс|привет алис|привет яндекс|слушай алис|слушай яндекс)") OR
+                text REGEXP("(окей алис|окей яндекс|привет алис|привет яндекс|слушай алис|слушай яндекс).* (окей алис|окей яндекс|привет алис|привет яндекс|слушай алис|слушай яндекс)")
+            ) THEN 2
+            WHEN text REGEXP("(окей алис|окей яндекс|привет алис|привет яндекс|слушай алис|слушай яндекс)") THEN 1
+            WHEN text IS NOT NULL THEN 0
+            ELSE NULL
+        END
+    WHEN spotter_type == "Confirmation" THEN
+        CASE
+            WHEN text REGEXP("(отмена|отменить|поехали).* (отмена|отменить|поехали)") THEN 2
+            WHEN text REGEXP("(отмена|отменить|поехали)") THEN 1
+            WHEN text IS NOT NULL THEN 0
+            ELSE NULL
+        END
+    ELSE
+        CASE
+            WHEN text IS NOT NULL THEN 0
+            ELSE NULL
+        END
+    END;
+    
+
+
+$spotter_log = ( 
+    SELECT transcript, source, mds_key FROM 
+        [//home/voice-speechbase/uniproxy/spotter/${global.fielddate}] AS log
+    WHERE 
+        key == "27fbd96d-ec5b-4688-a54d-421d81aa8cd2" AND
+        app_version >= "3.3"
+);
+
+$spotter = (
+    SELECT * WITHOUT yang.mds_key, yang.uuid, yang.source
+    FROM $spotter_log AS log
+    LEFT JOIN [${global.dir}/${global.fielddate}] AS yang 
+    ON log.mds_key == yang.mds_key
+);
+
+
+
+$stats = (
+    SELECT 
+        spotter_type, 
+        activation_type, 
+        transcript, 
+        COUNT(*) AS total,
+        COUNT_IF($activation_count == 2) AS more,
+        COUNT_IF($activation_count == 1) AS one,
+        COUNT_IF($activation_count == 0) AS no
+        
+    FROM $spotter
+    GROUP BY 
+        $spotter_type AS spotter_type,
+        $activation_type AS activation_type,
+        ROLLUP(transcript)
+);
+
+
+UPSERT INTO stat.[VoiceTech/monitorings/navi_spotter/daily]
+SELECT 
+    "${global.fielddate}" AS fielddate,
+    "\t" || String::JoinFromList(AsList(spotter_type, activation_type, transcript), "\t") || "\t"  AS id,
+    total, 
+    IF(more != 0 OR one != 0 OR no != 0, more, NULL) AS more, 
+    IF(more != 0 OR one != 0 OR no != 0, one, NULL) AS one, 
+    IF(more != 0 OR one != 0 OR no != 0, no, NULL) AS no
+FROM $stats
+

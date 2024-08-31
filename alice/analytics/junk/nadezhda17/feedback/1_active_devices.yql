@@ -1,0 +1,39 @@
+USE hahn;
+PRAGMA yt.UseColumnarStatistics = 'false'; 
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$active_devises_puid = 
+(
+    SELECT device_id, fielddate, SOME(puid) AS puid
+    FROM `//home/alice/cubes/dayuse/stations/last`
+    WHERE $date_filter(fielddate)
+    GROUP BY device_id, fielddate
+);
+
+$active_devices = 
+(
+    SELECT fielddate, puid, device_id, ListHas(states, 'active') AS plus
+    FROM 
+    (
+        SELECT DISTINCT d.fielddate AS fielddate, d.puid AS puid, d.device_id AS device_id, 
+        AGG_LIST_DISTINCT(state) AS states
+        FROM $active_devises_puid AS d
+        LEFT OUTER JOIN `//home/msdata/user-profiles-cumulative/v1/last` AS f ON d.puid = f.puid AND d.fielddate = f.fielddate
+        GROUP BY d.fielddate, d.puid, d.device_id
+    )
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/feedback/active_devices` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT fielddate, device_id, MAX_BY(puid, plus) AS puid, MAX(plus) AS plus
+    FROM $active_devices
+    GROUP BY fielddate, device_id
+    UNION ALL 
+    SELECT a.*
+    FROM `//home/voice/nadezhda17/common/feedback/active_devices`  AS a 
+    LEFT ONLY JOIN $active_devices AS d ON a.device_id = d.device_id AND a.fielddate = d.fielddate
+) 
+ORDER BY puid, fielddate;

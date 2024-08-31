@@ -1,0 +1,159 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+PRAGMA TablePathPrefix = '//home/voice/dialog/misc/cohorts/portion';
+
+DECLARE $param_dict AS Dict<String, String>;
+$date_first = $param_dict['date_first'];
+$date_last = $param_dict['date_last'];
+
+$format = DateTime::Format("%Y-%m-%d");
+
+$reportEnvironmentValueByKey = ($keys, $values, $keyValue) -> {
+    $idx = ListIndexOf($keys, $keyValue);
+    RETURN CAST($values[$idx] as Utf8)??'';
+};
+
+$fixed_quasar_init = (
+    SELECT device_id, MIN(init_date) AS init_date, MIN_BY(device_type, init_date) AS device_type
+    FROM `//home/marketing-data/andrewha/Station/backup/quasar_init`
+    GROUP BY device_id
+);
+
+INSERT INTO `active_device_id` WITH TRUNCATE
+SELECT DISTINCT fielddate, device_id, device_type FROM
+(
+select
+    $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp as UInt32)), "Europe/Moscow")) as fielddate,
+        CASE
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == 'desktop' THEN Model
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") != '' THEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type")
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='Station' THEN 'yandexstation'
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='YandexModule-00002' THEN 'yandexmodule'
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='KidPhone3G' THEN 'elariwatch'
+        ELSE Model
+    END as device_type,
+    CASE
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id") != '' THEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id")
+    ELSE DeviceID
+    END AS device_id
+from RANGE(`//logs/appmetrica-yandex-events/1d`, $date_first, $date_last)
+where
+    APIKey = 999537
+    AND $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp as UInt32)), "Europe/Moscow")) >= $date_first
+);
+COMMIT;
+
+$get_start_of_week = ($date) -> {
+    RETURN  CAST(DateTime::MakeDate(DateTime::StartOfWeek(CAST($date AS Date))) AS String);
+};
+
+$get_start_of_month = ($date) -> {
+    RETURN  CAST(DateTime::MakeDate(DateTime::StartOfMonth(CAST($date AS Date))) AS String);
+};
+
+$get_app = ($device_type) -> {
+    RETURN CASE
+    WHEN $device_type == 'yandexstation' THEN 'quasar'
+    WHEN $device_type??'' IN ('yandexmini', 'linkplay_a98', 'lightcomm', 'wk7y', 'elari_a98') THEN 'small_smart_speakers'
+    ELSE 'other'
+    END;
+};
+
+$get_cohort_alt = ($date) -> {
+    RETURN CASE
+        WHEN $date >= '2019-12-02' THEN $get_start_of_week($date)
+        WHEN $date == '2019-12-01' THEN '2019-11-01'
+        WHEN $date >= '2019-05-01' THEN $get_start_of_month($date)
+        ELSE '<=2019-04-30'
+    END;
+};
+
+$age = ($birthday, $date) -> {
+    RETURN DateTime::ToDays(CAST($date AS Date) - CAST($birthday AS Date));
+};
+
+$age_cohort_for_normalizing = ($age) -> {
+    RETURN CASE
+        WHEN $age <= -1 THEN NULL
+        WHEN $age <= 13 THEN $age
+        WHEN $age <= 55 THEN 7 * ($age / 7)
+        WHEN $age <= 97 THEN 14 * ($age / 14)
+        WHEN $age <= 293 THEN 98 * ($age / 98)
+        ELSE 294
+    END;
+};
+
+$age_cohort_for_series = ($age) -> {
+    RETURN CASE
+    WHEN $age <= -1 THEN NULL
+    WHEN $age <= 1  THEN 'newborn'
+    WHEN $age <= 7  THEN '<= 1week'
+    WHEN $age <= 14 THEN '<= 2week'
+    WHEN $age <= 21 THEN '<= 3week'
+    WHEN $age <= 28 THEN '<= 4week'
+    ELSE 'other'
+    END;
+};
+
+INSERT INTO `//home/voice/dialog/misc/app_cohort_init_stats` WITH TRUNCATE
+SELECT app,
+init_cohort_alt??'_total_' AS init_cohort_alt,
+COUNT(DISTINCT device_id) AS devices
+FROM (
+    SELECT device_id,
+    $get_app(device_type) AS app,
+    $get_cohort_alt(init_date) AS init_cohort_alt
+    FROM  $fixed_quasar_init
+)
+GROUP BY GROUPING SETS (
+    (app, init_cohort_alt),
+    (app)
+);
+COMMIT;
+
+INSERT INTO `active_device_id_add_cohorts` WITH TRUNCATE
+SELECT s.*,
+init_date AS device_init_date,
+$get_app(s.device_type) AS app,
+$get_cohort_alt(init_date) AS init_cohort_alt,
+$age(init_date, fielddate) AS age,
+$age_cohort_for_normalizing($age(init_date, fielddate)) AS age_cohort_for_normalizing,
+$age_cohort_for_series($age(init_date, fielddate)) AS age_cohort_for_series,
+FROM  `active_device_id` AS s
+LEFT JOIN $fixed_quasar_init AS i
+USING(device_id)
+WHERE fielddate BETWEEN $date_first AND $date_last;
+COMMIT;
+
+INSERT INTO `active_device_age_stats` WITH TRUNCATE
+SELECT fielddate, app,
+age_cohort_for_series??'_total_' AS age_cohort_for_series,
+COUNT(DISTINCT device_id) AS devices_active
+FROM (SELECT * FROM `active_device_id_add_cohorts` WHERE age_cohort_for_series IS NOT NULL)
+GROUP BY GROUPING SETS (
+    (fielddate, app, age_cohort_for_series),
+    (fielddate, app)
+);
+COMMIT;
+
+
+$app_cohort_active_stats = (
+    SELECT fielddate, app,
+    init_cohort_alt??'_total_' AS init_cohort_alt,
+    COUNT(DISTINCT device_id) AS devices_active
+    FROM `active_device_id_add_cohorts`
+    WHERE app??'' IN ('quasar', 'small_smart_speakers')
+    GROUP BY GROUPING SETS (
+        (fielddate, app, init_cohort_alt),
+        (fielddate, app)
+    )
+);
+
+INSERT INTO `app_cohort_active_stats` WITH TRUNCATE
+SELECT a.*, i.devices AS devices_init
+FROM $app_cohort_active_stats AS a
+LEFT JOIN `//home/voice/dialog/misc/app_cohort_init_stats` AS i
+USING(app, init_cohort_alt);
+COMMIT;

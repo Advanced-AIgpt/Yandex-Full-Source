@@ -1,0 +1,34 @@
+-- takes output from wonderlogs, extracts mds_key, forms voice_url
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA dqengine="force";
+$voice_source = {{param["voice_source"]}};
+$voice_url_common = "https://speechbase-yt.voicetech.yandex.net/getaudio/";
+
+$with_mds = (
+    SELECT
+        a.*,
+        String::ReplaceAll(TryMember(TryMember(a.asr, "voice_by_uniproxy", null), "mds", null),
+                "http://storage-int.mds.yandex.net:80/get-speechbase/", "") AS uniproxy_mds_key,
+        TryMember(TryMember(a.asr, "data", null), "mds_key", null) AS asr_mds_key
+    FROM (
+        SELECT MAX_BY(TableRow(), `_server_time_ms`) AS row
+        FROM {{concat_input1}}
+        GROUP BY `_uuid`
+    ) AS a
+    FLATTEN COLUMNS
+);
+
+INSERT INTO {{output1}}
+SELECT
+    IF ($voice_source == 'uniproxy', uniproxy_mds_key, asr_mds_key) AS mds_key,
+    IF ($voice_source == 'uniproxy',
+        IF (a.uniproxy_mds_key IS NULL, NULL,
+                $voice_url_common || a.uniproxy_mds_key || '?norm=1'),
+        IF (a.asr_mds_key IS NULL, NULL,
+                $voice_url_common || a.asr_mds_key || '?norm=1&storage-type=s3&s3-bucket=voicelogs')) AS voice_url,
+    a.* WITHOUT a.uniproxy_mds_key,
+    a.asr_mds_key
+FROM
+    $with_mds AS a
+;

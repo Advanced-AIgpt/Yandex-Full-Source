@@ -1,0 +1,44 @@
+$arc_commit = {{param.arc_commit->quote() ?? "6930f5d6ea825d6b17a5a4d8724064e66432c828"->quote()}};
+$input_table = {{input1->table_quote() ?? ""->quote()}};
+$custom_input_basket = {{param.custom_input_basket->quote() ?? ""->quote()}};
+$baskets = {{param.baskets->quote()}};
+
+$override_basket_params = {{param.override_basket_params->quote()}};
+$sample_percent = {{param.sample_percent ?? 100.0}};
+$app_type = {{param.app_type->quote() ?? 'all'->quote()}};
+
+$basket_configs_path_py = "arc://alice/analytics/tasks/VA-571/basket_configs.py?hash=" || $arc_commit;
+PRAGMA File("basket_configs.py", $basket_configs_path_py);
+$basket_configs_py = FileContent("basket_configs.py");
+
+$basket_configs_path_json = "arc://alice/analytics/tasks/VA-571/data/basket_configs.json?hash=" || $arc_commit;
+PRAGMA File("basket_configs.json", $basket_configs_path_json);
+$basket_configs_json = FileContent("basket_configs.json");
+
+$basket_common_path = "arc://alice/analytics/utils/yt/basket_common.py?hash=" || $arc_commit;
+PRAGMA File("basket_common.py", $basket_common_path);
+$basket_common = FileContent("basket_common.py");
+
+$get_baskets = Python2::get_baskets_paths(Callable<(String?,String?,String?,String?)->List<String>>, $basket_configs_py);
+$mr_path_to_alias = Python2::mr_path_to_alias(Callable<(String?,String?,String?)->String>, $basket_configs_py);
+$get_apps_by_type = Python2::get_apps_by_type(Callable<(String?)->List<String>>, $basket_common);
+
+
+INSERT INTO {{output1}}
+SELECT
+    IF(
+        ($input_table != "" AND $input_table != "EMPTY" AND $input_table != "//EMPTY") OR
+        ($custom_input_basket != "" AND $custom_input_basket != "null"),
+        "input_basket",
+        $mr_path_to_alias(TablePath(), $override_basket_params, $basket_configs_json)
+    ) AS basket,
+    baskets.*
+FROM EACH($get_baskets(
+    IF ($custom_input_basket != "" AND $custom_input_basket != "null", $custom_input_basket, $input_table),
+    $baskets,
+    $override_basket_params,
+    $basket_configs_json
+)) AS baskets
+WHERE
+    Digest::MurMurHash(session_id) % 100 < $sample_percent
+    AND ($app_type == 'all' OR baskets.app_preset IN $get_apps_by_type($app_type))

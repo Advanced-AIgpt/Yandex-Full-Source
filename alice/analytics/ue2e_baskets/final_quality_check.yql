@@ -1,0 +1,223 @@
+Use hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA DisableSimpleColumns;
+PRAGMA yt.InferSchema = '100';
+
+$app = "quasar";
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yandex_phone", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+
+-- ready basket
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_loc";
+
+-- samples
+$accept_basket = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_accept_intents_sample";
+$accept_basket_auto = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_accept_autoverdict_sample";
+
+-- markup outputs
+$annotations = "//home/voice/jdkondratenko/VA-2304/annotation_results/quasar";
+$intents = "//home/voice/jdkondratenko/VA-2304/intents/quasar_intent_output";
+$contexts = "//home/voice/jdkondratenko/VA-2304/context_data/quasar_ready_tasks_output";
+
+-- context data
+$context_data_with_asr = "//home/voice/jdkondratenko/VA-2304/context_data/quasar_with_asr";
+$context_data_empty_asr = "``";
+$context_data_auto_asr = "//home/voice/jdkondratenko/VA-2304/context_data/quasar_autoverdict_with_asr";
+$context_data_auto_no_asr = "``";
+
+--
+$sampling_intent_exceptions = AsList("toloka_gc", "ontofacts");
+
+
+DEFINE ACTION $check_basket($basket, $sample_auto, $sample_intents) AS
+
+    $auto_reqids = (SELECT request_id FROM $sample_auto);
+    $intent_reqids = (SELECT request_id FROM $sample_intents);
+
+    SELECT 
+        -- should be zero
+        COUNT_IF(request_id is Null or request_id == "") as null_reqids,
+        COUNT_IF(session_id is Null or session_id == "") as null_sessions,
+        COUNT_IF(session_sequence < 0 or reversed_session_sequence < 0) as below_zero_session_sequence,
+        COUNT_IF(reversed_session_sequence > 0 and experiments is null) as no_experiments_for_context,
+        COUNT_IF(reversed_session_sequence == 0 and experiments is not null) as experiments_for_main_q,
+        COUNT_IF(device_state is null) as null_dev_state,
+        COUNT_IF(client_time is null) as null_client_time,
+        COUNT_IF(timezone is null) as null_timezone,
+        COUNT_IF(app_preset is null) as null_app,
+        COUNT_IF(fetcher_mode is null) as null_fetcher_mode,
+        COUNT_IF(fetcher_mode == "voice" and (voice_url is null or voice_url == "")) as voice_mode_without_voice,
+        COUNT_IF(fetcher_mode == "voice" and reversed_session_sequence > 0) as voice_mode_for_context,
+        COUNT_IF(context_len is null and session_len > 2) as long_session_not_marked,
+        COUNT_IF(session_len == 0) as zero_session_len,
+        -- блок проверок по session_id
+        COUNT_IF(ListLength(String::SplitToList(session_id, "__")) > 2) as too_long_session_id,
+        COUNT_IF(String::Contains(session_id, '__') and session_len == 1) as long_session_id_for_short_session,
+        COUNT_IF(not String::Contains(session_id, '__') and session_len > 1) as short_session_id_for_long_session,
+        COUNT_IF(not String::Contains(session_id, '__') and session_id != request_id) as short_session_id_not_like_request_id,
+        -- блок проверок про тексты
+        COUNT_IF(text == "" and real_reqid not in $auto_reqids) as empty_text_for_not_auto_query,
+        COUNT_IF(text is null) as null_text,
+        COUNT_IF(asr_text is null) as null_asr_text,
+        COUNT_IF(asr_text is null and is_empty_asr) as good_null_asr_text,
+        -- для станции должно быть пусто, для general должно совпадать с кол-вом отобранных текстовых запросов
+        COUNT_IF(fetcher_mode == "text" and reversed_session_sequence == 0) as text_mode_for_main_query,
+        -- должны совпадать (не должно быть дубликатов по рекид)
+        COUNT(*) as num_queries,
+        COUNT(DISTINCT request_id) as distinct_reqids,
+        COUNT(DISTINCT real_reqid) as distinct_real_reqids,
+        -- должно стремиться к нулю)
+        COUNT_IF(location is null) as null_location,
+        COUNT_IF(additional_options is null) as null_options,
+        -- смотрим только по оцениваемому запросу
+        COUNT_IF(
+            reversed_session_sequence == 0 and context_len is not null and 
+            not ((context_len != 0 and session_len == context_len + 1) or
+            (context_len == 0 and session_len == context_len + 1 and sampling_intent not in $sampling_intent_exceptions) or
+            (context_len == 0 and session_len == context_len + 2 and sampling_intent in $sampling_intent_exceptions))) as context_chose_check,
+        -- все запросы с автовердиктом и с исходно одной сессией
+        COUNT_IF(context_len is null) as null_context_len,
+        COUNT(DISTINCT session_id) as distinct_session_id,
+        COUNT(DISTINCT real_session_id) as distinct_real_session_id, -- мб меньше того, что выше, т.к. часть мб null
+        COUNT_IF(Yson::LookupString(device_state, "device_id") is not null) as device_id_in_device_state,
+        COUNT_IF(reversed_session_sequence == 0 and is_empty_asr is not Null and is_new is not Null) as has_empty_asr_and_is_new_flag,
+        COUNT_IF(not is_good_session) as bad_session_in_basket,
+        COUNT_IF(activation_type is Null) as null_activation_type,
+        COUNT_IF(($app regexp "quasar" and app_preset in $quasar_apps) or ($app regexp "general" and app_preset in $general_apps) or ($app regexp "navi_auto" and app_preset in $navi_apps)) as correct_app -- должен совпадать с кол-вом запросов
+    FROM $basket;
+    
+    
+    SELECT COUNT(*) as cnt, "auto_reqids" as source
+    FROM $auto_reqids
+    UNION ALL 
+    SELECT COUNT_IF(real_reqid in $auto_reqids) as cnt, "auto_in_basket" as source
+    FROM $basket
+    UNION ALL
+    SELECT COUNT(*) as cnt, "intent_reqids" as source
+    FROM $intent_reqids
+    UNION ALL 
+    SELECT COUNT_IF(real_reqid in $intent_reqids) as cnt, "intents_in_basket" as source
+    FROM $basket
+    INTO RESULT `reqids from samples in basket`;
+    
+    SELECT *
+    FROM $basket
+    WHERE reversed_session_sequence == 0 and context_len is not null and 
+            not ((context_len != 0 and session_len == context_len + 1) or
+            (context_len == 0 and session_len == context_len + 1 and sampling_intent not in $sampling_intent_exceptions) or
+            (context_len == 0 and session_len == context_len + 2 and sampling_intent in $sampling_intent_exceptions))
+    INTO RESULT `context choose`;
+    
+    $duplicates_by_real_reqid = (
+        SELECT real_reqid
+        FROM (
+            SELECT real_reqid, COUNT(*) as cnt
+            FROM $basket
+            GROUP BY real_reqid
+        )
+        WHERE cnt > 1
+    );
+    
+    SELECT *
+    FROM $basket
+    WHERE real_reqid in $duplicates_by_real_reqid
+    INTO RESULT `duplicates by real reqid`;
+    
+    $basket_reqids = (SELECT real_reqid FROM $basket WHERE reversed_session_sequence == 0);
+    $context_bad_reqids = (SELECT Yson::LookupString(inputValues.input, "req_id") as reqid FROM $contexts WHERE `result` == -1);
+    
+    $not_in_basket_auto_reqids = (
+        SELECT *
+        FROM $auto_reqids
+        WHERE request_id not in $basket_reqids
+    );
+    
+    $session_groupped = (
+        SELECT 
+            session_id, COUNT(*) as queries_in_session, SOME(session_len) as session_len, SOME(context_len) as context_len,
+            MIN_BY(real_reqid, reversed_session_sequence) as real_reqid, AGGREGATE_LIST_DISTINCT(real_session_id) as real_sessions
+        FROM $basket
+        GROUP BY session_id
+    );
+    
+    SELECT 
+        COUNT_IF(queries_in_session != session_len) as different_len, -- проверка на коллизии
+        COUNT_IF(context_len is null) as null_context_len,
+        COUNT_IF(context_len is null and (real_reqid in $auto_reqids or session_len == 1)) as null_context_len_good,
+        COUNT_IF(ListLength(real_sessions) > 1) as more_than_one_real_session_in_fake_session
+    FROM $session_groupped
+    INTO RESULT `by session stats`;
+    
+    SELECT 
+        COUNT_IF(request_id not in $basket_reqids) as absent_in_basket_was_in_sample,
+        COUNT_IF(request_id in $context_bad_reqids) as bad_by_markup,
+        COUNT_IF(request_id not in $basket_reqids) - COUNT_IF(request_id in $context_bad_reqids) as should_be_only_ivi_diff,
+    FROM $sample_intents
+    INTO RESULT `not in basket stats`;
+    
+    $not_in_basket_reqids = (
+        SELECT request_id
+        FROM $sample_intents
+        WHERE request_id not in $basket_reqids and request_id not in $context_bad_reqids
+    );
+    
+    -- здесь должны быть только ivi и amediateka в стейте
+    SELECT *
+    FROM EACH(AsList($context_data_with_asr, $context_data_empty_asr))
+    WHERE request_id in $not_in_basket_reqids
+    INTO RESULT `not in basket reqids (intents)`;
+    
+    SELECT *
+    FROM EACH(AsList($context_data_auto_asr, $context_data_auto_no_asr))
+    WHERE request_id in $not_in_basket_auto_reqids
+    INTO RESULT `not in basket reqids (auto)`;
+    
+    -- sanity checks: всё должно было пойти правильно, но на всякий случай..
+    SELECT asr_text, text, real_reqid, voice_url
+    FROM $basket
+    WHERE asr_text != text
+    INTO RESULT `difference by annotations`;
+    
+    SELECT 
+        COUNT(*) as annotated_queries_in_basket, 
+        COUNT_IF((a.query is null and b.text is not null) or (a.query is not null and b.text is null) or a.query != b.text) as different_text,
+        COUNT_IF((a.full_text is null and b.full_text is not null) or (a.full_text is not null and b.full_text is null) or a.full_text != b.full_text) as different_full_text
+    FROM (
+        SELECT String::ReplaceAll(`url`, "getaudio", "getfile") as mds_url, query, full_text
+        FROM $annotations
+    ) as a
+    JOIN $basket as b
+    ON a.mds_url == b.voice_url
+    INTO RESULT `annotation check`;
+    
+    -- join может давать меньше результатов, т.к. тут юникнутые для разметки данные
+    SELECT 
+        COUNT(*) as intents_queries_in_basket, 
+        COUNT_IF((i.toloka_intent is null and b.toloka_intent is not null) or (i.toloka_intent is not null and b.toloka_intent is null) or i.toloka_intent != b.toloka_intent) as different_intents
+    FROM $intents as i
+    JOIN $basket as b
+    ON i.reqid == b.real_reqid
+    INTO RESULT `intents check (by markup)`;
+    
+    SELECT *
+    FROM $intents as i
+    JOIN $basket as b
+    ON i.reqid == b.real_reqid
+    WHERE (i.toloka_intent is null and b.toloka_intent is not null) or (i.toloka_intent is not null and b.toloka_intent is null) or i.toloka_intent != b.toloka_intent
+    INTO RESULT `intents check (by markup)`;
+    
+    SELECT 
+        COUNT(*) as intents_queries_in_basket, 
+        COUNT_IF((i.toloka_intent is null and b.toloka_intent is not null) or (i.toloka_intent is not null and b.toloka_intent is null) or i.toloka_intent != b.toloka_intent) as different_intents
+    FROM $sample_intents as i
+    JOIN $basket as b
+    ON i.request_id == b.real_reqid
+    INTO RESULT `intents check (by sample)`;
+    
+
+END DEFINE;
+
+DO $check_basket($accept, $accept_basket_auto, $accept_basket);

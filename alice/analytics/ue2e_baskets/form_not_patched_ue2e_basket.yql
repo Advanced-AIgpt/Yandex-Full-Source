@@ -1,0 +1,332 @@
+Use hahn;
+PRAGMA  yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = '100';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+$app = "quasar";
+$common_dir = "//home/voice/jdkondratenko/VA-2304/";
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/";
+
+$context_output = $common_dir || "context_data/" || $app || "_ready_tasks_output";
+
+-- contexts 
+$context_input_asr = $common_dir || "context_data/" || $app || "_with_asr";
+$context_input_no_asr = $common_dir || "context_data/" || $app || "_empty_asr";
+$context_input_auto_asr = $common_dir || "context_data/" || $app || "_autoverdict_with_asr";
+$context_input_auto_no_asr = $common_dir || "context_data/" || $app || "_autoverdict_empty_asr";
+
+-- baskets
+$accept_basket = $common_dir || "stratification/" || $app || "_accept_intents_sample";
+$kpi_basket = $common_dir || "stratification/" || $app || "_kpi_intents_sample";
+$dev_basket = $common_dir || "stratification/" || $app || "_dev_intents_sample";
+$accept_basket_auto = $common_dir || "stratification/" || $app || "_accept_autoverdict_sample";
+$kpi_basket_auto = $common_dir || "stratification/" || $app || "_kpi_autoverdict_sample";
+$dev_basket_auto = $common_dir || "stratification/" || $app || "_dev_autoverdict_sample";
+
+-- ready basket
+$accept = $restricted_dir || "basket/" || $app || "_accept_not_patched";
+$kpi = $restricted_dir || "basket/" || $app || "_kpi_not_patched";
+$dev = $restricted_dir || "basket/" || $app || "_dev_not_patched";
+
+$format = Struct<
+    activation_type:String?, additional_options:Yson?, analytics_info:Yson?, app_preset:String, 
+    asr_options:Yson?, asr_text:String?, client_time:String?, device_state:Yson?, experiments:Yson?, meta:Yson?,
+    fetcher_mode:String, full_text:String?, is_empty_asr:Bool?, is_new:String?, location:Yson?,
+    real_generic_scenario:String?, real_reqid:String, real_session_sequence:Yson?, 
+    reversed_session_sequence:Yson?, request_id:String?, sampling_intent:String?, session_sequence:Yson?,
+    text:String, timezone:String?, toloka_intent:String?, vins_intent:String?, voice_url:String?
+>;
+
+$patch_script = @@
+import cyson
+import random
+from datetime import datetime
+from pytz import timezone
+import re
+import copy
+
+MAX_CONTEXT_LEN = 11
+GC_MIN_CONTEXT_LEN = 4
+OTHER_MIN_CONTEXT_LEN = 1
+PROVIDER_BLACKLIST = {"ivi", "amediateka"}
+
+RENAMING_MAP = {
+    "directives": None,
+    "callback": None,
+    "reply": None,
+    "query": None,
+    "uuid": None,
+    "mds_key": None,
+    "session_id": None,
+    "input_type": None,
+    "prev_request_id": None,
+    "prev_session_id": None,
+    "prev_session_sequence": None,
+    "client_tz": "timezone",
+    "app": "app_preset",
+    "request_id": "real_reqid",
+    "intent": "vins_intent",
+    "generic_scenario": "real_generic_scenario"
+}
+
+
+def random_part(i):
+    return ''.join(map(lambda x: random.choice("0123456789abcdef"), range(i)))
+
+
+def generate_id(req_id):
+    return ''.join(['ffffffff-ffff-ffff-', random_part(4), '-', random_part(12)])
+
+
+def format_client_time(client_time):
+    return datetime.fromtimestamp(client_time, tz=timezone('UTC')).strftime("%Y%m%dT%H%M%S")
+
+
+def is_good_session(context_len, session):
+    if context_len == -1:
+        return False
+    for request in session:
+        if check_query_device_state(request["device_state"]):
+            return False
+    return True
+
+
+def check_item(item):
+    if item is not None:
+        if 'availability_request' in item:
+            for provider in PROVIDER_BLACKLIST:
+                if provider in item['availability_request']:
+                    return True
+        
+        pi = item.get('provider_info') or []
+        for provider in pi:
+            if provider.get('provider_name') in PROVIDER_BLACKLIST:
+                return True
+
+
+# adopted from ddale code
+def check_query_device_state(device_state):
+    device_state = device_state or {}
+    video_state = device_state.get('video') or {}
+    screen_state = video_state.get('screen_state', {})
+    
+    if 'item' in screen_state:
+        if check_item(screen_state.get('item')):
+            return True
+    
+    if 'items' in screen_state:
+        for item in screen_state.get('items'):
+            if check_item(item):
+                return True
+    
+    currently_playing = video_state.get('currently_playing', {})
+    if check_item(currently_playing.get('item')):
+        return True
+    
+    last_watched = device_state.get('last_watched') or {}
+    for key, values in last_watched.items():
+        for val in values:
+            if val.get('provider_name') in PROVIDER_BLACKLIST:
+                return True
+    return False
+
+
+def make_voice_url(mds_key):
+    return "https://speechbase-yt.voicetech.yandex.net/getfile/" + mds_key
+
+
+def form_basket_session(session, annotated_query, full_text, sampling_intent, toloka_intent, is_new, is_empty_asr, last_session_el, context_len):
+    if not session:
+        session = list()
+    
+    is_main_query_in_separate_el = False
+    
+    if last_session_el:
+        last_session_el["is_main_query"] = True
+        is_main_query_in_separate_el = True
+        session.append(last_session_el)
+    
+    is_main_query = False
+    reversed_session_sequence = len(session) - 1
+    # yql ругается, что получаются отрицательные числа, а он их в Uint64 конвертирует
+    if context_len is not None and context_len != -1:
+        if sampling_intent == "toloka_gc":
+            context_len = max(context_len, GC_MIN_CONTEXT_LEN)
+        else:
+            context_len = max(context_len, OTHER_MIN_CONTEXT_LEN)
+    start_len = len(session) if context_len is None or context_len == -1 else context_len + 1
+    session_sequence = start_len - len(session)
+    for req_ind, request in enumerate(session):
+        if request.get("current_row"):
+            request.update(request["current_row"])
+            request.pop("current_row", None)
+            
+            # в случае с пустым asr, в current_row кладётся элемент контекста, поэтому нужен доп.иф
+            if not is_main_query_in_separate_el:
+                is_main_query = True
+        
+        if request.get("is_main_query"):
+            is_main_query = True
+            request.pop("is_main_query", None)
+        
+        for ind in range(MAX_CONTEXT_LEN):
+            # для контекстных запросов информация лежит внутри _yql_Lag
+            if request.get("_yql_Lag" + str(ind)) and not is_main_query and not is_main_query_in_separate_el:
+                request.update(request["_yql_Lag" + str(ind)])
+            request.pop("_yql_Lag" + str(ind), None)
+        
+        if is_main_query:
+            # если явно передано annotated_query, то это запрос с asr_распознаванием, иначе это запрос с пустым распознаванием    
+            request["text"] = annotated_query if annotated_query is not None else request["query"]
+            request["full_text"] = full_text if not is_main_query_in_separate_el else request["full_text"]
+            # правильная функция, но для станции забыла сохранить input_type, не перегенеряла
+            # request["asr_text"] = request["query"] if annotated_query is not None and request["input_type"] == "voice" else None
+            request["asr_text"] = request["query"] if annotated_query is not None else None
+            request["toloka_intent"] = toloka_intent
+            request["sampling_intent"] = sampling_intent
+            request.pop('experiments', None)
+            request.pop('analytics_info', None)
+            # тут уже отобраны только текстовые и голосовые запросы
+            # request["fetcher_mode"] = request["input_type"]
+            request["fetcher_mode"] = "voice"
+            if request.get("mds_key"):
+                request["voice_url"] = make_voice_url(request["mds_key"])
+            if is_new is not None:
+                request["is_new"] = is_new
+            if is_empty_asr is not None:
+                request["is_empty_asr"] = is_empty_asr
+        else:
+            request["fetcher_mode"] = "text"
+            request["text"] = request["query"]
+            # правильная функция, но для станции забыла сохранить input_type, не перегенеряла
+            # request["asr_text"] = request["query"] if request["input_type"] == "voice" else None
+            request["asr_text"] = request["query"]
+        
+        # переименования и удаления
+        for key, val in RENAMING_MAP.items():
+            if val is not None:
+                request[val] = request[key]
+            request.pop(key, None)
+        
+        # этого поля может не быть для запроса без распознавания
+        request["real_session_sequence"] = request.get("session_sequence")
+        request["reversed_session_sequence"] = reversed_session_sequence
+        request["session_sequence"] = session_sequence
+        
+        # переменная нужна, чтоб не кешировался результат функции
+        request["request_id"] = generate_id(request["real_reqid"])
+        request["client_time"] = format_client_time(request["client_time"])
+        
+        if request.get("additional_options"):
+            request["additional_options"].pop("supported_features", None)
+        
+        # constant value
+        request["asr_options"] = {"allow_multi_utt": False}
+        
+        is_main_query = False
+        reversed_session_sequence -= 1
+        session_sequence += 1
+      
+    # отбираем контекст нужной длины по разметке
+    # context_len - это позиция последнего запроса, который надо взять
+    if context_len is not None and context_len != -1:
+        len_to_cut = context_len
+    else:
+        len_to_cut = len(session) - 1
+    session.reverse()
+    session = session[:len_to_cut + 1]
+    
+    # формируем новый session_id
+    session_id = '__'.join([session[-1]["request_id"], session[0]["request_id"]]) if len(session) > 1 else session[0]["request_id"]
+
+    return {
+        "session": session, "session_id": session_id, "is_good_session": is_good_session(context_len, session)
+    }
+
+form_basket_session._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$form_basket_session = Python2::form_basket_session(
+    ParseType("(Yson?, String?, String?, String?, String?, String?, Bool?, Yson?, Int64?)->Struct<session: List<Yson>, session_id: String,is_good_session: Bool>"), $patch_script);
+
+
+--- данные с asr и с контекстом (отправлялись в разметку контекстов)
+INSERT INTO @tmp_table WITH TRUNCATE 
+SELECT 
+    request_id, session_id as real_session_id, o.`result` as context_len, 
+    $form_basket_session(
+        Yson::SerializePretty(Yson::From(i.session)), i.query, i.full_text, i.sampling_intent, i.toloka_intent, i.is_new, i.is_empty_asr, Null, o.`result`
+    ) as session_struct
+FROM $context_input_asr as i
+LEFT JOIN $context_output as o
+ON i.request_id == Yson::LookupString(o.inputValues.input, "req_id");
+
+
+-- данные без asr и с контекстом (отправлялись в разметку контекстов)
+INSERT INTO @tmp_table
+SELECT 
+    request_id, prev_session_id as real_session_id, o.`result` as context_len, 
+    $form_basket_session(
+        Yson::SerializePretty(Yson::From(i.session)), Null, Null,
+        Yson::LookupString(i.query_data, "sampling_intent"), Yson::LookupString(i.query_data, "toloka_intent"),
+        Null, Null, i.query_data, o.`result`
+    ) as session_struct
+FROM $context_input_no_asr as i
+LEFT JOIN $context_output as o
+ON i.request_id == Yson::LookupString(o.inputValues.input, "req_id");
+
+
+-- asr и не отправлялись в разметку контекстов
+INSERT INTO @tmp_table
+SELECT 
+    request_id, session_id as real_session_id, Null as context_len, 
+    $form_basket_session(
+        Yson::SerializePretty(Yson::From(session)), query, full_text, Null, Null, is_new, is_empty_asr, Null, Null
+    ) as session_struct
+FROM $context_input_auto_asr;
+
+-- без asr и не отправлялись в разметку контекстов
+INSERT INTO @tmp_table
+SELECT 
+    request_id, prev_session_id as real_session_id, Null as context_len, 
+    $form_basket_session(
+        Yson::SerializePretty(Yson::From(session)), Null, Null, Null, NUll, Null, Null, query_data, Null
+    ) as session_struct
+FROM $context_input_auto_no_asr;
+
+
+COMMIT;
+
+
+DEFINE ACTION $choose_sessions_and_flatten($intent_basket, $auto_basket, $output_table) AS
+
+    $lookup_reqids = (
+        SELECT request_id 
+        FROM CONCAT($intent_basket, $auto_basket)
+    );
+
+    $chosen_sessions = (
+        SELECT 
+            request_id, real_session_id, context_len, ListLength(session_struct.session) as session_len, 
+            session_struct.session as session, session_struct.session_id as session_id, session_struct.is_good_session as is_good_session
+        FROM @tmp_table
+        WHERE request_id in $lookup_reqids
+    );
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT * 
+    FROM (
+        SELECT Yson::ConvertTo(Yson::Parse(d.session), $format), d.* WITHOUT d.session, d.request_id
+        FROM $chosen_sessions as d
+        FLATTEN LIST BY (d.session)
+        WHERE d.is_good_session
+    )
+    FLATTEN COLUMNS
+
+END DEFINE;
+
+DO $choose_sessions_and_flatten($accept_basket, $accept_basket_auto, $accept);
+DO $choose_sessions_and_flatten($kpi_basket, $kpi_basket_auto, $kpi);
+DO $choose_sessions_and_flatten($dev_basket, $dev_basket_auto, $dev);

@@ -1,0 +1,77 @@
+-- COMMON FUNCTIONS for 1d and 2d grep for postrolls
+
+$expboxes = "//home/alice/dialog/prepared_logs_expboxes";
+$proactivity_log = "//home/logfeller/logs/megamind-proactivity-log/1d";
+$success_conditions_with_timespent = {{param.success_conditions_with_timespent}};
+$output = {{param.postrolls_folder}} || "/" || $start_date;
+
+$postrolls =
+    select *
+    from (
+        select
+            lead(generic_scenario) over w as next_generic_scenario,
+            lead(intent) over w as next_intent,
+            lead(server_time_ms) over w as next_server_time_ms,
+            lead(query) over w as next_query,
+            lead(reply) over w as next_reply,
+            lead(req_id) over w as next_req_id,
+            t.*
+        from (
+            select
+                `uuid`, req_id,
+                fielddate, expboxes, app, is_new, String::ReplaceAll(intent, "\t", ".") as intent, child_confidence,
+                ListLast(String::SplitToList(voice_text, '\">')) as recommendation_phrase,
+                query, reply, generic_scenario, server_time_ms, alice_speech_end_ms,
+                Yson::ConvertToString(analytics_info.modifiers_info.proactivity.item_info) as item_info,
+                Yson::ConvertToString(analytics_info.modifiers_info.proactivity.item_id) as postroll_id,
+                Yson::ConvertToBool(analytics_info.modifiers_info.proactivity.appended) as appended
+            from range($expboxes, $start_date, $end_date)
+        ) as t
+        window w as (
+            partition by `uuid`
+            order by server_time_ms
+        )
+    )
+    where coalesce(appended, False) == True and fielddate == $start_date and generic_scenario != 'side_speech'
+;
+
+$proactivity =
+    select postroll_req_id,
+            min_by(req_id, server_time_ms) as first_converge_req_id,
+            min_by(child_confidence, server_time_ms) as first_converge_child_confidence,
+            min(server_time_ms) as first_converge_server_time_ms,
+            min_by(timespent_ms, server_time_ms) as first_converge_timespent_ms,
+            sum(timespent_ms) as total_timespent_ms,
+            sum(if (child_confidence > 0.8, timespent_ms, 0)) as child_total_timespent_ms,
+            count(*) as num_converged_queries
+    from (
+        select *
+        from (
+            select Yson::ConvertToString(postroll_click.show_req_id) as postroll_req_id, server_time_ms, req_id, child_confidence
+            from (
+                select
+                    Yson::ConvertToList(analytics_info.modifiers_info.proactivity.postroll_clicks) as postroll_clicks,
+                    child_confidence, server_time_ms, req_id
+                from range($expboxes, $start_date, $end_date)
+                where analytics_info.modifiers_info.proactivity.postroll_clicks is not null
+            )
+            flatten by postroll_clicks as postroll_click
+        ) as l left join (
+            select req_id,
+            sum(timespent_ms) as timespent_ms
+            from range($success_conditions_with_timespent, $start_date, $end_date)
+            group by req_id
+        ) as r
+        on l.req_id == r.req_id
+    )
+    group by postroll_req_id
+;
+
+insert into $output with truncate
+select t.* without postroll_req_id, appended
+from (
+    select *
+    from $postrolls as l
+    left join $proactivity as r on l.req_id == r.postroll_req_id
+) as t
+;

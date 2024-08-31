@@ -1,0 +1,79 @@
+-- ОБЩИЕ ФУНКЦИИ для всех ыклей бордов УШ
+
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+PRAGMA GroupByLimit = "64";
+PRAGMA GroupByCubeLimit = "4";
+
+$show_scenarios = AsList("alice_show", "morning_show");
+$show_apps = AsList("quasar", "small_smart_speakers");
+$show_charts_folder = {{param.alice_show_folder}};
+
+$get_alice_show_profile = ($analytics_info) -> {
+    $properties = Yson::ConvertToList($analytics_info.users_info.AliceShow.scenario_user_info.properties);
+    RETURN Yson::SerializePretty(ListFilter($properties, ($x) -> (Yson::ConvertToString($x.human_readable) = 'Alice show customisation'))[0].alice_show_profile)
+};
+
+$get_show_info_by_id = ($objects, $id) -> {
+    $filtered_object = ListHead(ListFilter($objects, ($x) -> (Yson::ConvertToString($x.id) = $id)));
+    RETURN Yson::ConvertToString($filtered_object.human_readable);
+}
+;
+
+$format = ($source) -> (String::JoinFromList(ListSkip(String::SplitToList($source, '-'), 1), '-'));
+
+$get_skills = ($alice_show_profile) -> (
+    ListMap(
+        Yson::ConvertToList($alice_show_profile.skills_config.skill_providers),
+        ($x) -> (String::SplitToList(Yson::ConvertToString($x.skill_slug), '-')[1])
+    )
+);
+
+$get_news = ($alice_show_profile) -> (
+    ListMap(
+        Yson::ConvertToList($alice_show_profile.news_config.news_providers),
+        ($x) -> (Yson::ConvertToString($x.rubric) || ' from ' || $format(Yson::ConvertToString($x.news_source)))
+    )
+);
+
+$get_topics = ($alice_show_profile) -> (
+    ListMap(
+        Yson::ConvertToList($alice_show_profile.topics_config.topics),
+        ($x) -> (Yson::ConvertToString($x.podcast))
+    )
+);
+
+$get_show_info_from_analytics_info = ($analytics_info) -> {
+    $alice_show_profile = $get_alice_show_profile($analytics_info);
+    $objects = Yson::ConvertToList(DictPayloads(Yson::ConvertToDict($analytics_info.analytics_info))[0].scenario_analytics_info.objects);
+    $skills = $get_skills($alice_show_profile);
+    $news = $get_news($alice_show_profile);
+    $topics = $get_topics($alice_show_profile);
+    $show_type = $get_show_info_by_id($objects, "show.type") ?? "morning";
+    $age_by_analytics_info = IF (CAST(Yson::SerializePretty($analytics_info) AS String) LIKE '%child%', "children", "adult");
+    $show_age = $get_show_info_by_id($objects, "show.age");
+    $show_day_part = $get_show_info_by_id($objects, "show.day_part");
+    $final_show_age = IF ($show_age is not null, $show_age, $age_by_analytics_info);
+    $final_show_day_part = IF ($show_day_part is not null, $show_day_part, IF ($show_type != "children", $show_type, "morning"));
+    $settings = CASE
+        WHEN ListLength($skills) = 0 and ListLength($topics) = 0 and ListLength($news) = 1 and String::StartsWith(($news[0]??''), '__mixed_news__')
+            then "default"
+        WHEN ListLength($topics) > 0 OR ListLength($news) > 0 OR ListLength($skills) > 0
+            then "custom"
+        ELSE "default"
+        END
+    ;
+
+    RETURN AsStruct(
+        $final_show_day_part AS show_day_part,
+        $final_show_age AS show_age,
+        $settings AS settings,
+        $skills AS skills,
+        $news AS news,
+        $topics AS topics,
+        $final_show_day_part || "_" || $final_show_age AS show_type
+    )
+}
+;

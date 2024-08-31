@@ -1,0 +1,99 @@
+USE hahn;
+PRAGMA yt.Pool = "alice-analytics-crons";
+PRAGMA SimpleColumns;
+PRAGMA yt.InferSchema;
+PRAGMA AllowDotInAlias;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = "1";
+PRAGMA yt.PoolTrees = "physical";
+PRAGMA yt.TentativePoolTrees = "cloud";
+PRAGMA AnsiOrderByLimitInUnionAll;
+PRAGMA DisableCoalesceJoinKeysOnQualifiedAll;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA DisableAnsiInForEmptyOrNullableItemsCollections;
+
+DECLARE $date_from as String;
+DECLARE $date_to as String;
+
+-- utils
+$parse_date = ($dt) -> { RETURN AddTimezone(CAST($dt AS Timestamp), "Europe/Moscow"); };
+$date_format = DateTime::Format("%Y-%m-%d");
+$get_priority = Re2::Capture('.*name=\\"priority\\"; type=\\"INTEGER\\"; value=([0-9]+?);.*');
+$get_sample_percent = Re2::Capture('.*name=\\"sample_percent\\"; type=\\"INTEGER\\"; value=([0-9]+?);.*');
+
+$date_range_inclusive = ($start_date, $end_date) -> {
+    RETURN ListCollect(ListFlatMap(ListFromRange(0, (DateTime::ToDays($end_date - $start_date)+1) ?? 0), ($x) -> {
+        RETURN $start_date + DateTime::IntervalFromDays(CAST($x AS Int16))
+    }));
+};
+$date_range_weekday = ($start_date, $end_date, $day_of_week) -> {
+    RETURN ListFilter($date_range_inclusive($start_date, $end_date), ($x) -> {
+        RETURN DateTime::GetDayOfWeek($x) == $day_of_week;
+    });
+};
+$utils_arc_path = "arc://alice/analytics/utils/datetime_utils.py?hash=" || "67144f249513411b0028830e2307ed2109bb98dd";
+PRAGMA File("datetime_utils.py", $utils_arc_path);
+$calc_business_time_duration = Python3::calc_business_time_duration(Callable<(Int64?, Int64?)->Uint64?>, FileContent("datetime_utils.py"));
+
+
+$nirvana_logs = (
+    SELECT *
+    FROM RANGE(
+        `//home/qe/nirvana/production/export/workflow_instances`,
+        $date_format(CAST($date_from as Date) - 6 * Interval('P1D')),
+        $date_format(CAST($date_to as Date) + 3 * Interval('P1D'))
+    )
+);
+
+$direct_clones = (
+    SELECT
+        DISTINCT workflowId
+    FROM $nirvana_logs as t
+    WHERE
+        -- started >= '2020-09-15'
+        rootWorkflowInstanceId IS NULL
+        AND cloneOfWorkflowId == 'aa47f60a-570f-48d5-a5a1-aa8faa6c03dc'
+    UNION ALL
+    SELECT '55486b5d-1b54-4a72-882f-36c4aef3a1bf' as workflowId
+);
+
+$completed_instances = (
+    SELECT
+        l.*,
+        Unwrap($date_format($parse_date(started))) as fielddate,
+        DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) as duration_seconds,
+        DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) / 3600.0 as duration_hours,
+        $get_priority(Yson::ConvertToString(globalOptions))._1 ?? '' as priority,
+        IF (executionResult == 'FAILURE' AND progress >= 0.95, 'error_metrics',
+            IF (executionResult == 'FAILURE' AND progress < 0.95, 'error_graph',
+                IF (executionResult == 'CANCEL', 'canceled',
+                    IF (executionResult == 'SUCCESS', 'success',
+                    'strange_status'
+                    )
+                )
+            )
+        ) as metric_name
+    FROM $nirvana_logs AS l
+    LEFT SEMI JOIN $direct_clones AS c ON (c.workflowId == l.workflowId)
+    WHERE
+        rootWorkflowInstanceId IS NULL
+        AND executionStatus == 'COMPLETED'
+        AND $get_sample_percent(Yson::ConvertToString(globalOptions))._1 == '100'
+        AND $get_priority(Yson::ConvertToString(globalOptions))._1 IN ['95', '85']
+        -- AND progress > 0.9
+
+        AND DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) >= 1800 -- меньше получаса - это рестарты
+        AND owner NOT IN ['mkamalova', 'bondy', 'nstbezz', 'gri201', 'kpmatveev', 'nerevar', 'yateika', 'nadezhda17', 'edvls', 'ikkalinkin', 'ilnur', 'jdkondratenko', 'irinfox', 'polinakud', 'robot-voice-qa', 'robot-voice-zayats']
+);
+
+UPSERT INTO stat.`VoiceTech/Dialog/Downloader/ue2e_priemka_execution_status/daily`
+
+SELECT
+    fielddate,
+    priority,
+    COUNT_IF(metric_name == 'success') as success_count,
+    COUNT_IF(metric_name == 'canceled') as canceled_count,
+    COUNT_IF(metric_name == 'error_metrics') as error_metrics_count,
+    COUNT_IF(metric_name == 'error_graph') as error_graph_count,
+FROM $completed_instances
+GROUP BY fielddate, priority

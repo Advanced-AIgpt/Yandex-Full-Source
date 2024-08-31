@@ -1,0 +1,43 @@
+service: amelie
+title: OAuth Redirector
+ci:
+  release-title-source: flow
+  secret: sec-01f3qvfjs72rpbxc5ychr662dx
+  runtime:
+    sandbox-owner: VINS
+  releases:
+    oauth-redirector-release:
+      title: OAuth Redirector
+      flow: release-oauth-redirector
+      auto: true
+      stages:
+        build:
+          title: Build
+          displace: true
+        stable:
+          title: Deploy
+  flows:
+    release-oauth-redirector:
+      title: OAuth Redirector
+      jobs:
+        build:
+          title: Build package
+          task: common/arcadia/ya_package
+          stage: build
+          input:
+            packages: alice/amelie/deploy/packages/oauth-redirector-package.json
+            resource_type: OAUTH_REDIRECTOR_PACKAGE
+            package_type: tarball
+        oauth-redirector-deploy:
+          title: Stable OAuth Redirector deploy
+          task: common/deploy/release
+          stage: stable
+          input:
+            config:
+              sandboxResourceType: OAUTH_REDIRECTOR_PACKAGE
+              commonReleaseData:
+                releaseStage: stable
+                releaseNotes: Release from CI
+              stageName: oauth-redirector-stable
+          needs:
+            - build

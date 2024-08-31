@@ -1,0 +1,84 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+
+$input1_new = "//home/voice/jdkondratenko/VA-2304/sampled_data/quasar_annotation_1_with_childness";
+
+$translation1 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_1";
+$translation2 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_2";
+$translation3 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_3";
+$translation4 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/translation_and_latin/translation_and_latin_4";
+
+$music1 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/music/music_1";
+$music2 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/music/music_2";
+$music3 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/music/music_3";
+$music4 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/music/music_4";
+
+$video1 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/video/video_1";
+$video2 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/video/video_2";
+$video3 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/video/video_3";
+$video4 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/video/video_4";
+
+$old_and_new1 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/old_and_new_diff/old_and_new_diff1";
+$old_and_new2 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/old_and_new_diff/old_and_new_diff2";
+$old_and_new3 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/old_and_new_diff/old_and_new_diff3";
+$old_and_new4 = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/old_and_new_diff/old_and_new_diff4";
+
+$translation = (
+    (SELECT * FROM $translation1)
+    UNION ALL
+    (SELECT * FROM $translation2)
+    UNION ALL
+    (SELECT * FROM $translation3)
+    UNION ALL
+    (SELECT * FROM $translation4)
+);
+
+$music = (
+    (SELECT * FROM $music1)
+    UNION ALL
+    (SELECT * FROM $music2)
+    UNION ALL
+    (SELECT * FROM $music3)
+    UNION ALL
+    (SELECT * FROM $music4)
+);
+
+$video = (
+    (SELECT * FROM $video1)
+    UNION ALL
+    (SELECT * FROM $video2)
+    UNION ALL
+    (SELECT * FROM $video3)
+    UNION ALL
+    (SELECT * FROM $video4)
+);
+
+$old_and_new = (
+    (SELECT * FROM $old_and_new1)
+    UNION ALL
+    (SELECT * FROM $old_and_new2)
+    UNION ALL
+    (SELECT * FROM $old_and_new3)
+    UNION ALL
+    (SELECT * FROM $old_and_new4)
+);
+
+$output = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/kids/kids1";
+
+$kids = (SELECT *
+FROM $input1_new
+WHERE child_confidence > 0.8
+);
+
+$all_prev = (
+(SELECT * FROM $translation)
+UNION ALL
+(SELECT * FROM $music)
+UNION ALL
+(SELECT * FROM $video)
+UNION ALL
+(SELECT * FROM $old_and_new)
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT ListSort(ListUniq(ListFlatMap(Yson::ConvertToList(raw_assesments), ($x)->{RETURN Yson::ConvertToString($x.query)})), ($x)->{RETURN Random($x)}) AS worker_hints, a.* FROM $kids AS a LEFT ONLY JOIN $all_prev AS all_prev USING (mds_key);

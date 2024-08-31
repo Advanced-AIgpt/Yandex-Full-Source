@@ -1,0 +1,77 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(5) AS String)};
+
+--логи потенциальных пользователей мультирума
+$logs = 
+(
+    SELECT p.*
+    FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $date_filter) AS p 
+    INNER JOIN 
+    (
+        SELECT DISTINCT puid
+        FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices` 
+        WHERE $date_filter(fielddate)
+    ) AS m ON m.puid = p.puid
+    WHERE app IN ('quasar', 'small_smart_speakers')
+);
+
+--события, где была директива start_multiroom 
+$start_multiroom_directive = 
+(
+    SELECT request_id AS req_id, puid, TableName() AS fielddate,
+    ListFilter(Yson::ConvertToList(response.directives),
+    ($x) -> (Yson::ConvertToString($x.name) = 'start_multiroom'))[0] AS start_multiroom
+    FROM FILTER(`//home/voice/vins/logs/dialogs`, $date_filter)
+    WHERE ListFilter(Yson::ConvertToList(response.directives), 
+    ($x) -> (Yson::ConvertToString($x.name) = 'start_multiroom'))[0] IS NOT NULL
+);
+
+--мультирумные группы в которых больше одного устройства
+$multiroom_groups =
+(
+    SELECT puid, fielddate, group_name
+    FROM  `//home/voice/nadezhda17/common/multiroom/multiroom_devices`
+    WHERE group_name IS NOT NULL
+    AND $date_filter(fielddate)
+    GROUP BY puid, fielddate, group_name HAVING COUNT(device_id) > 1
+);
+
+--устройста из этих групп
+$multiroom_group_devices =
+(
+    SELECT m.*
+    FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices` AS m
+    INNER JOIN $multiroom_groups AS t ON t.puid = m.puid AND t.fielddate = m.fielddate 
+    AND t.group_name = m.group_name
+    WHERE $date_filter(m.fielddate)
+);
+
+$ms_to_datetime = ($ms) -> {RETURN DateTime::FromMilliseconds(CAST($ms AS Uint64))};
+$intent_formatted = ($intent) -> {RETURN String::JoinFromList(String::SplitToList($intent, '\t'), '.')};
+
+$room = ($analytics_info) -> {RETURN Yson::ConvertToString(ListFilter(
+Yson::ConvertToList($analytics_info.analytics_info.HollywoodMusic.semantic_frame.slots), 
+($x) -> (Yson::ConvertToString($x.name) = 'room'))[0].value)};
+
+--запросы мультрумных пользователей, где была директива включения или слот комнаты или группа или везде
+$multiroom_music_logs = 
+(
+    SELECT m.device_id AS device_id, m.puid AS puid, m.fielddate AS fielddate, 
+    $ms_to_datetime(server_time_ms) AS ts, m.req_id AS req_id, parent_req_id, query, reply,
+    generic_scenario, $intent_formatted(intent) AS intent,
+    md.group_name AS group, $room(analytics_info) AS room, start_multiroom
+    FROM $logs AS m 
+    INNER JOIN $start_multiroom_directive AS s ON s.req_id = m.req_id AND s.fielddate = m.fielddate
+    LEFT JOIN $multiroom_group_devices AS md ON md.device_id = m.device_id AND md.fielddate = m.fielddate 
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/multiroom_music_logs` WITH TRUNCATE 
+SELECT *
+FROM $multiroom_music_logs
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/multiroom/multiroom_music_logs` AS m 
+LEFT ONLY JOIN $multiroom_music_logs AS t ON t.req_id = m.req_id AND t.fielddate = m.fielddate;

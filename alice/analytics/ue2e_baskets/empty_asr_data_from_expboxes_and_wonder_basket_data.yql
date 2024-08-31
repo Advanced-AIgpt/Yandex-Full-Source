@@ -1,0 +1,222 @@
+Use hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA dq.AnalyzeQuery = "1";
+PRAGMA yt.InferSchema = '100';
+PRAGMA udf("libasr_logs.so");
+pragma yt.Pool = "voice";
+pragma yt.MaxRowWeight = "128M";
+pragma yt.UseNativeYtTypes;
+PRAGMA yson.DisableStrict;
+
+
+$prepared_logs_expboxes = "//home/alice/dialog/prepared_logs_expboxes";
+
+$date_start = "2021-08-07";
+$date_end = "2021-08-07";
+
+$wonder_basket_logs = "//home/alice-dev/ran1s/basket/wonder/basket-data";
+$output_dir = "//home/voice/egd3700/TASKS/VA-2268/new_data/";
+$joined_logs_out = $output_dir || "empty_asr_data_eavesdropping_"  || $date_start || "_" || $date_end;
+
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yandex_phone", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+$tv_apps = AsList("tv");
+
+$patch_script = @@
+import cyson
+
+def patch_vins(vins_request, ignore_keys):
+    for ignore_key in ignore_keys:
+        if '.' in ignore_key:
+            ignore_parts = ignore_key.split('.')
+            cur_dict = vins_request or {}
+            for ignore_part in ignore_parts[:-1]:
+                cur_dict = cur_dict.get(ignore_part, {}) or {}
+            cur_dict.pop(ignore_parts[-1], None)
+    return vins_request
+
+patch_vins._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_vins_request = Python2::patch_vins(ParseType("(Yson?, List<String>)->Yson"), $patch_script);
+$ignore_options = AsList(
+                         "additional_options.bass_options.cookies", "additional_options.expflags", "additional_options.expboxes",
+                         "additional_options.oauth_token", "additional_options.bass_url"
+);
+
+$script = @@
+APP_LIST = {
+    "ru.yandex.searchplugin": "search_app_prod",
+    "ru.yandex.mobile": "search_app_prod",
+    "ru.yandex.searchplugin.beta": "search_app_beta",
+    "ru.yandex.mobile.search": "browser_prod",
+    "ru.yandex.mobile.search.ipad": "browser_prod",
+    "winsearchbar": "stroka",
+    "com.yandex.browser": "browser_prod",
+    "com.yandex.browser.alpha": "browser_alpha",
+    "com.yandex.browser.beta": "browser_beta",
+    "ru.yandex.yandexnavi": "navigator",
+    "ru.yandex.mobile.navigator": "navigator",
+    "com.yandex.launcher": "launcher",
+    "ru.yandex.quasar.services": "quasar",
+    "yandex.auto": "auto",
+    "ru.yandex.autolauncher": "auto",
+    "ru.yandex.iosdk.elariwatch": "elariwatch",
+    "aliced": "small_smart_speakers",
+    "YaBro": "yabro_prod",
+    "YaBro.beta": "yabro_beta",
+    "ru.yandex.quasar.app": "quasar",
+    "yandex.auto.old": "auto_old",
+    "ru.yandex.mobile.music": "music_app_prod",
+    "ru.yandex.music": "music_app_prod",
+    "com.yandex.tv.alice": "tv",
+    "ru.yandex.taximeter": "taximeter",
+    "ru.yandex.yandexmaps": "yandexmaps_prod",
+    "ru.yandex.traffic": "yandexmaps_prod",
+    "ru.yandex.yandexmaps.debug": "yandexmaps_dev",
+    "ru.yandex.yandexmaps.pr": "yandexmaps_dev",
+    "ru.yandex.traffic.inhouse": "yandexmaps_dev",
+    "ru.yandex.traffic.sandbox": "yandexmaps_dev",
+    "com.yandex.alice": "alice_app",
+    "ru.yandex.centaur": "centaur",
+}
+def get_app(app_id):
+    return APP_LIST.get(app_id, "other")
+@@;
+
+$map_app = Python2::get_app(ParseType("(String?)->String"), $script);
+
+$logs_table = "//home/voice/asr-logs/per-day";
+
+$is_good_id = ($some_id) -> {
+    return
+        $some_id is not null and
+        not String::StartsWith($some_id, "deadbeef") and
+        not String::StartsWith($some_id, "ffffffff") and
+        not String::StartsWith($some_id, "dddddddd") and
+        not String::StartsWith($some_id, "feedface") and
+        not String::StartsWith($some_id, "deafbeef") and
+        not String::StartsWith($some_id, "aaaaaa") and
+        not String::StartsWith($some_id, "eeadbeef") and
+        not String::StartsWith($some_id, "00000") and
+        not String::StartsWith($some_id, "shooting");
+};
+
+$is_spotter_validation_request = ($init_session_info) -> {
+    return
+        $init_session_info is not null and
+        Yson::Contains($init_session_info, "advanced_options") and
+        (Yson::LookupBool($init_session_info.advanced_options, "spotter_validation", Yson::Options(false as Strict, false as AutoConvert)) ?? False);
+};
+
+$has_eou_delay_experiment = ($exp_str) -> {
+    return
+        ($exp_str is not null) and
+        ListHas(Yson::ConvertToStringList(Yson::ParseJson($exp_str).ASR.flags), "EouDelay") and
+        (not ListHasItems(ListFilter(Yson::ConvertToStringList(Yson::ParseJson($exp_str).ASR.flags), ($x) -> {return String::StartsWith($x, "EouDelayDuration=");})))
+};
+
+$is_prod_request = ($code_debug) -> {
+    RETURN String::Contains(Yson::ConvertToString($code_debug.HostBSConfiguration), "a_ctype_prod")
+};
+
+$data = (
+    select
+        request_id,
+        asr_session_guid,
+        audio_mds_key,
+        session_start_time,
+        $is_spotter_validation_request(init_session_info) as spotter_validation_request,
+        $has_eou_delay_experiment(ASRLogs::GetExperimentsString(Yson::From(TableRow()))) as has_eou_delay_experiment,
+        ASRLogs::GetTopic(Yson::From(TableRow())) as topic,
+        ASRLogs::GetUUID(Yson::From(TableRow())) as `uuid`,
+        ASRLogs::GetDevice(Yson::From(TableRow())) as device,
+        ASRLogs::GetExperimentsString(Yson::From(TableRow())) as experiments_string
+    from RANGE($logs_table, $date_start, $date_end)
+    where
+        $is_good_id(request_id)
+        and (not any_missing_messages)
+        and ASRLogs::HasNoMultipleFinals(Yson::From(TableRow()))
+        and $is_good_id(ASRLogs::GetUUID(Yson::From(TableRow())))
+        and (audio_mds_key is not null)
+        and (asr_session_guid is not null)
+        and $is_prod_request(core_debug)
+);
+
+$good_data = (
+    select * from $data
+    where
+        (not spotter_validation_request) and
+        has_eou_delay_experiment and
+        device != "Yandex development"
+);
+
+$asr_data_request = SELECT * FROM (
+    SELECT MAX_BY(TableRow(), session_start_time) FROM $good_data GROUP BY request_id
+) FLATTEN COLUMNS;
+
+$expboxes_data = (
+    SELECT
+        is_new, query, input_type, session_sequence, session_id, reply, generic_scenario,
+        intent, fielddate, req_id as request_id, skill_id,
+        Yson::SerializePretty(Yson::Lookup(other, "callback")) as callback
+    FROM RANGE($prepared_logs_expboxes, $date_start, $date_end)
+);
+
+$wonder_basket_data = (
+    SELECT
+        Yson::LookupString(request, "request_id") as request_id,
+        substring(uniproxy_mds_key, 52) as mds_key,
+        directives,
+        analytics_info,
+        trash_or_empty as is_empty_asr,
+        client_tz,
+        Yson::LookupString(request, "device_id") as device_id,
+        $patch_vins_request(request, $ignore_options) as vins_full_request,
+        $map_app(Yson::ConvertToString(request.app_info.app_id)) as app,
+        `uuid` as `uuid`,
+        Yson::SerializePretty(Yson::Lookup(request, "location")) as location,
+        Yson::ConvertToBool(request.additional_options.do_not_use_user_logs) as do_not_use_user_logs,
+        activation_type as ActivationType,
+        Yson::SerializePretty(Yson::Lookup(request, "additional_options")) as AdditionalOptions,
+        Yson::SerializePretty(Yson::Lookup(request, "device_state")) as DeviceState,
+        Yson::ConvertToString(request.additional_options.bass_options.client_ip) as IpAddr,
+        Yson::ConvertToBool(request.reset_session) as ResetSession,
+        message_id as MessageId
+
+    FROM RANGE($wonder_basket_logs, $date_start, $date_end)
+    WHERE
+        not (String::StartsWith(`uuid`, 'uu/ffffffffffffffff') or String::StartsWith(`uuid`, 'uu/deadbeef') or String::StartsWith(`uuid`, 'uu/dddddddddddddddd')) -- не берём uuid прокачки
+        and Yson::LookupString(request, "lang") == "ru-RU"
+);
+
+$joined_logs = (
+    SELECT *
+    FROM $wonder_basket_data as wonderlogs
+    LEFT JOIN $expboxes_data as expboxes
+    USING(request_id)
+    WHERE
+        is_empty_asr == true
+        and (do_not_use_user_logs is null or not do_not_use_user_logs)
+        and app in ListExtend($quasar_apps, $general_apps, $navi_apps, $tv_apps)
+);
+
+$eavesdropping = (
+    SELECT joined.* FROM
+    (SELECT * FROM $joined_logs) as joined
+    JOIN
+    (SELECT request_id FROM $asr_data_request) as asr_sampling
+    ON joined.MessageId == asr_sampling.request_id
+);
+
+INSERT INTO $joined_logs_out WITH TRUNCATE
+SELECT
+    request_id, SOME(skill_id) as skill_id, SOME(input_type) as input_type, SOME(mds_key) as mds_key, SOME(reply) as reply, SOME(directives) as directives,
+    SOME(fielddate) as fielddate, SOME(query) as query, SOME(`uuid`) as `uuid`, SOME(analytics_info) as analytics_info, SOME(is_empty_asr) as is_empty_asr,
+    SOME(callback) as callback, SOME(is_new) as is_new, SOME(intent) as intent, SOME(client_tz) as client_tz, SOME(app) as app, SOME(vins_full_request) as vins_full_request,
+    SOME(session_id) as session_id, SOME(session_sequence) as session_sequence, SOME(do_not_use_user_logs) as do_not_use_user_logs,
+    SOME(generic_scenario) as generic_scenario, SOME(device_id) as device_id, SOME(ActivationType) as ActivationType, SOME(AdditionalOptions) as AdditionalOptions, SOME(DeviceState) as DeviceState, SOME(IpAddr) as IpAddr, SOME(ResetSession) as ResetSession, SOME(MessageId) as MessageId, SOME(location) as Location
+FROM $eavesdropping
+GROUP BY request_id;

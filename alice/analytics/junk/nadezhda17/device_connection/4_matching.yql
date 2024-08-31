@@ -1,0 +1,98 @@
+USE hahn;
+
+$start_date = 
+(
+    SELECT MIN(fielddate)
+    FROM 
+    (
+        SELECT CAST(CAST(DateTime::FromSeconds(CAST(ts AS Uint32)) AS Date) AS String) AS fielddate
+        FROM `//home/voice/nadezhda17/common/device_connection/js_api`
+    )
+);
+
+$finish_date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(1) AS String);
+$js_api_table = (SELECT * FROM `//home/voice/nadezhda17/common/device_connection/js_api`);
+
+--ограничимся важным набором моделей
+$device_white_list = AsList('yandex.station.micro', 'yandex.station.mini_2_no_clock', 
+'yandex.station.mini_2', 'yandex.station_2', 'yandex.station.midi');
+--и важным набором операционных систем
+$OSName_white_list = AsList('Android', 'iOS');
+
+$sessions = 
+(
+    SELECT EventDate, OSName, app, device, puid, session_id,
+    start_ts - DateTime::IntervalFromMinutes(1) AS start_ts,
+    finish_ts + DateTime::IntervalFromMinutes(1) AS finish_ts
+    FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric`
+    WHERE EventDate BETWEEN $start_date AND $finish_date
+    AND device IN $device_white_list
+    AND OSName IN $OSName_white_list
+);
+
+$js_api = 
+(
+    SELECT CAST(CAST(ts AS Date) AS String) AS  EventDate,
+    ts + DateTime::IntervalFromHours(3) AS ts, 
+    CASE WHEN OperatingSystem = 1 THEN 'Android'
+    WHEN OperatingSystem = 2 THEN 'iOS' 
+    ELSE NULL 
+    END AS OSName, 
+    IF(APIKey IN (3970000, 3944830), 'УД', 'ПП') AS app, 
+    AccountID AS puid, 
+    '{\"' || method || '\":' || info || '}' AS method 
+    FROM $js_api_table
+);
+
+$matched_js_api = 
+(
+    SELECT a.*, device, session_id
+    FROM $js_api AS a 
+    INNER JOIN $sessions AS s ON a.EventDate = s.EventDate AND a.OSName = s.OSName 
+    AND a.app = s.app AND a.puid = s.puid
+    WHERE a.ts BETWEEN s.start_ts AND s.finish_ts
+);
+
+$full_matched = 
+(
+    SELECT m.*, 
+    IF(j.session IS NULL, m.session,
+    ListSort(ListExtend(m.session, j.session) , ($x) -> ($x.ts))) AS session, 
+    IF(j.session IS NOT NULL, 1, 0) AS know_about_js_api,
+    ListMap(
+        ListFilter(j.session, ($x) -> ($x.tail LIKE '%\"error\"%' OR $x.tail LIKE '%\"message\"%')), 
+        ($x) -> (
+        AsStruct(
+            'get_ble_device_wifi_list_message: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).get_ble_device_wifi_list.message)??
+            'get_ble_device_wifi_list_error: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).get_ble_device_wifi_list.error)??
+            'start_discovery_message: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).start_discovery.message)??
+            'start_discovery_error: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).start_discovery.error)??
+            'provide_config_message: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).provide_config.message)??
+            'provide_config_error: ' || Yson::ConvertToString(Yson::ParseJson($x.tail).provide_config.error)
+         AS error, 
+         $x.ts AS ts)
+        )
+    ) AS problems
+    WITHOUT m.session
+    FROM 
+    (
+        SELECT s.*
+        FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric` AS s
+        WHERE EventDate BETWEEN $start_date AND $finish_date
+        AND device IN $device_white_list
+        AND OSName IN $OSName_white_list
+    ) AS m 
+    LEFT JOIN 
+    (
+        SELECT EventDate, OSName, app, device, puid, session_id, 
+        AGGREGATE_LIST(AsStruct(ts AS ts, method AS tail)) AS session
+        FROM $matched_js_api
+        GROUP BY EventDate, OSName, app, device, puid, session_id
+    ) AS j ON j.session_id = m.session_id AND j.puid = m.puid AND j.device = m.device 
+    AND j.app = m.app AND j.OSName = m.OSName AND j.EventDate = m.EventDate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/session_for_metric_with_js_api` WITH TRUNCATE 
+SELECT * FROM $full_matched;
+
+

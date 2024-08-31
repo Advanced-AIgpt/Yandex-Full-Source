@@ -1,0 +1,124 @@
+{%- set graph_prefix = scenario.graph_prefix -%}
+{%- set NODE_PREFIX = graph_prefix.upper() -%}
+{%- set NODE_NAME = NODE_PREFIX + "_RUN" -%}
+{
+    "monitoring": {
+        {%- set alerts = graph.monitoring.alerts if graph else [] %}
+        {%- if alerts %}
+        "alerts": {{ alerts|jsonify }}
+        {%- else %}
+        "alerts": [
+            {
+                "crit": 0.1,
+                "operation": "perc",
+                "prior": 10,
+                "type": "failures",
+                "warn": 0.09
+            }
+        ]
+        {%- endif %}
+    },
+    {%- set settings = graph.settings if graph else {} %}
+    {%- set nodes = settings.get("nodes", {}) %}
+    {%- set is_auto = not nodes or (nodes|count == 2 and "SCENARIO_REQUEST") %}
+    "settings": {
+        {%- if "edge_expressions" in settings %}
+        "edge_expressions": {{ settings.edge_expressions|jsonify }},
+        {%- endif %}
+        "input_deps": [
+            "DATASOURCES",
+            "WALKER_RUN_STAGE0"
+        ],
+        "node_deps": {
+            {%- set pipe = joiner(",") %}
+            {%- set node_deps = settings.node_deps if settings else {} %}
+            {%- if is_auto or is_deprecated_auto %}{{ pipe() }}
+            {%- do node_deps.pop("RESPONSE", {}) -%}
+            "{{ NODE_NAME }}": {
+                "input_deps": [
+                    "SCENARIO_REQUEST"
+                ]
+            },
+            "RESPONSE": {
+                "input_deps": [
+                    "{{ NODE_NAME }}@!mm_scenario_response"
+                ]
+            }
+            {%- endif %}
+            {%- set request = node_deps.pop("SCENARIO_REQUEST", {}) %}
+            {%- if is_auto or request %}{{ pipe() }}
+            "SCENARIO_REQUEST": {
+                "input_deps": [
+                    "DATASOURCES",
+                    "WALKER_RUN_STAGE0"
+                ]
+            }
+            {%- endif %}
+            {%- for name, value in node_deps.items() %}{{ pipe() }}
+            "{{ name }}" : {{ value|jsonify }}
+            {%- endfor %}
+        },
+        "nodes": {
+            {%- set pipe = joiner(",") %}
+            {%- set node = nodes.pop(NODE_NAME, {}) %}
+            {%- if is_auto or node %}{{ pipe() }}
+            "{{ NODE_NAME }}": {
+                "alias_config": {
+                    "addr_alias": [
+                        "HOLLYWOOD_ALL",
+                        "{{ NODE_PREFIX }}"
+                    ]
+                },
+                "backend_name": "{{node.get("backend_name", "HOLLYWOOD_COMMON")}}",
+                "node_type": "DEFAULT",
+                "params": {
+                    "handler": "/{{ graph_prefix }}/run",
+                    "load_control_config": {
+                        "max_reask_budget": 10,
+                        "requests_per_reask": 20
+                    },
+                    "soft_timeout": "{{node.get("params", {}).get("soft_timeout", "37ms")}}",
+                    "timeout": "{{node.get("params", {}).get("timeout", "75ms")}}"
+                }
+            }
+            {%- endif %}
+            {%- set request = nodes.pop("SCENARIO_REQUEST", {}) %}
+            {%- if is_auto or request %}{{ pipe() }}
+            "SCENARIO_REQUEST": {
+                "node_type": "TRANSPARENT"
+            }
+            {%- endif %}
+            {%- for name, value in nodes.items() %}{{ pipe() }}
+            "{{ name }}" : {{ value|jsonify }}
+            {%- endfor %}
+        },
+        "output_deps": [
+            "RESPONSE"
+        ],
+        "responsibles": {
+            {%- set responsibles = scenario.Responsibles %}
+            {%- if responsibles.AbcServices %}
+            "abc_service": [
+                {%- for abc_service in responsibles.AbcServices %}
+                {
+                    {%- if abc_service.DutySlugs %}
+                    "duty_slugs": {{ abc_service.DutySlugs|to_list|jsonify }},
+                    {%- endif %}
+                    {%- if abc_service.Scopes %}
+                    "role_scopes": {{ abc_service.Scopes|to_list|jsonify }},
+                    {%- endif %}
+                    "slug": "{{ abc_service.Name }}"
+                }{{ "," if not loop.last }}
+                {%- endfor %}
+            ],
+            {%- endif %}
+            {%- if responsibles.Logins %}
+            "logins": {{ responsibles.Logins|to_list|jsonify }},
+            {%- endif %}
+            "messenger_chat_names": [
+                "MegamindDuty"
+            ]
+        }
+    }
+}
+

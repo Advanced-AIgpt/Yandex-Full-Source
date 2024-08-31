@@ -1,0 +1,42 @@
+USE hahn;
+PRAGMA yt.InferSchema = '100';
+PRAGMA yson.DisableStrict;
+PRAGMA yt.Pool = "voice";
+
+-- set dates from nirvana
+$start_date = {{param.start_date}};
+$end_date = {{param.end_date}};
+
+$expboxes_logs = "//home/alice/dialog/prepared_logs_expboxes";
+
+$get_nav_url = ($matched_semantic_frames) -> {
+    $matched_semantic_frames = Yson::ConvertToList($matched_semantic_frames);
+    $slots = ListFilter(
+        $matched_semantic_frames, 
+        ($x)->{RETURN Yson::ConvertToString($x.name) == "alice.apps_fixlist"}
+    )[0].slots;
+    $slots = Yson::ConvertToList($slots);
+    $app_data = ListFilter(
+        $slots,
+        ($x)->{RETURN Yson::ConvertToString($x.name) == "app_data"}
+    );
+    $app_data_value = ListFilter($app_data,
+    ($x)->{RETURN Yson::ConvertToString($x.type) == "custom.app_data"}
+    )[0].value;
+    $app_data_value = Yson::ParseJson(Yson::ConvertToString($app_data_value));
+
+    RETURN Yson::ConvertToString($app_data_value.nav.url._)
+};
+
+UPSERT INTO stat.`VoiceTech/Dialog/session_metrics/shortcut_usage/daily`
+SELECT fielddate, url ?? "_total_" AS url, COUNT(*) AS hits, COUNT(DISTINCT user_id) AS users
+FROM (
+    SELECT
+    Unwrap(fielddate) AS fielddate, 
+    $get_nav_url(analytics_info.analytics_info.OpenAppsFixlist.matched_semantic_frames)??'NULL' AS url,
+    user_id
+    FROM RANGE($expboxes_logs, $start_date, $end_date)
+    WHERE generic_scenario == "nav_url" AND app == "search_app_prod" AND mm_scenario == "OpenAppsFixlist"
+)
+GROUP BY  ROLLUP(url), fielddate
+

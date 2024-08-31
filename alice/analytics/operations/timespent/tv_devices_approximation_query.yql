@@ -1,0 +1,84 @@
+USE hahn;
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict = 'true';
+
+$fielddate = {{param.date}};
+$tv_last_path = "//home/sda/cubes/tv/watching/last";
+
+$week_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(6))
+};
+$two_weeks_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(14))
+};
+
+$script = @@
+import numpy as np
+import time
+import datetime
+
+DAYS_IN_WEEK = 7
+
+def calc_week(device_data, rows):
+    timestamps = []
+    device_id, device = device_data
+    for row in rows:
+        timestamps.append(datetime.datetime.strptime(row.fielddate, "%Y-%m-%d"))
+
+    timestamps.sort()
+
+    dates_return = {date.strftime("%Y-%m-%d") for date in timestamps}
+    for date in timestamps:
+        for daynum in range(1, DAYS_IN_WEEK):
+            dates_return.add((date + datetime.timedelta(days=daynum)).strftime("%Y-%m-%d"))
+
+    for day in dates_return:
+        yield {"device_id": device_id, "device": device if device else 'other', "fielddate": day}
+    @@
+;
+
+$calc_week = Python2::calc_week(
+    Callable<(
+        Tuple<String?, String?>,
+        Stream<Struct<'device_id': String?, 'device': String?, 'fielddate': String?>>
+    ) ->
+        Stream<Struct<'device_id': String?, 'device': String?, 'fielddate':string?>>
+    >,
+    $script
+);
+
+
+$filtered_data = (
+    select fielddate, device_id, (platform ?? 'other') AS device
+    from $tv_last_path
+    where fielddate >= $two_weeks_ago($fielddate) and fielddate <= $fielddate
+)
+;
+
+
+$week_stats = (
+    SELECT fielddate, device ?? '_total_' as device, is_tv_plugged_in ?? '_total_' as is_tv_plugged_in,
+            app ?? '_total_' as app, count(distinct device_id) as week_cnt
+    from (
+        select fielddate, device, 'true' as is_tv_plugged_in, 'tv' as app, device_id
+        FROM (
+            REDUCE $filtered_data
+            PRESORT fielddate
+            ON device_id, device
+            USING $calc_week(TableRow())
+        )
+    )
+    group by fielddate, CUBE(app, device, is_tv_plugged_in)
+)
+;
+
+
+$tv_devices = (
+    SELECT fielddate, "_total_" AS cohort, "_total_" AS age_category, app, device, is_tv_plugged_in, week_cnt AS tv_devices_approximation
+    FROM $week_stats
+    where fielddate >= $week_ago($fielddate) and fielddate <= $fielddate
+);
+
+insert into {{output1}}
+SELECT t.*
+FROM $tv_devices AS t

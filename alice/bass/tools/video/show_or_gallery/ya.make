@@ -1,0 +1,1 @@
+RECURSE(generate_train_data)

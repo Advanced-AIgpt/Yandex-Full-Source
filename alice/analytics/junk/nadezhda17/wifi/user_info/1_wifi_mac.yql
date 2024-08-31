@@ -1,0 +1,24 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/user_info/wifi_mac`
+SELECT DeviceID, OriginalModel, 
+argMax(AppVersionName, EventDateTime) AS AppVersionName,
+argMax(quasmodrom_group, EventDateTime) AS quasmodrom_group,
+argMax(wifi_mac, EventDateTime) AS wifi_mac,
+argMax(wifi_ssid, EventDateTime) AS wifi_ssid
+FROM 
+(
+    SELECT DeviceID, OriginalModel, AppVersionName, EventDateTime, 
+    arrayElement(ReportEnvironment_Values, 
+    indexOf(ReportEnvironment_Keys, 'quasmodrom_group')) AS quasmodrom_group,
+    JSONExtractString(JSONExtractRaw(EventValue, 'stats'), 'wifi_mac') AS wifi_mac,
+    JSONExtractString(JSONExtractRaw(EventValue, 'stats'), 'wifi_ssid') AS wifi_ssid
+    FROM concatYtTablesRange('//logs/appmetrica-yandex-events/1d', 
+    toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+    toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+    WHERE APIKey = 999537
+    AND EventName = 'glagold_heartbeat'
+    AND OriginalModel IN ('yandexstation', 'yandexmini', 'yandexstation_2', 
+    'yandexmicro', 'yandexmini_2', 'yandexmidi')
+    AND EventType = 4
+)
+GROUP BY DeviceID, OriginalModel;
+

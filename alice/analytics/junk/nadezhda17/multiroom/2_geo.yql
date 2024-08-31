@@ -1,0 +1,31 @@
+USE hahn;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(5) AS String)};
+$date_filter_big = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(31) AS String)};
+
+$location = 
+(
+    SELECT ListReverse(String::SplitToList(request, '='))[0] as device_id, 
+    SUBSTRING(iso_eventtime, 0, 10) AS fielddate,
+    CAST(latitude AS Double) AS lat, 
+    CAST(longitude AS Double) AS lon,
+    CAST(radius AS Int64) AS radius, 
+    ip, wifi, 
+    DateTime::FromSeconds(CAST(_logfeller_timestamp AS Uint32)) AS ts
+    FROM FILTER(`//statbox/mobile-api-lbs-log`, $date_filter)
+    WHERE `api_key` = 'APl-5FoBAAAA5eCjSgMAh9tzkRj4lgqd2YxGsIJCOWWxMwIAAAAAAAAAAADwgzUA3HGu26NfXMGgRmswsvfVJQ=='
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/geo_devices` WITH TRUNCATE
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $location
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/multiroom/geo_devices` AS m
+    LEFT ONLY JOIN $location AS l ON l.device_id = m.device_id AND m.fielddate = l.fielddate
+)
+WHERE $date_filter_big(fielddate)
+;

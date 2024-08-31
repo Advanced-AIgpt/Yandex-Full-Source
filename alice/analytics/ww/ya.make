@@ -1,0 +1,6 @@
+OWNER(nerevar)
+
+RECURSE(
+    arabic
+)
+

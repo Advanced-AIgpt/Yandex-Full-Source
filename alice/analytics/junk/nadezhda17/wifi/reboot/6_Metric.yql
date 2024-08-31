@@ -1,0 +1,74 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$devices_in_socket = 
+(
+    SELECT fielddate, device_type AS device, device_id
+    FROM `//home/alice/cubes/dayuse/stations/last`
+    WHERE fielddate >= '2021-11-01'
+    AND device_type IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexstation', 'yandexstation_2')
+);
+
+$data = 
+(
+    SELECT fielddate, device??'Total' AS device, 
+    COUNT(*) AS device_amount, SUM(reboot)*100.0/COUNT(*) AS reboot_percent, 
+    SUM(reboot) AS reboot_amount
+    FROM 
+    (
+        SELECT ds.*, IF(t.device_id IS NOT NULL, 1, 0) AS reboot
+        FROM $devices_in_socket AS ds 
+        LEFT JOIN 
+        (
+            SELECT DISTINCT device_id, fielddate
+            FROM `//home/voice/nadezhda17/common/wifi_problems/reboot/device_power_on_fix_wifi`
+        ) AS t ON t.device_id = ds.device_id AND t.fielddate = ds.fielddate
+    )
+    GROUP BY GROUPING SETS ((fielddate, device), fielddate)
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/reboot/metric` WITH TRUNCATE
+SELECT Total.fielddate AS fielddate, 
+yandexmicro_percent, yandexmicro_amount,
+yandexmini_percent, yandexmini_amount,
+yandexmini_2_percent, yandexmini_2_amount,
+yandexstation_percent, yandexstation_amount,
+yandexstation_2_percent, yandexstation_2_amount,
+Total_percent, Total_amount
+FROM 
+(
+    SELECT fielddate, reboot_percent AS yandexmicro_percent, reboot_amount AS yandexmicro_amount
+    FROM $data
+    WHERE device = 'yandexmicro'
+) AS yandexmicro 
+INNER JOIN 
+(
+    SELECT fielddate, reboot_percent AS yandexmini_percent, reboot_amount AS yandexmini_amount
+    FROM $data
+    WHERE device = 'yandexmini'
+) AS yandexmini on  yandexmicro.fielddate = yandexmini.fielddate
+INNER JOIN 
+(
+    SELECT fielddate, reboot_percent AS yandexmini_2_percent, reboot_amount AS yandexmini_2_amount
+    FROM $data
+    WHERE device = 'yandexmini_2'
+) AS yandexmini_2 on  yandexmicro.fielddate = yandexmini_2.fielddate
+INNER JOIN 
+(
+    SELECT fielddate, reboot_percent AS yandexstation_percent, reboot_amount AS yandexstation_amount
+    FROM $data
+    WHERE device = 'yandexstation'
+) AS yandexstation on  yandexmicro.fielddate = yandexstation.fielddate
+INNER JOIN 
+(
+    SELECT fielddate, reboot_percent AS yandexstation_2_percent, reboot_amount AS yandexstation_2_amount
+    FROM $data
+    WHERE device = 'yandexstation_2'
+) AS yandexstation_2 on  yandexmicro.fielddate = yandexstation_2.fielddate
+INNER JOIN 
+(
+    SELECT fielddate, reboot_percent AS Total_percent, reboot_amount AS Total_amount
+    FROM $data
+    WHERE device = 'Total'
+) AS Total on  yandexmicro.fielddate = Total.fielddate
+ORDER BY fielddate;

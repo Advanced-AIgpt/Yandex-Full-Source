@@ -1,0 +1,105 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$push = 
+(
+    SELECT t.fielddate AS fielddate, t.puid AS puid, t.reqid AS reqid, 
+    CASE WHEN Yson::ConvertToString(push_metrika_events.ButtonClicked.log_date) IS NOT NULL THEN 'buttonclicked'
+    WHEN Yson::ConvertToString(push_metrika_events.Opened.log_date) IS NOT NULL THEN 'opened'
+    WHEN Yson::ConvertToString(push_metrika_events.Dismissed.log_date) IS NOT NULL THEN 'dismissed'
+    WHEN Yson::ConvertToString(push_metrika_events.Expired.log_date) IS NOT NULL THEN 'expired'
+    WHEN Yson::ConvertToString(push_metrika_events.Ignored.log_date) IS NOT NULL THEN 'ignored'
+    WHEN Yson::ConvertToString(push_metrika_events.Shown.log_date) IS NOT NULL THEN 'shown'
+    WHEN Yson::ConvertToString(push_metrika_events.Delivered.log_date) IS NOT NULL THEN 'delivered'
+    ELSE 'other' END AS type
+    FROM 
+    (
+        SELECT log_date AS fielddate, puid, push_id, reqid, push_metrika_events
+        FROM FILTER(`//home/sup/push_stats`, $date_filter, `push_final`)
+        WHERE project = 'quasar'
+    ) AS t 
+    INNER JOIN
+    (
+        SELECT DISTINCT reqid, pid, Substring(iso_eventtime, 0, 10) AS fielddate
+        FROM FILTER(`//logs/push-chunks-log/1d`, $date_filter) AS s
+        WHERE project = 'quasar'
+        AND reason LIKE '%QUASAR.PROMO_PERIOD%'
+    ) AS p ON p.reqid = t.reqid AND p.pid = t.push_id AND p.fielddate = t.fielddate
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/push` WITH TRUNCATE 
+SELECT *
+FROM $push
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/plus_metrics/push` AS p 
+LEFT ONLY JOIN $push AS d ON d.fielddate = p.fielddate AND d.puid = p.puid AND d.reqid = p.reqid;
+
+COMMIT;
+
+$finish_date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(15) AS String);
+
+$new_devices = 
+(
+    SELECT app, delay, device, device_id, init_date, plus_date, promo_activate_day, puid, 
+    subscription_state, plus_days, subscription_device,
+    CASE WHEN init_date <= $finish_date THEN two_weeks_status
+    WHEN init_date > $finish_date AND delay <= 14 THEN True
+    ELSE False END AS two_weeks_status
+    FROM  `//home/voice/nadezhda17/common/plus_metrics/subscription_status_full`
+);
+
+$uniq_users = 
+(
+    SELECT puid, MAX(CAST(CAST(init_date AS Date) + DateTime::IntervalFromDays(14) AS String)) AS two_weeks_date
+    FROM $new_devices
+    GROUP BY puid
+);
+
+$users = 
+(
+    SELECT puid, 
+    CASE WHEN ListHas(actions, 'promo') THEN 'promoperiod_page'
+    WHEN ListHas(actions, 'not_open') THEN 'delivered_push'
+    ELSE 'no_push_no_page' END AS status
+    FROM 
+    (
+        SELECT p.puid AS puid, AGGREGATE_LIST_DISTINCT(action) AS actions
+        FROM 
+        (
+            SELECT puid, IF(type LIKE '%promo%', 'promo', 'onboardong') AS action, fielddate
+            FROM `//home/voice/nadezhda17/common/plus_metrics/pages_from_appmetrica` 
+            UNION ALL 
+            SELECT puid, IF(type = 'opened', 'open', 'not_open') AS action, fielddate
+            FROM `//home/voice/nadezhda17/common/plus_metrics/push` 
+            WHERE type != 'other'
+        ) AS p 
+        INNER JOIN $uniq_users AS uu ON uu.puid = p.puid 
+        WHERE p.fielddate <= uu.two_weeks_date
+        GROUP BY p.puid
+    )
+);
+
+$matched = 
+(
+    SELECT n.*, status
+    FROM $new_devices AS n 
+    LEFT OUTER JOIN $users AS u ON u.puid = n.puid
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/plus_metrics/noplus_users_info` WITH TRUNCATE  
+SELECT init_date, app??'Total' AS app, 
+COUNT(*) AS amount,
+CAST(subscription_device AS String)??'Total' AS subscription_device,
+COUNT_IF(status = 'promoperiod_page') AS promoperiod_page,
+COUNT_IF(status = 'delivered_push') AS delivered_push,
+COUNT_IF(status = 'no_push_no_page' OR status IS NULL) AS no_push_no_page
+FROM $matched
+WHERE NOT two_weeks_status
+GROUP BY GROUPING SETS((init_date, app), (init_date),
+(init_date, app, subscription_device), (init_date, subscription_device))
+;

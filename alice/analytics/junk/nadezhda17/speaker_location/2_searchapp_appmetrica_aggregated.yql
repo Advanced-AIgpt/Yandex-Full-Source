@@ -1,0 +1,23 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--последняя настройка за этот день на puid
+$searchapp_appmetrica_aggregated  = 
+(
+    SELECT device_id, puid, fielddate, 
+    MAX_BY(location_ts, event_ts) AS location_ts,
+    MAX_BY(lat, event_ts) AS lat, MAX_BY(lon, event_ts) AS lon,
+    MAX_BY(location_precision, event_ts) AS location_precision, 
+    MAX_BY(location_source, event_ts) AS location_source,
+    MAX(event_ts) AS event_ts, 
+    MAX_BY(recieve_ts, event_ts) AS recieve_ts,
+    MAX(quasar_device_id) AS quasar_device_id
+    FROM  `//home/voice/nadezhda17/common/speakers_location/searchapp_appmetrica`
+    GROUP BY device_id, puid, fielddate
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/searchapp_appmetrica_aggregated` WITH TRUNCATE 
+SELECT *
+FROM $searchapp_appmetrica_aggregated
+ORDER BY puid, fielddate;

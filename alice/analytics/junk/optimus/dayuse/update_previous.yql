@@ -1,0 +1,26 @@
+-- combines new table with old
+-- removes duplicates, then union
+-- tested here: https://yql.yandex-team.ru/Operations/YNh1oQuEI2dKAQUiRE7KLsHZSZ3iUFvqzuA5mlg-Jrs=
+
+$q_update =
+SELECT
+    new.*
+FROM
+    (SELECT
+    *
+    FROM {{input1}}
+    ) AS new
+LEFT ONLY JOIN
+    (SELECT
+    *
+    FROM {{input2}}
+    ) AS old
+ON new.device_id == old.device_id AND new.fielddate == old.fielddate
+;
+
+INSERT INTO {{param[output_path]}} WITH TRUNCATE
+    SELECT * FROM  {{input2}}
+UNION ALL
+    SELECT * FROM $q_update
+ORDER BY fielddate, device_type, device_id
+;

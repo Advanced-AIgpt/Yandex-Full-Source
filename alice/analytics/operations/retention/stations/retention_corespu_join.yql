@@ -1,0 +1,67 @@
+-- joining retention and corespu tables for corespu chart creation
+-- tested here https://yql.yandex-team.ru/Operations/YP2vdfKQzhWp7BiVi1MkBbF9PUVBnlRPlLxbALyEsmQ=
+ PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$job_date = {{param[job_date]}};
+
+$corespu_pivot =
+SELECT
+    activation_date,
+    device_id,
+    `interval`,
+    sum_if(score, extended_intent == 'core_spu') AS core_spu,
+    cast(count_if (score > 0 AND extended_intent == 'tv_broadcast') AS int8) AS tv_broadcast,
+    cast(count_if (score > 0 AND extended_intent == 'timer') AS int8) AS timer,
+    cast(count_if (score > 0 AND extended_intent == 'sleep_timer') AS int8) AS sleep_timer,
+    cast(count_if (score > 0 AND extended_intent == 'alarm') AS int8) AS alarm,
+    cast(count_if (score > 0 AND extended_intent == 'alarm.regular') AS int8) AS alarm_regular,
+    cast(count_if (score > 0 AND extended_intent == 'news') AS int8) AS news,
+    cast(count_if (score > 0 AND extended_intent == 'weather') AS int8) AS weather,
+    cast(count_if (score > 0 AND extended_intent == 'iot.common') AS int8) AS iot_common,
+    cast(count_if (score > 0 AND extended_intent == 'iot.custom') AS int8) AS iot_custom,
+    cast(count_if (score > 0 AND extended_intent == 'traffic_route') AS int8) AS traffic_route,
+    cast(count_if (score > 0 AND extended_intent == 'todo_reminder') AS int8) AS todo_reminder,
+    cast(count_if (score > 0 AND extended_intent == 'radio') AS int8) AS radio,
+    cast(count_if (score > 0 AND extended_intent == 'music.morning_show') AS int8) AS music_morning_show,
+    cast(count_if (score > 0 AND extended_intent == 'music.rate') AS int8) AS music_rate,
+    cast(count_if (score > 0 AND extended_intent == 'music.personality') AS int8) AS music_personality,
+    cast(count_if (score > 0 AND extended_intent == 'music.mood_activity') AS int8) AS music_mood_activity,
+    cast(count_if (score > 0 AND extended_intent == 'music.track') AS int8) AS music_track,
+    cast(count_if (score > 0 AND extended_intent == 'music.empty_filter') AS int8) AS music_empty_filter,
+    cast(count_if (score > 0 AND extended_intent == 'music.artist') AS int8) AS music_artist,
+    cast(count_if (score > 0 AND extended_intent == 'music.album') AS int8) AS music_album,
+    cast(count_if (score > 0 AND extended_intent == 'music.playlist') AS int8) AS music_playlist,
+    cast(count_if (score > 0 AND extended_intent == 'music.ambient_sound') AS int8) AS music_ambient_sound,
+    cast(count_if (score > 0 AND extended_intent == 'music.fairy_tale') AS int8) AS music_fairy_tale,
+    cast(count_if (score > 0 AND extended_intent == 'music.genre') AS int8) AS music_genre,
+    cast(count_if (score > 0 AND extended_intent == 'music.language') AS int8) AS music_language,
+    cast(count_if (score > 0 AND extended_intent == 'music.epoch') AS int8) AS music_epoch,
+    cast(count_if (score > 0 AND extended_intent == 'video.country') AS int8) AS video_country,
+    cast(count_if (score > 0 AND extended_intent == 'video.empty_filter') AS int8) AS video_empty_filter,
+    cast(count_if (score > 0 AND extended_intent == 'video.recommend') AS int8) AS video_recommend,
+    cast(count_if (score > 0 AND extended_intent == 'video.genre') AS int8) AS video_genre,
+    cast(count_if (score > 0 AND extended_intent == 'video.epoch') AS int8) AS video_epoch,
+FROM {{input2}}
+WHERE DateTime::ToDays(cast($job_date AS Date) - cast(activation_date AS Date)) > `interval`
+GROUP BY activation_date, device_id, `interval`
+;
+
+
+INSERT INTO {{param[output_table]}} WITH TRUNCATE
+SELECT
+    a.*,
+    b.*,
+    if(cast($job_date AS Date) - cast(activation_date AS Date) > Interval("P2W"), if(ListHas(b.active_weeks, 1), TRUE, FALSE), NULL) AS retn1,
+    if(cast($job_date AS Date) - cast(activation_date AS Date) > Interval("P5W"), if(ListHas(b.active_weeks, 4), TRUE, FALSE), NULL) AS retn4,
+    if(cast($job_date AS Date) - cast(activation_date AS Date) > Interval("P9W"), if(ListMax(b.active_weeks) >= 4, TRUE, FALSE), NULL) AS retn4m
+FROM (
+    SELECT *
+    FROM $corespu_pivot
+    ) AS a
+JOIN (
+    SELECT * WITHOUT activation_date
+    FROM {{input1}}
+    ) AS b
+ON a.device_id == b.device_id
+WHERE b.device_type not in ['yandexmini_2', 'yandexstation_subscription', 'Station']
+;

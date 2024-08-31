@@ -1,0 +1,59 @@
+service: amelie
+title: Amelie
+ci:
+  release-title-source: flow
+  secret: sec-01f3qvfjs72rpbxc5ychr662dx
+  runtime:
+    sandbox-owner: VINS
+  releases:
+    amelie-release:
+      title: Amelie
+      flow: release-amelie
+      auto: true
+      stages:
+        build:
+          title: Build
+          displace: true
+        testing:
+          title: Deploy to Testing
+        stable:
+          title: Deploy to Stable
+  flows:
+    release-amelie:
+      title: Amelie
+      jobs:
+        build:
+          title: Build package
+          task: common/arcadia/ya_package
+          stage: build
+          input:
+            packages: alice/amelie/deploy/packages/amelie-package.json
+            resource_type: AMELIE_PACKAGE
+            package_type: tarball
+        testing-amelie-deploy:
+          title: Testing Amelie deploy
+          task: common/deploy/release
+          stage: testing
+          input:
+            config:
+              sandboxResourceType: AMELIE_PACKAGE
+              commonReleaseData:
+                releaseStage: testing
+                releaseNotes: Release from CI
+              stageName: amelie-testing
+          needs:
+            - build
+        stable-amelie-deploy:
+          title: Stable Amelie deploy
+          task: common/deploy/release
+          stage: stable
+          manual: true
+          input:
+            config:
+              sandboxResourceType: AMELIE_PACKAGE
+              commonReleaseData:
+                releaseStage: stable
+                releaseNotes: Release from CI
+              stageName: amelie-stable
+          needs:
+            - testing-amelie-deploy

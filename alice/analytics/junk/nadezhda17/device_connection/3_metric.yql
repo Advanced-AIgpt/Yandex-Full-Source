@@ -1,0 +1,193 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--ограничимся важным набором моделей
+$device_white_list = AsList('yandex.station.micro', 'yandex.station.mini', 'yandex.station', 
+'yandex.station.mini_2_no_clock', 'yandex.station.mini_2', 'yandex.station_2', 
+'jbl.link_portable', 'jbl.link_music', 'yandex.station.midi');
+--и важным набором операционных систем
+$OSName_white_list = AsList('Android', 'iOS');
+
+--ищем на каком статусе остановился пользователь при подключении
+$detailed_status = 
+(
+    SELECT 'day' AS scale, EventDate??'Total' AS EventDate, 
+    app??'Total' AS app, 
+    OSName??'Total' AS OSName, 
+    device??'Total' AS device, 
+    COUNT_IF(status = 'ble_success') AS ble_success, 
+    COUNT_IF(status = 'sonic_success') AS sonic_success, 
+    COUNT_IF(status = 'ap_success') AS ap_success, 
+    COUNT_IF(status = 'ap_fail') AS ap_fail, 
+    COUNT_IF(status = 'sonic_fail') AS sonic_fail, 
+    COUNT_IF(status = 'ble_fail') AS ble_fail, 
+    COUNT_IF(status = 'none') AS none
+    FROM 
+    (
+        SELECT EventDate, app, OSName, device, 
+        /*классическая последовательность неудачной настройки колонки:
+        попробовал ble
+        попробовал настроить звуком (sonic)
+        пытался настроить через wifi
+        поэтому очередность статусом именно такая
+        нельзя получить ap_fail без предшествующих sonic_fail и ble_fail
+        none - означает что пользователь не столкнулся ни с одной финальной страничкой*/
+        CASE 
+        WHEN ble_success = 1 THEN 'ble_success'
+        WHEN sonic_success = 1 THEN 'sonic_success'
+        WHEN ap_success = 1 THEN 'ap_success'
+        WHEN ap_fail = 1 THEN 'ap_fail'
+        WHEN sonic_fail = 1 THEN 'sonic_fail'
+        WHEN ble_fail = 1 THEN 'ble_fail'
+        ELSE 'none'
+        END AS status
+        FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric`
+        WHERE device IN $device_white_list
+        AND OSName IN $OSName_white_list
+        --пользователь начал выбирать wifi или дошёл до финального статуса
+        AND (wifi_select = 1 
+        OR MAX_OF(ble_success, sonic_success, ap_success) > 0
+        OR MAX_OF(ble_fail, sonic_fail, ap_fail) > 0)
+    )
+    GROUP BY CUBE (EventDate, app, OSName, device)
+);
+
+
+--ищем на каком статусе остановился пользователь при подключении, неделя
+$week_detailed_status = 
+(
+    SELECT 'week' AS scale, EventDate, OSName, app, device, 
+    SUM(ap_fail) OVER w AS ap_fail, 
+    SUM(ap_success) OVER w AS ap_success,
+    SUM(ble_fail) OVER w AS ble_fail, 
+    SUM(ble_success) OVER w AS ble_success,
+    SUM(sonic_fail) OVER w AS sonic_fail, 
+    SUM(sonic_success) OVER w AS sonic_success,
+    SUM(none) OVER w AS none
+    FROM $detailed_status
+    WINDOW w AS (PARTITION BY OSName, app, device 
+    ORDER BY EventDate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+);
+
+--интегральная метрика успеха
+$success = 
+(
+    SELECT 'day' AS scale, EventDate??'Total' AS EventDate, app??'Total' AS app, 
+    OSName??'Total' AS OSName, device??'Total' AS device, 
+    SUM(MAX_OF(ble_success, sonic_success, ap_success)) AS success, COUNT(*) AS total,
+    Math::Round(SUM(MAX_OF(ble_success, sonic_success, ap_success))*100.0/COUNT(*), -2) AS success_share
+    FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric`
+    WHERE device IN $device_white_list
+    AND OSName IN $OSName_white_list
+    AND (wifi_select = 1 
+    OR MAX_OF(ble_success, sonic_success, ap_success) > 0
+    OR MAX_OF(ble_fail, sonic_fail, ap_fail) > 0)
+    GROUP BY CUBE (EventDate, app, OSName, device)
+);
+
+--интегральная метрика успеха
+$week_success = 
+(
+    SELECT 'week' AS scale, EventDate, OSName, app, device, 
+    Math::Round(SUM(success) OVER w*100.0/SUM(total) OVER w, -2) AS success_share
+    FROM $success
+    WINDOW w AS (PARTITION BY OSName, app, device 
+    ORDER BY EventDate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+);
+
+--какая доля пользователей ловит хотя бы одну проблему
+$problems = 
+(
+    SELECT 'day' AS scale, EventDate??'Total' AS EventDate, app??'Total' AS app, 
+    OSName??'Total' AS OSName, device??'Total' AS device, 
+    SUM(MAX_OF(ble_fail, sonic_fail, ap_fail)) AS fail, COUNT(*) AS total,
+    Math::Round(SUM(MAX_OF(ble_fail, sonic_fail, ap_fail))*100.0/COUNT(*), -2) AS problems_share
+    FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric`
+    WHERE device IN $device_white_list
+    AND OSName IN $OSName_white_list
+    AND (wifi_select = 1 
+    OR MAX_OF(ble_success, sonic_success, ap_success) > 0
+    OR MAX_OF(ble_fail, sonic_fail, ap_fail) > 0)
+    GROUP BY CUBE (EventDate, app, OSName, device)
+);
+
+
+--какая доля пользователей ловит хотя бы одну проблему
+$week_problems = 
+(
+    SELECT 'week' AS scale, EventDate, OSName, app, device, 
+    Math::Round(SUM(fail) OVER w*100.0/SUM(total) OVER w, -2) AS problems_share
+    FROM $problems
+    WINDOW w AS (PARTITION BY OSName, app, device 
+    ORDER BY EventDate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+);
+
+--какая доля пользователей переходит к настройке после того как видит инструкцию
+$wifi_select = 
+(
+    SELECT 'day' AS scale, EventDate??'Total' AS EventDate, app??'Total' AS app, 
+    OSName??'Total' AS OSName, device??'Total' AS device, 
+    SUM(wifi_select) AS wifi_select, COUNT(*) AS total,
+    Math::Round(SUM(wifi_select)*100.0/COUNT(*), -2) AS wifi_select_share
+    FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric`
+    WHERE device IN $device_white_list
+    AND OSName IN $OSName_white_list
+    AND instruction = 1 
+    GROUP BY CUBE (EventDate, app, OSName, device)
+);
+
+--какая доля пользователей ловит хотя бы одну проблему
+$week_wifi_select = 
+(
+    SELECT 'week' AS scale, EventDate, OSName, app, device, 
+    Math::Round(SUM(wifi_select) OVER w*100.0/SUM(total) OVER w, -2) AS wifi_select_share
+    FROM $wifi_select
+    WINDOW w AS (PARTITION BY OSName, app, device 
+    ORDER BY EventDate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+);
+
+$day_metrics = 
+(
+    SELECT ds.*, success_share, problems_share, wifi_select_share
+    FROM $detailed_status AS ds 
+    INNER JOIN $success AS s ON s.EventDate = ds.EventDate AND s.app = ds.app 
+    AND s.OSName = ds.OSName AND s.device = ds.device
+    INNER JOIN $problems AS p ON p.EventDate = ds.EventDate AND p.app = ds.app 
+    AND p.OSName = ds.OSName AND p.device = ds.device
+    INNER JOIN $wifi_select AS w ON w.EventDate = ds.EventDate AND w.app = ds.app 
+    AND w.OSName = ds.OSName AND w.device = ds.device
+    WHERE ds.EventDate != 'Total'
+);
+
+$week_metrics = 
+(
+    SELECT ds.*, success_share, problems_share, wifi_select_share
+    FROM $week_detailed_status AS ds 
+    INNER JOIN $week_success AS s ON s.EventDate = ds.EventDate AND s.app = ds.app 
+    AND s.OSName = ds.OSName AND s.device = ds.device
+    INNER JOIN $week_problems AS p ON p.EventDate = ds.EventDate AND p.app = ds.app 
+    AND p.OSName = ds.OSName AND p.device = ds.device
+    INNER JOIN $week_wifi_select AS w ON w.EventDate = ds.EventDate AND w.app = ds.app 
+    AND w.OSName = ds.OSName AND w.device = ds.device
+    WHERE ds.EventDate != 'Total'
+    AND ds.EventDate >= CAST(CAST(CurrentUtcDate() - DateTime::IntervalFromDays(20) AS Date) AS String) 
+);
+
+$metrics = 
+(
+    SELECT *
+    FROM $day_metrics
+    UNION ALL 
+    SELECT *
+    FROM $week_metrics
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/metrics` WITH TRUNCATE 
+SELECT * 
+FROM $metrics
+UNION ALL
+SELECT m.*
+FROM `//home/voice/nadezhda17/common/device_connection/metrics` AS m 
+LEFT ONLY JOIN $metrics AS t ON t.EventDate = m.EventDate AND t.app = m.app 
+AND t.OSName = m.OSName AND t.device = m.device AND t.scale = m.scale
+;

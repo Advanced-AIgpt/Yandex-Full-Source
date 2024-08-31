@@ -1,0 +1,85 @@
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+PRAGMA GroupByLimit = "36";
+
+DECLARE $param_dict AS Dict<String, String>;
+$date_first = $param_dict['date_first'];
+$date_last = $param_dict['date_last'];
+
+$get_age_category = Python::get_age_category(
+    Callable<(Double?) -> String>,@@
+def get_age_category(child_confidence):
+    CHILD_THRESHOLD = 0.8
+    if child_confidence is not None:
+        return 'child' if child_confidence >= CHILD_THRESHOLD else 'adult'
+    return 'unknown'
+@@
+);
+
+$timespent_precompute_tlt = (
+    SELECT fielddate, app, age_category, device, `uuid`, puid, req_id, 1.0*sum(tlt_tvt ?? 0)/1000 + 1.0*sum(tts ?? 0)/1000 as timespent_s,
+    FROM RANGE(`//home/alice/precomputes/timespent/precompute_timespent`, $date_first, $date_last)
+    WHERE scenario == "music_fairy_tale" and app IN ('quasar', 'small_smart_speakers')
+    AND (parent_timespent_req_id ?? '') != ''
+    GROUP BY fielddate, app, $get_age_category(child_confidence) AS age_category, device, parent_timespent_req_id AS req_id, `uuid`, puid
+);
+
+$aggr_by_req_id = (
+    SELECT fielddate,
+    app??'_total_' AS app,
+    age_category??'_total_' AS age_category,
+    device??'_total_' AS device,
+    puid, req_id, sum(timespent_s) AS tlt
+    FROM $timespent_precompute_tlt
+    GROUP BY
+        fielddate, puid, req_id,
+        CUBE(app, age_category, device)
+);
+
+$tlt_v0 =
+(
+    SELECT fielddate, app, age_category, device,
+    COUNT(DISTINCT puid) AS uniq_user_amount, COUNT(DISTINCT req_id) AS uniq_req_amount,
+    SUM(tlt) AS total_tlt, AVG(tlt) AS avg_tlt, MEDIAN(tlt) AS median_tlt
+    FROM $aggr_by_req_id
+    GROUP BY fielddate, app, age_category, device
+);
+
+$tlt_v1 =
+(
+    SELECT fielddate, app, age_category, device, MEDIAN(tlt_max) AS median_tlt_max,
+    MEDIAN(tlt_sum) AS median_tlt_sum
+    FROM
+    (
+        SELECT fielddate, app, age_category, device, puid, MAX(tlt) as tlt_max,
+        SUM(tlt) AS tlt_sum
+        FROM $aggr_by_req_id
+        GROUP BY fielddate, app, age_category, device, puid
+    )
+    GROUP BY fielddate, app, age_category, device
+);
+
+$tlt =
+(
+    SELECT t0.fielddate AS fielddate,
+    t0.app AS app,
+    t0.age_category AS age_category,
+    t0.device AS device,
+    uniq_user_amount, uniq_req_amount,
+    total_tlt, avg_tlt, median_tlt, median_tlt_max, median_tlt_sum
+    FROM $tlt_v0 AS t0
+    INNER JOIN $tlt_v1 AS t1
+    USING(fielddate, app, age_category, device)
+);
+
+INSERT INTO `//home/alice/charts/music_fairy_tale/tlt` WITH TRUNCATE
+SELECT *
+FROM $tlt
+UNION ALL
+SELECT *
+FROM `//home/alice/charts/music_fairy_tale/tlt` AS t
+LEFT ONLY JOIN $tlt as n
+USING(fielddate);
+COMMIT;

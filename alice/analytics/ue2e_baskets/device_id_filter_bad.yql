@@ -1,0 +1,20 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_mock";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_mock";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_mock";
+$bad_device_id = "//home/voice/jdkondratenko/VA-2304/bad_device_id";
+
+DEFINE ACTION $patch_additional_options($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT a.*
+    FROM $input_table as a
+    LEFT ONLY JOIN (SELECT DISTINCT session_id FROM $bad_device_id) as b
+    USING(session_id);
+
+END DEFINE;
+
+DO $patch_additional_options($accept, $accept);
+DO $patch_additional_options($kpi, $kpi);
+DO $patch_additional_options($dev, $dev);

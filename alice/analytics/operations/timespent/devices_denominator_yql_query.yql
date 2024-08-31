@@ -1,0 +1,188 @@
+use hahn;
+PRAGMA yson.DisableStrict;
+
+$fielddate = {{param.date}};
+$period = {{param.period}};
+
+$appmetric_path = "//logs/appmetrica-yandex-events/1d";
+$expb_path = "//home/alice/dialog/prepared_logs_expboxes";
+$device_cohorts_path = "//home/marketing-data/andrewha/Station/backup/quasar_init";
+
+$arcadia_device_path = "arc://alice/analytics/operations/timespent/device_mappings.py?hash=" || {{param.commit->quote() ?? "b9961d52d3504106aad76ef7a6f516656311e504"->quote()}};
+PRAGMA File("device_mappings.py", $arcadia_device_path);
+$script = FileContent("device_mappings.py");
+$map_device_to_app = Python2::map_device_to_app(Callable<(String?)->String?>, $script);
+$map_device_to_device = Python2::map_device_appmetic_to_device_expboxes(Callable<(String?)->String?>, $script);
+
+$format = DateTime::Format("%Y-%m-%d");
+
+$start_of_week = ($date) -> {
+    RETURN $format(DateTime::StartOfWeek(cast($date AS date)))
+};
+
+$period_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays($period))
+};
+
+$reportEnvironmentValueByKey = ($keysList, $valuesList, $keyValue) -> {
+    $idx = ListIndexOf($keysList, $keyValue);
+    RETURN CAST($valuesList[$idx] AS Utf8);
+};
+
+$appmetric = (
+    SELECT
+        fielddate AS fielddate,
+        if ($map_device_to_device(device_type) is not null, $map_device_to_device(device_type), "other") AS device,
+        device_type,
+        device_id,
+        is_tv_plugged_in as app_is_tv_plugged_in
+    FROM (
+        SELECT
+            fielddate,
+            device_type,
+            device_id,
+            bool_or(if ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "hdmiPlugged") == "1", True, False)) AS is_tv_plugged_in
+        FROM range($appmetric_path, $period_ago($fielddate), $fielddate)
+        WHERE
+            APIKey = 999537
+            AND $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp AS UInt32)), "Europe/Moscow")) >= $period_ago($fielddate)
+        GROUP BY
+            CASE
+                WHEN ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id") ?? '') != '' THEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id")
+                ELSE DeviceID
+            END AS device_id,
+            CASE
+                WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == 'desktop' THEN Model
+                WHEN ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") ?? '') != '' THEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type")
+                WHEN ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") ?? '') == '' AND Model=='Station' THEN 'yandexstation'
+                WHEN ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") ?? '') == '' AND Model=='YandexModule-00002' THEN 'yandexmodule'
+                WHEN ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") ?? '') == '' AND Model=='KidPhone3G' THEN 'elariwatch'
+                ELSE Model
+            END AS device_type,
+            $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp AS UInt32)), "Europe/Moscow")) AS fielddate
+        )
+);
+
+$device_cohorts = (
+    SELECT
+        device_id,
+        $start_of_week(init_date) AS cohort
+    FROM $device_cohorts_path
+)
+;
+
+$expboxes_age_tv = (
+    SELECT fielddate, device_id, fielddate_is_tv_plugged_in, device as exp_device, age_category
+    FROM (
+        SELECT fielddate, device_id, bool_or(is_tv_plugged_in) AS fielddate_is_tv_plugged_in, some(device) AS device,
+            AGGREGATE_LIST_DISTINCT(if(child_confidence is null, 'unknown', if(child_confidence >= 0.8, 'child', 'adult'))) as age_category
+        FROM (
+            SELECT
+                fielddate, device_id, is_tv_plugged_in, device, TryMember(TableRow(), 'child_confidence', null) AS child_confidence,
+            FROM range($expb_path, $period_ago($fielddate), $fielddate)
+        )
+        GROUP BY device_id, fielddate
+    )
+    FLATTEN BY age_category
+)
+;
+
+$join_cohorts = (
+    SELECT
+        appmetric.fielddate AS fielddate,
+        $map_device_to_app(appmetric.device_type) AS app,
+        appmetric.device_id AS device_id,
+        appmetric.app_is_tv_plugged_in AS app_is_tv_plugged_in,
+        appmetric.device AS app_device,
+        cohorts.cohort AS cohort
+    FROM $appmetric AS appmetric
+    join $device_cohorts AS cohorts
+    on appmetric.device_id == cohorts.device_id
+    WHERE (appmetric.fielddate <= $fielddate and appmetric.fielddate >= $period_ago($fielddate)) and $map_device_to_app(appmetric.device_type) is not null
+)
+;
+
+
+$join_age_and_tv = (
+    SELECT $fielddate as fielddate, some(app) as app, some(device) as device, device_id, age_category, some(cohort) as cohort, is_tv_plugged_in
+    FROM (
+        SELECT
+            fielddate, app, device_id, if (age_category is null, 'unknown', age_category) as age_category, cohort,
+            cast(if (fielddate_is_tv_plugged_in is not null, fielddate_is_tv_plugged_in, app_is_tv_plugged_in) AS string) AS is_tv_plugged_in,
+            if (exp_device is not null, exp_device, app_device) AS device
+        FROM (
+            SELECT *
+            FROM $join_cohorts AS jc
+            left join $expboxes_age_tv AS expb on jc.device_id == expb.device_id and jc.fielddate == expb.fielddate
+        )
+    ) GROUP BY device_id, age_category, is_tv_plugged_in
+)
+;
+
+$total_age_without_device = (
+    SELECT * FROM $join_age_and_tv
+    UNION ALL
+    SELECT "_total_" AS age_category, ja.* without age_category FROM $join_age_and_tv AS ja
+    UNION ALL
+    SELECT "_total_" AS is_tv_plugged_in, ja.* without is_tv_plugged_in FROM $join_age_and_tv AS ja
+    UNION ALL
+    SELECT "_total_" AS is_tv_plugged_in, "_total_" AS age_category, ja.* without is_tv_plugged_in, age_category FROM $join_age_and_tv AS ja
+)
+;
+
+$total_age = (
+    SELECT *
+    FROM $total_age_without_device
+    UNION ALL
+    SELECT "_total_" AS device, t.* without device FROM $total_age_without_device AS t
+)
+;
+
+$aggregated = (
+    SELECT fielddate, app, cohort, age_category, is_tv_plugged_in, device, count(distinct device_id) AS devices
+    FROM $total_age
+    GROUP BY fielddate, app, cohort, age_category, is_tv_plugged_in, device
+)
+;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    *
+FROM $aggregated
+UNION ALL (
+SELECT
+    $fielddate AS fielddate,
+    "_total_" AS app,
+    cohort,
+    age_category,
+    device,
+    is_tv_plugged_in,
+    sum(devices) AS devices,
+FROM $aggregated
+GROUP BY cohort, age_category, is_tv_plugged_in, device
+)
+UNION ALL (
+SELECT
+    $fielddate AS fielddate,
+    app,
+    "_total_" AS cohort,
+    age_category,
+    device,
+    is_tv_plugged_in,
+    sum(devices) AS devices,
+FROM $aggregated
+GROUP BY app, age_category, is_tv_plugged_in, device
+)
+UNION ALL (
+SELECT
+    $fielddate AS fielddate,
+    '_total_' AS app,
+    '_total_' AS cohort,
+    age_category,
+    is_tv_plugged_in,
+    device,
+    sum(devices) AS devices,
+FROM $aggregated
+GROUP BY age_category, is_tv_plugged_in, device
+)
+;

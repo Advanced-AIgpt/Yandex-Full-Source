@@ -1,0 +1,26 @@
+-- Скрипт генерит таблицу с юзерами целиком, из всей истории, которую укажешь
+USE hahn;
+
+-- PARAMS
+$start_date = '2017-04-21';
+$end_date = '2018-03-01';
+$out_table = 'tmp/dialogs_users_info'; -- prod: 'home/alice/dialog/misc/uuids_info'
+
+-- CODE
+$getDate  = Re2::Capture('[^/]+$');
+
+$days = (SELECT uuid, $getDate(TablePath())._0 as day
+         FROM RANGE([home/voice/vins/logs/dialogs], $start_date, $end_date));
+
+INSERT INTO $out_table
+
+WITH TRUNCATE -- by default INSERT INTO on MapReduce clusters just
+              -- appends to the table. Optional WITH TRUNCATE modifier clears
+              -- the contents of the table before adding new rows
+
+(SELECT DateTime::ToDate(DateTime::StartOfWeek(DateTime::FromString(min(day)))) as cohort,
+        min(day) as first_day,
+        uuid
+ FROM $days
+ GROUP BY uuid
+ );

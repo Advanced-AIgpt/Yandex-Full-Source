@@ -1,0 +1,135 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$arcadia_intents_path = "arc://alice/analytics/utils/yt/extract_intent.py?hash=" || {{param.arc_commit->quote() ?? "8a05684edd21c5bb0ae57aa0f5d5dda106002654"->quote()}};
+PRAGMA File("arcadia_intents_path.py", $arcadia_intents_path);
+$script = FileContent("arcadia_intents_path.py");
+$get_intent = Python::get_intent(Callable<(String?,Bool?)->String?>, $script);
+
+$get_message = Python::get_message(Callable<(String?, String?, String?, String?, String?, String?, String?)->Json>,
+@@
+import json, random
+def random_part(i):
+    return ''.join(map(lambda x: random.choice("0123456789abcdef"), range(i)))
+
+def generate_id():
+    return ''.join([''.join(['f']*8), '-', ''.join(['f']*4), '-', ''.join(['f']*4), '-',
+                    random_part(4), '-', random_part(12)])
+
+def get_message(prev_response, curr_response, vins_intent, context_2, context_0, request_id, intent):
+    prev_response = prev_response.decode("utf-8")
+    if prev_response != "":
+        try:
+            a = json.loads(prev_response)['response']
+        except TypeError:
+            a = ""
+    else:
+        a = ""
+    try:
+        curr_response = curr_response.decode("utf-8")
+        intent = intent.decode("utf-8") or vins_intent.decode("utf-8")
+        context_2 = context_2.decode("utf-8")
+        context_0 = context_0.decode("utf-8")
+        request_id = request_id.decode("utf-8")
+        b = json.loads(curr_response)['directive']['payload']['response']
+        key = generate_id()
+
+        if a != "":
+            dialog = [
+                { "message": { "text": context_2},
+                  "type": "user"},
+                { "message": a,
+                  "type": "assistant"},
+                { "message": { "text": context_0},
+                  "type": "user"},
+                { "message": b,
+                  "type": "assistant"}
+            ]
+        else:
+            dialog = [
+                { "message": { "text": context_0},
+                  "type": "user"},
+                { "message": b,
+                  "type": "assistant"}
+            ]
+
+        return json.dumps({
+            "intent": intent,
+            "info": {
+                "intent": intent,
+                "id": request_id,
+                "context_2": context_2,
+                "device_id": generate_id(),
+                "context_0": context_0,
+                "request_id": request_id
+            },
+            "task": {
+                "dialog": dialog,
+                "key": key
+            },
+            "key": key,
+            "directives_dict": {x['name']: [x['payload'], x.get('sub_name', '')] for x in b["directives"]}
+            })
+    except:
+        return ""
+@@
+);
+
+DEFINE SUBQUERY $join_with_uniproxy_output() AS
+    SELECT e.*, IF(LENGTH(f.session_id) > 36, SUBSTRING(f.session_id, NULL, 36), "") AS prev_reqid
+    FROM {{input1}} AS e
+    JOIN {{input2}} AS f
+    ON e.RequestId  == f.request_id;
+END DEFINE;
+
+DEFINE ACTION $join_with_vins_output() AS
+    INSERT INTO @joined_tables with truncate
+    SELECT e.*, f.FetchedResult AS prev_response
+    FROM $join_with_uniproxy_output() AS e
+    LEFT JOIN {{input3}} AS f
+    ON e.prev_reqid == f.id;
+END DEFINE;
+
+DEFINE ACTION $join_without_vins_output() AS
+    INSERT INTO @joined_tables with truncate
+    SELECT c.*, NULL AS prev_response
+    FROM $join_with_uniproxy_output() AS c;
+END DEFINE;
+
+
+DEFINE SUBQUERY $get_row_count() AS
+    $path_parts = String::SplitToList({{input3->table_quote()}}, '/');
+    $replace = Re2::Replace("^//");
+    $folder = String::JoinFromList(ListTake($path_parts, ListLength($path_parts)-1), '/');
+    SELECT Yson::LookupInt64(Attributes, "row_count") AS row_count FROM FOLDER($folder, "row_count") WHERE Path == $replace({{input3->table_quote()}}, '');
+END DEFINE;
+
+$rows = SELECT row_count FROM $get_row_count();
+
+EVALUATE IF $rows > 0
+    DO $join_with_vins_output()
+ELSE
+    DO $join_without_vins_output();
+COMMIT;
+
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    a.RequestId AS request_id,
+    $get_message(
+        IF(a.prev_response IS NOT NULL, a.prev_response, ""),
+        a.VinsResponse,
+        b.vins_intent,
+        IF(a.prev_text IS NOT NULL, a.prev_text, ""),
+        b.text,
+        a.RequestId,
+        $get_intent(a.VinsResponse, False)
+    ) AS message
+from (
+    SELECT g.*, h.text AS prev_text
+    FROM @joined_tables AS g
+    LEFT JOIN {{input2}} AS h
+    ON g.prev_reqid == h.request_id
+) AS a
+JOIN {{input2}} AS b
+ON a.RequestId == b.request_id;

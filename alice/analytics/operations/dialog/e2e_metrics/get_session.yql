@@ -1,0 +1,44 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict = 'true';
+
+$script = @@
+import cyson
+def get_session(inputValues):
+    states, actions = {}, {}
+    
+    for i, item in enumerate(inputValues['input']):
+        states['state' + str(i)] = item.get('state')
+        actions['action' + str(i)] = {
+            'action': item.get('action'),
+            'answer': item.get('answer'),
+            'query': item.get('query'),
+            'scenario': item.get('scenario'),
+        }
+
+    session = []
+    for state_key, action_key in zip(reversed(sorted(states.keys())), reversed(sorted(actions.keys()))):
+        if states.get(state_key):
+            session.append(states[state_key])
+        if actions.get(action_key):
+            session.append(actions[action_key])
+    return session
+get_session._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+$get_session = Python2::get_session(ParseType("(Yson?)->Yson"), $script);
+
+INSERT INTO {{output1}}
+SELECT
+    $get_session(inputValues) AS session,
+    Yson::From({
+        'action': inputValues.input[0]['action'],
+        'answer': inputValues.input[0]['answer'],
+        'query': inputValues.input[0]['query'],
+        'scenario': inputValues.input[0]['scenario']
+    }) AS action0,
+    inputValues.input[0]['state'] AS state0,
+    Yson::ConvertToString(inputValues.input[0].req_id) AS req_id,
+    Yson::ConvertToString(inputValues.input[0].session_id) AS session_id,
+    Yson::ConvertToString(inputValues.input[0].intent) AS intent,
+    Yson::ConvertToString(outputValues.result) AS result,
+    Yson::ConvertToBool(outputValues.fraud) AS fraud
+FROM {{input1}}

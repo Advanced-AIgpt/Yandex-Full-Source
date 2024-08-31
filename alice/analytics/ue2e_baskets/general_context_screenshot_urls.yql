@@ -1,0 +1,18 @@
+Use hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = '1000';
+
+$tasks = "//home/voice/jdkondratenko/VA-1984/context_data/vins_logs_sample_with_context_all_tasks";
+$urls = "//home/voice/jdkondratenko/VA-1984/context_data/screenshots";
+$output = "//home/voice/jdkondratenko/VA-1984/context_data/screenshots_urls";
+
+$tasks_data = (
+    SELECT `a.request_id` as request_id, Yson::ConvertToString(Yson::SerializePretty(Yson::ParseJson(message)).task.key) as key
+    FROM $tasks as a
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT a.request_id as request_id, b.downloadUrl as downloadUrl
+FROM $tasks_data as a
+JOIN $urls as b
+ON a.key = substring(b.initialFileName, 12, 36);

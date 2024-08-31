@@ -1,0 +1,35 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+PRAGMA yson.DisableStrict;
+
+$user_id = ($generated_puid_playlist_id) -> {RETURN String::SplitToList($generated_puid_playlist_id, ':')[0]};
+$playlist_id = ($generated_puid_playlist_id) -> {RETURN String::SplitToList($generated_puid_playlist_id, ':')[1]};
+$success = ($uri, $generated_puid_playlist_id) -> {RETURN String::Contains($uri, $user_id($generated_puid_playlist_id)??'AAA') 
+AND String::Contains($uri, $playlist_id($generated_puid_playlist_id)??'AAA')};
+
+INSERT INTO `//home/voice/nadezhda17/common/music_search_quality/personal_playlists_quality` WITH TRUNCATE
+SELECT basket, fielddate, COUNT(req_id) AS amount, COUNT_IF(success)*1.0/COUNT(*) AS value
+FROM
+(
+    SELECT 'accept' AS basket, req_id,
+    String::Substring(Yson::ConvertToString(state0.`time`), 0, 10) AS fielddate,
+    Yson::ConvertToString(music_entity.uri) AS uri,
+    generated_puid_playlist_id,
+    $success(Yson::ConvertToString(music_entity.uri), generated_puid_playlist_id) AS success
+    FROM RANGE(`//home/voice/nadezhda17/common/music_search_quality/accept/results`) as s 
+    INNER JOIN `//home/voice/nadezhda17/common/music_search_quality/accept/music_search_quality_basket` as b ON b.request_id = s.req_id
+    WHERE toloka_query_type = 'Персональный плейлист'
+    AND String::Substring(Yson::ConvertToString(state0.`time`), 0, 10) >= '2020-06-12'
+    UNION ALL 
+    SELECT 'kpi' AS basket, req_id,
+    String::Substring(Yson::ConvertToString(state0.`time`), 0, 10) AS fielddate,
+    Yson::ConvertToString(music_entity.uri) AS uri,
+    generated_puid_playlist_id,
+    $success(Yson::ConvertToString(music_entity.uri), generated_puid_playlist_id) AS success
+    FROM RANGE(`//home/voice/nadezhda17/common/music_search_quality/kpi/results`) as s 
+    INNER JOIN `//home/voice/nadezhda17/common/music_search_quality/kpi/music_search_quality_basket` as b ON b.request_id = s.req_id
+    WHERE toloka_query_type = 'Персональный плейлист'
+    AND String::Substring(Yson::ConvertToString(state0.`time`), 0, 10) >= '2020-06-12'    
+)
+GROUP BY basket, fielddate;
+

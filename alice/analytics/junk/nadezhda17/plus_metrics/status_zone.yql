@@ -1,0 +1,234 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--последняя неделя
+$date_filter = ($date) -> {RETURN CAST($date AS Date) BETWEEN 
+CurrentUtcDate() - DateTime::IntervalFromDays(7) AND CurrentUtcDate() - DateTime::IntervalFromDays(1)};
+
+-- --определили гео
+$quasar_geo = 
+(
+    SELECT fielddate, app, device, device_id, puid,
+    Geo::RoundRegionByLocation(lat, lon, 'city').id AS geoId, 
+    Geo::RoundRegionByLocation(lat, lon, 'city').name AS city,
+    lat, lon 
+    FROM 
+    (
+        SELECT fielddate, app, device, device_id, puid,
+        Yson::ConvertToDouble(location.lat) AS lat, 
+        Yson::ConvertToDouble(location.lon) AS lon, 
+        FROM    
+        (
+            SELECT fielddate, device_id, 
+            MAX_BY(device, app) AS app,
+            MAX_BY(device, server_time_ms) AS device,
+            MAX_BY(puid, server_time_ms) AS puid,
+            MAX_BY(location, server_time_ms) AS location
+            FROM 
+            (
+                SELECT fielddate, app, device, device_id, puid, location, server_time_ms
+                FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $date_filter)
+                WHERE app IN ('quasar', 'small_smart_speakers')
+                AND query IS NOT NULL
+                AND LEN(device_id) > 1
+                AND LEN(puid) > 1
+                UNION ALL 
+                SELECT fielddate, app, device, device_id, puid, location, server_time_ms
+                FROM FILTER(`//home/alice/dialog/robot-prepared_logs_expboxes`, $date_filter)
+                WHERE app IN ('quasar', 'small_smart_speakers')
+                AND query IS NOT NULL
+                AND LEN(device_id) > 1
+                AND LEN(puid) > 1
+            )
+            GROUP BY fielddate, device_id
+        )
+    )
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/quasar_geo` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $quasar_geo
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/plus_metrics/quasar_geo`
+    WHERE NOT $date_filter(fielddate)
+)
+ORDER BY device_id, fielddate;
+
+COMMIT;
+
+--активность по запросам колонки за последнюю неделю
+$devices_with_reqs = 
+(
+    SELECT device_id, MAX(fielddate) AS req_fielddate, 
+    MAX_BY(puid, fielddate) AS puid, MAX_BY(geoId, fielddate) AS region_id
+    FROM `//home/voice/nadezhda17/common/plus_metrics/quasar_geo` 
+    GROUP BY device_id
+);
+
+--колонки в розетке за последнюю неделю
+$app_map = ($device_type) -> {RETURN IF($device_type IN 
+('yandexstation', 'yandexstation_2', 'Station', 'yandexmodule', 'yandexmodule_2'), 
+'quasar', 'small_smart_speakers')};
+
+
+$devices_in_the_socket = 
+(
+    SELECT device_id, MAX(fielddate) AS socket_fielddate, MAX_BY(puid, fielddate) AS puid, 
+    String::ReplaceAll(MAX(model??device_type), '_subscription', '') AS device_type
+    FROM `//home/alice/cubes/dayuse/stations/last` 
+    GROUP BY device_id
+);
+
+$geo = 
+(
+    SELECT device_id, 
+    MAX_BY(geoId, fielddate) AS region_id
+    FROM `//home/voice/nadezhda17/common/plus_metrics/quasar_geo`
+    GROUP BY device_id
+);
+
+$quasar_init = 
+(
+    SELECT device_id, MIN(init_date) AS init_date
+    FROM
+    (
+        SELECT d.id AS device_id, SUBSTRING(CAST(first_activation_date AS String), 0, 10) AS init_date
+        FROM `//home/quasar-dev/backend/snapshots/current/device` AS d 
+        INNER JOIN `//home/quasar-dev/backend/snapshots/current/platform` AS p ON p.id = d.platform_id
+    )
+    GROUP BY device_id
+);
+
+--статус колонок за последнюю неделю
+$all_devices_for_update = 
+(
+    SELECT q.device_id AS device_id, s.device_type AS device, $app_map(s.device_type) AS app,
+    q.init_date AS init_date, r.region_id??225 AS region_id,
+    socket_fielddate, req_fielddate, 
+    MAX_OF( (r.puid??'') , (s.puid??'') ) AS puid
+    FROM $quasar_init AS q  
+    INNER JOIN $devices_in_the_socket AS s ON q.device_id = s.device_id
+    LEFT OUTER JOIN $devices_with_reqs AS r ON q.device_id = r.device_id
+    WHERE s.device_type NOT LIKE 'yandex_tv%'
+);
+
+--обновляем историю устройств
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/all_devices` WITH TRUNCATE
+SELECT device_id, MAX(device) AS device, MAX_BY(app, device) AS app, MIN(init_date) AS init_date, 
+MAX_BY(region_id, req_fielddate) AS region_id, MAX(socket_fielddate) AS socket_fielddate, 
+MAX(req_fielddate) AS req_fielddate, MAX_BY(puid, req_fielddate) AS puid
+FROM 
+(
+    SELECT a.device_id AS device_id, a.device AS device, a.app AS app, a.init_date AS init_date, a.region_id AS region_id,
+    a.socket_fielddate AS socket_fielddate, a.req_fielddate??d.req_fielddate AS req_fielddate, a.puid AS puid
+    FROM $all_devices_for_update AS a 
+    LEFT OUTER JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS d ON a.device_id = d.device_id
+    UNION ALL 
+    SELECT device_id, device, app, init_date, region_id, socket_fielddate, req_fielddate, puid
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS d
+    LEFT ONLY JOIN $all_devices_for_update AS a ON a.device_id = d.device_id
+    WHERE puid != ''
+)
+GROUP BY device_id;
+
+COMMIT;
+
+--последние 90 дней
+$date_filter = ($date) -> {RETURN CAST($date AS Date) BETWEEN 
+CurrentUtcDate() - DateTime::IntervalFromDays(120) AND CurrentUtcDate() - DateTime::IntervalFromDays(1)};
+
+--проклеиваем между собой
+$matched_devices = 
+(
+    SELECT s.device_id AS device_id, s.socket_fielddate AS fielddate, 
+    IF(r.req_fielddate IS NOT NULL, True, False) AS with_reqs
+    FROM  
+    (
+        SELECT DISTINCT device_id, fielddate AS socket_fielddate
+        FROM `//home/alice/cubes/dayuse/stations/last` 
+        WHERE $date_filter(fielddate)
+    ) AS s 
+    LEFT JOIN 
+    (
+        SELECT DISTINCT device_id, fielddate AS req_fielddate
+        FROM `//home/voice/nadezhda17/common/plus_metrics/quasar_geo` 
+        WHERE $date_filter(fielddate)
+    ) AS r ON s.device_id = r.device_id AND s.socket_fielddate = r.req_fielddate
+);
+
+$uniq_dates = 
+(
+    SELECT `date` AS fielddate
+    FROM `//home/sprav/assay/common/Dates` 
+    WHERE $date_filter(`date`)
+);
+
+$total = 
+(
+    SELECT u.fielddate AS fielddate, a.app AS app, a.device_id AS device_id
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a 
+    CROSS JOIN $uniq_dates AS u 
+    WHERE u.fielddate >= a.init_date 
+);
+
+$all_data =
+(
+    SELECT t.fielddate AS fielddate, t.device_id AS device_id, t.app AS app,
+    IF(m.fielddate IS NOT NULL, 1, 0) AS in_socket, 
+    IF(m.with_reqs, 1, 0) AS with_reqs
+    FROM $total AS t 
+    LEFT JOIN $matched_devices AS m ON m.fielddate = t.fielddate AND m.device_id = t.device_id
+    ORDER BY device_id, fielddate
+);
+
+$zone_plot = 
+(
+    SELECT app??'Total' AS app, scale, fielddate, 
+    COUNT_IF(in_socket = 0) AS black_devices_amount,
+    COUNT_IF(in_socket = 1 AND with_reqs = 0) AS grey_devices_amount,
+    COUNT_IF(with_reqs = 1) AS white_devices_amount
+    FROM
+    (
+        SELECT app, device_id, fielddate, 'day' AS scale,
+        in_socket,
+        with_reqs
+        FROM $all_data
+        UNION ALL
+        SELECT app, device_id, fielddate, 'week' AS scale,
+        MAX(in_socket) OVER w AS in_socket,
+        MAX(with_reqs) OVER w AS with_reqs
+        FROM $all_data
+        WINDOW w AS (PARTITION BY device_id ORDER BY fielddate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+        UNION ALL 
+        SELECT app, device_id, fielddate, 'month' AS scale,
+        MAX(in_socket) OVER w AS in_socket,
+        MAX(with_reqs) OVER w AS with_reqs
+        FROM $all_data
+        WINDOW w AS (PARTITION BY device_id ORDER BY fielddate ROWS BETWEEN 30 PRECEDING AND CURRENT ROW)
+        UNION ALL 
+        SELECT app, device_id, fielddate, 'two_month' AS scale,
+        MAX(in_socket) OVER w AS in_socket,
+        MAX(with_reqs) OVER w AS with_reqs
+        FROM $all_data
+        WINDOW w AS (PARTITION BY device_id ORDER BY fielddate ROWS BETWEEN 60 PRECEDING AND CURRENT ROW)
+        UNION ALL 
+        SELECT app, device_id, fielddate, 'three_month' AS scale,
+        MAX(in_socket) OVER w AS in_socket,
+        MAX(with_reqs) OVER w AS with_reqs
+        FROM $all_data
+        WINDOW w AS (PARTITION BY device_id ORDER BY fielddate ROWS BETWEEN 90 PRECEDING AND CURRENT ROW)
+    )
+    GROUP BY GROUPING SETS ((app, fielddate, scale), (fielddate, scale))
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/zone_plot` WITH TRUNCATE 
+SELECT *
+FROM $zone_plot
+UNION ALL 
+SELECT z.*
+FROM `//home/voice/nadezhda17/common/plus_metrics/zone_plot` AS z 
+LEFT ONLY JOIN $zone_plot AS p ON p.fielddate = z.fielddate AND p.scale = z.scale AND p.app = z.app;

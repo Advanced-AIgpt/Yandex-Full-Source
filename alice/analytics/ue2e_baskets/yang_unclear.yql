@@ -1,0 +1,12 @@
+Use hahn;
+
+$input1 = "//home/voice/jdkondratenko/VA-2304/sampled_data/quasar_annotation_1_unclear";
+$input2 = "//home/voice/jdkondratenko/VA-2304/sampled_data/quasar_annotation_1_unclear_words_and_empty";
+$output = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/unclear/unclear_1_with_hints";
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT ListSort(ListUniq(ListFlatMap(Yson::ConvertToList(raw_assesments), ($x)->{RETURN Yson::ConvertToString($x.query)})), ($x)->{RETURN Random($x)}) AS worker_hints, a.*
+FROM
+((SELECT * FROM $input1 WHERE text != "")
+UNION ALL
+(SELECT * FROM $input2 WHERE text != "")) as a;

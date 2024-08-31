@@ -1,0 +1,30 @@
+PRAGMA yt.InferSchema = '50';
+PRAGMA SimpleColumns;
+
+$with_binary = (
+    SELECT b.*, downloaded.voice_binary AS voice_binary
+    FROM {{input2}} AS b
+    LEFT JOIN {{input1}} AS downloaded
+    USING (voice_url)
+);
+
+$good_voice_sessions = (
+    SELECT DISTINCT session_id
+    FROM $with_binary
+    WHERE fetcher_mode == "voice" AND voice_binary IS NOT NULL
+);
+
+$text_sessions = (
+    SELECT session_id
+    FROM (
+        SELECT session_id, MAX_BY(fetcher_mode, session_sequence) as main_fetcher_mode
+        FROM $with_binary
+        GROUP BY session_id
+    )
+    WHERE main_fetcher_mode == "text"
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT *
+FROM $with_binary
+WHERE session_id IN $good_voice_sessions or session_id in $text_sessions

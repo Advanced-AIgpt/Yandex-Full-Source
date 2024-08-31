@@ -1,0 +1,84 @@
+USE hahn;
+
+$start_date =  CAST(CurrentUtcDate() - DateTime::IntervalFromDays(90) AS String);
+$today = CAST(CurrentUtcDate() AS String);
+$plus_60 = ($date) -> (CAST(CAST($date AS Date) + DateTime::IntervalFromDays(60) AS String));
+$finish_date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(60) AS String);
+
+$quasar_init = 
+(
+    SELECT device_id, MIN(init_date) AS init_date
+    FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status`
+    WHERE init_date BETWEEN $start_date AND $finish_date
+    AND device IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexstation', 'yandexstation_2',
+    'jbl_link_portable', 'jbl_link_music', 'linkplay_a98', 'prestigio_smart_mate', 'wk7y', 'lightcomm')
+    GROUP BY device_id
+);
+
+$socket_devices = 
+(
+    SELECT DISTINCT t.device_id AS device_id, fielddate AS socket_date
+    FROM `//home/voice/nadezhda17/common/feedback/active_devices` AS t
+    INNER JOIN $quasar_init AS q ON q.device_id = t.device_id
+);
+
+$uniq_dates = 
+(
+    SELECT `date` AS fielddate
+    FROM `//home/sprav/assay/common/Dates` 
+    WHERE `date` BETWEEN $start_date AND $today
+);
+
+$matched = 
+(
+    SELECT t.device_id AS device_id, init_date, fielddate, IF(socket_date IS NOT NULL, 1, 0) AS in_socket
+    FROM 
+    (
+        SELECT device_id, init_date, fielddate
+        FROM $quasar_init AS q 
+        CROSS JOIN $uniq_dates AS u
+        WHERE fielddate BETWEEN init_date AND $plus_60(init_date)
+    ) AS t 
+    LEFT OUTER JOIN $socket_devices AS s ON s.device_id = t.device_id AND s.socket_date = t.fielddate
+);
+
+$result = 
+(
+    SELECT device_id, init_date, ListMax(ListMap(ListTake(ListReverse(status), 30), ($x) -> ($x.in_socket))) AS two_month_alive
+    FROM 
+    (
+        SELECT device_id, init_date, 
+        ListSort(AGGREGATE_LIST(AsStruct(fielddate AS fielddate, in_socket AS in_socket)), ($x) -> ($x.fielddate)) AS status
+        FROM $matched
+        GROUP BY device_id, init_date
+    )
+);
+
+$result2 = 
+(
+    SELECT ss.*, r.two_month_alive AS two_month_alive
+    FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status` AS ss 
+    INNER JOIN $result AS r ON r.device_id = ss.device_id
+);
+
+$dead_share = 
+(
+    SELECT init_date, app??'Total' AS app, 
+    CAST(subscription_device AS String)??'Total' AS subscription_device,
+    COUNT(device_id) AS new_device_amount, 
+    1 - AVG(two_month_alive) AS dead_share, 
+    COUNT_IF(two_month_alive = 0) AS dead_amount
+    FROM  $result2
+    WHERE two_month_alive IS NOT NULL
+    GROUP BY GROUPING SETS((init_date, app), (init_date),
+    (init_date, app, subscription_device), (init_date, subscription_device))
+    ORDER BY init_date, app
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/dead_share` WITH TRUNCATE
+SELECT *
+FROM $dead_share
+UNION ALL 
+SELECT d.*
+FROM  `//home/voice/nadezhda17/common/plus_metrics/dead_share` AS d 
+LEFT ONLY JOIN $dead_share AS ds ON ds.init_date = d.init_date;

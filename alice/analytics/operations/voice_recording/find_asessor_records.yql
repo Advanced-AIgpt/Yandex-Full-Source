@@ -1,0 +1,36 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$start = {{param.start}};
+$end = {{param.end}};
+$wonder = "//home/alice/wonder/logs";
+
+$toloka_data = 
+select 
+    deviceId as device_id,
+    t.* without deviceId 
+from {{input1}} as t;
+
+$voice_data = 
+select 
+    _server_time_ms as server_time_ms,
+    speechkit_request.application.client_time as client_time,
+    _megamind_request_id as req_id,
+    speechkit_request.application.device_id as device_id,
+    speechkit_request.application.device_manufacturer || " " || speechkit_request.application.device_model as device,
+	String::ReplaceAll(asr.voice_by_uniproxy.mds, "http://storage-int.mds.yandex.net:80/get-speechbase/", "") as mds_key,
+    String::ReplaceAll(asr.voice_by_uniproxy.mds, "http://storage-int.mds.yandex.net:80/get-speechbase/", "https://speechbase-yt.voicetech.yandex.net/getfile/") as voice_url
+from range($wonder, $start, $end);
+
+$joined_data =
+select * from $voice_data as voice join $toloka_data as toloka using (device_id)
+where toloka.time1 <= voice.server_time_ms + 1500
+and toloka.time2 >= voice.server_time_ms - 500;
+
+insert into {{output1}} with truncate
+select * from (
+  select MinBy(TableRow(), Math::Abs(cast((time1 - server_time_ms) as Double)))
+  from $joined_data
+  group by assignmentId
+) 
+flatten columns;

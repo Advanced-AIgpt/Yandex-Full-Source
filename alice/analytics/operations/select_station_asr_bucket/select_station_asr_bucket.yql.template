@@ -1,0 +1,55 @@
+USE hahn; 
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$filter = CASE "${global.topic}"
+    WHEN "music" THEN 
+        intent == "search.content.music.listen" OR 
+        intent == "search.content.music.general" 
+    WHEN "films" THEN 
+        intent == "search.content.film.play" OR 
+        intent == "search.content.film.search" OR 
+        intent == "search.content.film.download"
+    WHEN "latin_music" THEN
+        (
+            intent == "search.content.music.listen" OR 
+            intent == "search.content.music.general" 
+        ) AND text REGEXP("[a-zA-Z]")
+    ELSE Ensure(false, false, "Topic is not known")
+END
+;
+
+$a = (
+    SELECT 
+        uuid,
+        text, 
+        MIN_BY(intent, Digest::Crc32c(a.mds_key)) AS intent,
+        MIN_BY(a.mds_key, Digest::Crc32c(a.mds_key)) AS mds_key,
+        MIN_BY(mark, Digest::Crc32c(a.mds_key)) AS mark,
+        MIN_BY(source, Digest::Crc32c(a.mds_key)) AS source,
+        MIN_BY(speech, Digest::Crc32c(a.mds_key)) AS speech,
+        MIN_BY(ts, Digest::Crc32c(a.mds_key)) AS ts,
+        MIN_BY(url, Digest::Crc32c(a.mds_key)) AS url,
+        MIN_BY(voices, Digest::Crc32c(a.mds_key)) AS voices,
+        CAST(Digest::Crc32c(uuid || "hbjhdfsvcbuhjsb") AS DOUBLE) / 4294967296 AS hash
+    FROM 
+        RANGE([//home/voice/toloka/ru-RU/daily/quasar-general-checked], [${global.start_date}], [${global.end_date}]) AS a
+        JOIN 
+        RANGE([//home/voice/dialog/toloka/quasar_annotations_intents], [${global.start_date}], [${global.end_date}]) AS b 
+        ON a.mds_key == b.mds_key
+    WHERE 
+        mark == "TEST" AND 
+        speech == "OK" AND
+        $filter
+    GROUP BY a.uuid AS uuid, a.text AS text
+);
+
+INSERT INTO [${global.out_dir}/${global.topic!latin_music}_bucket_${global.start_date}__${global.end_date}_KPI] WITH TRUNCATE
+SELECT * FROM $a WHERE hash <= 0.5
+ORDER BY Random(*)
+LIMIT ${global.size_of_buckets};
+
+INSERT INTO [${global.out_dir}/${global.topic!latin_music}_bucket_${global.start_date}__${global.end_date}_dev] WITH TRUNCATE
+SELECT * FROM $a WHERE hash > 0.5
+ORDER BY Random(*)
+LIMIT ${global.size_of_buckets};

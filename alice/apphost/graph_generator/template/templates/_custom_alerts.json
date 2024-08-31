@@ -1,0 +1,35 @@
+{%- extends "custom_alerts_base.json" %}
+{%- macro service_name(name) -%}scenario_{{ name }}.cancelled{%- endmacro -%}
+{%- set alert_settings = dict() %}
+{%- for alert in custom_alerts.get("custom_alerts", {}) %}
+    {%- do alert_settings.update({alert.service: alert.alert_settings}) %}
+{%- endfor %}
+{%- block hollywood_custom_alerts %}
+    {{- super() }}
+    {%- for name, config in graphs|dictsort %}
+        {%- set service_name = service_name(name) %}
+        {%- set alerts = alert_settings.get(service_name, {"crit": 0.1, "warn": 0.09}) %}
+        {
+            "alert_settings": {{ alerts|jsonify }},
+            "juggler_check": {
+                "flaps": {
+                    "boost": 0,
+                    "critical": 180,
+                    "stable": 60
+                },
+                {%- set responsibles = config.settings.responsibles %}
+                "responsibles": {
+                    {%- set pipe = joiner(",") %}
+                    {%- if responsibles.abc_service %}{{ pipe() }}
+                    "abc_service": {{ responsibles.abc_service|jsonify }}
+                    {%- endif %}
+                    {%- if responsibles.logins %}{{ pipe() }}
+                    "logins": {{ responsibles.logins|jsonify }}
+                    {%- endif %}
+                }
+            },
+            "service": "{{ service_name }}",
+            "signal": "perc(unistat-SOURCES-{{ name }}-SELF-GraphCancelErrors_dmmm,unistat-SOURCES-{{ name }}-SELF-Requests_dmmm)"
+        }{{"," if not loop.last }}
+    {%- endfor %}
+{%- endblock %}

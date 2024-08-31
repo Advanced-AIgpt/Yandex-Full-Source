@@ -1,0 +1,296 @@
+USE hahn;
+PRAGMA yt.Pool = "alice-analytics-crons";
+PRAGMA SimpleColumns;
+PRAGMA yt.InferSchema;
+PRAGMA AllowDotInAlias;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = "1";
+PRAGMA yt.PoolTrees = "physical";
+PRAGMA yt.TentativePoolTrees = "cloud";
+PRAGMA AnsiOrderByLimitInUnionAll;
+PRAGMA DisableCoalesceJoinKeysOnQualifiedAll;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA DisableAnsiInForEmptyOrNullableItemsCollections;
+
+DECLARE $date_from as String;
+DECLARE $date_to as String;
+
+-- utils
+$parse_date = ($dt) -> { RETURN AddTimezone(CAST($dt AS Timestamp), "Europe/Moscow"); };
+$date_format = DateTime::Format("%Y-%m-%d");
+$get_priority = Re2::Capture('.*name=\\"priority\\"; type=\\"INTEGER\\"; value=([0-9]+?);.*');
+$get_sample_percent = Re2::Capture('.*name=\\"sample_percent\\"; type=\\"INTEGER\\"; value=([0-9]+?);.*');
+
+$date_range_inclusive = ($start_date, $end_date) -> {
+    RETURN ListCollect(ListFlatMap(ListFromRange(0, (DateTime::ToDays($end_date - $start_date)+1) ?? 0), ($x) -> {
+        RETURN $start_date + DateTime::IntervalFromDays(CAST($x AS Int16))
+    }));
+};
+$date_range_weekday = ($start_date, $end_date, $day_of_week) -> {
+    RETURN ListFilter($date_range_inclusive($start_date, $end_date), ($x) -> {
+        RETURN DateTime::GetDayOfWeek($x) == $day_of_week;
+    });
+};
+$utils_arc_path = "arc://alice/analytics/utils/datetime_utils.py?hash=" || "67144f249513411b0028830e2307ed2109bb98dd";
+PRAGMA File("datetime_utils.py", $utils_arc_path);
+$calc_business_time_duration = Python3::calc_business_time_duration(Callable<(Int64?, Int64?)->Uint64?>, FileContent("datetime_utils.py"));
+
+
+$nirvana_logs = (
+    SELECT *
+    FROM RANGE(
+        `//home/qe/nirvana/production/export/workflow_instances`,
+        $date_format(CAST($date_from as Date) - 6 * Interval('P1D')),
+        $date_format(CAST($date_to as Date) + 3 * Interval('P1D'))
+    )
+);
+
+$direct_clones = (
+    SELECT
+        DISTINCT workflowId
+    FROM $nirvana_logs as t
+    WHERE
+        -- started >= '2020-09-15'
+        rootWorkflowInstanceId IS NULL
+        AND cloneOfWorkflowId == 'aa47f60a-570f-48d5-a5a1-aa8faa6c03dc'
+    UNION ALL
+    SELECT '55486b5d-1b54-4a72-882f-36c4aef3a1bf' as workflowId
+);
+
+$completed_instances = (
+    SELECT
+        l.*,
+        Unwrap($date_format($parse_date(started))) as fielddate,
+        DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) as duration_seconds,
+        DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) / 3600.0 as duration_hours,
+        $get_priority(Yson::ConvertToString(globalOptions))._1 ?? '' as priority,
+    FROM $nirvana_logs AS l
+    LEFT SEMI JOIN $direct_clones AS c ON (c.workflowId == l.workflowId)
+    WHERE
+        rootWorkflowInstanceId IS NULL
+        AND executionStatus == 'COMPLETED'
+        AND $get_sample_percent(Yson::ConvertToString(globalOptions))._1 == '100'
+        AND $get_priority(Yson::ConvertToString(globalOptions))._1 IN ['95', '85']
+        AND progress > 0.9
+
+        AND DateTime::ToSeconds($parse_date(completed) - $parse_date(started)) >= 1800 -- меньше получаса - это рестарты
+        AND owner NOT IN ['mkamalova', 'bondy', 'nstbezz', 'gri201', 'kpmatveev', 'nerevar', 'yateika', 'nadezhda17', 'edvls', 'ikkalinkin', 'ilnur', 'jdkondratenko', 'irinfox', 'polinakud', 'robot-voice-qa', 'robot-voice-zayats']
+        AND (
+            workflowInstanceComment IS NULL
+            OR workflowInstanceComment NOT IN ['begemot_megamind-0-0', 'vins-r0']
+        )
+);
+
+$operations = (
+    SELECT
+        t.*,
+        Unwrap($date_format($parse_date(t.started))) as fielddate,
+        DateTime::ToSeconds($parse_date(t.completed) - $parse_date(t.started)) as duration_seconds,
+        DateTime::ToSeconds($parse_date(t.completed) - $parse_date(t.started)) / 3600.0 as duration_hours,
+        $calc_business_time_duration(
+            DateTime::ToSeconds($parse_date(t.started)),
+            DateTime::ToSeconds($parse_date(t.completed))
+        ) / 3600.0 as duration_businesstime_hours,
+        priority ?? '' as priority,
+    FROM RANGE(
+        `//home/qe/nirvana/production/export/operation_blocks`,
+        $date_format(CAST($date_from as Date) - 6 * Interval('P1D')),
+        $date_format(CAST($date_to as Date) +3 * Interval('P1D'))
+    ) as t
+    INNER JOIN $completed_instances as c ON t.workflowInstanceId == c.workflowInstanceId
+    WHERE
+        DateTime::ToSeconds($parse_date(t.completed) - $parse_date(t.started)) >= 900 -- интересуют операции больше 15 минут
+);
+
+
+DEFINE SUBQUERY $get_data($day_from, $day_to) AS
+    $day_from_str = Unwrap($date_format($day_from));
+    $day_to_str = Unwrap($date_format($day_to));
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'ue2e graph' as operation,
+        '85' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+    FROM $completed_instances
+    WHERE
+        priority == '85'
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+    UNION ALL
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'ue2e graph' as operation,
+        '95' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+    FROM $completed_instances
+    WHERE
+        priority == '95'
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+    UNION ALL
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'downloader' as operation,
+        '85' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+    FROM $operations
+    WHERE
+        priority == '85'
+        AND (
+            (
+                (operationName == 'ue2e Downloader [deep] [with compatibility layer]'
+                OR operationName == 'ue2e Downloader [deep] [without compatibility layer]')
+                AND 
+                fielddate < '2021-09-13'
+            )
+            
+            OR
+
+            (
+                operationName ILIKE '%ue2e Downloader%'
+                AND 
+                fielddate >= '2021-09-13'
+            )
+        )
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+    UNION ALL
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'downloader' as operation,
+        '95' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+    FROM $operations
+    WHERE
+        priority == '95'
+        AND (
+            (
+                (operationName == 'ue2e Downloader [deep] [with compatibility layer]'
+                OR operationName == 'ue2e Downloader [deep] [without compatibility layer]')
+                AND 
+                fielddate < '2021-09-13'
+            )
+            
+            OR
+
+            (
+                operationName ILIKE '%ue2e Downloader%'
+                AND 
+                fielddate >= '2021-09-13'
+            )
+        )
+        
+
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+    UNION ALL
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'relevance' as operation,
+        '85' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+
+        AVG(duration_businesstime_hours) as duration_businesstime_avg,
+        PERCENTILE(duration_businesstime_hours, 0.25) as duration_businesstime_p25,
+        PERCENTILE(duration_businesstime_hours, 0.50) as duration_businesstime_p50,
+        PERCENTILE(duration_businesstime_hours, 0.75) as duration_businesstime_p75,
+        PERCENTILE(duration_businesstime_hours, 0.80) as duration_businesstime_p80,
+        PERCENTILE(duration_businesstime_hours, 0.90) as duration_businesstime_p90,
+        PERCENTILE(duration_businesstime_hours, 0.95) as duration_businesstime_p95,
+    FROM $operations
+    WHERE
+        priority == '85'
+        AND operationName == 'ue2e Relevance'
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+    UNION ALL
+
+    SELECT
+        $day_from_str as `fielddate`,
+        'relevance' as operation,
+        '95' as priority,
+        COUNT(*) as `count`,
+
+        AVG(duration_hours) as duration_avg,
+        PERCENTILE(duration_hours, 0.25) as duration_p25,
+        PERCENTILE(duration_hours, 0.50) as duration_p50,
+        PERCENTILE(duration_hours, 0.75) as duration_p75,
+        PERCENTILE(duration_hours, 0.80) as duration_p80,
+        PERCENTILE(duration_hours, 0.90) as duration_p90,
+        PERCENTILE(duration_hours, 0.95) as duration_p95,
+
+        AVG(duration_businesstime_hours) as duration_businesstime_avg,
+        PERCENTILE(duration_businesstime_hours, 0.25) as duration_businesstime_p25,
+        PERCENTILE(duration_businesstime_hours, 0.50) as duration_businesstime_p50,
+        PERCENTILE(duration_businesstime_hours, 0.75) as duration_businesstime_p75,
+        PERCENTILE(duration_businesstime_hours, 0.80) as duration_businesstime_p80,
+        PERCENTILE(duration_businesstime_hours, 0.90) as duration_businesstime_p90,
+        PERCENTILE(duration_businesstime_hours, 0.95) as duration_businesstime_p95,
+    FROM $operations
+    WHERE
+        priority == '95'
+        AND operationName == 'ue2e Relevance'
+        AND fielddate >= $day_from_str
+        AND fielddate <= $day_to_str
+
+END DEFINE;
+
+DEFINE ACTION $calc_daily_data($day_from, $day_to) AS
+    UPSERT INTO stat.`VoiceTech/Dialog/Downloader/ue2e_priemka_duration_v2/daily`
+    SELECT * FROM $get_data($day_from, $day_to);
+END DEFINE;
+
+EVALUATE
+    FOR $day
+    IN $date_range_inclusive(CAST($date_from as Date), CAST($date_to as Date))
+    DO $calc_daily_data($day - 6 * Interval('P1D'), $day);

@@ -1,0 +1,16 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$start = {{param.date}};
+$end = {{param.date}};
+
+$subs = select distinct puid, bundle as subs from range(`//home/msdata/user-profiles/v1`, $start, $end) where state == 'active';
+
+$vins = (select app_id, fielddate, puid
+from range(`home/voice/vins/logs/dialogs`, $start, $end)
+group by Yson::ConvertToString(Yson::Parse(request).app_info.app_id) as app_id, TableName() as fielddate, puid);
+
+insert into `//home/voice/nstbezz/datasets/subscriptions`
+select app_id, fielddate, subs, count(*) as cnt
+from (select * from $vins as t1 left join $subs as t2 using(puid))
+group by app_id ?? 'none' as app_id, fielddate, subs ?? 'none' as subs

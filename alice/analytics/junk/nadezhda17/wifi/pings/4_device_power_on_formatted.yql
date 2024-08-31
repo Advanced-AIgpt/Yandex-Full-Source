@@ -1,0 +1,30 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+$device_power_on = 
+(
+    SELECT DeviceID AS device_id, OriginalModel AS device, 
+    SUBSTRING(iso_eventtime, 0, 10) AS fielddate, 
+    $s_to_datetime(EventDateTime) AS ts,
+    iso_eventtime, 
+    DateTime::IntervalFromSeconds(CAST(diff_sec AS Int32)) AS device_power_on_diff
+    FROM  `//home/voice/nadezhda17/common/wifi_problems/pings/device_power_on_temp`
+);
+
+
+INSERT INTO  `//home/voice/nadezhda17/common/wifi_problems/pings/device_power_on` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $device_power_on
+    UNION ALL 
+    SELECT *
+    FROM  `//home/voice/nadezhda17/common/wifi_problems/pings/device_power_on` AS t 
+    LEFT ONLY JOIN $device_power_on AS d ON d.device_id = t.device_id AND t.fielddate = d.fielddate
+)
+--не хотим хранить слишком много
+WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(61) AS String)
+ORDER BY device_id, fielddate, ts;

@@ -1,0 +1,954 @@
+<style>
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{font-family: "Yandex Sans Text", Arial, Helvetica, sans-serif;font-size:15px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#CCCCCC;}
+.tg .intent, .spacer {border-color:#CCCCCC;text-align:left}
+.tg .intent {border-color:#CCCCCC;text-align:left;vertical-align:top}
+.spacer {width:35px;}
+.kats {
+    border-bottom: 1px solid #CCCCCC;
+}
+.kat input {
+    display:none;
+}
+.kat label {
+    cursor:pointer;
+    color:#04b;
+    border-bottom:1px dotted #04b;
+}
+.i-title .under {
+    border-bottom:1px dotted #04b;
+}
+.i-title .under:hover{
+    border-bottom:1px dotted #c00;
+}
+.kat label:hover {
+    color:#c00;
+    border-bottom:1px dotted #c00;
+}
+div#hidden1, div#hidden2, div#hidden3, div#hidden4, div#hidden5, div#hidden6, div#hidden7, div#hidden8, div#hidden9, div#hidden10 {
+    display:none;
+}
+input#show1:checked ~ div#hidden1, input#show2:checked ~ div#hidden2, input#show3:checked ~ div#hidden3, input#show4:checked ~ div#hidden4, input#show5:checked ~ div#hidden5, input#show6:checked ~ div#hidden6, input#show7:checked ~ div#hidden7, input#show8:checked ~ div#hidden8, input#show9:checked ~ div#hidden9, input#show10:checked ~ div#hidden10 {
+  display:block;
+  border-top: 1px solid #CCCCCC;
+  border-left: 1px solid #CCCCCC;
+  border-right: 1px solid #CCCCCC;
+  padding:10px 10px 10px 50px;
+}
+input#show1:unchecked ~ div#hidden1, input#show2:unchecked ~ div#hidden2, input#show3:unchecked ~ div#hidden3, input#show4:unchecked ~ div#hidden4, input#show5:unchecked ~ div#hidden5, input#show6:unchecked ~ div#hidden6, input#show7:unchecked ~ div#hidden7, input#show8:unchecked ~ div#hidden8, input#show9:unchecked ~ div#hidden9, input#show10:unchecked ~ div#hidden10 {
+  display:none;
+}
+.i-title { font-size:1rem;font-weight:bold;padding:10px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:#CCCCCC;text-align:left;border-bottom:none;}
+.intent .title {
+	font-weight:bold;
+	font-size:15px;
+}
+.red {
+
+	color:#df0000;
+}
+.notice {
+	border:1px solid #CCCCCC;
+	padding: 10px;
+	font-size:13px;
+}
+.instr {
+	margin-bottom:50px;
+}
+.instr h3{
+	margin-top:50px;
+}
+.samples {
+	padding:10px 10px 10px 0;
+	font-size:13px;
+}
+.samples > .red {
+	color: #c00;
+	font-weight: bold;
+	display:block;
+	padding:12px 0;
+}
+.samples > .green {
+	color: #70ad47;
+	font-weight: bold;
+	margin-bottom:0;
+	display:block;
+	padding:12px 0;
+}
+.red-notice {
+	color: #c00;
+}
+ul.queries-list {
+	margin-top:0;
+	}
+ul.queries-list li {
+	margin: 2px 0;
+	}
+img.screenshot {
+	border:1px solid #CCCCCC;
+	}
+.queries-list {
+	margin-left: 0 !important;
+	}
+.new-mark, .new-mark-2{
+	background-color: #70ad47;
+	color: #FFF;
+	font-size: 10px;
+	border:2px solid #70ad47;
+	border-radius:4px;
+	padding:0 4px;
+	margin-left:10px;
+	}
+.new-mark {
+	float:right;
+	}
+#new-intent {
+	background-color:#f0fff0;
+	}
+</style>
+
+<div class="instr">
+<p>В задании нужно <strong>определять тему последней фразы пользователя</strong> в диалоге с голосовым помощником Алисой, интегрированной в Яндекс.Навигатор.</p>
+
+<div style="margin-top:10px;margin-bottom:10px" class="p">
+    <div>При разметке необходимо учитывать следующие особенности работы приложения Яндекс.Навигатор: если пользователь называет некоторый адрес, то необходимо размечать как адрес, будь то полный адрес или только улица. Если указывается название населённого пункта, то найдется этот населённый пункт и размечаем как "Поиск по адресу" - "Без уточнения" (если, разумеется, в тексте запроса явно не указано приложение. Если назвать два города, например, "Москва Суздаль", то приложение сразу же проложит маршрут между их центрами и такие запросы следует размечать как построение маршрута<br></div>
+</div>
+
+<h3>Термины</h3>
+<p><strong>Тема</strong> - вариант конечной классификации реплики; имеет галочку; при выборе цвет меняется на зеленый.<br>
+<img width="310" alt="" src="http://storage.mds.yandex.net:80/get-voicetoloka/18463/5cc2ebcf-66e2-4f84-9cff-3f25fb67bc81"><br>
+<strong>Группа, подгруппа</strong> -&nbsp;<span style="color: rgb(0, 0, 0);">набор тем или других групп, объединенных по разнообразным признакам; имеет стрелку вправо; при выборе цвет меняется на желтый.</span><br>
+<img width="310" alt="" src="http://storage.mds.yandex.net:80/get-voicetoloka/24235/74000260-9f01-4892-bba9-107c7685b14b"></p><p style="color: rgb(0, 0, 0);">При наведении курсора на группу/тему появляется подсказка<br></p><div><span style="font-size: 1.17em;">Описание</span><br></div>
+<p>Для удобства разметки все темы распределены по группам и подгруппам. Последовательно выбирайте наиболее подходящую группу — подгруппу — тему.</p>
+
+<p><span class="red">Важное уточнение:</span> некоторые темы можно выбрать, идя разными путями. Выбирайте тот, который вам в данный момент удобнее.</p>
+
+<p>Задание считается выполненным, если вы прошли по цепочке до конца (последнего варианта) и выбрали конкретную тему.</p>
+
+<p>Если вы не знаете, что выбрать:</p>
+<ol>
+<li>Изучите список всех групп (их пять) и подгрупп (их может быть до пятнадцати).</li>
+<li>Воспользуйтесь поиском по темам.</li>
+<li>Перечитайте инструкцию.</li>
+<li>Отправьте нам личное сообщение с трудной фразой, чтобы получить разъяснение.</li>
+</ol>
+
+
+<p class="notice">Примечание. Мы не отвечаем на общие вопросы «Почему у меня такой низкий рейтинг?», «Где я ошибся?». Пожалуйста, указывайте только фразы, вызвавшие затруднения, и ссылки на конкретные задания.</p>
+<h3>Как выбрать тему. Пример</h3>
+
+<p>1.&nbsp;<span style="color: rgb(0, 0, 0);">Дана фраза с контекстом. Выбираем наиболее точную группу, подходящую под запрос: <b>Поиск объектов на карте</b></span><br>
+<img src="http://storage.mds.yandex.net:80/get-voicetoloka/15283/c682bff2-ef45-4064-a4de-c72a6a8c42ba" class="screenshot" alt="" width="310"></p>
+<p>2. Далее появятся варианты следующего уровня (подгруппы). Запрос относится к населенным пунктам, выбираем <strong>Населенные пункты / области</strong><br>
+<img src="http://storage.mds.yandex.net:80/get-voicetoloka/17757/27b3364e-1894-4623-b31d-5ebc5ebf5c10" class="screenshot" alt="" width="620"></p>
+<br>
+<p>3. При нажатии на тему она выделяется зелёным цветом - задание успешно выполнено!</span><br>
+<img src="http://storage.mds.yandex.net:80/get-voicetoloka/17757/b8617119-15f7-45a9-ab47-f38ca86b548e" class="screenshot" alt="" width="620"></p>
+</div>
+
+<h3>Список групп, подгрупп и тем</h3>
+
+<p>Группы, подгруппы и темы расположены в алфавитном порядке на каждом уровне. Исключение - пункты "Другое" и "Прочее", они всегда размещены последними.</p>
+
+<div class="kats">
+	<div class="kat">
+		<label for="show1">
+			<div class="i-title"><span class="under">Вопросы связанные с авто</span></div>
+		</label>
+		<input type="checkbox" id="show1" name="group1">
+		<div id="hidden1">
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td class="intent">
+						<div class="title">Штрафы</div>
+						<div class="description">Информация о штрафах</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Другое</div>
+						<div class="description">Например, узнать автомобильные коды регионов</div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show2">
+			<div class="i-title"><span class="under">Дорожные события</span></div>
+		</label>
+		<input type="checkbox" id="show2" name="group2">
+		<div id="hidden2">
+			<p>Любые команды, похожие на установку или чтение дорожных событий</p>
+			<table class="tg" width="100%">
+				<tbody>
+
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Дорожные события</div>
+						<div class="description">Любые команды, похожие на установку или чтение дорожных событий</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="7" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Авария</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Без указания типа</div>
+						<div class="description">Общие фразы вроде [добавь точку]</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Дорожные работы</div>
+						<div class="description">Движение затруднено. Если перекрыто совсем, то это относится к категории "Ошибка"</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Камера</div>
+						<div class="description">В том числе "дпс", но без указания географии. Запросы вида "пост дпс пулково" должны попадать в поиск, а не в дорожные события</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Ошибка</div>
+						<div class="description">Указать ошибку на карте (поворот не туда, нет проезда, перекрытие...)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Разговорчик / Комментарий</div>
+						<div class="description">Размещение комментариев (разговорчиков, сообщений) на карте о событиях не подпадающих под вышеперечисленные варианты, в том числе без подробностей вроде "поставь сообщение"</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Тип точки "другое"</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Отображение ДС</div>
+						<div class="description">Включение слоя дорожных событий</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="5" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Авария</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Дорожные работы</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Камера</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Разговорчик / Комментарий</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Тип точки "другое"</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Скрытие ДС</div>
+						<div class="description">Выключение слоя дорожных событий</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="5" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Авария</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Дорожные работы</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Камера</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Разговорчик / Комментарий</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Тип точки "другое"</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show3">
+			<div class="i-title"><span class="under">Маршруты</span></div>
+		</label>
+		<input name="group3" id="show3" type="checkbox">
+		<div id="hidden3">
+			<p>Построение маршрута или запрос информации о маршруте</p>
+			<table width="100%" class="tg">
+				<tbody>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Выбор из списка</div>
+						<div class="description">Пользователь видит список маршрутов и просит выбрать какой-то по номеру (например "покажи второй маршрут")</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Информация об уже построенном маршруте</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="3" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">Во сколько мы прибудем</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Сколько осталось ехать</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Другое</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Обзор маршрута</div>
+						<div class="description">Отображение актуального на сейчас маршрута</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Поиск более быстрого</div>
+						<div class="description">Запрос на объезд или более быстрый маршрут</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Построение маршрута</div>
+						<div class="description">Не следует путать с поиском мест на карте - он в другом разделе. О маршруте почти всегда говорит указание слова "поехали", "маршрут", "через" или "без пробок" в сочетании с адресом</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="9" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">Без указания точки</div>
+						<div class="description">Общий запрос на построение маршрута</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">До определенной парковки</div>
+						<div class="description">Пользователь хочет поехать на парковку организации, географического места или определенного типа
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Домой</div>
+						<div class="description">С указанием слов "поехали" и подобными, либо без дополнений, например "дом"
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">К организации</div>
+						<div class="description">
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">На ближайшую парковку</div>
+						<div class="description">
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">На общественном транспорте</div>
+						<div class="description">Есть указание что именно на общественном транспорте, не на машине и не пешком
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">На работу</div>
+						<div class="description">С указанием слов "поехали" и подобными, либо без дополнений, например "работа"
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">По адресу</div>
+						<div class="description">
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Сколько ехать?</div>
+						<div class="description">Запрос информации, сам маршрут отображать не надо
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Сброс/отмена маршрута</div>
+						<div class="description">Не стоит относить сюда общие команды "удалить" или "отменить". Только явное указание на "маршрут", "путь" или подобное</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="2" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">Текущий маршрут</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Очистить всю историю</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show4">
+			<div class="i-title"><span class="under">Настройки навигатора</span></div>
+		</label>
+		<input type="checkbox" id="show4" name="group4">
+		<div id="hidden4">
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Парковки</div>
+						<div class="description">Управление отображением парковок</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="2" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Показать</div>
+						<div class="description">Показать слой парковок на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Скрыть</div>
+						<div class="description">Скрыть слой парковок на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Показать схему</div>
+						<div class="description">Аналогично скрытию спутникового изображения</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Пробки</div>
+						<div class="description">Управление отображением пробок</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="2" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Показать</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Скрыть</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Смена голоса штурмана</div>
+						<div class="description">Просьба говорить другим голосом (Харламов, Бондарчук, Оптимус Прайм и др.)</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Спутниковая карта</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="2" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Показать</div>
+						<div class="description">Отобразить на карте спутниковое изображение</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Скрыть</div>
+						<div class="description">Убрать с карты спутниковое изображение</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Управление звуком</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="3" class="spacer"></td>
+					<td class="intent">
+						<div class="title">Включить звуки</div>
+						<div class="description">В том числе неявное "говори куда поворачивать"</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Отключить звуки</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Другие действия со звуком</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Управление масштабом карты</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Другое</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show5">
+			<div class="i-title"><span class="under">Парковки</span></div>
+		</label>
+		<input type="checkbox" id="show5" name="group5">
+		<div id="hidden5">
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td class="intent">
+						<div class="title">Маршрут до определенной парковки</div>
+						<div class="description">Пользователь хочет поехать на парковку организации или географического места</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Найти парковку поблизости</div>
+						<div class="description">Пользователь хочет именно поехать на парковку, а не показать их на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Оплатить парковку</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Отобразить парковки</div>
+						<div class="description">Показать слой на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Поиск определенных парковок</div>
+						<div class="description">Пользователь ищет парковки определенного типа или принадлежащие организациям</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Скрыть парковки</div>
+						<div class="description">Скрыть слой на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Другое</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show6">
+			<div class="i-title"><span class="under">Поиск объектов на карте</span></div>
+		</label>
+		<input name="group6" id="show6" type="checkbox">
+		<div id="hidden6">
+			<p>Поиск объектов на карте без построения маршрута (например слов поехали, маршрут, "без пробок")</p>
+			<table width="100%" class="tg">
+				<tbody>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Адреса</div>
+						<div class="description">Назван конкретный адрес, но не обязательно вплоть до дома. В эту категорию также попадают указания положения на трассе (км) или съезд (поворот на)</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Дом, работа или избранное</div>
+						<div class="description">Показ на карте дома (например "где я живу"), работы (например "покажи мою работу")</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="3" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">Маршрут домой</div>
+						<div class="description">С указанием слов "поехали", "маршрут" и подобными, либо без дополнений, например "дом"</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Маршрут на работу</div>
+						<div class="description">С указанием слов "поехали", "маршрут" и подобными, либо без дополнений, например "работа"</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Показать на карте</div>
+						<div class="description">Должно сопровождаться словами вроде "покажи", "где", "найди"</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Координаты</div>
+						<div class="description">Географические координаты в виде широты и долготы</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Населенные пункты / области</div>
+						<div class="description">Географические названия, при этом могут не содержать слов город, село и подобных</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Парковки</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="3" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">Отобразить слой парковок на карте</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Поиск ближайшей парковки</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Поиск определенных парковок</div>
+						<div class="description">Пользователь ищет парковки определенного типа (например "грузовые"), расположения (например "у метро") или принадлежащие организациям</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Собственное расположение</div>
+						<div class="description">Иногда собственную точку называют "маркером"</div>
+					</td>
+				</tr>
+				<tr>
+					<td rowspan="3" class="spacer"></td>
+					<td colspan="2" class="intent">
+						<div class="title">В прошлом</div>
+						<div class="description">Точку из истории или некоторое время назад</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Сохранить</div>
+						<div class="description">Отметить или сохранить текущее местоположение</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2" class="intent">
+						<div class="title">Текущее</div>
+						<div class="description">Показ на карте точки, в которой именно в данный момент находится пользователь</div>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" class="intent">
+						<div class="title">Другое</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show7">
+			<div class="i-title"><span class="under">Пробки</span></div>
+		</label>
+		<input type="checkbox" id="show7" name="group7">
+		<div id="hidden7">
+			<p>Все что как-то связано с пробками, но не связано с дорожными событиями</p>
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td class="intent">
+						<div class="title">Какая причина пробки?</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">На сколько пробка</div>
+						<div class="description">Запрос информации о продолжительности или длине пробки</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Показать слой пробок</div>
+						<div class="description">Пользователь просит включить слой пробок</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Пробки в городе</div>
+						<div class="description">В том числе общее [какие пробки]</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Пробки в конкретных местах</div>
+						<div class="description">Более детальный запрос пробок - на определенных улицах или пересечениях улиц</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Скрыть пробки</div>
+						<div class="description">Скрыть слой на карте</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Другое</div>
+						<div class="description"></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="kat">
+		<label for="show8">
+			<div class="i-title"><span class="under">Сохранение избранных точек</span></div>
+		</label>
+		<input type="checkbox" id="show8" name="group8">
+		<div id="hidden8">
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td class="intent">
+						<div class="title">Адрес или организация</div>
+						<div class="description">Пользователь просит сохранить конкретный адрес или организацию</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="title">Текущее местоположение</div>
+						<div class="description">Отметить или сохранить текущее местоположение</div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+		<div class="kat">
+		<label for="show9">
+			<div class="i-title"><span class="under">Другое</span></div>
+		</label>
+		<input type="checkbox" id="show9" name="group9">
+		<div id="hidden9">
+			<p>Запросы не подпадающие под классификацию, не относящиеся к навигатору, объединение нескольких действий (например "впереди камера на улица таллинской 34") или вообще случайный шум.</p>
+		</div>
+	</div>
+</div>
+<br>
+
+
+<div class="kats">
+	<div class="kat">
+		<label for="show10">
+			<div class="i-title"><span class="under">Некоторые примеры</span></div>
+		</label>
+		<input type="checkbox" id="show10" name="group10">
+		<div id="hidden10">
+			<p>Здесь разобраны примеры работы с запросами, в которых необходимо классифицировать адреса </p>
+			<table class="tg" width="100%">
+				<tbody>
+				<tr>
+					<td class="intent">
+						<div class="description">Ленинский проспект дом 45 <br> Ленинский проспект
+							<br><i>Поиск объектов на карте > Адреса</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Если подобный запрос с адресом содержит слова "Поехали", "вперед", "погнали", то относить уже следует к <i>Построение маршрута > По адресу</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Если адрес содержит населенный пункт но пользователь запрашивает конкретный адрес, например: <br>Деревня Кукушкино улица Советская 2 (в данном случае пользователь ищет конкретный адрес, в населенном пункте, а не сам населенный пункт) <br> относим к категории <i>Поиск объектов на карте > Адреса</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Если адрес содержит название организации, например: <br> Ленинский проспект "Банк Открытие"<br> относим к категории <i>Поиск объектов на карте > Организации</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	домой <br> <i>Маршруты - построение маршрута - домой</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	промысловая тридцать девять <br> <i>Поиск объектов на карте - адреса</i> (указан адрес, нет слов триггеров для построения маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	астор плаза ростов<br> Навигатор:	Сейчас поищу.<br> Пользователь:	астор плаза ростов <br> <i>Поиск объектов на карте - организации</i> (Поиск организации в городе, нет слов триггеров для построения маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	строительный супермаркет <br> <i>Поиск объектов на карте - организации</i> (Поиск организации в городе, нет слов трггеров для построения маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	большие бакалды нижегородской области<br> Навигатор:	Сейчас поищу.<br> Пользователь:	большие бакалды <br> Ищем в поисковике, что такое большие бакалды улица или населенный пункт, находим информацию, что это село ставим <i>Поиск объектов на карте - населенные пункты</i> (Нет адреса, нет триггера на построение маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	воронцовская один дробь три строение два <br>Навигатор:	Адрес чего вас интересует? <br>Пользователь:	мтс банк <br> <i>Поиск объектов на карте - организации</i> (Ищет организацию, нет триггера по построению маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	саракташ<br> Навигатор:	Показываю варианты.<br> Пользователь:	кувандык <br> Ищем в поисковике, что такое Кувындык находим насленный пункт ставим <i>Поиск объектов на карте - населенные пункты</i> так как нет конкретного адреса (нет триггера на построение маршрута)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	латышских стрелков<br> Навигатор:	Внимание на карту.<br> Пользователь:	набережная реки волковки <br> <i>Поиск объектов на карте - адреса </i>  (набережные, площади относим к адресам)</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	удали все поездки <br> <i>Маршруты-сброс маршрута-очистить всю историю</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	он перебивает поехали<br> Навигатор:	Извините, я не могу понять, что это за место: перебивает. Попробуйте указать другую точку назначения.<br> Пользователь:	поехали <br> Несвязный разговор - <i>Другое</i><br> Сложный пример если бы например в первой реплике человек забивал адрес, а в последней сказал - поехали, мы бы отнесли это к <i>построению маршрута</i>, а в данном контексте это - другое</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	ува<br> Навигатор:	Внимание на карту.<br> Пользователь:	алиса ува молоко надо <br> Запрос не ясен, если бы запрос бы более четкий на поиск молока, можно было бы отнести к категории поиск организаций. А так <i>Другое</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	машина сломался правом ряду <br> <i>Дорожные события добавление точки-авария</i></div>
+					</td>
+				</tr>
+				<tr>
+					<td class="intent">
+						<div class="description">Пользователь:	алиса не хочу слышать диктора <br> <i>Настройки-выключить звук</i></div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<h3>Интерфейс задания</h3>
+<h4>Переход на поиск</h4>
+<p>Нажав на кнопку рядом с последним запросом диалога можно перейти на страницу поиска. Это может пригодится в тех случаях, когда запрос совсем непонятен.<br>
+<img alt="" src="http://storage.mds.yandex.net:80/get-voicetoloka/18463/346fec91-6133-466f-bb96-7a454477b3a1" class="screenshot" width="310">
+</p>
+<h4>Горячие клавиши</h4>
+<p>Горячие клавиши для выбора групп и тем указаны в интерфейсе.
+</p><p class="notice"><span class="red-notice">Примечание. По умолчанию горячие клавиши выключены (работают только стандартные стрелки), включить их можно с помощью кнопки "Включить горячие клавиши". При включенных горячих клавишах нельзя отправить сообщение или выделить текст на странице, будьте внимательны.</span></p>
+<p class="notice"><span class="red-notice">Внимание! При включении горячих клавиш переключение между заданиями в проекте отличается от стандартного и осуществляется с помощью клавиш "z" и "x".</span></p>
+Для использования горячих клавиш нужно выделить блок одного диалога.<br>
+Цифры 0-9 — выбор кнопки.<br>
+Буквы q,w,e,r,t,y,u,i,o,p можно использовать тогда, когда недостаточно цифр.<br>
+"~" или буква "ё" — снятие выбора.<br>
+Пробел — начало ввода в строке поиска.<br>
+Буквы "z" и "x" — переключение между заданиями.<p></p>
+<h4>Поиск по темам</h4>
+<p>В поле поиска можно ввести ключевые слова, будет показана подсказка, из которой есть возможность сразу выбрать нужный вариант.</p><br>
+<img alt="" src="http://storage.mds.yandex.net:80/get-voicetoloka/15283/f38cb669-cf81-4d3d-911d-16f9ee01e158" class="screenshot" width="420"><br>

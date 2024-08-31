@@ -1,0 +1,34 @@
+Use hahn;
+
+$start = "2020-10-01";
+$end = "2021-02-28";
+
+$logs = "//home/alice/wonder/logs";
+$output = "//home/alice/jdkondratenko/VA-1984/empty_2020-10-01_2021-02-28";
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT
+    _uuid as `uuid`,
+    _megamind_request_id as request_id,
+    _action as _action,
+    _message_id as _message_id,
+    _downloading_info as _downloading_info,
+    _presence as _presence,
+    privacy as privacy,
+    speechkit_request.application as Application, 
+    speechkit_request.header as Header, 
+    speechkit_request.request.additional_options as AdditionalOptions, 
+    speechkit_request.request.device_state as DeviceState,
+    speechkit_request.request.location as Location,
+    speechkit_request.request.test_ids as testids,
+    spotter.false_activation as spotter_false_activation,
+    IF(speechkit_request IS NULL, True, False) as speechkit_request_is_null,
+    IF(speechkit_response IS NULL, True, False) as speechkit_response_is_null,
+    _environment.megamind_environment.environment as environment
+FROM RANGE($logs, $start, $end)
+WHERE 
+        asr.trash_or_empty 
+    AND
+        _environment.uniproxy_environment.qloud_project in ('voice-ext', 'alice', 'unknown')
+    AND
+        _environment.uniproxy_environment.qloud_application in ('uniproxy');

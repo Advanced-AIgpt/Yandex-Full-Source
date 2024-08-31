@@ -1,0 +1,18 @@
+
+$reask_script = @@
+def calculate_reask(requery_utils):
+     import requery_utils
+
+     def is_reask(first_event_dict, second_event_dict):
+
+        event = requery_utils.SmallEvent(first_event_dict)
+        next_event = requery_utils.SmallEvent(second_event_dict)
+
+        return requery_utils.is_requery(event, next_event, levenstein_threshold=0.86) and event.query != next_event.query
+
+     return is_reask
+@@;
+PRAGMA File('requery_utils.py', 'arc://quality/ab_testing/cofe/projects/alice/requery/utils.py?hash=96a9b803b4ea5160b879ad09b6e35c1af74deb09');
+$udf_reask = Python2::calculate_reask(Callable<(String)->Callable<(Dict<String, Utf8?>, Dict<String, Utf8?>)->Bool>>, $reask_script);
+$is_reask = $udf_reask(FilePath("requery_utils.py"));
+

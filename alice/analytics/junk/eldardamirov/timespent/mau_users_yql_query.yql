@@ -1,0 +1,90 @@
+use hahn;
+pragma yt.InferSchema = '1000';
+pragma yson.DisableStrict = 'true';
+
+$end = {{param.date}};
+$expb_path = "//home/alice/dialog/prepared_logs_expboxes";
+
+$month_ago = ($date) -> {
+    return DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(30))
+};
+
+$expboxes = (
+    SELECT
+        `uuid`,
+        app,
+        cohort,
+        TryMember(TableRow(), 'child_confidence', null) AS child_confidence
+    FROM range($expb_path, $month_ago($end), $end) AS expboxes
+)
+;
+
+$total_age_expboxes = (
+    SELECT
+        if(child_confidence is null, 'unknown', if(child_confidence >= 0.8, 'child', 'adult')) AS age_category,
+        expboxes.*,
+    FROM $expboxes AS expboxes
+    UNION ALL
+    SELECT
+        '_total_' AS age_category,
+        expboxes.*
+    FROM $expboxes AS expboxes
+)
+;
+
+$users = (
+    SELECT
+        $end AS fielddate,
+        app,
+        cohort,
+        age_category,
+        count(distinct `uuid`) AS users,
+    FROM $total_age_expboxes
+    WHERE app not in ["quasar", "small_smart_speakers", "elariwatch"]
+    GROUP BY app, cohort, age_category
+)
+;
+
+$users_without_tv = (
+    SELECT
+        *
+    FROM $users
+    UNION ALL (
+        SELECT
+            $end AS fielddate,
+            "_total_" AS app,
+            cohort,
+            age_category,
+            sum(users) AS users
+        FROM $users
+        GROUP BY cohort, age_category
+    )
+    UNION ALL (
+        SELECT
+            $end AS fielddate,
+            app,
+            "_total_" AS cohort,
+            age_category,
+            sum(users) AS users
+        FROM $users
+        GROUP BY app, age_category
+    )
+    UNION ALL (
+        SELECT
+            $end AS fielddate,
+            "_total_" AS app,
+            "_total_" AS cohort,
+            age_category,
+            sum(users) AS users
+        FROM $users
+        GROUP BY age_category
+    )
+)
+;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT t.*, "false" AS is_tv_plugged_in, "_total_" AS device
+FROM $users_without_tv AS t
+UNION ALL
+SELECT t.*, "_total_" AS is_tv_plugged_in, "_total_" AS device
+FROM $users_without_tv AS t

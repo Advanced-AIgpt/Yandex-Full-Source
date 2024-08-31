@@ -1,0 +1,29 @@
+USE hahn;
+
+$date_pattern = "%Y-%m-%d";
+$date_format = DateTime::Format($date_pattern);
+
+INSERT INTO `//home/sda/cubes/tv/activations/last` WITH TRUNCATE
+
+SELECT
+    activation_id,
+    MIN($date_format(DateTime::StartOfDay(DateTime::FromSeconds(CAST(COALESCE(receive_timestamp, event_timestamp) AS Uint32)))))) AS activation_date,
+    MIN_BY(eth0, IF(eth0 IS NOT NULL, event_date)) AS eth0,
+    MIN_BY(quasar_device_id, IF(quasar_device_id IS NOT NULL, event_date)) AS quasar_device_id,
+    MIN_BY(wlan0, IF(wlan0 IS NOT NULL, event_date)) AS wlan0,
+    MIN_BY(app_version, IF(app_version IS NOT NULL, event_date)) ?? '' AS app_version,
+    MIN_BY(firmware_version, IF(firmware_version IS NOT NULL, event_date)) ?? '' AS firmware_version,
+    MIN_BY(build_fingerprint, IF(build_fingerprint IS NOT NULL, event_date)) ?? '' AS build_fingerprint,
+    MIN_BY(manufacturer, IF(manufacturer IS NOT NULL, event_date)) ?? '' AS manufacturer,
+    MIN_BY(model, IF(model IS NOT NULL, event_date)) ?? '' AS model,
+    MIN_BY(diagonal, IF(diagonal IS NOT NULL, event_date)) ?? 0 AS diagonal,
+    MIN_BY(resolution, IF(resolution IS NOT NULL, event_date)) ?? '' AS resolution,
+    CAST(MIN_BY(Yson::LookupInt64(clids, 'clid1', Yson::Options(false as Strict)), IF(Yson::LookupInt64(clids, 'clid1', Yson::Options(false as Strict)) IS NOT NULL, event_date)) AS String) ?? '' AS clid1,
+    MIN_BY(board, IF(board IS NOT NULL, event_date)) ?? '' AS board,
+    MIN_BY(build, IF(build IS NOT NULL, event_date)) ?? '' AS build,
+    MIN_BY(platform, IF(platform IS NOT NULL, event_date)) ?? '' AS platform,
+    MIN_BY(geo_id, IF(geo_id IS NOT NULL, event_date)) ?? 0 AS geo_id,
+    MIN_BY(device_id, IF(device_id IS NOT NULL, event_date)) ?? '' AS device_id
+FROM RANGE('//home/smarttv/logs/tvandroid_sessions/1d')
+GROUP BY COALESCE(eth0, quasar_device_id) AS activation_id
+ORDER BY activation_date, activation_id

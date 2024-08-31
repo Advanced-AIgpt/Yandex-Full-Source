@@ -1,0 +1,26 @@
+Use hahn;
+
+$app = "quasar";
+$accept_path = "//home/alice/irinfox/VA-1190/stratification/";
+$kpi_path = "//home/voice/dialog/toloka/kpi_baskets_and_results/new_ue2e_baskets/stratification/";
+$accept_input = $accept_path || $app || "_accept_autoverdict";
+$accept_output = $accept_input || "_sample";
+
+$kpi_input = $kpi_path || $app || "_kpi_autoverdict";
+$kpi_output = $kpi_input || "_sample";
+$sample_size = 1000;
+
+DEFINE ACTION $make_sample($input, $output, $sample_size) AS
+    
+    $num_rows = (SELECT COUNT(*) FROM $input);
+    $proportion = $sample_size * 1.0 / $num_rows; 
+    
+    INSERT INTO $output WITH TRUNCATE 
+    SELECT *
+    FROM $input
+    SAMPLE $proportion;
+    
+END DEFINE;
+
+DO $make_sample($accept_input, $accept_output, $sample_size);
+DO $make_sample($kpi_input, $kpi_output, $sample_size);

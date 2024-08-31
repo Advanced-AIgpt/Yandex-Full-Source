@@ -1,0 +1,131 @@
+USE hahn;
+PRAGMA yt.InferSchema = '1000';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(10) AS String)};
+
+$music_devices_puid = 
+(
+    SELECT DISTINCT puid, fielddate
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data`
+    WHERE  $date_filter(fielddate)
+    AND generic_scenario = 'music'
+    AND music IS NOT NULL
+);
+
+$like_phrases = ($reply) -> {RETURN $reply ILIKE '%тавлю лайк%' 
+OR $reply ILIKE '%поставила лайк%'
+OR $reply ILIKE '%запомню, что вам такое по душе%' 
+OR $reply ILIKE '%буду включать такое чаще%' 
+OR $reply ILIKE '%рада, что вы оценили%'};
+
+$dislike_phrases = ($reply) -> {RETURN $reply ILIKE '%тавлю дизлайк%' 
+OR $reply ILIKE '%не буду такое ставить%' 
+OR $reply ILIKE '%больше не включу%' 
+OR $reply ILIKE '%поставила дизлайк%' 
+OR $reply ILIKE '%дизлайк принят%'};
+
+$feedback = 
+(
+    SELECT fielddate, COUNT_IF(event = 'like') AS likes, COUNT_IF(event = 'dislike') AS dislikes, COUNT(*) AS feedback
+    FROM 
+    (
+        SELECT fielddate, IF(intent LIKE '%player_like%', 'like', 'dislike') AS event
+        FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data`
+        WHERE  $date_filter(fielddate)
+        AND generic_scenario IN ('feedback', 'player_commands')
+        AND (intent LIKE '%player_like%' OR intent LIKE '%player_dislike%')
+        AND ($like_phrases(reply) OR $dislike_phrases(reply))
+    )
+    GROUP BY fielddate
+);
+
+$tlt = 
+(
+    SELECT fielddate, SUM(tlt) AS tlt
+    FROM 
+    (
+        SELECT fielddate, app, TableName() AS table_name, total_timespent_m AS tlt
+        FROM FILTER(`//home/alice/precomputes/timespent/total_timespent`, $date_filter)
+        WHERE age_category = '_total_'
+        AND is_tv_plugged_in = '_total_'
+        AND scenario = 'music'
+        AND app IN ('quasar', 'small_smart_speakers') 
+        AND device = '_total_'
+        AND cohort = '_total_'
+    )
+    WHERE fielddate = table_name
+    GROUP BY fielddate
+    ORDER BY fielddate
+);
+
+$feedback_tlt = 
+(
+    SELECT f.*, tlt, week_tlt
+    FROM 
+    (
+        SELECT MIN(fielddate) OVER w AS start_of_week, fielddate, feedback, likes, dislikes,
+        SUM(feedback) OVER w AS week_feedback, SUM(likes) OVER w AS week_likes, SUM(dislikes) OVER w AS week_dislikes
+        FROM $feedback
+        WINDOW w AS (ORDER BY fielddate  ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+        ORDER BY fielddate
+    ) AS f 
+    INNER JOIN
+    (
+        SELECT fielddate, tlt, SUM(tlt) OVER w AS week_tlt
+        FROM $tlt
+        WINDOW w AS (ORDER BY fielddate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+        ORDER BY fielddate       
+    ) AS t ON t.fielddate = f.fielddate
+);
+
+$aggregated = 
+(
+    SELECT f.fielddate AS fielddate, f.week_feedback AS feedback, 
+    f.week_likes AS likes, f.week_dislikes AS dislikes, f.week_tlt AS tlt,
+    COUNT(DISTINCT wa.puid) AS active_users, 
+    f.week_feedback*1.0/COUNT(DISTINCT wa.puid) AS feedback_per_user, 
+    f.week_feedback*1.0/f.week_tlt AS feedback_per_min, 
+    f.week_feedback*1.0/(COUNT(DISTINCT wa.puid) * f.week_tlt) AS feedback_per_user_per_min, 
+    'week' AS scape
+    FROM $feedback_tlt AS f 
+    CROSS JOIN $music_devices_puid AS wa
+    WHERE wa.fielddate BETWEEN f.start_of_week AND f.fielddate
+    GROUP BY f.start_of_week,  f.fielddate, f.week_feedback, f.week_likes, f.week_dislikes, f.week_tlt
+    UNION ALL 
+    SELECT f.fielddate AS fielddate, f.feedback AS feedback, 
+    f.likes AS likes, f.dislikes AS dislikes, f.tlt AS tlt,
+    COUNT(DISTINCT da.puid) AS active_users, 
+    f.feedback*1.0/COUNT(DISTINCT da.puid) AS feedback_per_user, 
+    f.feedback*1.0/f.tlt AS feedback_per_min, 
+    f.feedback*1.0/(COUNT(DISTINCT da.puid) * f.tlt) AS feedback_per_user_per_min, 
+    'day' AS scape
+    FROM $feedback_tlt AS f 
+    INNER JOIN $music_devices_puid AS da ON da.fielddate = f.fielddate
+    GROUP BY f.fielddate, f.feedback, f.likes, f.dislikes, f.tlt
+);
+
+SELECT * FROM $aggregated ORDER BY scape, fielddate;
+
+$result = 
+(
+    SELECT *
+    FROM $aggregated
+    WHERE scape = 'week'
+    AND fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)
+    UNION ALL 
+    SELECT *
+    FROM $aggregated
+    WHERE scape = 'day'
+);
+
+SELECT * from $result ORDER BY scape, fielddate;
+
+INSERT INTO `//home/voice/nadezhda17/common/feedback/speakers_stats` WITH TRUNCATE 
+SELECT *
+FROM $result
+UNION ALL 
+SELECT * 
+FROM `//home/voice/nadezhda17/common/feedback/speakers_stats` AS ss 
+LEFT ONLY JOIN $result AS r ON r.scape = ss.scape AND r.fielddate = ss.fielddate
+;

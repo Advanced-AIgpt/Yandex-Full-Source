@@ -1,0 +1,161 @@
+{
+  "private_name": "${private_name}",
+  "project_id": "${prj_id}",
+  "private_comment": "${private_comment}",
+  "assignment_max_duration_seconds": 1800,
+  "dynamic_pricing_config": {
+    "skill_id": "${price_skill_id}",
+    "intervals": [],
+    "type": "SKILL"
+  },
+  "auto_accept_solutions": true,
+  "assignments_issuing_config": {
+    "issue_task_suites_in_creation_order": false
+  },
+  "reward_per_assignment": 0.02,
+  "priority": 50,
+  "type": "REGULAR",
+  "quality_control": {
+    "configs": [
+      {
+        "rules": [
+          {
+            "action": {
+              "type": "RESTRICTION",
+              "parameters": {
+                "scope": "PROJECT",
+                "duration_days": 1,
+                "private_comment": "Слишком быстрые ответы"
+              }
+            },
+            "conditions": [
+              {
+                "operator": "GTE",
+                "value": 5,
+                "key": "fast_submitted_count"
+              }
+            ]
+          }
+        ],
+        "collector_config": {
+          "type": "ASSIGNMENT_SUBMIT_TIME",
+          "parameters": {
+            "history_size": 5,
+            "fast_submit_threshold_seconds": 20
+          }
+        }
+      },
+      {
+        "rules": [
+          {
+            "action": {
+              "type": "SET_SKILL_FROM_OUTPUT_FIELD",
+              "parameters": {
+                "skill_id": "${price_skill_id}",
+                "from_field": "correct_answers_rate"
+              }
+            },
+            "conditions": [
+              {
+                "operator": "GTE",
+                "value": 6,
+                "key": "total_answers_count"
+              }
+            ]
+          }
+        ],
+        "collector_config": {
+          "type": "GOLDEN_SET",
+          "parameters": {
+            "history_size": ${page_size}
+          }
+        }
+      },
+      {
+        "rules": [
+          {
+            "action": {
+              "type": "RESTRICTION",
+              "parameters": {
+                "scope": "POOL",
+                "duration_days": 1,
+                "private_comment": "Больше 5 пропусков"
+              }
+            },
+            "conditions": [
+              {
+                "operator": "GT",
+                "value": 5,
+                "key": "skipped_in_row_count"
+              }
+            ]
+          }
+        ],
+        "collector_config": {
+          "type": "SKIPPED_IN_ROW_ASSIGNMENTS",
+          "parameters": {}
+        }
+      },
+      {
+        "rules": [
+          {
+            "action": {
+              "type": "RESTRICTION",
+              "parameters": {
+                "scope": "POOL",
+                "duration_days": 1,
+                "private_comment": "Слишком много работать вредно"
+              }
+            },
+            "conditions": [
+              {
+                "operator": "GT",
+                "value": 10.0,
+                "key": "income_sum_for_last_24_hours"
+              }
+            ]
+          }
+        ],
+        "collector_config": {
+          "type": "INCOME",
+          "parameters": {}
+        }
+      }
+    ]
+  },
+  "may_contain_adult_content": true,
+  "auto_close_after_complete_delay_seconds": 10,
+  "filter": {
+    "and": [
+      {
+        "or": [
+          {
+            "operator": "EQ",
+            "category": "skill",
+            "value": null,
+            "key": "${price_skill_id}"
+          },
+          {
+            "operator": "GTE",
+            "category": "skill",
+            "value": ${ban_score},
+            "key": "${price_skill_id}"
+          }
+        ]
+      }
+    ]
+  },
+  "defaults": {
+    "default_overlap_for_new_tasks": ${overlap},
+    "default_overlap_for_new_task_suites": ${overlap}
+  },
+  "mixer_config": {
+    "force_last_assignment": true,
+    "mix_tasks_in_creation_order": false,
+    "golden_tasks_count": ${gs_count},
+    "real_tasks_count": ${tasks_count},
+    "shuffle_tasks_in_task_suite": true,
+    "training_tasks_count": 0
+  },
+  "will_expire": "${expire_date}"
+}

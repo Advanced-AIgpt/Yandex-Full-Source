@@ -1,0 +1,164 @@
+use hahn;
+pragma AnsiInForEmptyOrNullableItemsCollections;
+pragma dq.AnalyzeQuery = "1";
+pragma yt.InferSchema = '100';
+pragma yson.DisableStrict;
+
+$date_start = '2022-07-07';
+$date_end = '2022-07-07';
+
+$wonder_logs = '//home/alice/wonder/logs';
+$prepared_logs_expboxes = '//home/alice/dialog/prepared_logs_expboxes';
+
+$output_table = '//home/voice/dmitriip99/prepare_basket/joined_data';
+
+$script_app = @@
+
+def is_good_app(basket_common):
+    import basket_common
+
+    def check_app(app, type):
+        if type == 'all':
+            apps = basket_common.QUASAR_APPS | basket_common.GENERAL_APPS | basket_common.NAVI_APPS | basket_common.TV
+        elif type == 'quasar':
+            apps = basket_common.QUASAR_APPS
+        elif type == 'tv':
+            apps = basket_common.TV
+        return app in apps
+
+    return check_app
+@@;
+PRAGMA File('basket_common.py', 'arc://alice/analytics/utils/yt/basket_common.py?rev=9264986');
+$udf_is_good_app = Python2::is_good_app(Callable<(String)->Callable<(String?, String)->Bool>>, $script_app);
+$is_good_app = $udf_is_good_app(FilePath("basket_common.py"));
+
+$input_types = AsSet("voice", "text", "click");
+
+$bad_uuids = Re2::Grep('(uu\/ffffffffffffffff|uu\/deadbeef|uu\/dddddddddddddddd)');
+
+$get_text = ($x) -> { return $x.text; };
+
+$create_uuid = ($x) -> {return 'uu/' || String::ReplaceAll($x, '-', '')};
+
+-- 1) Преобразуем данные из вандерлогов
+PRAGMA udf('w');
+PRAGMA Library('converters_to_binary_proto.sql', 'arc://alice/wonderlogs/sdk/sql/converters_to_binary_proto.sql?rev=9692721');
+IMPORT converters_to_binary_proto SYMBOLS $wonderlog_to_binary_proto, $application_to_binary_proto;
+
+$wonder_prepared = (
+    select
+        Wonderlogs::WonderlogToVinsLikeRequest($wonderlog_to_binary_proto(TableRow())) as request,
+        Wonderlogs::WonderlogToJson($wonderlog_to_binary_proto(TableRow())) as yson_raw,
+
+        Wonderlogs::GetApp($application_to_binary_proto(speechkit_request.application)) as app,
+        TableName() as fielddate,
+        _message_id as message_id,
+        speechkit_response.voice_response.output_speech.text as voice_response_text,
+        ListMap(speechkit_response.response.cards, $get_text) as response_cards,
+        _megamind_request_id as request_id,
+        $create_uuid(_uuid) as `uuid`,
+        asr.trash_or_empty as is_empty_asr,
+        speechkit_request.application.timezone as client_tz,
+        CAST(speechkit_request.application.timestamp AS Int64) as client_time,
+        speechkit_request.request.device_state.device_id as device_id,
+        speechkit_request.request.additional_options.bass_options.client_ip as ip_addr,
+        speechkit_request.request.additional_options.expboxes as expboxes,
+        CAST(speechkit_request.request.additional_options.server_time_ms AS Int64) as server_time_ms,
+        speechkit_request.session as session,
+        asr,
+        spotter,
+        client,
+    from range($wonder_logs, $date_start, $date_end)
+    where
+        speechkit_request is not null
+        and speechkit_request.application.lang == 'ru-RU'
+        and (privacy.do_not_use_user_logs is null or not privacy.do_not_use_user_logs)
+        and not spotter.false_activation -- not verified YET
+);
+
+-- 2) Достаем необходимые поля из протобуфов вандерлогов
+$wonder_basket_logs = (
+    select
+        yson_raw['speechkit_response']['response']['directives'] as directives,
+        yson_raw['speechkit_request']['application'] as application,
+        request['device_state'] as device_state,
+        request['additional_options'] as additional_options,
+        yson_raw['speechkit_response']['megamind_analytics_info'] as analytics_info,
+        yson_raw['speechkit_response']['megamind_analytics_info']['iot_user_info'] as iot_config,
+        yson_raw['speechkit_response']['request']['environment_state'] as environment_state,
+        request['location'] as request_location,
+
+        w.* WITHOUT w.yson_raw
+    from $wonder_prepared as w
+    where
+         $is_good_app(app, 'all')
+         and if( -- confirmed with Dubov, Mammaev, Ozornin, Naydin, should be checked, that it works
+            $is_good_app(app, 'quasar') or $is_good_app(app, 'tv'),
+                (client.application.quasmodrom_group == 'production' and client.application.quasmodrom_subgroup == 'production')
+                or (client.application.quasmodrom_group == 'beta' and client.application.quasmodrom_subgroup == 'beta')
+                or client.application.quasmodrom_group is null,
+            true
+         )
+);
+
+-- https://st.yandex-team.ru/MEGAMIND-3465
+$wonder_logs_grouped = (
+    select
+    *
+    from (
+        select
+            min_by(TableRow(), is_empty_asr)
+        from $wonder_basket_logs
+        group by message_id, `uuid`
+    )
+    flatten columns
+);
+
+-- 3) Достаем все необходимые поля из prepared
+$prepared_data = (
+    select
+        if(app == "yandex_phone", "launcher", app) as app,
+        input_type,
+        is_new,
+        req_id as request_id,
+        session_id,
+        fielddate,
+        intent,
+        generic_scenario,
+        session_sequence,
+        `uuid`,
+        query,
+        child_confidence,
+        reply,
+        device_id,
+        location
+    FROM RANGE($prepared_logs_expboxes, $date_start, $date_end)
+    where
+        (do_not_use_user_logs is null or not do_not_use_user_logs)
+        and $is_good_app(app, 'all')
+);
+
+-- 4) Объединяем вандерлоги и prepared по req_id
+insert into $output_table with truncate
+select
+    p.`uuid`??w.`uuid` as `uuid`,
+    w.request_id as request_id,
+    p.app??w.app as app,
+    p.fielddate??w.fielddate as fielddate,
+    p.device_id??w.device_id as device_id,
+    p.location??w.request_location as location,
+    p.input_type??"voice" as input_type, -- из вандерлогов берём только запросы с подавленным сайдспичом, для остальных должны быть типы в prepared, поэтому можно смело утверждать, что вандерложные голосовые
+    w.*, p.* without p.`uuid`, w.`uuid`, w.request_id, p.request_id, p.app, w.app, p.fielddate, w.fielddate, p.device_id, w.device_id, p.location, w.request_location, p.input_type
+from $wonder_logs_grouped as w
+left join any $prepared_data as p
+using(request_id)
+where
+    (
+        w.is_empty_asr or (
+            (w.is_empty_asr is null or not w.is_empty_asr)
+            and input_type in $input_types
+            and query is not null
+            and String::Strip(query) != ""
+        )
+    )
+    and not $bad_uuids(p.`uuid`??w.`uuid`)

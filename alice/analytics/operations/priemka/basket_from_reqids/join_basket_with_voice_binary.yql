@@ -1,0 +1,84 @@
+PRAGMA yt.HybridDqExecution;
+PRAGMA dq.EnableFullResultWrite;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+-- merge voice binary with primary voice requests
+$with_binary = (
+    SELECT
+        a.*,
+        IF (a.reversed_session_sequence==0 AND a.fetcher_mode == "voice",
+            dowloaded.voice_binary, NULL) AS voice_binary
+    FROM
+        {{input1}} AS a
+    LEFT JOIN
+        {{input2}} AS dowloaded
+    ON
+        a.real_reqid == dowloaded.req_id
+);
+
+-- whilelist sessions where primary voice request has missing voice binary
+$good_voice_sessions =
+    SELECT DISTINCT
+        session_id
+    FROM (
+        SELECT
+            real_reqid,
+            session_id,
+            fetcher_mode,
+            reversed_session_sequence
+        FROM
+            {{input1}}
+        WHERE
+            reversed_session_sequence==0 AND (fetcher_mode != "voice" OR
+                real_reqid IN (
+                    SELECT req_id
+                    FROM {{input2}}
+                    WHERE voice_binary IS NOT NULL
+                ))
+    )
+    ;
+
+$valid =
+    SELECT *
+    FROM
+        $with_binary
+    WHERE
+        session_id IN $good_voice_sessions;
+-- main result output
+INSERT INTO {{output1}}
+    WITH TRUNCATE
+SELECT *
+FROM
+    $valid;
+
+-- UNCOMMENT BELOW FOR DEBUG
+
+-- $rejected =
+--     SELECT *
+--     FROM
+--         $with_binary
+--     WHERE
+--         session_id NOT IN $good_voice_sessions;
+
+-- -- stats
+-- SELECT
+--     'valid' AS _group,
+--     count(*) AS num_rows,
+--     count (distinct session_id) AS num_sessions,
+--     count (distinct real_reqid) AS num_requests,
+-- FROM
+--     $valid
+-- UNION ALL
+-- SELECT
+--     'rejected' AS _group,
+--     count(*) AS num_rows,
+--     count (distinct session_id) AS num_sessions,
+--     count (distinct real_reqid) AS num_requests,
+-- FROM
+--     $rejected
+--     INTO RESULT `stats`;
+
+-- rejected requests
+-- SELECT *
+-- FROM
+--     $rejected INTO RESULT `rejected`;

@@ -1,0 +1,90 @@
+
+-- поиск подозрительных сочетаний puid + device_id которые могут означать активацию тестером или иным не конечным пользователем.
+
+$dayuse_cube = SELECT * FROM {{param[dayuse_table]}};
+$blacklist_pairs_stations_table = {{param[blacklist_pairs_stations_table]}};  -- output
+$hotel_devices_ids = (SELECT device_id
+        FROM `//home/quasar_infra/backend/db_snapshots/current/auxiliary_config`
+        WHERE auxiliary_config_provider_id == 1);
+
+-- blacklisting params
+$activation_gap = 10;  -- min gap between early fielddates to consider as activation issue
+$bottom_fielddates_depth = 4;  -- number of early fielddates to collect for analysis
+$suspect_puid_min_devices = 10;
+
+-- selecting dayuse records with defined ids
+$dayuse_prefiltered =
+SELECT
+    device_id,
+    fielddate,
+    device_type,
+    is_subscription_device,
+    model,
+    puid,
+    app_version,
+    geo_id
+FROM $dayuse_cube
+WHERE
+    exclude IS NULL
+    and puid IS NOT NULL
+    AND NOT (device_type LIKE 'yandex_tv%')  -- remove smart TVs
+    AND NOT (device_type LIKE 'elari_atch')  -- remove elari smart watches, incl spelling error case
+    -- blacklist puids already filtered in dayuse
+;
+
+$first_fielddates =
+SELECT
+    device_id,
+    SOME (device_type) as device_type,
+    BOTTOM (fielddate, $bottom_fielddates_depth) as b_dates,
+    COUNT (distinct fielddate) as n_dates,
+    BOTTOM_BY (puid, fielddate, $bottom_fielddates_depth) as b_puids,
+    MIN_BY (puid, fielddate) as puid_0,
+    -- ListLength(ListUniq(BOTTOM_BY (puid, fielddate, $bottom_fielddates_depth))) as n_puids,
+FROM $dayuse_prefiltered
+WHERE puid is not null
+GROUP BY device_id
+;
+
+$first_fielddates_with_gaps =
+SELECT
+    device_id,
+    device_type,
+    b_dates,
+    n_dates,
+    -- n_puids,
+    b_puids,
+    b_puids[0] as puid_0,
+    -- DateTime::ToDays(cast (b_dates[3] AS Date) - cast(b_dates[0] AS Date)) as days_diff
+FROM $first_fielddates
+    WHERE
+        n_dates >= $bottom_fielddates_depth AND
+        (DateTime::ToDays(cast (b_dates[1] AS Date) - cast(b_dates[0] AS Date)) >= $activation_gap
+            AND b_puids[0] != b_puids[1]) OR
+        (DateTime::ToDays(cast (b_dates[2] AS Date) - cast(b_dates[1] AS Date)) >= $activation_gap
+            AND b_puids[0] != b_puids[2]) OR
+        (DateTime::ToDays(cast (b_dates[3] AS Date) - cast(b_dates[2] AS Date)) >= $activation_gap
+            AND b_puids[0] != b_puids[3])
+;
+
+$suspect_puids =
+SELECT
+    puid_0,
+FROM $first_fielddates_with_gaps
+GROUP BY puid_0
+HAVING COUNT(distinct device_id) > $suspect_puid_min_devices
+;
+
+$suspect_pairs =
+SELECT
+    device_id,
+    puid_0 as puid,
+    device_type
+FROM $first_fielddates_with_gaps
+WHERE puid_0 in $suspect_puids
+    AND NOT (device_id IN $hotel_devices_ids)
+;
+
+insert into $blacklist_pairs_stations_table WITH TRUNCATE
+SELECT * from $suspect_pairs
+;

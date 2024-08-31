@@ -1,0 +1,19 @@
+OWNER(
+    g:amanda
+    alkapov
+)
+
+RECURSE(
+    account
+    app
+    common
+    debug
+    device
+    experiments
+    features
+    help
+    location
+    params
+    queryparams
+    uuid
+)

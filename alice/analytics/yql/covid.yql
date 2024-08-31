@@ -1,0 +1,29 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+Pragma yson.disablestrict;
+
+$start = {{param.date}};
+$end = {{param.date}};
+
+$prepared = "//home/alice/dialog/prepared_logs_expboxes";
+$res = "//home/voice/nstbezz/datasets/covid";
+$blndr_table = "//home/voice/nstbezz/datasets/covid_blndr";
+$blndr = select aggregate_list(query) from $blndr_table;
+
+$re_black = Re2::Match(".*(новости|как дела|что .*творится|ситуация|обстановк|что .*происходит|что .*нового|песня|путин|обращен|выступлен|видео|включи|слушать|скача|повтори|перевод|переведи|навык|сказк|на карте|карт(а|у|ы)|сколько стоит|сайт|точка|стоп|такси|ютуб|фильм|мультик|сериал|эфир|трек|радио|комп|антивирус|спой|ротовирус|коронка|хантавирус|(на|по)(-| )английск|(на|по)(-| )китайск|(на|по)(-| )японск|(на|по)(-| )французск|(на|по)(-| )немецк|золот).*");
+
+$re_wide = Re2::Match(".*(вирус|ковид|covid|корон|карантин).*");
+
+$q1 = select String::ToLower(query) as query, reply, app, intent, generic_scenario, TableName() as dt, `uuid`
+from range($prepared, $start, $end);
+
+$q2 = select `uuid`, dt, query, reply, app, intent, 
+if(String::ToLower(generic_scenario) in aslist("covid", "wizard"), intent, generic_scenario) as scenario,
+$re_wide(query) as query_wide,
+$re_black(query) as query_black,
+listhas($blndr, query) as query_blndr
+from $q1;
+
+insert into $res
+select dt, app, scenario, query_wide, query_black, query_blndr, count(distinct `uuid`) as cnt_uuid, count(*) as cnt_events
+from $q2 group by dt, app, scenario, query_wide, query_black, query_blndr;

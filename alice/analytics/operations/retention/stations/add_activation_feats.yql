@@ -1,0 +1,99 @@
+-- code for "RETN: ADD ACTIVATION FEATS" YQL cube
+-- tested https://yql.yandex-team.ru/Operations/YOsmcguEI2IGXCVUu4mPIWickHUn-A1x8IUdKwa15pQ=
+
+$dayuse_with_activations_and_features = SELECT * FROM {{input1}};
+
+$has_iot_activations = ($devices_records, $start, $end) -> (ListAny(ListMap(
+            ListMap(Yson::ConvertToList($devices_records),
+                    ($x) -> {$x = Yson::ConvertToStringList($x); RETURN $x[2]}),
+            ($x)-> (($x >= $start) AND ($x <= $end))
+            )));
+
+$advanced_activations_features =
+SELECT
+    device_id,
+    MIN_BY(device_type, fielddate) as device_type,
+--     MIN_BY(model, fielddate) as model,
+--     SOME(is_subscription_device) as is_subscription_device,
+
+    SOME(activation_date) AS activation_date,
+--     MIN_BY(geo_id, fielddate) as activation_region,
+    MIN_BY(Geo::RoundRegionById(CAST(geo_id AS Int32), "country").id, fielddate) as activation_country,
+    MIN_BY(puid, fielddate) AS activation_puid,
+
+    ListHas(AGGREGATE_LIST_DISTINCT(subscription_state), 'active') as has_active_subscription_7d,
+    ListHas(AGGREGATE_LIST_DISTINCT(subscription_declared_state), 'trial') as has_trial_subscription_7d,
+    ListHas(AGGREGATE_LIST_DISTINCT(subscription_declared_state), 'transactional') as has_promo_subscription_7d,
+    ListHas(AGGREGATE_LIST_DISTINCT(subscription_declared_state), 'premium') as has_premium_subscription_7d,
+    ListHas(AGGREGATE_LIST_DISTINCT(subscription_state), 'churned') as has_churned_subscription_7d,
+    NOT ListHasItems(ListNotNull(AGGREGATE_LIST_DISTINCT(subscription_state))) as no_any_subscription_7d,
+    ListAny(AGGREGATE_LIST_DISTINCT(hdmi_plugged)) AS hdmi_plugged_7d,
+    (MAX(has_child_requests) == 1) ?? false AS has_child_requests_7d,
+
+    (MAX_BY(Yson::GetLength(iot_active_devices), fielddate) > 0) ?? false AS has_iot_active_device_7d,
+    MAX_BY($has_iot_activations(iot_active_devices, activation_date, fielddate), fielddate) as  has_iot_device_activation_7d,
+  -- assuming `iot_active_devices` contain all iot activations up to fielddate (otherwise uncomment alternatives)
+  -- IF (ListMax(AGGREGATE_LIST_DISTINCT(Yson::GetLength(iot_active_devices))) > 0, 'has_iot_active_device_7d'),
+  -- IF (ListAny(AGGREGATE_LIST_DISTINCT($lambda1(iot_active_devices, activation_date, fielddate))), 'has_iot_device_activation_7d'),
+
+    ListUniq(ListFlatten(AGGREGATE_LIST_DISTINCT(scenarios_features))) AS activation_scenarios_features,
+
+FROM $dayuse_with_activations_and_features
+WHERE cast (fielddate AS Date) - cast(activation_date AS Date) <= Interval("P7D")
+GROUP BY device_id
+;
+
+-- process table for join with retention cube in historic form
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    device_id,
+    activation_date,
+    activation_country,
+    ListNotNull(AsList(
+        IF (has_active_subscription_7d, 'has_active_subscription_7d'),
+        IF (has_trial_subscription_7d, 'has_trial_subscription_7d'),
+        IF (has_promo_subscription_7d, 'has_promo_subscription_7d'),
+        IF (has_premium_subscription_7d, 'has_premium_subscription_7d'),
+        IF (has_churned_subscription_7d, 'has_churned_subscription_7d'),
+        IF (no_any_subscription_7d, 'no_any_subscription_7d'),
+        IF (hdmi_plugged_7d, 'hdmi_plugged_7d'),
+        IF (has_child_requests_7d, 'has_child_requests_7d'),
+        IF (has_iot_active_device_7d, 'has_iot_active_device_7d'),
+        IF (has_iot_device_activation_7d, 'has_iot_device_activation_7d'),
+        ))  as activation_features,
+    activation_scenarios_features
+FROM $advanced_activations_features
+;
+
+-- separate reduce to get series of active weeks
+$retention_weeks =
+SELECT
+    device_id,
+    AGGREGATE_LIST_DISTINCT(
+        DateTime::ToDays(cast (fielddate AS Date) - cast(activation_date AS Date)) / 7
+        ) as active_weeks,
+FROM $dayuse_with_activations_and_features
+WHERE cast (fielddate AS Date) - cast(activation_date AS Date) <= Interval("P8W")
+GROUP BY device_id
+;
+
+-- join everything in big pivot
+$retention_pivot =
+SELECT
+    a.*,
+    b.*
+FROM (SELECT * FROM $advanced_activations_features) as a
+JOIN (SELECT * FROM $retention_weeks) as b
+ON a.device_id == b.device_id
+;
+
+-- output activation table file for end users
+INSERT INTO {{output2}}  WITH TRUNCATE
+SELECT * FROM $retention_pivot
+;
+
+-- output activation table file for end users
+INSERT INTO {{param[pivot_path]}} WITH TRUNCATE
+SELECT * FROM $retention_pivot
+ORDER BY activation_date, device_type, device_id
+;

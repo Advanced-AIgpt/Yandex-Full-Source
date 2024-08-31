@@ -1,0 +1,142 @@
+Use hahn;
+
+$app = "quasar";
+$accept_intents = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_accept_intents";
+-- $accept_autoverdict = "//home/alice/irinfox/VA-1190/stratification/" || $app || "_accept_autoverdict";
+
+$accept_sampled = $accept_intents || "_sample";
+
+PRAGMA File("slices_mapping.py", "arc://alice/analytics/tasks/VA-571/slices_mapping.py?hash=413d041c88f1db6b257f072607871b45066f28b0");
+$script = FileContent("slices_mapping.py");
+$get_sampling_intent = Python2::toloka_intent_to_sampling_intent(ParseType("(String?)->String"), $script);
+
+DEFINE SUBQUERY $count_by_query_stats($table) AS
+    SELECT
+        app,
+        COUNT(*) as all_queries,
+        COUNT_IF(input_type == "voice") as voice_queries,
+        COUNT_IF(input_type == "voice" and mds_key is not null) as voice_q_with_voice_url,
+        COUNT_IF(is_empty_asr == True) as with_empty_asr,
+        COUNT_IF(is_empty_asr == False) as not_empty_asr,
+        COUNT_IF(is_empty_asr is Null) as null_empty_asr,
+        COUNT_IF(is_new == "1 week") * 1.0 / COUNT(*) as queries_from_new_users,
+        COUNT_IF(is_new != "1 week") * 1.0 / COUNT(*) as queries_from_old_users
+    FROM $table as a
+    GROUP BY app
+END DEFINE;
+
+DEFINE SUBQUERY $count_by_intent_stats($table) AS
+
+    $total = (SELECT "total" as source, COUNT(*) as total FROM $table);
+    
+    SELECT s.sampling_intent as sampling_intent, s.cnt as q_abs, t.total as total_queries, (s.cnt * 1.0 / t.total) as q_share
+    FROM
+        (
+        SELECT sampling_intent, "total" as source, COUNT(*) as cnt
+        FROM(
+            SELECT $get_sampling_intent(toloka_intent) as sampling_intent
+            FROM $table as a
+        )
+        GROUP BY sampling_intent
+        ) as s
+    JOIN $total as t
+    USING(source)
+    ORDER BY q_share;
+END DEFINE;
+
+DEFINE SUBQUERY $check_queries_by_intent($table, $intent) AS
+    SELECT *
+    FROM $table
+    WHERE $get_sampling_intent(toloka_intent) == $intent;
+END DEFINE;
+
+$has_marker = ($text) -> {
+    RETURN IF(
+        $text REGEXP "ivi" OR
+        $text REGEXP " иви " OR
+        $text REGEXP " иви" OR
+        $text REGEXP "иви " OR
+        $text REGEXP "kinopoisk" OR
+        $text REGEXP "кинопоиск" OR
+        $text REGEXP "ютуб" OR
+        $text REGEXP "ютьуб" OR
+        $text REGEXP "ютьюб" OR
+        $text REGEXP "ютюб" OR
+        $text REGEXP "youtube" OR
+        $text REGEXP "you tube" OR
+        $text REGEXP "на рутубе" OR
+        $text REGEXP "amediatek" OR
+        $text REGEXP "амедиатек" OR
+        $text REGEXP "медиатек" OR
+        $text REGEXP "в контакт" OR
+        $text REGEXP "вконтакте" OR
+        $text REGEXP "в сети" OR
+        $text REGEXP "из сети" OR
+        $text REGEXP "в интернет" OR
+        $text REGEXP "яндекс видео" OR
+        $text REGEXP "на яндекс" OR
+        $text REGEXP "в яндекс" OR
+        $text REGEXP "бесплатн" OR
+        $text REGEXP "в высоком качеств" OR
+        $text REGEXP "в высоком разрешен" OR
+        $text REGEXP "в хорошем качеств" OR
+        $text REGEXP "на телевизор" OR
+        $text REGEXP "в браузер" OR
+        $text == "алиса видео" OR
+        $text == "алиса включи видео" OR
+        $text == "алиса включи клипы" OR
+        $text == "алиса включи видео про" OR
+        $text == "видео" OR
+        $text == "видео пожалуйста включи" OR
+        $text == "видеоклипы" OR
+        $text == "видеоролик" OR
+        $text == "включи видео алиса" OR
+        $text == "включи видео яндекс" OR
+        $text == "включи видеоклипы" OR
+        $text == "включи доступные видео" OR
+        $text == "включи клипы" OR
+        $text == "еще видео" OR
+        $text == "запусти видео" OR
+        $text == "клип" OR
+        $text == "клипы" OR
+        $text == "найди видео" OR
+        $text == "найди клип" OR
+        $text == "найди ролик" OR
+        $text == "ролики", True, FALSE)
+    };
+
+DEFINE SUBQUERY $check_video_queries($table) AS
+    SELECT 
+        COUNT_IF($has_marker(annotation_query)) as with_marker, 
+        COUNT_IF(not $has_marker(annotation_query)) as no_marker,
+        COUNT(*) as all_queries
+    FROM $table
+    WHERE $get_sampling_intent(toloka_intent) == "video";
+END DEFINE;
+
+SELECT * FROM $count_by_query_stats($accept_intents)
+INTO RESULT `accept queries stats (before sampling)`;
+
+SELECT * FROM $count_by_intent_stats($accept_intents)
+INTO RESULT `accept intent distribution (before sampling)`;
+
+-- after sampling stats
+SELECT * FROM $count_by_query_stats($accept_sampled)
+INTO RESULT `accept queries stats (after sampling)`;
+
+SELECT * FROM $count_by_intent_stats($accept_sampled)
+INTO RESULT `accept intent distribution (after sampling)`;
+
+-- по срезам
+
+SELECT * FROM $check_queries_by_intent($accept_sampled, "geo")
+INTO RESULT `accept geo queries (after sampling)`;
+
+SELECT * FROM $check_queries_by_intent($accept_sampled, "music")
+INTO RESULT `accept music queries (after sampling)`;
+
+SELECT * FROM $check_video_queries($accept_sampled)
+INTO RESULT `accept video queries stat (after sampling)`;
+
+SELECT * FROM $check_queries_by_intent($accept_sampled, "video")
+INTO RESULT `accept video queries (after sampling)`;

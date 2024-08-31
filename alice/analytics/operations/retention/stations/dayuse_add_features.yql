@@ -1,0 +1,91 @@
+-- code for "retn: DAYUSE ADD FEATS" YQL cube
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$dayuse_cube = SELECT * FROM {{input1}};
+$subscription_features = SELECT * FROM {{input2.subscription_features}};
+$megamind_features = SELECT * FROM {{input2.megamind_features}};
+
+$iot_features = SELECT * FROM {{input2.iot_features}};
+$blacklist_pairs_stations_table = SELECT * FROM {{param[blacklist_pairs_stations_table]}};
+
+-- selecting dayuse records with defined ids
+$dayuse_prefiltered =
+SELECT
+    fielddate,
+    if (is_subscription_device, device_type || '_subscription', device_type) as device_type,
+    model,
+    puid,
+    hdmi_plugged,
+    geo_id,
+    device_id,
+--     is_subscription_device,
+FROM $dayuse_cube
+WHERE
+    exclude is NULL AND
+    NOT (device_type LIKE 'yandex_tv%')  -- remove smart TVs (NOT ALL MAY BE REMOVED THIS WAY)
+    AND NOT (device_type LIKE 'elari_atch')  -- remove elari smart watches, incl spelling error case
+    -- blacklist puids already filtered in dayuse
+;
+
+-- removing records that match blacklist on puids to filter out fake activations
+-- consider filtering by BOTH puid and device_id from ../blacklist_puids_devices
+$dayuse_filtered =
+SELECT
+    a.*
+FROM (
+    SELECT * FROM $dayuse_prefiltered
+    ) as a
+LEFT ONLY JOIN ANY
+    (SELECT
+    device_id,
+    puid
+    FROM $blacklist_pairs_stations_table
+    ) as b
+ON a.puid == b.puid AND a.device_id = b.device_id
+;
+
+-- get features at activation date
+$activations=
+SELECT
+    device_id,
+    MIN(fielddate) as activation_date,
+FROM $dayuse_filtered
+    WHERE puid IS NOT NULL
+GROUP BY device_id
+;
+
+-- join daily device records with features tables (bloats...)
+$dayuse_with_activations_and_features =
+SELECT
+    dayuse.*,
+    activations.activation_date as activation_date,
+    subscription_features.state as subscription_state,
+    subscription_features.declared_state as subscription_declared_state,
+    megamind_features.has_child_requests as has_child_requests,
+    megamind_features.generic_scenarios as scenarios_features,
+    iot_features.*
+FROM (
+    SELECT * FROM $dayuse_filtered
+    ) as dayuse
+
+LEFT JOIN ANY (
+    SELECT * FROM $activations
+    ) as activations
+ON dayuse.device_id == activations.device_id
+
+LEFT JOIN ANY (SELECT * FROM $subscription_features) as subscription_features
+ON dayuse.puid == subscription_features.puid AND dayuse.fielddate == subscription_features.fielddate
+
+LEFT JOIN ANY (SELECT * FROM $megamind_features) as megamind_features
+ON dayuse.device_id == megamind_features.device_id AND dayuse.fielddate == megamind_features.fielddate
+
+LEFT JOIN ANY (SELECT * FROM $iot_features) as iot_features
+ON dayuse.puid == iot_features.puid AND dayuse.fielddate == iot_features.fielddate
+
+WHERE dayuse.fielddate >= activation_date
+;
+
+insert into  {{output1}} WITH TRUNCATE
+SELECT * FROM $dayuse_with_activations_and_features
+;

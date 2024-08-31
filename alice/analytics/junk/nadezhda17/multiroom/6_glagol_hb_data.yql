@@ -1,0 +1,117 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.Pool = 'voice';
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String) AND $date < CAST(CurrentUtcDate() AS String)};
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+--собираем хартбиты глагола
+$metrika = 
+(
+    SELECT DeviceID, AccountID, OriginalModel, TableName() AS fielddate, 
+    $s_to_datetime(EventDateTime) AS ts, 
+    Yson::ParseJson(EventValue) as value
+    FROM FILTER(`//logs/appmetrica-yandex-events/1d`, $date_filter) 
+    WHERE APIKey = 999537
+    AND EventName = 'glagold_heartbeat'
+);
+
+--округляем до минут события глагола 
+$rounding_heartbeats = 
+(
+    SELECT puid, device_id, device, fielddate, ts, MAX_BY(value, ts_with_sec) AS value
+    FROM
+    (
+        SELECT AccountID AS puid, DeviceID AS device_id, value, fielddate, OriginalModel AS device,
+        ts AS ts_with_sec, DateTime::StartOf(ts, DateTime::IntervalFromMinutes(1)) AS ts
+        FROM $metrika
+    )
+    GROUP BY puid, device_id, device, fielddate, ts
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/rounding_heartbeats_temp` WITH TRUNCATE 
+SELECT *
+FROM $rounding_heartbeats
+ORDER BY puid, device_id, ts;
+
+--распаршенные хартбиты
+$parsed_data = 
+(
+    SELECT puid, fielddate, ts, device_id AS hb_device_id, device AS hb_device, value.0 AS event_device_id, value.1 AS event_device_value
+    FROM
+    (
+        SELECT puid, device_id, device, fielddate, ts, DictItems(Yson::ConvertToDict(value)) AS value_list,
+        FROM $rounding_heartbeats
+    )
+    FLATTEN LIST BY value_list AS value
+    WHERE value.0 NOT IN ('', 'stats')
+    ORDER BY puid, ts
+);
+
+$parsed_data_with_platform = 
+(
+    SELECT p.*, a.device AS event_device,
+    AsStruct
+    (
+        Yson::ConvertToString(event_device_value.cluster_host) AS cluster_host, 
+        Yson::ConvertToString(event_device_value.cluster_state) AS cluster_state, 
+        Yson::ConvertToString(event_device_value.visible_host) AS visible_host
+    ) AS event_value   
+    FROM $parsed_data AS p 
+    INNER JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a ON a.device_id = p.event_device_id
+);
+
+$status = ($event_value) -> {RETURN CASE 
+
+    WHEN $event_value IS NULL THEN NULL
+
+    WHEN $event_value.cluster_state = 'CONNECTED' 
+    AND $event_value.cluster_host IS NOT NULL 
+    THEN 'я подключилась, ко мне подключились'
+
+    WHEN $event_value.cluster_state = 'CONNECTED' 
+    AND $event_value.cluster_host IS NULL 
+    THEN 'я подключилась, с той стороны какие-то проблемы'
+
+    WHEN $event_value.cluster_state != 'CONNECTED' 
+    AND $event_value.cluster_host IS NOT NULL 
+    THEN 'connection problem с моей стороны, ко мне подключились'
+
+    WHEN $event_value.cluster_state != 'CONNECTED' 
+    AND $event_value.cluster_host IS NULL 
+    THEN 'connection problem с моей стороны, с той стороны какие-то проблемы'
+
+    WHEN $event_value.cluster_state IS NULL 
+    AND $event_value.cluster_host IS NOT NULL
+    THEN 'discovery problem с моей стороны, ко мне подключились'
+
+    WHEN $event_value.cluster_state IS NULL 
+    AND $event_value.cluster_host IS NULL
+    THEN 'discovery problem с моей стороны, с той стороны какие-то проблемы'
+
+ELSE NULL END
+};
+
+$parsed_data_with_status = 
+(
+    SELECT fielddate, puid, ts,
+    hb_device_id, hb_device,
+    event_device_id, event_device,
+    event_value, $status(event_value) AS event_status
+    FROM $parsed_data_with_platform
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status` WITH TRUNCATE 
+SELECT *
+FROM 
+    (
+    SELECT *
+    FROM $parsed_data_with_status
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status`
+    WHERE NOT $date_filter(fielddate)
+)
+WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(30) AS String)
+;

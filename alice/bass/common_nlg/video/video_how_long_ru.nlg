@@ -1,0 +1,49 @@
+{% nlgimport "alice/bass/common_nlg/video/browser_video_gallery_ru.nlg" %}
+{% from "alice/bass/common_nlg/common/macros_ru.nlg" import inability %}
+
+{% macro time_left(data) %}
+    {% if data.hours % 10 == 1 and data.hours % 100 != 11 %}
+        остался
+    {% elif data.hours > 0 %}
+        осталось
+    {% elif data.minutes % 10 == 1 and data.minutes != 11 %}
+        осталась
+    {% else %}
+        осталось
+    {% endif %}
+
+    {% if data.hours == 0 and data.minutes == 0 %}
+        меньше минуты
+    {% endif %}
+
+    {% if data.hours > 0 %}
+        {{ data.hours }}
+        {{ 'час' | pluralize(data.hours, 'nom') }}
+    {% endif %}
+
+    {% if data.minutes > 0 %}
+        {{ data.minutes }}
+        {{ 'минут' | pluralize(data.minutes, 'nom') }}
+    {% endif %}
+
+    .
+
+{% endmacro %}
+
+{% phrase render_result %}
+    {% if 'video_how_long_is_not_supported' in context.attentions %}
+        {{ inability() }}
+    {% elif 'has_credits' in context.attentions %}
+        До финальных титров {{ time_left(context.attentions.get('has_credits')) }}
+    {% elif 'cartoon' in context.attentions %}
+        До конца мультфильма {{ time_left(context.attentions.get('cartoon')) }}
+    {% elif 'tv_show_episode' in context.attentions %}
+        До конца серии {{ time_left(context.attentions.get('tv_show_episode')) }}
+    {% elif 'movie' in context.attentions %}
+        До конца фильма {{ time_left(context.attentions.get('movie')) }}
+    {% elif 'video' in context.attentions %}
+        До конца видео {{ time_left(context.attentions.get('video')) }}
+    {% elif 'unknown_type' in context.attentions %}
+        До конца {{ time_left(context.attentions.get('unknown_type')) }}
+    {% endif %}
+{% endphrase %}

@@ -1,0 +1,33 @@
+Use hahn;
+PRAGMA yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$start = "2020-10-01";
+$end = "2021-02-28";
+
+
+$vins_logs = "//home/voice/vins/logs/dialogs";
+$with_asr = "//home/voice/jdkondratenko/VA-1984/context_data/general_with_asr";
+$empty_asr = "//home/voice/jdkondratenko/VA-1984/context_data/general_empty_asr";
+$context_request_ids = "//home/voice/jdkondratenko/VA-1984/context_data/general_with_asr_all_request_ids";
+$context_request_ids_empty = "//home/voice/jdkondratenko/VA-1984/context_data/general_empty_asr_all_request_ids";
+$output= "//home/voice/jdkondratenko/VA-1984/context_data/vins_logs_sample_with_context_all";
+
+$req_ids = (
+(SELECT context_request_id as request_id_src FROM $context_request_ids WHERE context_request_id IS NOT NULL)
+UNION ALL
+(SELECT context_request_id as request_id_src FROM $context_request_ids_empty WHERE context_request_id IS NOT NULL)
+UNION ALL
+(SELECT prev_request_id as request_id_src FROM $empty_asr WHERE prev_request_id IS NOT NULL)
+UNION ALL
+(SELECT request_id as request_id_src FROM $with_asr)
+UNION ALL
+(SELECT request_id as request_id_src FROM $empty_asr)
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT *
+FROM $req_ids as a
+JOIN RANGE($vins_logs, $start, $end) as b
+ON a.request_id_src = Yson::LookupString(b.request, "request_id");

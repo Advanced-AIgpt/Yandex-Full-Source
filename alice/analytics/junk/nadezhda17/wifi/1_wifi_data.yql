@@ -1,0 +1,76 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/1_device_wifi_info` WITH TRUNCATE 
+SELECT CAST(CAST((DateTime::FromSeconds(CAST(EventDate AS Uint32)) + 
+DateTime::IntervalFromHours(3)) AS Date) as String) AS fielddate, 
+DeviceID, OriginalModel, 
+IF(SUM(weight) >= 2, 1, 0) AS predicted_problems, 
+SUM(weight) AS weight,
+SUM(IF(EventName IN ('ysk_error_network', 'ysk_error_timeout'), 1, 0)) AS ysk_error_network_timeout,
+SUM(IF(EventName IN ('ysk_error_network', 'ysk_error_timeout'), amount, 0)) AS ysk_error_network_amount
+FROM 
+(
+SELECT EventDate, DeviceID, OriginalModel, EventName, amount, 
+CASE 
+
+WHEN EventName = 'httpError' AND OriginalModel = 'yandexmini' AND amount >= 6 THEN 1
+WHEN EventName = 'httpError' AND OriginalModel = 'yandexstation' AND amount >= 3 THEN 1
+WHEN EventName = 'httpError' AND OriginalModel = 'yandexmicro' AND amount >= 7 THEN 1
+WHEN EventName = 'httpError' AND OriginalModel = 'yandexstation_2' AND amount >= 3 THEN 1
+
+WHEN EventName = 'ysk_voicedialog_conlost_network_error' AND OriginalModel = 'yandexmini' AND amount >= 3 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_network_error' AND OriginalModel = 'yandexstation' AND amount >= 6 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_network_error' AND OriginalModel = 'yandexmicro' AND amount >= 4 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_network_error' AND OriginalModel = 'yandexstation_2' AND amount >= 6 THEN 1
+
+WHEN EventName = 'ysk_voicedialog_conlost_pong_timeout' AND OriginalModel = 'yandexmini' AND amount >= 87 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_pong_timeout' AND OriginalModel = 'yandexstation' AND amount >= 7 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_pong_timeout' AND OriginalModel = 'yandexmicro' AND amount >= 20 THEN 1
+WHEN EventName = 'ysk_voicedialog_conlost_pong_timeout' AND OriginalModel = 'yandexstation_2' AND amount >= 10 THEN 1
+
+WHEN EventName = 'wifiStatus' AND OriginalModel = 'yandexmini' AND amount >= 50 THEN 1
+WHEN EventName = 'wifiStatus' AND OriginalModel = 'yandexstation' AND amount >= 73 THEN 1
+WHEN EventName = 'wifiStatus' AND OriginalModel = 'yandexmicro' AND amount >= 78 THEN 1
+WHEN EventName = 'wifiStatus' AND OriginalModel = 'yandexstation_2' AND amount >= 100 THEN 1
+
+ELSE 0
+END AS weight
+FROM 
+(
+    SELECT EventDate, DeviceID, OriginalModel, EventName, COUNT(*) AS amount
+    FROM 
+    (
+        SELECT EventDate, DeviceID, OriginalModel,
+        IF(EventName LIKE 'wifi%', 'wifiStatus', EventName) AS EventName
+        FROM FILTER('//logs/appmetrica-yandex-events/1d', $date_filter)
+        WHERE APIKey = 999537
+        AND OriginalModel IN ('yandexmini', 'yandexmicro', 'yandexstation', 'yandexstation_2')
+        AND 
+        (
+            EventName = 'ysk_voicedialog_conlost_pong_timeout' 
+            OR 
+            (
+                EventName = 'ysk_voicedialog_conlost_network_error'  
+                AND EventValue LIKE '%NetworkError: Socket.connection timeout elapsed%'
+            )
+            OR 
+            (
+                EventName = 'httpError' 
+                AND EventValue = '{"client":"clickdaemon","code":"28","request":"write-json-batch"}'
+            )
+            OR 
+            (
+                EventName IN ('wifiConnect', 'wifiDisconnect', 'wifiStatus') 
+                AND Yson::ConvertToInt64(Yson::ParseJson(EventValue).wifi) != 3
+            )
+            OR EventName IN ('ysk_error_network', 'ysk_error_timeout')
+        )
+    )
+    GROUP BY EventDate, DeviceID, OriginalModel, EventName
+)
+)
+GROUP BY EventDate, DeviceID, OriginalModel;
+

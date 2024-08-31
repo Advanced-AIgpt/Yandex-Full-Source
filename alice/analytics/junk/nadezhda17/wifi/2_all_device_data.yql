@@ -1,0 +1,71 @@
+USE hahn;
+PRAGMA yt.Pool = 'voice';
+
+--последние 5 дней
+$date_filter = ($date) -> {RETURN $date BETWEEN CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)
+AND CAST(CurrentUtcDate() AS String)};
+
+--проклеиваем между собой
+$matched_devices = 
+(
+    SELECT s.device_id AS device_id, s.socket_fielddate AS fielddate, 
+    IF(r.req_fielddate IS NOT NULL, 1, 0) AS with_reqs,
+    predicted_problems??0 AS predicted_problems, 
+    ysk_error_network_timeout??0 AS ysk_error_network_timeout,
+    ysk_error_network_amount??0 AS ysk_error_network_amount, 
+    weight??0 AS weight
+    FROM  
+    (
+        SELECT DISTINCT device_id, fielddate AS socket_fielddate
+        FROM `//home/alice/cubes/retention/stations/last` 
+        WHERE $date_filter(fielddate)
+    ) AS s 
+    LEFT JOIN 
+    (
+        SELECT DISTINCT device_id, fielddate AS req_fielddate
+        FROM `//home/voice/nadezhda17/common/plus_metrics/quasar_geo` 
+        WHERE $date_filter(fielddate)
+    ) AS r ON s.device_id = r.device_id AND s.socket_fielddate = r.req_fielddate
+    LEFT JOIN 
+    (
+        SELECT DeviceID AS device_id, fielddate AS problem_fielddate, 
+        predicted_problems, ysk_error_network_timeout,
+        ysk_error_network_amount, weight
+        FROM `//home/voice/nadezhda17/common/wifi_problems/1_device_wifi_info`
+    ) AS p ON s.device_id = p.device_id AND s.socket_fielddate = p.problem_fielddate
+);
+
+$uniq_dates = 
+(
+    SELECT `date` AS fielddate
+    FROM `//home/sprav/assay/common/Dates` 
+    WHERE $date_filter(`date`)
+);
+
+$total = 
+(
+    SELECT u.fielddate AS fielddate, a.device_id AS device_id, a.device AS device
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a 
+    CROSS JOIN $uniq_dates AS u 
+    WHERE u.fielddate >= a.init_date 
+    AND a.device IN ('yandexmini', 'yandexmicro', 'yandexstation', 'yandexstation_2')
+);
+
+$all_data =
+(
+    SELECT t.fielddate AS fielddate, t.device_id AS device_id, t.device AS device,
+    IF(m.fielddate IS NOT NULL, 1, 0) AS in_socket, 
+    m.with_reqs??0 AS with_reqs,
+    m.predicted_problems??0 AS predicted_problems, 
+    m.ysk_error_network_timeout??0 AS ysk_error_network_timeout,
+    m.ysk_error_network_amount??0 AS ysk_error_network_amount, 
+    m.weight??0 AS weight
+    FROM $total AS t 
+    LEFT JOIN $matched_devices AS m ON m.fielddate = t.fielddate AND m.device_id = t.device_id
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/2_device_total_info` WITH TRUNCATE 
+SELECT *
+FROM $all_data
+ORDER BY device_id, fielddate;
+

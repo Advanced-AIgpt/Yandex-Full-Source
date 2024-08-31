@@ -1,0 +1,66 @@
+PRAGMA SimpleColumns;
+PRAGMA AllowDotInAlias;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = "100";
+PRAGMA yt.DefaultMaxJobFails = "1";
+PRAGMA yt.PoolTrees = "physical";
+PRAGMA yt.TentativePoolTrees = "cloud";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$type = {{param.type->quote() ?? "accept"->quote()}};
+
+$basket_table = '//home/alice/toloka/' || $type || '/ue2e_quasar/basket';
+
+$metrics_list = [
+    'integral',
+    'general_conversation_fraud',
+    'fraud',
+    'no_commands',
+    'commands',
+    'music',
+    'radio',
+    'alarms_timers',
+    'toloka_gc',
+    'search',
+    'translate',
+    'video',
+    'geo'
+];
+
+
+$newbies = (
+    SELECT request_id as req_id
+    FROM $basket_table
+    WHERE is_new == '1 week'
+);
+
+
+DEFINE ACTION $count_metrics($basket, $device, $metric_name) as
+     $metrics = (
+        SELECT 
+            TableName() as fielddate,
+            TableRow().$metric_name as current_metric
+        FROM {{input1}}
+        WHERE req_id IN $newbies
+    );
+
+    UPSERT INTO stat.`VoiceTech/Dialog/ue2e_fixed_buckets/quality_metrics/daily`
+    SELECT 
+        fielddate,
+        $basket as basket,
+        $device as device,
+        $metric_name as metric_type,
+        AVG(current_metric) as metric_value,
+        SUM(current_metric) as metric_num,
+        COUNT_IF(current_metric IS NOT NULL) as metric_denom,
+    FROM $metrics
+    GROUP BY Unwrap(fielddate) as fielddate
+END DEFINE;
+
+
+EVALUATE FOR $metric in $metrics_list 
+    DO $count_metrics(
+        'ue2e_' || $type || '__is_new',
+        'quasar',
+        'metric_' || $metric
+    )

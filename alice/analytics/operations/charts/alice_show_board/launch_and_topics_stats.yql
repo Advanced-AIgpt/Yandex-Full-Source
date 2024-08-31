@@ -1,0 +1,93 @@
+-- ВЫЧИСЛЯЕМ DAU, статистику по настройкам Шоу для пользователей
+
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+
+$show_launch_stats_path = $show_charts_folder || "/show_launch_stats";
+$topics_skills_news_stat_path = $show_charts_folder || "/topics_skills_news_stat";
+$topic_amount_data_path = $show_charts_folder || "/topic_amount";
+
+
+$morning_show_launch = (
+    SELECT fielddate, req_id, puid, app,
+    $get_show_info_from_analytics_info(analytics_info) AS show_info
+    FROM RANGE(`//home/alice/dialog/prepared_logs_expboxes`, $date_start, $date_end)
+    WHERE app IN $show_apps
+    AND generic_scenario IN $show_scenarios
+    AND (parent_req_id == req_id OR (parent_req_id ?? "") == "")
+    AND input_type != "tech"
+)
+;
+
+-- статистика по запускам шоу (запросы + DAU)
+INSERT INTO $show_launch_stats_path WITH TRUNCATE
+SELECT fielddate, app ?? "Total" AS app, show_type ?? "Total" AS show_type, settings ?? "Total" AS settings,
+    COUNT(DISTINCT req_id) AS req_amount,
+    COUNT(DISTINCT puid) AS user_amount
+FROM
+(
+    SELECT fielddate, req_id, puid,
+            show_info.show_type AS show_type,
+            show_info.settings AS settings, app
+    FROM $morning_show_launch
+)
+GROUP BY fielddate, CUBE(show_type, settings, app)
+UNION ALL
+SELECT *
+FROM $show_launch_stats_path
+WHERE fielddate < $date_start OR fielddate > $date_end
+;
+
+$last_day_users = (
+    SELECT COUNT(DISTINCT req_id)
+    FROM $morning_show_launch
+    WHERE fielddate == $date_end
+)
+;
+
+-- количество юзеров по кастомным скиллам
+INSERT INTO $topics_skills_news_stat_path WITH TRUNCATE
+SELECT "skill" AS type, skill, COUNT(DISTINCT puid) AS user_amount, $last_day_users AS total_users
+FROM
+(
+    SELECT skill, puid
+    FROM $morning_show_launch
+    FLATTEN LIST BY show_info.skills AS skill
+    WHERE fielddate == $date_end
+)
+GROUP BY skill
+UNION ALL
+SELECT "news_topic" AS type, news_topic, COUNT(DISTINCT puid) AS user_amount, $last_day_users AS total_users
+FROM
+(
+    SELECT news_topic, puid
+    FROM $morning_show_launch
+    FLATTEN LIST BY show_info.news AS news_topic
+    WHERE fielddate == $date_end
+)
+WHERE NOT String::StartsWith((news_topic??''), '__mixed_news__')
+GROUP BY news_topic
+UNION ALL
+SELECT "topic" AS type, topic, COUNT(DISTINCT puid) AS user_amount, $last_day_users AS total_users
+FROM
+(
+    SELECT topic, puid
+    FROM $morning_show_launch
+    FLATTEN LIST BY show_info.topics AS topic
+    WHERE fielddate == $date_end
+)
+GROUP BY topic;
+
+$topic_amount_data =
+(
+    SELECT puid, MAX_BY(ListLength(show_info.topics), fielddate) AS topics_amount
+    FROM $morning_show_launch
+    WHERE fielddate == $date_end
+    GROUP BY puid
+);
+
+-- сколько топиков у юзеров
+INSERT INTO $topic_amount_data_path WITH TRUNCATE
+SELECT topics_amount, COUNT(puid) AS user_amount, $last_day_users AS total_users
+FROM $topic_amount_data
+GROUP BY topics_amount;

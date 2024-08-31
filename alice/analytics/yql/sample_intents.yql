@@ -1,0 +1,92 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+PRAGMA yt.QueryCacheMode = "normal";
+
+
+$app_param = {{param.app}};
+$sample_size = {{param.sample_size}};
+$date = {{param.date}};
+
+$auto_apps = ($app) -> {RETURN $app REGEXP "auto"};
+$navi_apps = ($app) -> {RETURN $app == "navigator"};
+$general_apps = ($app) -> {RETURN $app REGEXP "search_app" or $app REGEXP "browser" or $app REGEXP "stroka" or $app REGEXP "yabro" or $app regexp "alice_app"};
+$quasar_apps = ($app) -> {RETURN $app REGEXP "quasar" or $app REGEXP "small_smart_speakers"};
+
+$choose_apps = ($app) -> {RETURN
+    CASE $app_param
+        WHEN "quasar" THEN $quasar_apps($app)
+        WHEN "general" THEN $general_apps($app)
+        WHEN "auto" THEN $auto_apps($app)
+        WHEN "navi" THEN $navi_apps($app)
+        ELSE $app_param == $app
+    END
+};
+
+-- sample sizes from graphs
+-- auto : limit 5000
+-- general: limit 10000
+-- navi: limit 5000
+-- quasar: limit 11000
+$expboxes_intents_grep = (
+    select Digest::MurMurHash((prev_query?? "") || (prev_reply ?? "") || (query ?? "")) as dialog_hash_id, t.*
+    from (
+        select app, query, reply, intent, session_id, `uuid`, input_type, req_id, server_time_ms, do_not_use_user_logs,
+            lag(query) over w as prev_query, lag(reply) over w as prev_reply, lag(intent) over w as prev_intent, lag(req_id) over w as prev_req_id, lag(do_not_use_user_logs) over w as prev_do_not_use_user_logs
+        from (
+            select app, query, reply, String::JoinFromList(String::SplitToList(intent, "\t"), ".") as intent, session_id, `uuid`, input_type, req_id, server_time_ms, do_not_use_user_logs
+            from range(`//home/alice/dialog/prepared_logs_expboxes`, $date, $date)
+            WHERE $choose_apps(app) and generic_scenario != 'side_speech'
+        )
+        window w as (
+            partition by session_id
+            order by server_time_ms
+        )
+    ) as t
+    where (prev_do_not_use_user_logs == False and do_not_use_user_logs == False) and
+            (Find(intent ?? "", "external_skill") is null and Find(prev_intent ?? "", "external_skill") is null) and
+            (query ?? "") != "" and (prev_reply ?? "") != ""
+)
+;
+
+$expboxes_with_mds_key = (
+    select ListLast(String::SplitToList(asr.voice_by_uniproxy.mds ?? "", "get-speechbase/")) as mds_url, ListLast(String::SplitToList(prev_asr.voice_by_uniproxy.mds ?? "", "get-speechbase/")) as prev_mds_url, t.* without asr, prev_asr
+    from (
+        select *
+        from (
+            SELECT *
+            from $expboxes_intents_grep as l
+            left join
+            (select _megamind_request_id as req_id, asr from range(`//home/alice/wonder/logs`, $date, $date)) as r
+            on l.req_id == r.req_id
+        ) as l
+        left join
+        (select _megamind_request_id as prev_req_id, asr as prev_asr from range(`//home/alice/wonder/logs`, $date, $date)) as r
+        on l.prev_req_id == r.prev_req_id
+    ) as t
+)
+;
+
+insert into {{output1}}
+SELECT *
+from (
+    select some(AsStruct(
+        dialog_hash_id as dialog_hash_id,
+        prev_query as query0,
+        prev_reply as query1,
+        query as query2,
+        intent as intent,
+        input_type as type,
+        prev_intent as prev_intent,
+        req_id as reqid,
+        prev_req_id as prev_reqid,
+        mds_url as mds_url,
+        prev_mds_url as prev_mds_url,
+        app as app,
+        if (prev_query is not null, 3, 1) as context_len
+    )) as query_info
+    from $expboxes_with_mds_key
+    group by dialog_hash_id
+)
+FLATTEN COLUMNS
+order by random(dialog_hash_id)
+limit $sample_size

@@ -1,0 +1,61 @@
+-- ВЫЧИСЛЯЕМ WAU
+
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+
+$show_wau_path = $show_charts_folder || "/wau";
+
+$daysDiff = ($d1, $d2) -> {RETURN DateTime::ToDays(CAST($d1 AS Date) - CAST($d2 AS Date))};
+
+$week_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(6))
+};
+
+$weekly_dates_range = ($fielddate) -> {
+    RETURN ListMap(
+        ListFromRange(0, min_of(nvl($daysDiff($date_end, $fielddate), 0) + 1, 7)),
+        ($x) -> {
+            RETURN CAST(CAST($fielddate AS Date) + DateTime::IntervalFromDays($x) AS String)
+        }
+    )
+};
+$morning_show_launch = (
+    SELECT req_id, puid, app,
+    $get_show_info_from_analytics_info(analytics_info) AS show_info, $weekly_dates_range(fielddate) AS weekly_dates
+    FROM RANGE(`//home/alice/dialog/prepared_logs_expboxes`, $week_ago($date_start), $date_end)
+    WHERE app IN $show_apps
+    AND generic_scenario IN $show_scenarios
+    AND (parent_req_id == req_id OR (parent_req_id ?? "") == "")
+    AND input_type != "tech"
+)
+;
+
+$wau = (
+    SELECT *
+    FROM (
+        SELECT fielddate, show_type ?? "Total" AS show_type, settings ?? "Total" AS settings, app ?? "Total" AS app, COUNT(DISTINCT puid) AS users
+        FROM (
+            SELECT fielddate, req_id, puid, app,
+                    show_info.show_type AS show_type,
+                    show_info.settings AS settings
+            FROM $morning_show_launch
+            FLATTEN BY weekly_dates AS fielddate
+        ) GROUP BY fielddate, CUBE(show_type, settings, app)
+    )
+    WHERE fielddate between $date_start and $date_end
+)
+;
+
+
+INSERT INTO $show_wau_path WITH TRUNCATE
+SELECT *
+FROM
+(
+    SELECT *
+    FROM $show_wau_path AS w
+    LEFT ONLY JOIN (SELECT DISTINCT fielddate FROM $wau) AS m ON w.fielddate = m.fielddate
+    UNION ALL
+    SELECT *
+    FROM $wau
+)
+ORDER BY fielddate desc, show_type, settings, app;

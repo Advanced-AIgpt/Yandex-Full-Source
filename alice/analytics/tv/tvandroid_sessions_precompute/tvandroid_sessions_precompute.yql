@@ -1,0 +1,236 @@
+PRAGMA simplecolumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA file("app_projects", "yt://hahn/statbox/statbox-dict-last/tvandroid_model_specifications.json");
+PRAGMA file("tvandroid_drop_ip", "yt://hahn/statbox/statbox-dict-last/tvandroid_drop_ip.json");
+PRAGMA yt.ExpirationInterval = '2d';
+
+$job_date = {{param.date}};
+$recalc_period = unwrap(cast({{param.recalc_period}} as Int64));
+$update_period = unwrap(cast({{param.update_period}} as Int64));
+
+$appmetrica_path = "//logs/appmetrica-yandex-events/1d";
+$tvsessions_path = "//home/smarttv/logs/tvandroid_sessions_precompute/1d";
+$used_promo_path = "//home/paskills/billing/snapshots/" || $job_date || "/v_used_device_promo";
+$activation_path = "//home/sda/cubes/tv/activations/last";
+
+$date_pattern = "%Y-%m-%d";
+$date_format = DateTime::Format($date_pattern);
+$datetime_format = DateTime::Format("%Y-%m-%d %H:%M:%S");
+$time_zone = 'Europe/Moscow';
+$timestamp_to_datetime = ($timestamp) -> {
+    RETURN AddTimeZone(DateTime::FromSeconds(CAST($timestamp AS Uint32)), $time_zone);
+};
+
+$parse_date = ($date_string) -> {
+    RETURN DateTime::MakeDatetime((DateTime::Parse("%Y-%m-%d"))($date_string))
+};
+
+$string_date_add_days = ($date, $days) -> {
+    RETURN $date_format(DateTime::MakeDate(DateTime::Parse($date_pattern)($date)) + Interval("P1D") * $days);
+};
+
+
+$frst_date = $string_date_add_days($job_date, -($recalc_period + $update_period));
+$last_date = $job_date;
+
+$tvandroid_model_spec = CAST(FileContent("app_projects") AS Json);
+$get_model_spec_explicit = ($manufacturer, $model, $field) -> {
+    RETURN Yson::YPath(
+        $tvandroid_model_spec,
+        '/' || UNWRAP($manufacturer) || '/' || UNWRAP($model) || '/' || $field,
+        Yson::Options(false as Strict)
+    );
+};
+$tvandroid_drop_ip = CAST(FileContent("tvandroid_drop_ip") AS Json);
+$is_factory_ip = ($ip_hash) -> {
+    RETURN Yson::Contains($tvandroid_drop_ip, '$.\"' || NVL(CAST($ip_hash AS String), '') || '\"');
+};
+$get_model_spec = ($manufacturer, $model, $field, $cast_type) -> {
+    $manufacturer = NVL($manufacturer, '');
+    $model = NVL($model, '');
+    RETURN CAST(
+        Yson::ConvertToString(
+                COALESCE(
+                $get_model_spec_explicit($manufacturer, $model, $field),
+                $get_model_spec_explicit(String::AsciiToUpper($manufacturer), $model, $field),
+                $get_model_spec_explicit(String::AsciiToTitle($manufacturer), $model, $field),
+                $get_model_spec_explicit(String::AsciiToLower($manufacturer), $model, $field),
+                NULL
+            )
+        ) AS $cast_type
+    );
+};
+
+$get_test_ids = ($event_value) -> {
+    RETURN ListFilter(ListMap(
+        String::SplitToList($event_value, ';'),
+        ($x) -> {
+            RETURN CAST(String::SplitToList($x, ',')[0] AS Int64);
+        }
+    ), ($x) -> { RETURN $x IS NOT NULL});
+};
+
+$get_buckets = ($event_value) -> {
+    RETURN ListNotNull(ListMap(
+        String::SplitToList($event_value, ';'),
+        ($x) -> {
+            RETURN CASE
+                WHEN String::SplitToList($x, ',')[2] IS NOT NULL THEN [CAST(String::SplitToList($x, ',')[0] AS Int64), CAST(String::SplitToList($x, ',')[2] AS Int64)]
+                ELSE NULL
+            END;
+        }
+    ));
+};
+
+$parse_app_version = Re2::Capture("^(?P<board>[^@]*)@(?P<platform>[^@]*)@(?P<firmware_version>[^@]*)(?:@(?P<build>[^@]*))?$");
+
+$get_quasar_device_id = ($board, $platform, $eth0) -> {
+    $platform_digest = String::AsciiToLower(String::HexEncode(Digest::Sha1(
+        'yandex_tv_' || $board ||  '_' || $platform
+    )));
+    $mac_digest = String::AsciiToLower(String::HexEncode(Digest::Sha1(
+        ListConcat(
+            ListMap(
+                ListFromRange(0, 12, 2),
+                ($x) -> {
+                    RETURN SUBSTRING(String::AsciiToLower($eth0), CAST($x AS Uint32), 2);
+                }
+            ),
+            ':'
+        )
+    )));
+    RETURN SUBSTRING($platform_digest, 0, 4) || SUBSTRING($mac_digest, 0, 16);
+};
+
+$appmetrica = (
+    SELECT
+        $date_format($timestamp_to_datetime(EventDate)) AS event_date,
+        $datetime_format($timestamp_to_datetime(EventDateTime)) AS event_datetime,
+        EventTimestamp AS event_timestamp,
+        $date_format($timestamp_to_datetime(ReceiveDate)) AS receive_date,
+        ReceiveTimestamp AS receive_timestamp,
+        DeviceID AS device_id,
+        EventName AS event_name,
+        NVL(Yson::ParseJson(EventValue, Yson::Options(false as Strict)), Yson::From({})) AS event_value,
+        ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'session_id')] AS session_id,
+        ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'quasar_id')] AS quasar_device_id,
+        ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'quasar_platform')] AS quasar_platform,
+        ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'test_buckets')] AS raw_buckets,
+        UNWRAP(NVL(ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'tandem_device_id')], '')) AS tandem_device_id,
+        UNWRAP(NVL(ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'tandem_device_connected')], '')) AS tandem_connection_state,
+        NetworksInterfaces_Macs[ListIndexOf(NetworksInterfaces_Names, 'eth0')] AS eth0,
+        NetworksInterfaces_Macs[ListIndexOf(NetworksInterfaces_Names, 'wlan0')] AS wlan0,
+        NVL(
+            NetworksInterfaces_Macs[ListIndexOf(NetworksInterfaces_Names, 'eth0')],
+            NetworksInterfaces_Macs[ListIndexOf(NetworksInterfaces_Names, 'wlan0')]
+        ) AS mac_id,
+        Yson::Serialize(Yson::From(ToDict(ListZip(
+            Clids_Names,
+            Clids_Values
+        )))) AS clids,
+        AppVersionName AS app_version,
+        $parse_app_version(AppVersionName) AS parsed_app_version,
+        Manufacturer AS manufacturer,
+        Model AS model,
+        $get_model_spec(Manufacturer, Model, 'diagonal', Double) AS diagonal,
+        $get_model_spec(Manufacturer, Model, 'resolution', String) AS resolution,
+        appmetrica.AccountID AS puid,
+        appmetrica.AccountID IS NOT NULL AS is_logged_in,
+        CAST(ClientIPHash AS String) AS client_ip_hash,
+        RegionID AS geo_id,
+        $is_factory_ip(ClientIPHash) AS is_factory_ip,
+        `UUID` AS `uuid`,
+    FROM RANGE($appmetrica_path, $frst_date, $last_date) AS appmetrica
+    WHERE APIKey = 3235939
+    AND EventType IN (4, 11)
+    AND EventName != 'tv_debug_log'
+);
+
+$session_info = (
+    SELECT
+        device_id,
+        session_id,
+        SOME(Yson::LookupString(event_value, 'build_fingerprint', NULL)) AS build_fingerprint,
+        SOME(Yson::YPathString(event_value, '/apps_versions/com.yandex.tv.home', NULL)) AS home_app_version,
+        SOME(CASE
+            WHEN parsed_app_version.board IS NULL OR parsed_app_version.platform IS NULL OR eth0 IS NULL THEN
+                NULL
+            ELSE
+                $get_quasar_device_id(parsed_app_version.board, parsed_app_version.platform, eth0)
+        END) AS quasar_device_id
+    FROM $appmetrica
+    WHERE event_name = 'session_init'
+    GROUP BY device_id, session_id
+);
+
+$experiments = (
+    SELECT
+        device_id,
+        session_id,
+        SOME(Yson::LookupString(event_value, 'exp_boxes', Yson::Options(false as Strict))) AS raw_buckets,
+    FROM $appmetrica
+    WHERE event_name = 'experiments'
+    GROUP BY device_id, session_id
+);
+
+$tvsessions = (
+    SELECT
+        upd.*,
+        parsed_app_version.board AS board,
+        parsed_app_version.platform AS platform,
+        parsed_app_version.firmware_version AS firmware_version,
+        parsed_app_version.build AS build,
+        ses.*,
+        NVL(upd.quasar_device_id, ses.quasar_device_id) AS quasar_device_id,
+        upd.raw_buckets ?? exps.raw_buckets ?? '' AS raw_buckets,
+        Yson::From($get_test_ids(upd.raw_buckets ?? exps.raw_buckets ?? '')) AS test_ids,
+        Yson::From($get_buckets(upd.raw_buckets ?? exps.raw_buckets ?? '')) AS buckets,
+    WITHOUT
+        upd.quasar_device_id,
+        ses.quasar_device_id,
+        upd.parsed_app_version,
+        upd.raw_buckets,
+    FROM $appmetrica AS upd
+    LEFT JOIN $session_info AS ses ON ses.device_id = upd.device_id AND ses.session_id = upd.session_id
+    LEFT JOIN $experiments AS exps ON exps.device_id = upd.device_id AND exps.session_id = upd.session_id
+);
+
+$activations = (
+    SELECT
+        activation_id,
+        activation_date
+    FROM $activation_path
+);
+
+$used_promo = (
+    SELECT distinct deviceid AS device_id
+    FROM $used_promo_path
+    WHERE platform LIKE 'yandexmodule%'
+        OR platform LIKE 'yandex_tv_%'
+);
+
+$sessions_activations = (
+    SELECT
+        tvsessions.*,
+        activations.activation_date AS activation_date,
+        DateTime::ToDays($parse_date(tvsessions.event_date) - $parse_date(activations.activation_date)) <= 7 AS is_new,
+        used_promo.device_id IS NULL AS potential_gift,
+    FROM $tvsessions AS tvsessions
+    LEFT JOIN $activations AS activations ON coalesce(tvsessions.eth0, tvsessions.quasar_device_id) = activations.activation_id
+    LEFT JOIN $used_promo AS used_promo ON used_promo.device_id = tvsessions.quasar_device_id
+);
+
+$dates = ListMap(
+    ListFromRange(-$update_period, 1),
+    ($x) -> {
+        RETURN $string_date_add_days($job_date, $x);
+    }
+);
+
+EVALUATE FOR $date IN $dates DO BEGIN
+    $result_path = $tvsessions_path || '/' || $date;
+    INSERT INTO $result_path WITH TRUNCATE
+    SELECT *
+    FROM $sessions_activations
+    WHERE event_date = $date
+END DO;

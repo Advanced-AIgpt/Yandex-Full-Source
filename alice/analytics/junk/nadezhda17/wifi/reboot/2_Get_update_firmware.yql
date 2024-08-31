@@ -1,0 +1,15 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/wifi_problems/reboot/update_firmware`
+SELECT DeviceID, EventDate, EventDateTime, EventName, EventValue
+FROM concatYtTablesRange('//logs/appmetrica-yandex-events/1d', 
+toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+WHERE APIKey = 999537
+AND EventName IN ('updateApplySuccess', 'updateApplyFailure')
+AND DeviceID IN (
+    SELECT DISTINCT DeviceID
+    FROM concatYtTablesRange('//logs/appmetrica-yandex-events/1d', 
+    toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+    toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+    WHERE APIKey = 999537
+    AND EventName = 'device_power_on'
+);

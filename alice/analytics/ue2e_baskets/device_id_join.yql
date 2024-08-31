@@ -1,0 +1,21 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_mock";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_mock";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_mock";
+$joined = "//home/voice/jdkondratenko/VA-2304/joined_data_eavesdropping_2021-02-26_2021-08-29";
+$output = "//home/voice/jdkondratenko/VA-2304/data_with_device_id";
+
+$baskets = (
+    (SELECT * FROM $accept)
+    UNION ALL
+    (SELECT * FROM $kpi)
+    UNION ALL
+    (SELECT * FROM $dev)
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT a.*, b.device_id as device_id
+FROM $baskets as a 
+LEFT JOIN $joined as b 
+ON a.real_reqid = b.request_id;

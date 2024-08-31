@@ -1,0 +1,230 @@
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = "100";
+PRAGMA yt.DefaultMaxJobFails = "1";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+
+$arc_commit = {{param.arc_commit->quote() ?? "a4196587fbceffd8bf738d74d40b5e6967aded4d"->quote()}};
+$query_key = {{param.query_key->quote() ?? "text"->quote()}};
+$keep_source_columns = {{param.keep_source_columns->quote() ?? "true"->quote()}};
+$add_lang_ar_sa = {{param.add_lang_ar_sa->quote() ?? "false"->quote()}};
+$filter_is_query_yes = {{param.filter_is_query_yes->quote() ?? "false"->quote()}};
+$use_robot_logs = {{param.use_robot_logs->quote() ?? "false"->quote()}};
+$intent_filter = {{param.intent_filter->quote() ?? ""->quote()}};
+
+$basket_common_path = "arc://alice/analytics/utils/yt/basket_common.py?hash=" || $arc_commit;
+PRAGMA File("basket_common.py", $basket_common_path);
+$basket_common = FileContent("basket_common.py");
+
+-- HACK: по-умолчанию YQL преобразует Yson? в String в Python UDF. Говорим ему Yson использовать как Yson
+$basket_common = 'import cyson\n' || $basket_common || '\npatch_device_state._yql_convert_yson = (cyson.loads, cyson.dumps)';
+
+$patch_device_state = Python2::patch_device_state(Callable<(Yson?, String?)->Yson?>, $basket_common);
+$get_app_preset_from_app = Python2::get_app_preset_from_app(Callable<(String?, String?)->String?>, $basket_common);
+$format_client_time = Python2::format_client_time(Callable<(Int64?)->String?>, $basket_common);
+
+$apps_str = {{param.apps_str->quote()}};
+$apps_list = String::SplitToList($apps_str, ',');
+
+
+$format = DateTime::Format("%Y-%m-%d");
+$dt_start = CurrentTzDate("Europe/Moscow") - Interval('P7D');
+$dt_end = CurrentTzDate("Europe/Moscow") - Interval('P6D');
+$dt_end_r = CurrentTzDate("Europe/Moscow") - Interval('P4D');
+
+$path_dialogs = ($x) -> ('//home/alice/wonder/dialogs/' || ($x ?? ""));
+$path_robot_dialogs = ($x) -> ('//home/alice/wonder/robot-dialogs/' || ($x ?? ""));
+$path_expboxes = ($x) -> ('//home/alice/dialog/prepared_logs_expboxes/' || ($x ?? ""));
+$path_robot_expboxes = ($x) -> ('//home/alice/dialog/robot-prepared_logs_expboxes/' || ($x ?? ""));
+
+$date_list = ListMap(ListFromRange($dt_start, $dt_end, Interval('P1D')), $format);
+$date_list_robot = ListMap(ListFromRange($dt_start, $dt_end_r, Interval('P1D')), $format);
+
+$dialogs_tables = IF(
+    $use_robot_logs != "true",
+    ListMap($date_list, $path_dialogs),
+    ListExtend(ListMap($date_list, $path_dialogs), ListMap($date_list_robot, $path_robot_dialogs)),
+);
+$expboxes_tables = IF(
+    $use_robot_logs != "true",
+    ListMap($date_list, $path_expboxes),
+    ListExtend(ListMap($date_list, $path_expboxes), ListMap($date_list_robot, $path_robot_expboxes)),
+);
+
+
+-- записывает в колонку `text` значение из колонки $text_key
+$update_text_column = ($struct, $text_key) -> {
+    $text_value = $struct.$text_key;
+    $struct = ForceRemoveMember($struct, 'text');
+    $struct = AddMember($struct, 'text', $text_value);
+    RETURN $struct;
+};
+
+-- логика: сохранять ли все исходные колонки или брать только текст запроса
+EVALUATE IF $keep_source_columns == "true" DO BEGIN
+    INSERT INTO @source_table_v1 WITH TRUNCATE
+    SELECT *
+    FROM (
+        SELECT
+            $update_text_column(
+                AddMember(TableRow(), 'row_num', TableRecordIndex()),
+                $query_key
+            )
+        FROM {{input1}}
+    )
+    FLATTEN COLUMNS;
+
+    COMMIT;
+END DO
+ELSE DO BEGIN
+    INSERT INTO @source_table_v1 WITH TRUNCATE
+    SELECT
+        TableRow().$query_key as text,
+        TableRecordIndex() AS row_num
+    FROM {{input1}} AS t;
+
+    COMMIT;
+END DO;
+
+
+-- логика: добавлять ли колонку lang: 'ar-Sa'
+EVALUATE IF $add_lang_ar_sa == "true" DO BEGIN
+    INSERT INTO @source_table_v2 WITH TRUNCATE
+    SELECT
+        t.*,
+        'ar-SA' as lang
+    FROM @source_table_v1 as t;
+
+    COMMIT;
+END DO
+ELSE DO BEGIN
+    INSERT INTO @source_table_v2 WITH TRUNCATE
+    SELECT *
+    FROM @source_table_v1;
+
+    COMMIT;
+END DO;
+
+
+-- логика: фильтровать ли запросы только is_query == 'yes'
+EVALUATE IF $filter_is_query_yes == "true" DO BEGIN
+    INSERT INTO @source_table WITH TRUNCATE
+    SELECT *
+    FROM @source_table_v2
+    WHERE is_query == 'yes';
+
+    COMMIT;
+END DO
+ELSE DO BEGIN
+    INSERT INTO @source_table WITH TRUNCATE
+    SELECT *
+    FROM @source_table_v2;
+
+    COMMIT;
+END DO;
+
+
+-- число запросов, которые семплить из prepared + vins_logs_dialogs
+$limit = (
+    SELECT COUNT(*)
+    FROM @source_table
+);
+
+
+-- семпл из препаредов такого же размера, что и исходная корзинка
+$prepared = (
+    SELECT
+        app,
+        `uuid`,
+        location,
+        server_time_ms,
+        $get_app_preset_from_app(app, device) AS app_preset,
+        $format_client_time(client_time) as client_time,
+        client_tz as timezone,
+    FROM EACH($expboxes_tables)
+    WHERE
+        do_not_use_user_logs != True
+        AND app IS NOT NULL
+        AND app IN $apps_list
+        AND IF (
+            $intent_filter != '' AND $intent_filter != 'null',
+            String::Contains(intent, $intent_filter),
+            query IS NOT NULL
+        )
+    ORDER BY Digest::Fnv32(`uuid` || CAST(`server_time_ms` AS String))
+    LIMIT ($limit ?? 15000)
+);
+
+
+EVALUATE IF ("${global.use_device_state}" == "true") DO BEGIN
+    -- данные из логов (prepared + vins-logs-dialogs), которые нужно приклеить к текстам
+    $logs_data = (
+        SELECT
+            location,
+            timezone,
+            app_preset,
+            client_time,
+            device_state,
+            ROW_NUMBER() OVER (ORDER BY request_hash) AS row_num,
+        FROM (
+            SELECT
+                location, app_preset, timezone,
+                p.client_time AS client_time,
+                Yson::GetHash(v.request) AS request_hash,
+                $patch_device_state(Yson::Lookup(v.request, 'device_state'), app) AS device_state,
+            FROM EACH($dialogs_tables) AS v
+            INNER JOIN $prepared AS p
+            USING (`server_time_ms`, `uuid`)
+        )
+        WHERE
+            device_state != Yson::From({})
+    );
+
+    -- объединение исходных данных и приклеиваемых из логов по случайному порядковому номеру строки row_num
+    INSERT INTO @joined
+    SELECT *
+    FROM @source_table as s
+    INNER JOIN $logs_data as l
+    USING (row_num)
+    ;
+END DO
+
+-- без device_state
+ELSE DO BEGIN
+    $logs_data = (
+        SELECT
+            location,
+            timezone,
+            app_preset,
+            p.client_time as client_time,
+            Yson::Serialize(Yson::From({})) AS device_state,
+            ROW_NUMBER() OVER (ORDER BY Digest::Fnv32(`uuid`)) AS row_num
+        FROM $prepared AS p
+    );
+
+    -- объединение исходных данных и приклеиваемых из логов по случайному порядковому номеру строки row_num
+    INSERT INTO @joined
+    SELECT *
+    FROM @source_table as s
+    INNER JOIN $logs_data as l
+    USING (row_num)
+    ;
+END DO;
+
+COMMIT;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    Cast(RandomUuid(TableRow()) AS String) AS session_id,
+    String::JoinFromList(
+        ListExtend(['ffffffff'], ListSkip(String::SplitToList(Cast(RandomUuid(TableRow()) AS String), '-'), 1)),
+        '-'
+    ) AS request_id,
+    0 AS session_sequence,
+    0 AS reversed_session_sequence,
+    'text' AS fetcher_mode,
+    Yson::Serialize(Yson::From({})) AS asr_options,
+    t.* WITHOUT row_num
+FROM @joined AS t
+;

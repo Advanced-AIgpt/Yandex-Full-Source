@@ -1,0 +1,88 @@
+PRAGMA yson.DisableStrict;
+
+$toloka_dups_policy = {{param.toloka_dups_policy->quote() ?? "all_tasks"->quote()}};
+
+-- output1 - выход пульсара для прод ветки
+-- output2 - выход толоки для прод ветки
+-- output3 - выход пульсара для теcтовой ветки
+-- output4 - выход толоки для тестовой ветки
+-- аналогично input
+
+DEFINE ACTION $all_tasks() AS
+    INSERT INTO {{output1}} SELECT * FROM {{input1}};
+    INSERT INTO {{output2}} SELECT * FROM {{input2}};
+    INSERT INTO {{output3}} SELECT * FROM {{input3}};
+    INSERT INTO {{output4}} SELECT * FROM {{input4}};
+END DEFINE;
+
+DEFINE ACTION $only_unique() AS
+    $all_prod_hashsums = (
+        SELECT hashsum FROM {{input1}}
+        UNION ALL
+        SELECT hashsum FROM {{input2}}
+    );
+
+    $all_test_hashsums = (
+        SELECT hashsum FROM {{input3}}
+        UNION ALL
+        SELECT hashsum FROM {{input4}}
+    );
+
+    INSERT INTO {{output1}}
+        SELECT * FROM {{input1}}
+        WHERE hashsum NOT IN $all_test_hashsums
+    ;
+
+    INSERT INTO {{output2}}
+        SELECT * FROM {{input2}}
+        WHERE hashsum NOT IN $all_test_hashsums
+    ;
+
+    INSERT INTO {{output3}}
+        SELECT * FROM {{input3}}
+        WHERE hashsum NOT IN $all_prod_hashsums
+    ;
+
+    INSERT INTO {{output4}}
+        SELECT * FROM {{input4}}
+        WHERE hashsum NOT IN $all_prod_hashsums
+    ;
+END DEFINE;
+
+DEFINE ACTION $without_same_diffs() AS
+    $toloka_prod_hashsums = (
+        SELECT hashsum FROM {{input2}}
+    );
+
+    $toloka_test_hashsums = (
+        SELECT hashsum FROM {{input4}}
+    );
+
+    INSERT INTO {{output1}} SELECT * FROM {{input1}};
+
+    INSERT INTO {{output2}}
+        SELECT * FROM {{input2}}
+        WHERE hashsum NOT IN $toloka_test_hashsums
+    ;
+
+    INSERT INTO {{output3}} SELECT * FROM {{input3}};
+
+    INSERT INTO {{output4}}
+        SELECT * FROM {{input4}}
+        WHERE hashsum NOT IN $toloka_prod_hashsums
+    ;
+END DEFINE;
+
+DEFINE ACTION $filter() AS
+    EVALUATE IF $toloka_dups_policy == "without_same_diffs"
+        DO $without_same_diffs()
+    ELSE
+        DO $only_unique()
+    ;
+END DEFINE;
+
+EVALUATE IF $toloka_dups_policy == "all_tasks"
+        DO $all_tasks()
+    ELSE
+        DO $filter()
+;

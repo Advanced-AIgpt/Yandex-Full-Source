@@ -1,0 +1,74 @@
+Use hahn;
+PRAGMA yt.InferSchema;
+
+$app = "quasar";
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/";
+$output_dir = "//home/voice/jdkondratenko/VA-2304/";
+
+$annotations_results = "//home/voice/jdkondratenko/VA-2304/annotation_results/" || $app;
+$intent_input_full = "//home/voice/jdkondratenko/VA-2304/intents/quasar_input_full";
+$intent_output = "//home/voice/jdkondratenko/VA-2304/intents/quasar_intent_output";
+
+-- В разметку отправлялись данные, уникальные по dialog_hash_id. Нужно проставить интенты по этому хешу для каждого рекида.
+-- dialog_hash_id - это хеш от (контекст, ответ, запрос)
+$dialog_hash_id_to_intent = (
+    SELECT i.dialog_hash_id as dialog_hash_id, o.toloka_intent as toloka_intent, o.prev_toloka_intent as prev_toloka_intent
+    FROM $intent_input_full as i
+    JOIN $intent_output as o
+    USING(reqid)
+);
+
+-- Теперь каждому рекиду проставлен интент
+$reqid_to_intent = (
+    SELECT reqid, i.dialog_hash_id as dialog_hash_id, toloka_intent, prev_toloka_intent, query2, mds_url as mds_key
+    FROM $intent_input_full as i 
+    JOIN $dialog_hash_id_to_intent as d
+    USING(dialog_hash_id)
+);
+
+-- Хотим в финальных корзинках иметь full_text
+$intents_with_full_text = (
+    SELECT reqid, a.mds_key as mds_key, toloka_intent, prev_toloka_intent, query as annotation_query, full_text
+    FROM $reqid_to_intent as i
+    JOIN $annotations_results as a
+    USING(mds_key)
+);
+
+DEFINE ACTION $prepare_data_for_stratification($app, $basket_type) AS
+    $path_prefix = IF($basket_type == "accept" OR $basket_type == "dev", $common_dir, $restricted_dir);
+    -- baskets
+    $folder = "sampled_data/";
+    $basket = $path_prefix || $folder || $app || "_" || $basket_type || "_with_asr";
+    $basket_no_asr = $path_prefix || $folder || $app || "_" || $basket_type || "_empty_asr";
+
+    -- outputs
+    $intents = $output_dir || "stratification/" || $app || "_" || $basket_type || "_intents";
+    $autoverdict = $output_dir || "stratification/" || $app || "_" || $basket_type || "_autoverdict";
+
+    -- Подготовка данных для семплирования по интентам
+    INSERT INTO $intents WITH TRUNCATE 
+    SELECT 
+        b.request_id as request_id, b.mds_key as mds_key, marked.toloka_intent as toloka_intent, marked.prev_toloka_intent as prev_toloka_intent, 
+        marked.annotation_query as annotation_query, marked.full_text as full_text, b.`uuid` as `uuid`, b.app as app, b.input_type as input_type,
+        b.is_empty_asr as is_empty_asr, b.generic_scenario as generic_scenario, b.intent as vins_intent, b.query as query, b.is_new as is_new
+    FROM $intents_with_full_text as marked
+    JOIN CONCAT($basket, $basket_no_asr) as b
+    ON marked.reqid == b.request_id;
+    
+    -- Подготовка данных для семплирования по пустым ответам
+    INSERT INTO $autoverdict WITH TRUNCATE 
+    SELECT 
+        b.request_id as request_id, b.mds_key as mds_key, marked.query as annotation_query, marked.full_text as full_text, 
+        b.`uuid` as `uuid`, b.app as app, b.input_type as input_type, b.is_empty_asr as is_empty_asr, 
+        b.generic_scenario as generic_scenario, b.intent as vins_intent, b.query as query, b.is_new as is_new
+    FROM $annotations_results as marked
+    JOIN CONCAT($basket, $basket_no_asr) as b
+    ON marked.mds_key == b.mds_key
+    WHERE marked.annotated_type == "autoverdict";
+    
+END DEFINE;
+
+DO $prepare_data_for_stratification($app, "accept");
+DO $prepare_data_for_stratification($app, "kpi");
+DO $prepare_data_for_stratification($app, "dev");

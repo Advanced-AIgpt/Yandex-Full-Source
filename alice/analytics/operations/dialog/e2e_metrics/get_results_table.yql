@@ -1,0 +1,129 @@
+USE hahn;
+PRAGMA yt.InferSchema = "1000";
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+
+$with_uniproxy = CAST({{param.with_uniproxy ?? True}} AS Bool);
+
+$BASKET_LIST_TO_IGNORE_UTTERANCE = AsList(
+    "home/voice/dialog/toloka/kpi_baskets_and_results/ue2e_quasar_wait_eou/basket",
+    "home/voice/dialog/toloka/accept_baskets_and_results/ue2e_quasar_wait_eou/basket",
+    "home/voice/dialog/toloka/accept_baskets_and_results/e2e_quasar_covid/basket",
+    "home/voice/dialog/toloka/accept_baskets_and_results/ue2e_quasar_from_online/basket",
+    "home/voice/dialog/toloka/accept_baskets_and_results/ue2e_quasar_from_online/basket_candidate"
+);
+
+$replace = Re2::Replace("^//");
+$basket_name = $replace({{input3->table_quote()}}, '');
+
+$ignore_empty_utterance = IF($basket_name in $BASKET_LIST_TO_IGNORE_UTTERANCE, True, False);
+
+$script = @@
+import json
+def extract_hyp_from_asr_responses(asr_responses):
+    recognition = asr_responses[-1]['directive']['payload']['recognition']
+    if recognition:
+        words = recognition[0]['words']
+        return ' '.join([word['value'] for word in words]).lower()
+    else:
+        return ''
+
+def get_asr(VinsResponse, asr_responses, ignore=False):
+    if VinsResponse:
+        vins_loaded = json.loads(VinsResponse)
+        if not ignore or (ignore and 'original_utterance' in vins_loaded['directive']['payload']['megamind_analytics_info']):
+            return vins_loaded['directive']['payload']['megamind_analytics_info']['original_utterance']
+        elif ignore and asr_responses:
+            return extract_hyp_from_asr_responses(json.loads(asr_responses))
+    return ''
+@@;
+$get_asr = Python::get_asr(Callable<(String?, String?, Bool?)->String>, $script);
+
+$get_voice = ($arg) -> {
+    RETURN AsTagged(
+        String::ReplaceAll($arg, "getfile", "getaudio") || "?norm=1",
+        "audiourl"
+    );
+};
+
+$basket = (
+    SELECT *
+    FROM {{input3}}
+    WHERE ListLength(String::SplitToList(session_id, '__')) == 1 OR session_sequence == 1
+);
+
+$toloka = (
+    SELECT
+        toloka.*,
+        tasks.generic_scenario AS generic_scenario,
+        IF({{param.new_format->quote() ?? "false"->quote()}} == "true", WeakField(toloka.action0, Yson),
+            WeakField(toloka.action1, Yson)) AS current_action,
+        tasks.hashsum AS hashsum
+    FROM {{input1}} AS toloka
+    JOIN {{input4}} AS tasks USING (req_id)
+);
+
+DEFINE ACTION $join_with_uniproxy() AS
+
+    INSERT INTO @joined_tables WITH TRUNCATE
+    SELECT
+        basket.toloka_intent AS toloka_intent,
+        basket.request_id AS req_id,
+        basket.session_id AS session_id,
+        WeakField(basket.has_ivi_in_state_or_query, Bool) AS has_ivi_in_state_or_query,
+        $get_voice(WeakField(basket.voice_url, String)) AS voice_url,
+        $get_asr(uniproxy_results.VinsResponse, uniproxy_results.AsrResponses, $ignore_empty_utterance) AS asr_text,
+        basket.app_preset AS app,
+        basket.text AS text,
+        IF(uniproxy_results.RequestId IS NULL, "UNIPROXY_ERROR", IF(uniproxy_results.VinsResponse IS NULL, "EMPTY_VINS_RESPONSE", NULL)) AS result,
+        uniproxy_results.SetraceUrl AS setrace_url
+    FROM $basket AS basket
+    LEFT JOIN {{input2 ?? "``"}} AS uniproxy_results ON basket.request_id == uniproxy_results.RequestId;
+
+END DEFINE;
+
+
+-- для онлайн-замеров по ue2e, где нет прокачки, но данные из логов в том же формате
+DEFINE ACTION $no_uniproxy() AS
+
+    INSERT INTO @joined_tables WITH TRUNCATE
+    SELECT
+        toloka_intent, real_reqid AS req_id,
+        session_id, $get_voice(WeakField(voice_url, String)) AS voice_url,
+        asr_text, app_preset AS app, text,
+        NULL AS result -- тут не может быть ошибок прокачки
+    FROM $basket;
+
+END DEFINE;
+
+
+EVALUATE IF $with_uniproxy
+    DO $join_with_uniproxy()
+ELSE
+    DO $no_uniproxy();
+
+COMMIT;
+
+
+$results = (
+    SELECT
+        Yson::SerializeJson(toloka.session) AS session,
+        Yson::SerializeJson(toloka.state0) AS state0,
+        Yson::ConvertToString(toloka.current_action.answer) AS answer,
+        Yson::ConvertToString(toloka.current_action.action) AS action,
+        Yson::ConvertToString(toloka.current_action.scenario) AS generic_scenario_human_readable,
+        IF(toloka.result IS NOT NULL, toloka.result, basket.result) AS result,
+        WeakField(toloka.fraud, Bool) AS fraud,
+        IF(basket.result IN ("EMPTY_VINS_RESPONSE", "UNIPROXY_ERROR"), basket.result, toloka.intent) AS intent,
+        toloka.generic_scenario AS generic_scenario,
+        toloka.hashsum AS hashsum,
+        basket.* WITHOUT basket.result
+    FROM @joined_tables AS basket
+    LEFT JOIN $toloka AS toloka USING (req_id)
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT IF(r.result == 'good', 1.0, IF(r.result == 'UNIPROXY_ERROR', NULL, 0.0)) AS mark,
+{{param.basket->quote()}} AS basket,
+r.*
+FROM $results AS r

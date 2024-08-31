@@ -1,0 +1,81 @@
+PRAGMA yt.InferSchema;
+PRAGMA yt.UseSkiff="0";
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+
+$spotter_folder = "home/voice-speechbase/uniproxy/spotter";
+$fixed_prefix = "https://speechbase.voicetech.yandex-team.ru/getaudio/";
+
+$get_spotter_length = ($extra) -> {
+    RETURN MIN_OF(Yson::ConvertToInt64($extra.requestSoundBeforeTriggerMs), Yson::ConvertToInt64($extra.actualSoundBeforeTriggerMs)) +
+           MIN_OF(Yson::ConvertToInt64($extra.requestSoundAfterTriggerMs), Yson::ConvertToInt64($extra.actualSoundAfterTriggerMs))
+};
+
+$get_url_param = ($extra) -> {
+    RETURN IF($extra IS NULL OR NOT $cut_spotter_sound, "",
+        IF(Yson::ConvertToInt64($extra.actualSoundAfterTriggerMs) IS NULL, "",
+            "?duration=" || CAST($get_spotter_length($extra) AS String)
+        )
+    )
+};
+
+$joined = (
+    SELECT
+        a.mds_key AS mds_key,
+        a.audio AS audio,
+        log.do_not_use_user_logs AS do_not_use_user_logs,
+        WeakField(log.extra, Yson) AS extra,
+        log.mds_key IS NOT NULL AS present_in_logs,
+        log.`uuid` AS `uuid`,
+        IF(
+            a.worker_hints IS NOT NULL,
+            Yson::ConvertToStringList(a.worker_hints),
+            ListCreate(String)
+        ) AS worker_hints
+    FROM {{input1}} WITH SCHEMA Struct<mds_key:String, audio:String?, worker_hints:Yson?> AS a
+    LEFT JOIN ANY RANGE($spotter_folder, $start_date, $end_date) AS log
+    USING(mds_key)
+);
+
+$joined = (
+    SELECT
+        present_in_logs AND (do_not_use_user_logs IS NULL OR NOT do_not_use_user_logs) AS is_good,
+        j.*
+    FROM $joined AS j
+);
+
+$bad = (
+    SELECT * FROM $joined
+    WHERE NOT is_good
+);
+
+SELECT
+    Ensure(
+        present_in_logs,
+        present_in_logs OR $on_bad_records != "fail",
+        "Some of your data have not been found in logs in given range. Please check first_log_date, last_log_date parametrs"
+    ),
+    Ensure(
+        do_not_use_user_logs,
+        (do_not_use_user_logs IS NULL OR NOT do_not_use_user_logs) OR $on_bad_records == "skip",
+        "Some of given keys have do_not_use_user_logs set to true in log. Please resample or filter your data"
+    ),
+    mds_key
+FROM $bad;
+
+SELECT Ensure(false, $on_bad_records != "fail", "Unknown failure reason, please contact author") FROM $bad;
+
+$filtered = (
+    SELECT * FROM $joined WHERE is_good OR $on_bad_records == "force"
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    mds_key,
+   audio ?? ($fixed_prefix || mds_key || $get_url_param(extra)) AS audio,
+    `uuid`,
+    worker_hints
+FROM $filtered;
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT * FROM $bad

@@ -1,0 +1,231 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(10) AS String) 
+AND $date < CAST(CurrentUtcDate() AS String)};
+
+--односторонние статусы колонок за последние 10 дней
+$one_hb_status = 
+(
+    SELECT a.fielddate AS fielddate, a.hb_device AS hb_device,
+    a.event_device AS event_device, event_status, hb_amount, pairs_amount
+    FROM 
+    (
+        SELECT fielddate, hb_device, event_device, 
+        COUNT(DISTINCT String::JoinFromList(ListSort(AsList(hb_device_id, event_device_id)), ';')) AS pairs_amount
+        FROM `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status`
+        WHERE $date_filter(fielddate)
+        AND hb_device NOT LIKE 'yandexmodule%' 
+        AND event_device NOT LIKE 'yandexmodule%' 
+        GROUP BY fielddate, hb_device, event_device
+    ) AS a 
+    INNER JOIN 
+    (
+        SELECT fielddate, hb_device, event_device, event_status, 
+        COUNT(*) AS hb_amount
+        FROM `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status`
+        WHERE $date_filter(fielddate)
+        AND hb_device NOT LIKE 'yandexmodule%' 
+        AND event_device NOT LIKE 'yandexmodule%' 
+        GROUP BY fielddate, hb_device, event_device, event_status
+    ) AS e ON e.hb_device = a.hb_device AND e.event_device = a.event_device AND e.fielddate = a.fielddate
+);
+
+--обновляем график с ними
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/one_hb_status` WITH TRUNCATE 
+SELECT *
+FROM `//home/voice/nadezhda17/common/multiroom/glagol/one_hb_status` AS o 
+WHERE NOT $date_filter(fielddate)
+UNION ALL 
+SELECT *
+FROM $one_hb_status;
+
+COMMIT;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String) 
+AND $date < CAST(CurrentUtcDate() AS String)};
+
+--пользователи у которых 1+ яндекс колонок
+$users_with_more_than_one_device = 
+(
+    SELECT DISTINCT m.fielddate AS fielddate, m.puid AS puid, m.device_id AS device_id, m.device AS device_type
+    FROM  `//home/voice/nadezhda17/common/multiroom/multiroom_devices` AS m 
+    INNER JOIN 
+    (
+        SELECT fielddate, puid
+        FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices`
+        WHERE device IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexstation', 'yandexstation_2')
+        AND $date_filter(fielddate)
+        GROUP BY fielddate, puid HAVING COUNT(DISTINCT device_id) > 1
+    ) AS p ON p.puid = m.puid AND p.fielddate = m.fielddate
+    WHERE $date_filter(m.fielddate)
+    AND device IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexstation', 'yandexstation_2')
+);
+
+--наборы пар колонок, недалеко друг от друга
+$geo =
+(
+    SELECT fielddate, device_id, MAX_BY(lat, ts) AS lat, MAX_BY(lon, ts) AS lon
+    FROM `//home/voice/nadezhda17/common/multiroom/geo_devices`
+    WHERE $date_filter(fielddate)
+    GROUP BY fielddate, device_id
+);
+
+$all_pairs = 
+(
+    SELECT u1.fielddate AS fielddate, u1.puid AS puid, 
+    u1.device_id AS device1, u1.device_type AS device_type1,
+    u2.device_id AS device2, u2.device_type AS device_type2
+    FROM $users_with_more_than_one_device AS u1 
+    INNER JOIN $users_with_more_than_one_device AS u2 ON u1.puid = u2.puid AND u1.fielddate = u2.fielddate
+    WHERE u1.device_id > u2.device_id
+);
+
+$nearby_pairs =
+(
+    SELECT DISTINCT fielddate, puid, device1, device_type1, device2, device_type2
+    FROM 
+    (
+        SELECT p.fielddate AS fielddate, puid, device1, device_type1,
+        device2, device_type2, Geo::CalculatePointsDifference(g1.lat, g1.lon, g2.lat, g2.lon)??0 AS distance
+        FROM $all_pairs AS p 
+        LEFT JOIN $geo AS g1 ON p.device1 = g1.device_id AND p.fielddate = g1.fielddate
+        LEFT JOIN $geo AS g2 ON p.device2 = g2.device_id AND p.fielddate = g2.fielddate
+    )
+    WHERE distance <= 1000
+);
+
+--уникальные ребра, от которых шли глагольные хартбиты
+$edge = 
+(
+    SELECT p.fielddate AS fielddate, p.puid AS puid, d1.ts AS ts,
+    device1, device_type1 AS device_type1, 
+    device2, device_type2 AS device_type2, 
+    d1.value AS device1_heartbeat, d2.value AS device2_heartbeat
+    FROM $nearby_pairs AS p 
+    INNER JOIN `//home/voice/nadezhda17/common/multiroom/glagol/rounding_heartbeats_temp` AS d1 
+    ON d1.device_id = p.device1 
+    AND d1.puid = p.puid AND d1.fielddate = p.fielddate
+    INNER JOIN `//home/voice/nadezhda17/common/multiroom/glagol/rounding_heartbeats_temp` AS d2 
+    ON d2.device_id = p.device2 
+    AND d2.puid = p.puid AND d2.fielddate = p.fielddate
+    AND d2.ts = d1.ts  
+    ORDER BY puid, ts
+);
+
+--проклеенные данные по ребрам
+$matched = 
+(
+    SELECT e.puid AS puid, e.fielddate AS fielddate, e.ts AS ts, device1, device_type1, device2, device_type2,
+    p1.event_value AS device1_device2, p2.event_value AS device2_device1,
+    device1_heartbeat, device2_heartbeat
+    FROM $edge AS e 
+    LEFT OUTER JOIN `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status` AS p1 ON e.puid = p1.puid AND e.device1 = p1.hb_device_id AND e.device2 = p1.event_device_id 
+    AND e.fielddate = p1.fielddate AND e.ts = p1.ts
+    LEFT OUTER JOIN `//home/voice/nadezhda17/common/multiroom/glagol/parsed_data_with_status` AS p2 ON e.puid = p2.puid AND e.device2 = p2.hb_device_id AND e.device1 = p2.event_device_id 
+    AND e.fielddate = p2.fielddate AND e.ts = p2.ts
+    ORDER BY puid, ts
+);
+
+$edge_type = ($event1, $event2) -> {RETURN 
+CASE 
+WHEN $event1 IS NULL AND $event2 IS NULL THEN AsStruct('discovery' AS type, 0 AS value)
+
+WHEN (($event1.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND') AND $event2.cluster_state IS NULL)
+OR  ($event2.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND') AND $event1.cluster_state IS NULL))
+THEN AsStruct('connection_discovery' AS type, 0.1 AS value)
+
+WHEN $event1.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND') 
+AND $event2.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND')
+THEN AsStruct('connection_connection' AS type, 0.2 AS value)
+
+WHEN (($event1.cluster_state = 'CONNECTED' AND $event2.cluster_state IS NULL) 
+OR ($event2.cluster_state = 'CONNECTED' AND $event1.cluster_state IS NULL))
+THEN AsStruct('one_way_discovery' AS type, 0.5 AS value)
+
+WHEN (($event1.cluster_state = 'CONNECTED' AND $event2.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND')) 
+OR ($event2.cluster_state = 'CONNECTED' AND $event1.cluster_state IN ('CONNECTING', 'REQUESTING_BACKEND')))
+THEN AsStruct('one_way_connection' AS type, 0.7 AS value)
+
+WHEN $event1.cluster_state = 'CONNECTED' AND $event2.cluster_state = 'CONNECTED'
+THEN AsStruct('good' AS type, 1 AS value)
+
+ELSE AsStruct(NULL AS type, NULL AS value)
+END};
+
+$result = 
+(
+    SELECT puid, fielddate, ts, device1, device_type1, device2, device_type2, 
+    device1_device2, device2_device1, 
+    $edge_type(device1_device2, device2_device1) AS edge_type,
+    device1_heartbeat, device2_heartbeat, 
+    FROM $matched
+    ORDER BY puid, ts
+);
+
+--ребра за последний месяц
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/edges` WITH TRUNCATE 
+SELECT * 
+FROM
+(
+    SELECT *
+    FROM $result 
+    UNION ALL 
+    SELECT e.*
+    FROM `//home/voice/nadezhda17/common/multiroom/glagol/edges` AS e 
+    WHERE NOT $date_filter(e.fielddate)
+)
+WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(30) AS String);
+
+COMMIT;
+
+$data = 
+(
+    SELECT fielddate, puid, device1, device_type1, device2, device_type2, 
+    COUNT(*) AS edges_amount, AVG(edge_type.value) AS value, 
+    COUNT_IF(edge_type.type = 'good') AS good, 
+    COUNT_IF(edge_type.type = 'one_way_connection') AS one_way_connection, 
+    COUNT_IF(edge_type.type = 'one_way_discovery') AS one_way_discovery, 
+    COUNT_IF(edge_type.type = 'connection_connection') AS connection_connection, 
+    COUNT_IF(edge_type.type = 'connection_discovery') AS connection_discovery, 
+    COUNT_IF(edge_type.type = 'discovery') AS discovery, 
+    FROM 
+    (
+        SELECT fielddate, puid, ts, device1, device_type1, device2, device_type2, edge_type, 
+        FROM `//home/voice/nadezhda17/common/multiroom/glagol/edges`
+    )
+    GROUP BY fielddate, puid, device1, device_type1, device2, device_type2
+);
+
+$data = 
+(
+    SELECT d.*, 
+    device_type1 || '_' || device_type2 AS type
+    FROM $data AS d
+);
+
+$connectivity = 
+(
+    SELECT fielddate, type??'Total' AS type, 
+    COUNT(DISTINCT puid) AS users_amount, 
+    COUNT(DISTINCT device1 || device2) AS pairs_amount,
+    AVG(value) AS value, 
+    SUM(good) AS good,
+    SUM(one_way_connection) AS one_way_connection,
+    SUM(one_way_discovery) AS one_way_discovery,
+    SUM(connection_connection) AS connection_connection,
+    SUM(connection_discovery) AS connection_discovery,
+    SUM(discovery) AS discovery,
+    FROM $data
+    GROUP BY GROUPING SETS ((fielddate, type), (fielddate))
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/connectivity` WITH TRUNCATE 
+SELECT *
+FROM $connectivity
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/multiroom/glagol/connectivity` AS c 
+LEFT ONLY JOIN $connectivity AS co ON co.fielddate = c.fielddate AND co.type = c.type;

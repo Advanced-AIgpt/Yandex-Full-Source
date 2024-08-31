@@ -1,0 +1,36 @@
+USE hahn;
+
+$device_power_on_total = 
+(
+    SELECT OriginalModel, DeviceID, EventDate, EventDateTime, 
+    iso_eventtime, EventName, EventValue, diff_sec, 
+    EventDateTime - LAG(EventDateTime) OVER w AS last_device_power_on
+    FROM `//home/voice/nadezhda17/common/wifi_problems/reboot/device_power_on`
+    WINDOW w AS (PARTITION BY DeviceID ORDER BY EventDateTime)
+);
+
+$device_power_on = 
+(
+    SELECT OriginalModel, DeviceID, EventDate, EventDateTime, iso_eventtime, EventName, EventValue, diff_sec, 
+    FROM $device_power_on_total
+    WHERE (last_device_power_on IS NULL 
+    --прошло не менее часа с предыдущей перезагрузки
+    OR last_device_power_on > 60 * 60)
+    --устройство отсутствовало в розетке не более 5 минут 
+    AND diff_sec <= 60 * 5
+);
+
+$update_firmware = 
+(
+    SELECT DISTINCT d.DeviceID AS DeviceID, d.EventDateTime AS EventDateTime
+    FROM `//home/voice/nadezhda17/common/wifi_problems/reboot/update_firmware` AS u 
+    INNER JOIN $device_power_on AS d ON u.DeviceID = d.DeviceID
+    --в радиусе 5 минут от перезагрузки было событие обновления прошивки
+    WHERE u.EventDateTime BETWEEN d.EventDateTime - 60 * 5 AND d.EventDateTime + 60 * 5
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/reboot/manual_device_power_on` WITH TRUNCATE 
+SELECT  OriginalModel, DeviceID, EventDate, 
+EventDateTime, iso_eventtime, EventName, EventValue, diff_sec
+FROM $device_power_on AS d 
+LEFT ONLY JOIN $update_firmware AS uf ON uf.DeviceID = d.DeviceID AND uf.EventDateTime = d.EventDateTime;

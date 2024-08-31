@@ -1,0 +1,42 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_mock";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_mock";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_mock";
+
+$process_action = @@
+import cyson
+import copy
+
+def process_action(state):
+    new_state = {}
+    if state:
+        for key, value in state.items():
+            if key == "app_info":
+                continue
+            elif key == "bass_options":
+                new_state["bass_options"] = {}
+                if value.get("client_ip"):
+                    new_state["bass_options"]["client_ip"] = copy.deepcopy(value["client_ip"])
+            else:
+                new_state[key] = copy.deepcopy(value)
+    return new_state
+
+process_action._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$process_action = Python2:: process_action(ParseType("(Yson?)->Yson?"), $process_action);
+
+DEFINE ACTION $patch_additional_options($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT 
+        $process_action(additional_options) as additional_options,
+        a.* WITHOUT a.additional_options
+    FROM $input_table as a;
+
+END DEFINE;
+
+DO $patch_additional_options($accept, $accept);
+DO $patch_additional_options($kpi, $kpi);
+DO $patch_additional_options($dev, $dev);

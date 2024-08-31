@@ -1,0 +1,28 @@
+USE hahn;
+
+$metric_result = 
+(
+    SELECT fielddate, device??'Total' AS device,
+    COUNT_IF(in_socket = 1 AND predicted_problems = 1)*1.0/COUNT_IF(in_socket = 1) AS  predicted_problems_for_device_in_socket,
+    COUNT_IF(with_reqs = 1 AND predicted_problems = 1)*1.0/COUNT_IF(with_reqs = 1) AS  predicted_problems_for_device_with_reqs,
+    COUNT_IF(in_socket = 1 AND with_reqs = 0 AND predicted_problems = 1)*1.0/
+    COUNT_IF(in_socket = 1 AND with_reqs = 0) AS  predicted_problems_for_device_without_reqs,
+
+    COUNT_IF(with_reqs = 1 AND ysk_error_network_timeout >= 1)*1.0/COUNT_IF(with_reqs = 1) AS  ysk_error_network_timeout_for_device_with_reqs,
+    COUNT_IF(ysk_error_network_timeout = 1 AND predicted_problems = 0)*1.0/
+    COUNT_IF(ysk_error_network_timeout >= 1) AS lost_predicted,
+    COUNT_IF(predicted_problems = 1 AND ysk_error_network_timeout = 0 AND with_reqs = 1)*1.0/
+    COUNT_IF(ysk_error_network_timeout = 0 AND with_reqs = 1) AS predicted_without_ysk_error_network_timeout
+    FROM `//home/voice/nadezhda17/common/wifi_problems/2_device_total_info`
+    GROUP BY GROUPING SETS ((fielddate, device), fielddate)
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/wifi_problems/3_metric_result` WITH TRUNCATE 
+SELECT *
+FROM $metric_result
+UNION ALL 
+SELECT r.*
+FROM  `//home/voice/nadezhda17/common/wifi_problems/3_metric_result` AS r 
+LEFT ONLY JOIN $metric_result AS m ON m.fielddate = r.fielddate AND m.device = r.device;
+
+

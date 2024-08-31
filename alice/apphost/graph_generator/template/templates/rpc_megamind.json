@@ -1,0 +1,210 @@
+{%- macro node_name(name) -%}{{name|upper}}{%- endmacro %}
+{%- set nodes = [] %}
+{%- set MM_SETUP_NODE = "MEGAMIND_RPC_SETUP" %}
+{%- set MM_FINALIZE_NODE = "MEGAMIND_RPC_FINALIZE" %}
+{%- set HANDLER_REQUEST_PREFIX = "rpc_request_" %}
+{%- set HANDLER_PREFIX = "rpc_handler_" %}
+{%- set GPROXY_INPUT_NODE = "GPROXY_MM_RPC_SETUP" %}
+{%- set CONTEXT_LOAD_NODE = "CONTEXT_LOAD" %}
+{%- set REQUEST_META_NODE = "GPROXY_REQUEST_META_SETUP" %}
+{%- set GPROXY_DATASOURCES_NODE = "GPROXY_DATASOURCES" %}
+{%- for config in graphs %}
+    {%- do nodes.append((node_name(config.snake_case_name), config)) %}
+{%- endfor %}
+{
+    "monitoring": {
+        "alerts": [
+            {
+                "crit": 0.1,
+                "operation": "perc",
+                "prior": 10,
+                "type": "failures",
+                "warn": 0.09
+            }
+        ]
+    },
+    "settings": {
+        "allow_empty_response": true,
+
+        "edge_expressions": {
+        {%- set edges = [] %}
+        {%- for (node_name, config) in nodes %}
+            {%- do edges.append((MM_SETUP_NODE, node_name, config.snake_case_name)) %}
+        {%- endfor %}
+        {%- for (input_dep, node_name, item_name) in edges|sort_tuple(0, 1) %}
+            "{{input_dep}}->{{node_name}}": "{{input_dep}}[{{HANDLER_REQUEST_PREFIX}}{{item_name}}]"
+            {{- "," if not loop.last }}
+        {%- endfor %}
+        },
+
+        "input_deps": [
+            "{{REQUEST_META_NODE}}",
+            "{{GPROXY_INPUT_NODE}}",
+            "{{CONTEXT_LOAD_NODE}}",
+            "{{GPROXY_DATASOURCES_NODE}}"
+        ],
+
+        "node_deps": {
+            "RESPONSE": {
+                "input_deps": [
+                    "!{{MM_FINALIZE_NODE}}@mm_rpc_response"
+                ]
+            },
+            "{{MM_FINALIZE_NODE}}": {
+                "input_deps": [
+                    {%- for (node_name, config) in nodes %}
+                    "{{node_name}}@rpc_response",
+                    {%- endfor %}
+                    "{{GPROXY_INPUT_NODE}}"
+                ]
+            },
+            {%- for (node_name, config) in nodes %}
+            "{{node_name}}": {
+                "input_deps": [
+                    "{{REQUEST_META_NODE}}@mm_scenario_request_meta",
+                    "{{CONTEXT_LOAD_NODE}}@context_load_response",
+                    "{{MM_SETUP_NODE}}@{{HANDLER_REQUEST_PREFIX}}{{config.snake_case_name}}->rpc_request",
+                    "DATASOURCES"
+                ]
+            },
+            {%- endfor %}
+            "{{MM_SETUP_NODE}}": {
+                "input_deps": [
+                    "{{GPROXY_INPUT_NODE}}"
+                ]
+            },
+            "DATASOURCES": {
+                "input_deps": [
+                    "{{GPROXY_DATASOURCES_NODE}}",
+                    "MEGAMIND_RPC_SETUP@rpc_datasource_user_location"
+                ]
+            }
+        },
+
+        "nodes": {
+            {%- for (node_name, config) in nodes|sort_tuple(0) %}
+            "{{node_name}}": {
+                "backend_name": "SELF",
+                "node_type": "DEFAULT",
+                "params": {
+                    "attempts": {
+                        "max_attempts": 1
+                    },
+                    "handler": "/_subhost/{{HANDLER_PREFIX}}{{config.snake_case_name}}",
+                    "responsibles": {
+                        {%- set responsibles = config.Responsibles %}
+                        {%- if responsibles.AbcServices %}
+                        "abc_service": [
+                            {%- for abc_service in responsibles.AbcServices %}
+                            {
+                                {%- if abc_service.DutySlugs %}
+                                "duty_slugs": {{ abc_service.DutySlugs|to_list|jsonify }},
+                                {%- endif %}
+                                {%- if abc_service.Scopes %}
+                                "role_scopes": {{ abc_service.Scopes|to_list|jsonify }},
+                                {%- endif %}
+                                "slug": "{{ abc_service.Name }}"
+                            }{{ "," if not loop.last }}
+                            {%- endfor %}
+                        ],
+                        {%- endif %}
+                        {%- if responsibles.Logins %}
+                        "logins": {{ responsibles.Logins|to_list|jsonify }},
+                        {%- endif %}
+                        "messenger_chat_names": [
+                            "MegamindDuty"
+                        ]
+                    },
+                    "timeout": "{{config.Timeout}}ms"
+                }
+            },
+            {%- endfor %}
+
+            "DATASOURCES": {
+                "node_type": "TRANSPARENT_STREAMING"
+            },
+            "{{MM_SETUP_NODE}}": {
+                "alias_config": {
+                    "addr_alias": [
+                        "MEGAMIND_ALIAS"
+                    ]
+                },
+                "backend_name": "MEGAMIND",
+                "node_type": "DEFAULT",
+                "params": {
+                    "attempts": {
+                        "max_attempts": 2
+                    },
+                    "responsibles": {
+                        "abc_service": [
+                            {
+                                "duty_slugs": [
+                                    "alice_duty_senior",
+                                    "alice_duty_executive"
+                                ],
+                                "slug": "aliceruntime"
+                            }
+                        ],
+                        "logins": [
+                            "nkodosov"
+                        ]
+                    },
+                    "handler": "/mm_rpc_setup_handler",
+                    "soft_timeout": "100ms",
+                    "timeout": "300ms"
+                }
+            },
+            "{{MM_FINALIZE_NODE}}": {
+                "alias_config": {
+                    "addr_alias": [
+                        "MEGAMIND_ALIAS"
+                    ]
+                },
+                "backend_name": "MEGAMIND",
+                "node_type": "DEFAULT",
+                "params": {
+                    "attempts": {
+                        "max_attempts": 2
+                    },
+                    "responsibles": {
+                        "abc_service": [
+                            {
+                                "duty_slugs": [
+                                    "alice_duty_senior",
+                                    "alice_duty_executive"
+                                ],
+                                "slug": "aliceruntime"
+                            }
+                        ],
+                        "logins": [
+                            "nkodosov"
+                        ]
+                    },
+                    "handler": "/mm_rpc_finalize_handler",
+                    "soft_timeout": "100ms",
+                    "timeout": "300ms"
+                }
+            }
+        },
+
+        "output_deps": [
+            "RESPONSE"
+        ],
+        "responsibles": {
+            "abc_service": [
+                {
+                    "duty_slugs": [
+                        "alice_duty_senior",
+                        "alice_duty_executive"
+                    ],
+                    "slug": "aliceruntime"
+                }
+            ],
+            "messenger_chat_names": [
+                "MegamindDuty"
+            ]
+        },
+        "streaming_no_block_outputs": true
+    }
+}
+

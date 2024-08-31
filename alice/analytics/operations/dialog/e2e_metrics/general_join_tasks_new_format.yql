@@ -1,0 +1,54 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+
+$script = @@
+import json
+def get_asr(VinsResponse):
+    if VinsResponse:
+        return json.loads(VinsResponse)['directive']['payload']['megamind_analytics_info']['original_utterance']
+    return ''
+@@;
+$get_asr = Python2::get_asr(Callable<(String?)->String>, $script);
+
+$get_voice = ($arg) -> {
+    RETURN String::ReplaceAll($arg, "getfile", "getaudio") || "?norm=1"
+};
+
+$basket = (
+    SELECT *
+    FROM {{input3}}
+    WITH SCHEMA Struct<request_id:String, session_id:String, toloka_intent:String?, app_preset:String, text:String?, basket:String, voice_url:String?, session_sequence:Int32>
+    WHERE ListLength(String::SplitToList(session_id, '__')) == 1 OR session_sequence == 1
+);
+
+$toloka_tasks = (
+    SELECT *
+    FROM {{input1}}
+    WITH SCHEMA Struct<app:String, generic_scenario:String?, hashsum:String, intent:String, req_id:String, session:Yson?, session_id:String, action0:Yson?, state0:Yson?, action1:Yson?, state1:Yson?>
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    IF(Yson::ConvertToString(Yson::Serialize(Yson::Parse(toloka_tasks.action0)).url) IS NULL AND results.result IS NULL, "RENDER_ERROR", results.result) AS result,
+    Yson::ConvertToString(Yson::Serialize(Yson::Parse(toloka_tasks.action0)).url) AS screenshot_url,
+    Yson::ConvertToString(Yson::Serialize(Yson::Parse(toloka_tasks.action0)).action) AS action,
+    Yson::ConvertToString(Yson::Serialize(Yson::Parse(toloka_tasks.action0)).answer) AS answer,
+    results.req_id as req_id, results.session_id as session_id, results.toloka_intent as toloka_intent, results.app as app, results.text as text, results.basket as basket, results.voice_url as voice_url, results.asr_text as asr_text, results.setrace_url as setrace_url,
+    toloka_tasks.* WITHOUT toloka_tasks.app, toloka_tasks.req_id, toloka_tasks.session_id
+FROM (
+    SELECT
+        basket.request_id as req_id,
+        basket.session_id as session_id,
+        basket.toloka_intent AS toloka_intent,
+        basket.app_preset AS app,
+        basket.text AS text,
+        basket.basket AS basket,
+        $get_voice(basket.voice_url) as voice_url,
+        $get_asr(uniproxy_results.VinsResponse) as asr_text,
+        uniproxy_results.SetraceUrl AS setrace_url,
+        IF(uniproxy_results.RequestId IS NULL, "UNIPROXY_ERROR", IF(uniproxy_results.VinsResponse IS NULL, "EMPTY_VINS_RESPONSE", NULL)) AS result
+    FROM $basket as basket
+    LEFT JOIN {{input2}} as uniproxy_results ON basket.request_id == uniproxy_results.RequestId
+) AS results
+LEFT JOIN $toloka_tasks AS toloka_tasks ON results.req_id == toloka_tasks.req_id;

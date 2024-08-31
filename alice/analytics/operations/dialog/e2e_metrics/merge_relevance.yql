@@ -1,0 +1,22 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict;
+
+INSERT INTO {{output1}}
+SELECT
+    request_id AS req_id,
+    result,
+    NULL AS fraud,
+    NULL AS query,
+FROM {{input1}}
+WITH SCHEMA Struct<request_id:String, result:String>
+
+UNION ALL
+
+SELECT
+    Yson::ConvertToString(inputValues.input.req_id) AS req_id,
+    Yson::ConvertToString(outputValues.result) AS result,
+    Yson::ConvertToBool(outputValues.fraud) AS fraud,
+    Yson::ConvertToString(inputValues.input.action0.query) AS query,
+FROM {{input2}}
+WITH SCHEMA Struct<inputValues:Yson, outputValues:Yson>
+

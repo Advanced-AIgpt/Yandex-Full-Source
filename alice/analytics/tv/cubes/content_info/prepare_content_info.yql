@@ -1,0 +1,354 @@
+PRAGMA File("libdj_udf.so", "https://proxy.sandbox.yandex-team.ru/last/DJ_UDF");
+PRAGMA UDF("libdj_udf.so");
+
+$final_doc_profiles_path = "//home/videoindex/recommender/profiles/vhs/prod/doc_profiles/final_doc_profiles";
+$entity_titles_path = "//home/videorecom/recommender/entity_titles";
+$output_path = {{param.output_table}};
+
+
+$extract_content_id = Re2::FindAndConsume("^frontend\.vh\.yandex\.ru\/player\/(.*)$");
+$episodes_title_regexp = Re2::Capture("^(?P<title>.*)\\s\\-\\sСезон\\s(?P<season>\\d+)\\s\\-\\sСерия\\s(?P<episode>\\d+)(.*)?");
+
+$get_real_content_id = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_CONTENTID", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId
+};
+
+$get_episodes_root_content_id = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_ROOT_UUID", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId
+};
+
+$get_onto_id = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_REAL_ONTO_ID", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId
+};
+
+$get_duration = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_DURATION", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].Value
+};
+
+$get_title = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_FULL_TITLE", "PN_VHS#CT_DSSM_DATA", "RT_Sum", NULL
+    )[0].ObjectId
+};
+
+$get_episodes_title = ($profile) -> {
+    RETURN $episodes_title_regexp($get_title($profile)).title
+};
+
+$get_season_number = ($profile) -> {
+    RETURN $episodes_title_regexp($get_title($profile)).season
+};
+
+$get_episode_number = ($profile) -> {
+    RETURN $episodes_title_regexp($get_title($profile)).episode
+};
+
+$get_genres = ($profile) -> {
+    RETURN ListMap(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_GENRE", "PN_VHS#CT_DSSM_DATA", "RT_Sum", NULL
+    ), ($x) -> {RETURN SUBSTRING($x.ObjectId, 1)})
+};
+
+$get_country = ($profile) -> {
+    RETURN ListMap(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_ONTO_COUNTRY", "PN_VHS#CT_DATA", "RT_Last", NULL
+    ), ($x) -> {RETURN SUBSTRING($x.ObjectId, 1)})
+};
+
+$get_director = ($profile) -> {
+    RETURN SUBSTRING(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_DIRECTOR", "PN_VHS#CT_DSSM_DATA", "RT_Sum", NULL
+    )[0].ObjectId, 1)
+};
+
+$get_actors = ($profile) -> {
+    RETURN ListMap(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_ACTOR", "PN_VHS#CT_DSSM_DATA", "RT_Sum", NULL
+    ), ($x) -> {RETURN SUBSTRING($x.ObjectId, 1)})
+};
+
+$get_kinopoisk_id = ($profile) -> {
+    RETURN DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_REAL_KINOPOISK_ID", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId
+};
+
+$get_kp_rating = ($profile) -> {
+    $erfs = DJ::GetProfileErfs(DJ::ProfileFromProto($profile), false, false);
+    RETURN ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_KP_RATING";})[0].Value.`Float`
+};
+
+$get_release_date = ($profile) -> {
+    $erfs = DJ::GetProfileErfs(DJ::ProfileFromProto($profile), false, false);
+    RETURN CAST(ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_RELEASE_YEAR";})[0].Value.`Float` as String) || '-01-01'
+};
+
+$get_content_availablity = ($profile) -> {
+    $erfs = DJ::GetProfileErfs(DJ::ProfileFromProto($profile), false, false);
+
+    $HAS_TVOD = ListHasItems(ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_DOC_HAS_TVOD";}));
+    $HAS_SVOD = ListHasItems(ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_DOC_HAS_SVOD";}));
+
+    $YA_PREMIUM = ListHasItems(ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_DOC_IS_YA_PREMIUM";}));
+    $YA_PLUS_SUPER = ListHasItems(ListFilter($erfs, ($e) -> {RETURN $e.ErfType == "PN_VHS#ERFT_DOC_IS_YA_PLUS_SUPER";}));
+    $YA_PLUS = ListHasItems(ListFilter($erfs, ($e) -> {RETURN $e.ErfType in (
+        "PN_VHS#ERFT_DOC_IS_YA_PLUS",
+        "PN_VHS#ERFT_DOC_IS_YA_PLUS_3M",
+        "PN_VHS#ERFT_DOC_IS_KP_BASIC"
+    );}));
+
+    RETURN CASE
+        WHEN $HAS_TVOD and not $HAS_SVOD THEN "TVOD/EST"
+        WHEN $YA_PLUS THEN "YA_PLUS"
+        WHEN $YA_PLUS_SUPER THEN "YA_PLUS_SUPER"
+        WHEN $YA_PREMIUM THEN "YA_PREMIUM"
+        ELSE "AVOD"
+    END
+};
+
+$get_main_genre = ($profile) -> {
+    RETURN SUBSTRING(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_FIRST_GENRE", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId, 1)
+};
+
+$get_main_country = ($profile) -> {
+    RETURN SUBSTRING(DJ::GetProfileCounters(DJ::ProfileFromProto($profile),
+        false, false, false,
+        "PN_VHS#OT_FIRST_ONTO_COUNTRY", "PN_VHS#CT_DATA", "RT_Last", NULL
+    )[0].ObjectId, 1)
+};
+
+
+$raw_data = (
+    SELECT
+        id, profile
+    FROM $final_doc_profiles_path
+    WHERE id like('%frontend.vh.yandex.ru/player/%')
+);
+
+
+$real_content_ids = (
+    SELECT
+        id,
+        "frontend.vh.yandex.ru/player/" || $get_real_content_id(profile) as real_content_id
+    FROM $raw_data
+);
+
+
+$data = (
+    SELECT
+        ids_mapping.id as id,
+        ids_mapping.real_content_id as real_content_id,
+        data.profile as profile
+    FROM $real_content_ids as ids_mapping
+    JOIN $raw_data as data
+    ON ids_mapping.real_content_id = data.id
+);
+
+
+$entity_titles = (
+    SELECT
+        Yson::ConvertToString(key) as key,
+        _other['title'] as value
+    FROM $entity_titles_path
+    WHERE key is not null
+);
+
+
+$genres = (
+    SELECT
+        id,
+        AGGREGATE_LIST(titles.value) as genres,
+    FROM
+    (
+        SELECT
+            id,
+            genres as genre_id
+        FROM
+        (
+            SELECT
+                id,
+                $get_genres(profile) as genres,
+            FROM $data
+        ) FLATTEN LIST BY genres
+    ) as genres
+    LEFT JOIN $entity_titles as titles
+    ON genres.genre_id = titles.key
+    GROUP BY genres.id as id
+);
+
+
+$countries = (
+    SELECT
+        id,
+        AGGREGATE_LIST(titles.value) as countries,
+    FROM
+    (
+        SELECT
+            id,
+            countries as country_id
+        FROM
+        (
+            SELECT
+                id,
+                $get_country(profile) as countries,
+            FROM $data
+        ) FLATTEN LIST BY countries
+    ) as countries
+    LEFT JOIN $entity_titles as titles
+    ON countries.country_id = titles.key
+    GROUP BY countries.id as id
+);
+
+
+$actors = (
+    SELECT
+        id,
+        AGGREGATE_LIST(titles.value) as actors,
+    FROM
+    (
+        SELECT
+            id,
+            actors as actor_id
+        FROM
+        (
+            SELECT
+                id,
+                $get_actors(profile) as actors,
+            FROM $data
+        ) FLATTEN LIST BY actors
+    ) as actors
+    LEFT JOIN $entity_titles as titles
+    ON actors.actor_id = titles.key
+    GROUP BY actors.id as id
+);
+
+
+$director = (
+    SELECT
+        data.id as id,
+        titles.value as director
+    FROM $data as data
+    LEFT JOIN $entity_titles as titles
+    ON $get_director(data.profile) = titles.key
+);
+
+
+$main_country = (
+    SELECT
+        data.id as id,
+        titles.value as main_country
+    FROM $data as data
+    LEFT JOIN $entity_titles as titles
+    ON $get_main_country(data.profile) = titles.key
+);
+
+
+$main_genre = (
+    SELECT
+        data.id as id,
+        titles.value as main_genre
+    FROM $data as data
+    LEFT JOIN $entity_titles as titles
+    ON $get_main_genre(data.profile) = titles.key
+);
+
+
+$data_wo_episodes = (
+    SELECT
+        $extract_content_id(t0.id)[0] as id,
+
+        $get_duration(profile) as duration,
+        $get_real_content_id(profile) as real_content_id,
+        $get_onto_id(profile) as onto_id,
+        $get_title(profile) as title,
+        $get_kinopoisk_id(profile) as kinopoisk_id,
+        $get_kp_rating(profile) as kp_rating,
+        $get_release_date(profile) as release_date,
+        $get_content_availablity(profile) as content_availablity,
+        $get_episodes_root_content_id(profile) as episodes_root_content_id,
+        $get_episodes_title(profile) as episodes_title,
+        $get_season_number(profile) as season_number,
+        $get_episode_number(profile) as episode_number,
+
+        nvl(genres, []) as genres,
+        nvl(countries, []) as countries,
+        nvl(actors, []) as actors,
+
+        nvl(director, null) as director,
+        nvl(main_country, null) as main_country,
+        nvl(main_genre, null) as main_genre
+
+    FROM $data as t0
+    LEFT JOIN $countries as countries
+    ON t0.id = countries.id
+    LEFT JOIN $genres as genres
+    ON t0.id = genres.id
+    LEFT JOIN $actors as actors
+    ON t0.id = actors.id
+    LEFT JOIN $director as director
+    ON t0.id = director.id
+    LEFT JOIN $main_country as main_country
+    ON t0.id = main_country.id
+    LEFT JOIN $main_genre as main_genre
+    ON t0.id = main_genre.id
+);
+
+
+$episodes_data = (
+    SELECT
+        id,
+        id as real_content_id,
+        min_by(onto_id, AsTuple(season_number, episode_number)) as onto_id,
+        min_by(episodes_title, AsTuple(season_number, episode_number)) as title,
+        min_by(kinopoisk_id, AsTuple(season_number, episode_number)) as kinopoisk_id,
+        min_by(kp_rating, AsTuple(season_number, episode_number)) as kp_rating,
+        min_by(release_date, AsTuple(season_number, episode_number)) as release_date,
+        min_by(content_availablity, AsTuple(season_number, episode_number)) as content_availablity,
+
+        min_by(genres, AsTuple(season_number, episode_number)) as genres,
+        min_by(countries, AsTuple(season_number, episode_number)) as countries,
+        min_by(actors, AsTuple(season_number, episode_number)) as actors,
+        min_by(director, AsTuple(season_number, episode_number)) as director,
+        min_by(main_country, AsTuple(season_number, episode_number)) as main_country,
+        min_by(main_genre, AsTuple(season_number, episode_number)) as main_genre,
+    FROM $data_wo_episodes
+    WHERE episodes_root_content_id is not null
+    GROUP BY episodes_root_content_id as id
+);
+
+
+$final_data = (
+    SELECT
+        *
+    FROM (
+        (SELECT * FROM $data_wo_episodes)
+        UNION ALL
+        (SELECT * FROM $episodes_data)
+    )
+);
+
+
+INSERT INTO $output_path WITH TRUNCATE
+SELECT * FROM $final_data
+ORDER BY id;

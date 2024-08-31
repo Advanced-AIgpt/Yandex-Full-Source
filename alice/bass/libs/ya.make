@@ -1,0 +1,34 @@
+OWNER(g:bass)
+
+RECURSE(
+    analytics
+    app_host
+    avatars
+    client
+    config
+    eventlog
+    facts
+    fetcher
+    forms_db
+    globalctx
+    logging
+    logging_v2
+    metrics
+    ner
+    push_notification
+    radio
+    request
+    rtlog
+    scheduler
+    smallgeo
+    socialism
+    source_request
+    tvm2
+    ut_helpers
+    video_common
+    video_content
+    video_tools
+    ydb_config
+    ydb_helpers
+    ydb_kv
+)

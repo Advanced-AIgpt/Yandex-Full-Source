@@ -1,0 +1,110 @@
+USE hahn;
+
+--ищем события ребута которые произошли сразу после дырки
+$rebooted_devices =
+(
+    SELECT t.device_id AS device_id, t.fielddate AS fielddate,
+    MAX_BY(p.ts, p.device_power_on_diff) AS device_power_on_ts, 
+    MAX(p.device_power_on_diff) AS no_socket_time
+    FROM `//home/voice/nadezhda17/common/wifi_problems/pings/pings_history` AS t 
+    INNER JOIN `//home/voice/nadezhda17/common/wifi_problems/pings/device_power_on` AS p ON t.device_id = p.device_id 
+    WHERE p.ts BETWEEN t.ts - DateTime::IntervalFromMinutes(10) AND t.ts + DateTime::IntervalFromMinutes(5)
+    GROUP BY t.device_id, t.fielddate
+);
+
+--девайс правда вынимали из розетки на 10+ мин
+$long_time_no_socket = ($no_socket_time, $external_gap) -> {RETURN 
+IF($no_socket_time >= DateTime::IntervalFromMinutes(10) 
+AND $external_gap >= DateTime::IntervalFromMinutes(10), 1, 0)};
+
+--час не было пингов и из розетки не вынимали на 10+ мин
+$pings_problem = ($no_socket_time, $external_gap) -> {RETURN 
+IF(($no_socket_time <= DateTime::IntervalFromMinutes(10) OR $no_socket_time IS NULL)
+AND $external_gap >= DateTime::IntervalFromHours(1), 1, 0)};
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/pings/final_matched` WITH TRUNCATE
+SELECT t.*, 
+--девайс правда вынимали из розетки на 10+ мин
+$long_time_no_socket(no_socket_time, external_gap) AS long_time_no_socket, 
+no_socket_time, device_power_on_ts, 
+--считаем проблемой когда потеря пингов не связаны с выниманием из розетки
+$pings_problem(no_socket_time, external_gap) AS pings_problem
+FROM `//home/voice/nadezhda17/common/wifi_problems/pings/pings_history` AS t 
+LEFT JOIN $rebooted_devices AS r ON r.device_id = t.device_id AND r.fielddate = t.fielddate;
+
+COMMIT;
+
+INSERT INTO  `//home/voice/nadezhda17/common/wifi_problems/pings/beta_users` WITH TRUNCATE 
+SELECT login, puid, c.*
+FROM `//home/voice/nadezhda17/common/wifi_problems/pings/final_matched` AS c
+INNER JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a ON c.device_id = a.device_id
+INNER JOIN `//home/quasar-dev/backend/snapshots/current/account` AS cf ON cf.id = a.puid
+WHERE c.QuasmodromGroup = 'beta'
+AND pings_problem = 1
+ORDER BY ts DESC;
+
+$days_metric = 
+(
+    SELECT fielddate,
+    IF(fielddate >= '2021-11-22',
+    SUM_IF(pings_problem, device = 'yandexmini')*100.0/COUNT_IF(device = 'yandexmini'), 
+    NULL) AS yandexmini,
+    IF(fielddate >= '2021-11-22',
+    SUM_IF(pings_problem, device = 'yandexmini_2')*100.0/COUNT_IF(device = 'yandexmini_2'),
+    NULL) AS yandexmini_2,
+    IF(fielddate >= '2021-11-22',
+    SUM_IF(pings_problem, device = 'yandexmicro')*100.0/COUNT_IF(device = 'yandexmicro'),
+    NULL) AS yandexmicro,
+    IF(fielddate >= '2021-11-05',
+    SUM_IF(pings_problem, device = 'yandexstation')*100.0/COUNT_IF(device = 'yandexstation'), 
+    NULL) AS yandexstation,
+    IF(fielddate >= '2021-11-05',
+    SUM_IF(pings_problem, device = 'yandexstation_2')*100.0/COUNT_IF(device = 'yandexstation_2'),
+    NULL) AS yandexstation_2,
+    IF(fielddate >= '2021-11-05',
+    SUM_IF(pings_problem, device = 'yandexmidi')*100.0/COUNT_IF(device = 'yandexmidi'),
+    NULL) AS yandexmidi
+    FROM `//home/voice/nadezhda17/common/wifi_problems/pings/final_matched`
+    GROUP BY fielddate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/pings/days_metric` WITH TRUNCATE 
+SELECT *
+FROM $days_metric
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/wifi_problems/pings/days_metric` AS t 
+LEFT ONLY JOIN $days_metric AS d ON d.fielddate = t.fielddate;
+
+$styskin_metric = 
+(
+    SELECT fielddate,
+    IF(fielddate >= '2021-11-22',
+    COUNT_IF(pings_problem = 1 AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexmini')*100.0/COUNT_IF(device = 'yandexmini'), NULL) AS yandexmini,
+    IF(fielddate >= '2021-11-22',
+    COUNT_IF(pings_problem = 1  AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexmini_2')*100.0/COUNT_IF(device = 'yandexmini_2'), NULL) AS yandexmini_2,
+    IF(fielddate >= '2021-11-22',
+    COUNT_IF(pings_problem = 1 AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexmicro')*100.0/COUNT_IF(device = 'yandexmicro'), NULL) AS yandexmicro,
+    IF(fielddate >= '2021-11-05',
+    COUNT_IF(pings_problem = 1  AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexstation')*100.0/COUNT_IF(device = 'yandexstation'), NULL) AS yandexstation,
+    IF(fielddate >= '2021-11-05',
+    COUNT_IF(pings_problem = 1 AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexstation_2')*100.0/COUNT_IF(device = 'yandexstation_2'), NULL) AS yandexstation_2,
+    IF(fielddate >= '2021-11-05',
+    COUNT_IF(pings_problem = 1  AND device_power_on_ts IS NOT NULL AND
+    device = 'yandexmidi')*100.0/COUNT_IF(device = 'yandexmidi'), NULL) AS yandexmidi
+    FROM `//home/voice/nadezhda17/common/wifi_problems/pings/final_matched`
+    GROUP BY fielddate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/pings/styskin_metric` WITH TRUNCATE 
+SELECT *
+FROM $styskin_metric
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/wifi_problems/pings/styskin_metric` AS t 
+LEFT ONLY JOIN $styskin_metric AS d ON d.fielddate = t.fielddate;

@@ -1,0 +1,10 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/wifi_problems/pings/device_power_on_temp`
+SELECT OriginalModel, DeviceID, EventDate, EventDateTime, iso_eventtime, EventName, EventValue,
+visitParamExtractInt(EventValue, 'nowTimestampSec') - 
+visitParamExtractInt(EventValue, 'powerOffTimestampSec') AS diff_sec
+FROM concatYtTablesRange('//logs/appmetrica-yandex-events/1d', 
+toString(toDate(TIMESTAMP_SUB(day, 3, now()))), 
+toString(toDate(TIMESTAMP_SUB(day, 1, now()))))
+WHERE APIKey = 999537
+AND EventName = 'device_power_on'
+AND visitParamExtractInt(EventValue, 'powerOffTimestampSec') > 0;

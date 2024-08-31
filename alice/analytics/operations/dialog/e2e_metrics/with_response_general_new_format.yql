@@ -1,0 +1,191 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+
+$arcadia_intents_path = "arc://alice/analytics/utils/yt/extract_intent.py?hash=" || {{param.arc_commit->quote() ?? "99e8fd2fe9dabe365bdeca49600c6f99b41ce0ad"->quote()}};
+PRAGMA File("arcadia_intents_path.py", $arcadia_intents_path);
+$script = FileContent("arcadia_intents_path.py");
+$get_mm_scenario = Python::get_mm_scenario(Callable<(String?,Bool?)->String?>, $script);
+$get_product_scenario = Python::get_product_scenario_name(Callable<(String?,Bool?)->String?>, $script);
+$get_intent = Python::get_intent(Callable<(String?,Bool?)->String?>, $script);
+
+$arcadia_mapping_path = "arc://alice/analytics/operations/dialog/sessions/intent_scenario_mapping.py?hash=" || {{param.arc_commit->quote() ?? "8df00ff493d2add4510b37d60c08015aa2fe6894"->quote()}};
+PRAGMA File("intent_to_scenario_map.py", $arcadia_mapping_path);
+$script = FileContent("intent_to_scenario_map.py");
+$generalize_vins_intent = Python2::get_generic_scenario(ParseType("(String?, String?, String?)->String"), $script);
+
+$get_location = ($location, $additional_options, $app_preset, $generic_scenario, $exact_location) -> {
+    $lat = IF(Yson::Contains($location, "lat"), Yson::ConvertToDouble($location["lat"]), NULL);
+    $lon = IF(Yson::Contains($location, "lon"),  Yson::ConvertToDouble($location["lon"]), NULL);
+    $location_by_coordinates = IF($lat IS NOT NULL AND $lon IS NOT NULL, Geo::RoundRegionByLocation($lat, $lon, "town").name || ", " || Geo::RoundRegionByLocation($lat, $lon, "region").name, NULL);
+    $region_id = IF(Yson::Contains($additional_options["bass_options"], "region_id"), CAST(Yson::ConvertToInt64($additional_options["bass_options"]["region_id"]) AS Int32), NULL);
+    $location_by_region_id = IF($region_id IS NOT NULL, Geo::RoundRegionById($region_id, "town").name || ", " || Geo::RoundRegionById($region_id, "region").name, NULL);
+    $client_ip = IF(Yson::Contains($additional_options["bass_options"], "client_ip"), Yson::ConvertToString($additional_options["bass_options"]["client_ip"]), NULL);
+    $location_by_client_ip = IF($client_ip IS NOT NULL, Geo::RoundRegionByIp($client_ip, "town").name || ", " || Geo::RoundRegionByIp($client_ip, "region").name, NULL);
+    RETURN CASE
+    WHEN ($app_preset IN ("navigator", "auto") OR $generic_scenario IN ("find_poi", "route")) AND $exact_location IS NOT NULL AND $exact_location != "" THEN $exact_location
+        WHEN $location_by_coordinates IS NOT NULL THEN $location_by_coordinates
+        WHEN $location_by_region_id IS NOT NULL THEN $location_by_region_id
+        ELSE $location_by_client_ip
+    END;
+};
+
+$get_message = Python::get_message(Callable<(String?, String?, String?, String?, String?, String?, String?)->Json>,
+@@
+import json, random, re
+def random_part(i):
+    return ''.join(map(lambda x: random.choice("0123456789abcdef"), range(i)))
+    
+def generate_id():
+    return ''.join([''.join(['f']*8), '-', ''.join(['f']*4), '-', ''.join(['f']*4), '-',
+                    random_part(4), '-', random_part(12)])
+                    
+def get_message(response, vins_intent, text, request_id, intent, generic_scenario, location):
+    if response:
+        response = response.decode("utf-8")
+    vins_response = ""
+    message = ""
+    if response != "":
+        try:
+            message = json.loads(response)
+            if "response" in message:
+                vins_response = message
+                message = message["response"]
+            elif "directive" in message and "payload" in message["directive"] and "response" in message["directive"]["payload"]:
+                vins_response = message["directive"]["payload"]
+                message = message["directive"]["payload"]["response"]
+        except TypeError:
+            return ""
+    else:
+        return ""
+    
+    if intent:
+        intent = intent.decode("utf-8")
+    elif vins_intent:
+        intent = vins_intent.decode("utf-8")
+    else:
+        intent = "EMPTY"
+        
+    text = text.decode("utf-8")
+    request_id = request_id.decode("utf-8")
+    key = generate_id()
+    
+    dialog = [
+        { "message": {"text": text},
+          "type": "user"},
+        { "message": message,
+          "type": "assistant"}
+    ]
+    
+    directives_lst = []
+    if "directives" in message:
+        directives_lst = message["directives"]
+        
+    reply = ""
+    
+    if vins_response.get('voice_response') and vins_response['voice_response'].get('output_speech'):
+        reply = vins_response['voice_response']['output_speech'].get('text', "EMPTY")
+        
+    dict_to_dump = {
+        "intent": intent,
+        "info": {
+            "id": request_id,
+            "device_id": generate_id(),
+            "query": text,
+            "reply": reply,
+            "request_id": request_id,
+            "location": location.decode('utf-8') if location else "",
+            "intent": intent if intent else "EMPTY",
+            "generic_scenario": generic_scenario.decode('unicode_escape') if generic_scenario else ""
+        },
+        "task": {
+            "dialog": dialog,
+            "key": key
+        },
+        "key": key,
+        "directives_dict": {x['name']: [x['payload'], x.get('sub_name', '')] for x in directives_lst}
+    }
+   
+    return json.dumps(dict_to_dump)
+    
+@@
+);
+
+DEFINE SUBQUERY $join_with_uniproxy_output() AS
+    SELECT e.*, IF(LENGTH(f.session_id) > 36, SUBSTRING(f.session_id, NULL, 36), "") AS prev_reqid
+    FROM {{input1}} AS e
+    JOIN {{input2}} AS f
+    ON e.RequestId  == f.request_id;
+END DEFINE;
+
+DEFINE ACTION $join_with_vins_output() AS
+    INSERT INTO @joined_tables with truncate
+    SELECT e.*, f.FetchedResult AS prev_response
+    FROM $join_with_uniproxy_output() AS e
+    LEFT JOIN {{input3}} AS f
+    ON e.prev_reqid == f.id;
+END DEFINE;
+
+DEFINE ACTION $join_without_vins_output() AS
+    INSERT INTO @joined_tables with truncate
+    SELECT c.*, NULL AS prev_response
+    FROM $join_with_uniproxy_output() AS c;
+END DEFINE;
+
+
+DEFINE SUBQUERY $get_row_count() AS
+    $path_parts = String::SplitToList({{input3->table_quote()}}, '/');
+    $replace = Re2::Replace("^//");
+    $folder = String::JoinFromList(ListTake($path_parts, ListLength($path_parts)-1), '/');
+    SELECT Yson::LookupInt64(Attributes, "row_count") AS row_count FROM FOLDER($folder, "row_count") WHERE Path == $replace({{input3->table_quote()}}, '');
+END DEFINE;
+
+$rows = SELECT row_count FROM $get_row_count();
+
+EVALUATE IF $rows > 0
+    DO $join_with_vins_output()
+ELSE
+    DO $join_without_vins_output();
+COMMIT;
+
+$basket1 = (
+SELECT *
+FROM {{input2}}
+WHERE reversed_session_sequence = 1
+);
+
+$basket0 = (
+SELECT *
+FROM {{input2}}
+WHERE reversed_session_sequence = 0
+);
+
+$join_1 = (
+SELECT b.*, j.prev_response as vins_response
+FROM $basket1 as b
+LEFT JOIN @joined_tables as j
+ON b.request_id = j.prev_reqid
+);
+
+$join_0 = (
+SELECT b.*, j.VinsResponse as vins_response
+FROM $basket0 as b
+LEFT JOIN @joined_tables as j
+ON b.request_id = j.RequestId
+);
+
+$basket_joined = (
+(SELECT * FROM $join_1)
+UNION ALL
+(SELECT * FROM $join_0)
+);
+
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    request_id, 
+    $get_message(vins_response, vins_intent, text, request_id, $get_intent(vins_response, reversed_session_sequence != 0), 
+$generalize_vins_intent($get_intent(vins_response, reversed_session_sequence != 0) ?? "EMPTY", $get_mm_scenario(vins_response, reversed_session_sequence != 0), $get_product_scenario(vins_response, reversed_session_sequence != 0)), 
+$get_location(WeakField(location, Yson), WeakField(additional_options, Yson), WeakField(app_preset, String), $generalize_vins_intent($get_intent(vins_response, reversed_session_sequence != 0) ?? "EMPTY", $get_mm_scenario(vins_response, reversed_session_sequence != 0), $get_product_scenario(vins_response, reversed_session_sequence != 0)), WeakField(exact_location, String))) as message,
+    reversed_session_sequence, 
+    session_id
+from $basket_joined;

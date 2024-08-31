@@ -1,0 +1,101 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$two_weeks_ago = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(9) AS String);
+$week_ago = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(7) AS String);
+$yesterday = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(1) AS String);
+
+--непустые запросы пользователей за последние 9 дней
+$reqs = 
+(
+    SELECT fielddate, device_id, COUNT(DISTINCT req_id) AS reqs_amount
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data` AS s 
+    WHERE fielddate >= $two_weeks_ago
+    AND query IS NOT NULL 
+    GROUP BY fielddate, device_id
+);
+
+--устройства которые видели в розетках за последние 9 дней
+$all_devices = 
+(
+    SELECT `date` AS fielddate, device, device_id
+    FROM `//home/sprav/assay/common/Dates` AS d 
+    CROSS JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a 
+    WHERE `date` BETWEEN $two_weeks_ago AND $yesterday
+    AND device IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexmidi',
+    'yandexstation', 'yandexstation_2')
+    AND socket_fielddate >= $two_weeks_ago
+);
+
+--проклеенная информация
+$matched = 
+(
+    SELECT a.fielddate AS fielddate, device, a.device_id AS device_id, 
+    reqs_amount??0 AS reqs_amount, ysk_errors_amount??0 AS ysk_errors_amount
+    FROM $all_devices AS a
+    LEFT JOIN $reqs AS r ON r.device_id = a.device_id AND r.fielddate = a.fielddate
+    LEFT JOIN `//home/voice/nadezhda17/common/wifi_problems/user_problems/ysk_errors` AS y 
+    ON y.device_id = a.device_id AND y.fielddate = a.fielddate
+);
+
+
+$metrics = 
+(
+
+    SELECT fielddate, scale,
+
+    COUNT_IF(device = 'yandexstation' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexstation') AS yandexstation_99,
+    COUNT_IF(device = 'yandexstation' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexstation') AS yandexstation_90,
+
+    COUNT_IF(device = 'yandexmini' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexmini') AS yandexmini_99,
+    COUNT_IF(device = 'yandexmini' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexmini') AS yandexmini_90,
+
+    COUNT_IF(device = 'yandexstation_2' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexstation_2') AS yandexstation_2_99,
+    COUNT_IF(device = 'yandexstation_2' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexstation_2') AS yandexstation_2_90,
+
+    COUNT_IF(device = 'yandexmicro' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexmicro') AS yandexmicro_99,
+    COUNT_IF(device = 'yandexmicro' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexmicro') AS yandexmicro_90,
+
+    COUNT_IF(device = 'yandexmini_2' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexmini_2') AS yandexmini_2_99,
+    COUNT_IF(device = 'yandexmini_2' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexmini_2') AS yandexmini_2_90,
+
+    COUNT_IF(device = 'yandexmidi' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.99)*100.0/COUNT_IF(device = 'yandexmidi') AS yandexmidi_99,
+    COUNT_IF(device = 'yandexmidi' AND reqs_amount*1.0/(reqs_amount + ysk_errors_amount) 
+    > 0.9)*100.0/COUNT_IF(device = 'yandexmidi') AS yandexmidi_90
+
+    FROM 
+    (
+        SELECT 'week' AS scale, fielddate, device, device_id,
+        SUM(reqs_amount) OVER w AS reqs_amount, 
+        SUM(ysk_errors_amount) OVER w AS ysk_errors_amount
+        FROM $matched
+        WINDOW w AS (PARTITION BY device_id ORDER BY fielddate ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+        UNION ALL 
+        SELECT 'day' AS scale, fielddate, device, device_id,
+        reqs_amount, ysk_errors_amount 
+        FROM $matched    
+    )
+    WHERE reqs_amount + ysk_errors_amount > 0
+    --чтобы честно считать недельную метрику нужно сделать отсечку
+    AND fielddate >= $week_ago 
+    GROUP BY fielddate, scale
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/user_problems/metrics` WITH TRUNCATE 
+SELECT *
+FROM $metrics
+UNION ALL 
+SELECT o.*
+FROM `//home/voice/nadezhda17/common/wifi_problems/user_problems/metrics` AS o 
+LEFT ONLY JOIN $metrics AS n ON n.fielddate = o.fielddate AND n.scale = o.scale;

@@ -1,0 +1,118 @@
+-- code for "Parse_metrika" YQL cube
+
+-- tested : https://yql.yandex-team.ru/Operations/YNhoufMBwxsCLB8fO2JzhAhxF4lVbDIy1u53Uq596k0=
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$format = DateTime::Format("%Y-%m-%d");
+
+$reportEnvironmentValueByKey = ($keys, $values, $keyValue) -> {
+    $idx = ListIndexOf($keys, $keyValue);
+    RETURN CAST($values[$idx] AS Utf8)??'';    };
+
+-- QUERY 0
+-- take appmetrika 1 day log, only our API key (consider using other EventType set for speed/completeness)
+-- extract device_type, hdmiPlugged, devprod from ReportEnvironment_Keys/Values
+$q0 =
+SELECT
+    IF (DeviceID is NOT NULL, DeviceID,
+        $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id"))
+        AS device_id,
+    `UUID` AS `uuid`,
+    AccountID AS puid,
+    AppVersionName AS app_version,
+    RegionID AS geo_id,
+
+    EventTimestamp AS event_timestamp,
+    EventDate AS fielddate,
+
+    Model AS model,
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") AS device_type,
+    Manufacturer AS manufacturer,
+
+    IF (NOT ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "hdmiPlugged") IS NULL)
+        AND (cast($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "hdmiPlugged") AS string) == '1'),
+        1, 0) AS hdmi_plugged,
+
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "quasmodrom_group") ??
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "buildType") ?? '-' AS devprod,
+
+from {{input1}}
+where
+    APIKey = 999537
+    AND EventType in (2, 4)
+    AND EventName != 'yandexUidReceived' -- avoid duplicate device_id when yandexstation upgrades firmware
+;
+
+-- QUERY 1
+-- GROUP BY device_id, fielddate
+-- select feature values based on mode / latest value
+$q1 =
+SELECT
+    fielddate,
+    device_id,
+    MODE(`uuid`)[0].Value AS `uuid`,
+    MODE(puid)[0].Value AS puid,
+    MAX_BY(app_version, event_timestamp) AS app_version,
+    cast(MODE(geo_id)[0].Value AS int64) AS geo_id,
+
+    MODE(model)[0].Value AS model,
+    MODE(device_type)[0].Value AS device_type,
+    MODE(manufacturer)[0].Value AS manufacturer,
+
+    cast (MAX(hdmi_plugged) == 1 AS bool?) AS hdmi_plugged,
+
+    cast(MAX_BY(devprod, event_timestamp) AS string) AS devprod
+
+FROM $q0
+GROUP BY device_id, fielddate
+;
+
+
+-- QUERY 2
+-- select device_type, fielddate with formulas
+-- consider adding model selection
+-- consider combining with QUERY 1
+
+$q2 =
+SELECT
+    $format(AddTimezone(DateTime::FromSeconds(CAST(fielddate AS UInt32)), "Europe/Moscow")) AS fielddate,
+    device_id,
+    `uuid`,
+    puid,
+    app_version,
+    geo_id,
+    model,
+    CASE
+        WHEN device_type IS NULL OR device_type == ""
+            THEN CASE model
+                WHEN 'Station'
+                    THEN 'yandexstation'
+                WHEN 'YandexModule-00002'
+                    THEN 'yandexmodule'
+                WHEN 'KidPhone3G'
+                    THEN 'elariwatch'
+                ELSE model
+                END
+        ELSE
+            CASE
+            WHEN device_type == 'desktop'
+                THEN model
+            WHEN device_type == 'elariwatch'
+                THEN 'elariwatch'
+            WHEN device_type == 'Station'
+                THEN IF(model == 'Station', 'yandexstation', model)
+            ELSE device_type
+            END
+        END
+    AS device_type,
+
+    manufacturer,
+    hdmi_plugged,
+    devprod
+
+FROM $q1;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT * FROM $q2
+;

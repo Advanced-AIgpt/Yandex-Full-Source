@@ -1,0 +1,96 @@
+PRAGMA yt.InferSchema = '50';
+PRAGMA SimpleColumns;
+PRAGMA yt.UseNativeYtTypes = 'true';
+
+-- The artifact https://proxy.sandbox.yandex-team.ru/2547009942 was generated according to https://a.yandex-team.ru/arc/trunk/arcadia/voicetech/asr/core/lib/util/io/byte_stream_converter/py_lib/yql_udf?rev=r8738041. It contains opus -> wav converter.
+
+PRAGMA File('libbyte_stream_converter_yql.so', 'https://proxy.sandbox.yandex-team.ru/2547009942');
+PRAGMA udf('libbyte_stream_converter_yql.so');
+
+$python_script = "arc:" || {{param[python_path]}};
+PRAGMA File("script.py", $python_script);
+$script = FileContent("script.py");
+
+$norm = CustomPython3::norm(Callable<(String)->String?>, $script);
+$opus_to_wav = CustomPython3::opus_to_wav(Callable<(String)->String?>, $script);
+$normalize_audio = ($x) -> (AsTagged($norm(unwrap($opus_to_wav(unwrap(Untag($x, "audio/webm"))))), "audio/webm"));
+$morph_struct = ($x) -> {$y = $normalize_audio($x.audio); return ExpandStruct(RemoveMember($x, "audio"), $y as audio)};
+
+$basket = {{param[basket]}};
+
+$dtype_struct = Struct<'app':String,'asr_is_good':Bool?,'asr_text':String?,'audio':Tagged<String?,'audio/webm'>,'setrace_url':String?,'text':String?,'wer':Double?,'werp':Double?>;
+$dict_union = ($dict1, $dict2) -> {return SetUnion($dict1, $dict2, ($_k, $a, $b) -> {return unwrap($a ?? $b)})};
+$create = ($item, $_parent) -> {return $item};
+$add = ($state, $item, $_parent) -> {return $dict_union($state, $item)};
+$merge = ($state1, $state2) -> {return $dict_union($state1, $state2)};
+$add_mds = ($pair) -> (ExpandStruct($pair.1, $pair.0 as mds_key));
+$drop_members = ($x) -> (RemoveMembers($x, ["setrace_url", "wer", "werp"]));
+$udaf_factory = AggregationFactory("UDAF", $create, $add, $merge);
+
+$merged_table =
+select current.*, "current" as recency from {{input1}} as current
+union all
+select past.*, "past" as recency from {{input2}} as past;
+
+$merged_table =
+select
+    res.ticket as ticket,
+    some(res.status) as status,
+    some(res.summary) as ticket_summary,
+    res.recency as recency,
+    aggregate_list(
+        {
+            res.mds_key:
+            <|
+                "app": res.app,
+                "asr_text": res.asr_text,
+                "text": res.text,
+                "asr_is_good": res.asr_is_good,
+                "setrace_url": res.setrace_url,
+                "audio": AsTagged(basket.voice_binary, "audio/webm"),
+                "wer": res.wer,
+                "werp": res.werp
+            |>
+        }
+     ) as asr_summary
+from $merged_table as res
+join $basket as basket
+using (mds_key)
+group by res.ticket, res.recency;
+
+$merged_table = 
+select
+    c_asr.status as status,
+    c_asr.ticket as ticket,
+    c_asr.ticket_summary as ticket_summary,
+    ListAggregate(c_asr.asr_summary, $udaf_factory) as new_summary,
+    case
+        when ListHasItems(p_asr.asr_summary) then ListAggregate(p_asr.asr_summary, $udaf_factory)
+        else DictCreate(String?, $dtype_struct)
+    end as old_summary
+from (select * from $merged_table where recency == "current") as c_asr
+left join (select * from $merged_table where recency == "past") as p_asr
+using (ticket);
+
+-- Conversion opus -> wav may lead to large audio files. If you are out of memory, consider removing ListMap with $morph_struct from the code below.
+insert into {{output1}}
+select 
+    AsTagged(
+        AsStruct(
+            "https://st.yandex-team.ru/" || a.ticket AS href,
+            a.ticket AS text,
+            "https://st.yandex-team.ru/" || a.ticket AS title
+        ),
+        "url"
+    ) as ticket,
+    ListMap(ListSort(ListMap(ListMap(DictItems(a.new_summary), $add_mds), $drop_members), ($x) -> ($x.asr_is_good)), $morph_struct) as asr_summary,
+    a.ticket_summary as ticket_summary,
+from $merged_table as a
+where a.status != "closed";
+
+insert into {{output2}}
+select * without ticket_summary
+from $merged_table;
+
+insert into {{output3}}
+select * from {{input3}};

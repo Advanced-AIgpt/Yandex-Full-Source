@@ -1,0 +1,32 @@
+USE hahn;
+
+DEFINE ACTION $get_sample() AS
+    $sessions = (
+        SELECT DISTINCT session_id FROM {{input1}}
+    );
+    $total_sessions = (
+        SELECT COUNT(*) FROM $sessions
+    );
+    $sessions_sample = (
+        SELECT * FROM $sessions
+        TABLESAMPLE BERNOULLI(MIN_OF(100, 300.0 / $total_sessions * 100))
+    );
+
+    INSERT INTO @result_basket WITH TRUNCATE
+    SELECT * FROM {{input1}}
+    LEFT SEMI JOIN $sessions_sample AS sample USING (session_id)
+END DEFINE;
+
+DEFINE ACTION $get_full() AS
+    INSERT INTO @result_basket WITH TRUNCATE
+    SELECT * FROM {{input1}}
+END DEFINE;
+
+EVALUATE IF {{param.small_sample->quote() ?? "false"->quote()}} == "true"
+    DO $get_sample()
+    ELSE
+    DO $get_full();
+COMMIT;
+
+INSERT INTO {{output1}}
+SELECT * FROM @result_basket;

@@ -1,0 +1,139 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+
+$input_table = "//home/voice/irinfox/ue2e_baskets/joined_data_2022_07_07";
+$APP_TYPE = "quasar"; -- для какой поверхности семплируем, должно передаваться тоже
+$SAMPLE_NUM = 5000; -- объём, который хотим насемплить, и это передаваться
+$sample_type = "reask"; -- это тоже вроде в итоге передавать будем
+$sampled_dir = "//home/voice/irinfox/ue2e_baskets/sampled_data";
+$output_table = $sampled_dir || "/" || $APP_TYPE || "_" || $sample_type || "_" || CAST($SAMPLE_NUM as String); -- если будем конкатить, то необязательно так табличку называть
+
+
+$script_app = @@
+
+def is_correct_app_by_type(basket_common):
+    import basket_common
+
+    def check_app(app, app_type):
+        return app in basket_common.get_apps_by_type(app_type)
+
+    return check_app
+@@;
+PRAGMA File('basket_common.py', 'arc://alice/analytics/utils/yt/basket_common.py?rev=9264986');
+$udf_is_correct_app_by_type = Python2::is_correct_app_by_type(Callable<(String)->Callable<(String?, String)->Bool>>, $script_app);
+$is_correct_app_by_type = $udf_is_correct_app_by_type(FilePath("basket_common.py"));
+
+-- немножко неочевидных условий для фильтрации, чтоб жизнь красивой не казалась
+$external_skill_activation_intents = AsList(
+    "external_skill\tactivate", "personal_assistant\tscenarios\texternal_skill\tactivate_only",
+    "personal_assistant\tscenarios\texternal_skill"
+);
+
+-- не берём в ue2e корзину запросы навыков из соображений приватности. Оставляем только запросы на активацию навыков
+$externall_skills = (
+    SELECT DISTINCT request_id
+    FROM $input_table
+    WHERE generic_scenario == "dialogovo" and intent not in $external_skill_activation_intents
+);
+
+-- текстовые запросы или голосовые со ссылками
+$is_good_type = ($mds_key, $input_type) -> {
+    RETURN $input_type in ("text", "click")  or ($input_type == "voice" and $mds_key is not null);
+};
+
+
+$pairs = (
+    SELECT
+        data.request_id as request_id,
+        data.input_type as input_type,
+        data.asr as asr,
+        data.is_empty_asr as is_empty_asr,
+        data.is_new as is_new,
+        data.session_sequence AS first_session_sequence,
+        data.query AS first_query,
+        data.reply AS first_reply,
+        data.client_time AS first_query_time,
+        data.intent AS first_intent,
+        data.generic_scenario AS first_generic_scenario,
+        data.input_type as first_input_type,
+        data.session_id as session_id,
+        LEAD(data.session_sequence) OVER w as second_session_sequence,
+        LEAD(data.query) OVER w AS second_query,
+        LEAD(data.reply) OVER w AS second_reply,
+        LEAD(data.client_time) OVER w AS second_query_time,
+        LEAD(data.client_time) OVER w - data.client_time as delta_sec,
+        LEAD(data.intent) OVER w as second_intent,
+        LEAD(data.generic_scenario) OVER w as second_generic_scenario,
+        LEAD(data.request_id) OVER w as second_req_id,
+        LEAD(data.input_type) OVER w as second_input_type,
+        data.fielddate as fielddate,
+        data.app,
+        data.`uuid` as `uuid`
+    from $input_table as data
+    WHERE is_empty_asr is null or is_empty_asr == False
+    WINDOW w AS (
+        PARTITION BY data.`uuid`
+        ORDER BY data.client_time, data.server_time_ms, data.session_sequence
+    )
+);
+
+
+$reask_script = @@
+def calculate_reask(requery_utils):
+     import requery_utils
+
+     def is_reask(first_event_dict, second_event_dict):
+
+        event = requery_utils.SmallEvent(first_event_dict)
+        next_event = requery_utils.SmallEvent(second_event_dict)
+
+        return requery_utils.is_requery(event, next_event, levenstein_threshold=0.86) and event.query != next_event.query
+
+     return is_reask
+@@;
+PRAGMA File('requery_utils.py', 'arc://quality/ab_testing/cofe/projects/alice/requery/utils.py?hash=96a9b803b4ea5160b879ad09b6e35c1af74deb09');
+$udf_reask = Python2::calculate_reask(Callable<(String)->Callable<(Dict<String, Utf8?>, Dict<String, Utf8?>)->Bool>>, $reask_script);
+$is_reask = $udf_reask(FilePath("requery_utils.py"));
+
+
+$filtered_table = (
+   SELECT *
+   FROM $pairs
+   WHERE
+        request_id not in $externall_skills
+        and $is_correct_app_by_type(app, $APP_TYPE)
+        and $is_good_type(asr.data.mds_key, input_type)
+        and $is_reask(
+            {
+                "query": CAST(first_query AS Utf8),
+                "generic_scenario": CAST(first_generic_scenario AS Utf8),
+                "timestamp": CAST(first_query_time AS Utf8),
+                "input_type": CAST(first_input_type AS Utf8)
+            },
+            {
+                "query": CAST(second_query AS Utf8),
+                "generic_scenario": CAST(second_generic_scenario AS Utf8),
+                "timestamp": CAST(second_query_time AS Utf8),
+                "input_type": CAST(second_input_type AS Utf8)
+           }
+        )
+);
+
+$rows_total = (SELECT COUNT(*) FROM $filtered_table);
+$sample_percent = $SAMPLE_NUM * 100.0 / $rows_total;
+
+
+INSERT INTO $output_table WITH TRUNCATE
+SELECT
+    request_id, input_type, `uuid`,
+    first_query as query,
+    app, fielddate, is_new,
+    asr.data.mds_key as mds_key,
+    is_empty_asr,
+    session_id,
+    first_session_sequence as session_sequence,
+    first_intent as intent,
+    first_generic_scenario as generic_scenario,
+    $sample_type as sample_type
+FROM $filtered_table
+TABLESAMPLE BERNOULLI($sample_percent);

@@ -1,0 +1,95 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$parse = DateTime::Parse('%Y-%m-%d %H:%M:%S');
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+
+--достаём и дедуплицируем пинги до внешнего мира
+$pings_temp =
+(
+    SELECT device_id, device, QuasmodromGroup, ConnectionType, fielddate, ts, MAX(dns)??MAX(quasar) AS external_ping
+    FROM
+    (
+        SELECT DeviceId AS device_id, Platform AS device, QuasmodromGroup, ConnectionType, fielddate, iso_eventtime, 
+        $s_to_datetime(`Timestamp`) AS ts,
+        Yson::ConvertToDouble((ListFilter(DictItems(Yson::ConvertToDict(pings)), ($x) -> ($x.0 = '8.8.8.8'))[0].1).mean) AS dns,
+        Yson::ConvertToDouble((ListFilter(DictItems(Yson::ConvertToDict(pings)), ($x) -> ($x.0 = 'quasar.yandex.ru'))[0].1).mean) AS quasar
+        --тут данные за 3 дня
+        FROM  `//home/voice/nadezhda17/common/wifi_problems/pings/raw_pings_temp`
+    )
+    --пинг ушёл 
+    WHERE (dns IS NOT NULL OR quasar IS NOT NULL)
+    GROUP BY device_id, device, QuasmodromGroup, ConnectionType, fielddate, iso_eventtime, ts
+    ORDER BY device_id, ts
+);
+
+--считаем дырки
+$pings_with_gap = 
+(
+    SELECT p.*, ts - LAG(ts) OVER w AS external_gap
+    FROM $pings_temp AS p
+    WHERE external_ping IS NOT NULL
+    WINDOW w AS (PARTITION BY device_id ORDER BY ts)
+);
+
+--ищем самую большую дыру за день и время возвращения
+$grouped_pings = 
+(
+    SELECT fielddate, device, device_id, 
+    SOME(QuasmodromGroup) AS QuasmodromGroup, 
+    SOME(ConnectionType) AS ConnectionType, 
+    MAX(external_gap) AS external_gap, 
+    MAX_BY(ts, external_gap) AS ts, 
+    MAX_BY(ts, external_gap) - MAX(external_gap) AS ts_start_external_gap,
+    MIN(ts) AS start_ts, 
+    MAX(ts) AS finish_ts
+    FROM $pings_with_gap
+    GROUP BY fielddate, device, device_id
+);
+
+--доклеиваем исторические данные и смотрим на самые большие дыры.
+$all_pings = 
+(
+    SELECT fielddate, device, device_id, 
+    MAX_BY(QuasmodromGroup, external_gap) AS QuasmodromGroup, 
+    MAX_BY(ConnectionType, external_gap) AS ConnectionType, 
+    MAX(external_gap) AS external_gap, 
+    MAX_BY(ts, external_gap) AS ts, 
+    MAX_BY(ts, external_gap) - MAX(external_gap) AS ts_start_external_gap,
+    MAX_BY(start_ts, external_gap) AS start_ts, 
+    MAX_BY(finish_ts, external_gap) AS finish_ts
+    FROM 
+    (
+        SELECT *
+        FROM  `//home/voice/nadezhda17/common/wifi_problems/pings/pings_history` AS ph 
+        UNION ALL 
+        SELECT *
+        FROM $grouped_pings
+    )
+    GROUP BY fielddate, device, device_id
+);
+
+--ищем случаи, когда девайса не было много дней, и он вернулся в свежих данных
+--берем самое последнее время когда девайс подавал признаки жизни и самое первое на следующий день 
+$all_pings_with_alter_gap = 
+(
+    SELECT d.*, 
+    (start_ts - LAG(finish_ts) OVER w)??DateTime::IntervalFromMinutes(1) AS alter_external_gap, 
+    start_ts AS alter_ts, 
+    LAG(finish_ts) OVER w AS alter_ts_start_external_gap
+    FROM $all_pings AS d
+    WINDOW w AS (PARTITION BY device_id ORDER BY fielddate)
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/pings/pings_history` WITH TRUNCATE 
+SELECT fielddate, device, device_id, QuasmodromGroup, ConnectionType, 
+MAX_OF(external_gap, alter_external_gap) AS external_gap,
+IF(alter_external_gap > external_gap, alter_ts, ts) AS ts, 
+IF(alter_external_gap > external_gap,alter_ts_start_external_gap, ts_start_external_gap) AS ts_start_external_gap, 
+start_ts, finish_ts
+FROM $all_pings_with_alter_gap
+WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(60) AS String)
+;

@@ -1,0 +1,37 @@
+-- Extract necessary info from logs
+$logs_summary =
+select
+    _message_id,
+    _megamind_request_id,
+    _uuid,
+    speechkit_request.application.device_id as device_id,
+    speechkit_request.application.uuid as sk_uuid,
+    speechkit_request.application.timezone as timezone,
+    speechkit_request.application.client_time as client_time,
+    _server_time_ms,
+    asr.data.mds_key as mds_key,
+    asr.voice_by_uniproxy.mds as uniproxy_mds_key,
+    spotter.mds_url as spotter_mds_url,
+    TableName() as `date`
+from range("//home/alice/wonder/logs", $first_log_date, $last_log_date)
+where _message_id is not null and asr.data.mds_key is not null and speechkit_request.application.device_id is not null
+    and speechkit_request.application.client_time is not null;
+
+-- Find interesting device_ids
+$device_ids_message_ids =
+select device_id, _message_id, mds_key
+from $logs_summary
+where mds_key in (select * from {{input1}})
+    or _message_id in (select * from {{input1}});
+
+-- Extract only interesting sessions
+insert into $sessions_path with truncate
+select *
+from $logs_summary
+where device_id in (select distinct device_id from $device_ids_message_ids)
+order by device_id, client_time;
+
+-- Select request ids
+insert into $requests_path with truncate
+select unwrap(_message_id) as request_id
+from $device_ids_message_ids;

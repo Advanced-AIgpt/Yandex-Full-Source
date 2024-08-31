@@ -1,0 +1,40 @@
+Use hahn;
+
+$diffMembers = ($x,$y)->{
+    $names = EvaluateCode(LambdaCode(($xCode, $yCode)->{
+        $typeX = TypeOf($x);
+        $typeY = EnsureType(TypeOf($y), $typeX);
+        $fields = StructTypeComponents(TypeHandle($typeY));
+        $diffs = ListMap($fields, ($fld)->{
+              $atom = AtomCode($fld.Name);
+              $type = If(TypeKind($fld.Type) == "Optional",OptionalItemType($fld.Type), $fld.Type);
+              $left = FuncCode("Member", $xCode, $atom);
+              $right = FuncCode("Member", $yCode, $atom);
+              $compareNormal = FuncCode("AggrEquals", $left, $right);
+              $compareYson = FuncCode("Apply", FuncCode("Udf", AtomCode("Yson.Equals")), $left, $right);
+              $compare = If(TypeKind($type) == "Data" and DictContains({"Yson","Json"},DataTypeComponents($type)[0]),
+                   $compareYson,
+                   $compareNormal);
+              return FuncCode("If", 
+                FuncCode("Coalesce", $compare, ReprCode(false)),
+                ReprCode(""),
+                FuncCode("String", $atom));
+        });
+        return FuncCode("AsList", $diffs);
+    }))($x,$y);
+    
+    return ListFilter($names, ($name)->($name != ""));
+};
+
+
+-- пример использования
+-- $quasar_table = "//home/alice/irinfox/VA-1190/sampled_data/quasar_data_empty_asr";
+-- $duplicates = (
+--    SELECT request_id, AGGREGATE_LIST(TableRow()) as data, COUNT(*) as cnt
+--    FROM $quasar_table
+--    GROUP BY request_id
+-- );
+
+-- SELECT request_id,  $diffMembers(UNWRAP(data[0]), UNWRAP(data[1])) as diff_between_first_two
+-- FROM $duplicates
+-- WHERE cnt > 1

@@ -1,0 +1,428 @@
+{% from "alice/bass/common_nlg/common/macros_en.nlg" import inability %}
+
+{% set content_type_texts = {'tv_show': 'TV series', 'movie': 'movies', 'video': 'video', 'cartoon': 'cartoons', 'music_video': 'music videos'} %}
+{% set film_genres_texts = {'action': 'actions', 'adventure': 'adventure movies', 'adult': 'adult movies', 'anime': 'animes', 'arthouse': 'arthouse movies', 'biopic': 'biographical films',
+                            'by_comics': 'comic book movies', 'childrens': 'childrens movies', 'comedy': 'comedies', 'concert': 'concerts', 'crime': 'crime movies', 'detective': 'detective movies',
+                            'disaster': 'disaster movies', 'documentary': 'documentary movies', 'drama': 'drama movies', 'epic': 'epic films', 'erotica': 'erotica', 'family': 'family movies',
+                            'fantasy': 'fantasy movies', 'historical': 'historical movies', 'horror': 'horror movies', 'melodramas': 'melodramas', 'musical': 'musicals', 'noir': 'noir movies', 'porno': 'porn',
+                            'romantic': 'romantic films', 'science_video': 'science films', 'science_fiction': 'science fiction', 'show': 'shows', 'sport_video': 'sport videos',
+                            'supernatural': 'mystical movies', 'thriller': 'thrillers', 'war': 'war movies', 'westerns': 'westerns', 'zombie': 'zombie films'} %}
+
+{% macro video_autoplay() %}
+  {% chooseline %}
+    Turning it on.
+    Launching.
+    Let me turn it on.
+    Just a second.
+    Just a second.
+  {% endchooseline %}
+  {% if 'playing_westworld_tv_show' in context.attentions %}
+    {% maybe 0.25 %}
+      I hope you're not an android at least.
+    {% endmaybe %}
+  {% endif %}
+{% endmacro %}
+
+{% macro no_such_episode() %}
+  {% chooseline %}
+    There isn't an episode with that number.
+    That episode doesn't exist.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro no_such_season() %}
+  {% chooseline %}
+    There isn't a season with that number.
+    That season doesn't exist.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro gallery_opening() %}
+  {% chooseline %}
+    Here's what I could find.
+    Let's see.
+    One second.
+    One second, let's find that.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro disabled_provider() %}
+  That provider is no longer available in Yandex.Station. Sic transit gloria mundi. Let's pretend it was never here and you never saw anything.
+{% endmacro %}
+
+{% macro no_next_video() %}
+  There's no next for this video
+{% endmacro %}
+
+{% macro no_previous_video() %}
+  There's no previous for this video
+{% endmacro %}
+
+{% macro insert_search_text(form) %}
+  {% if form.search_text %}
+    for query «{{ form.search_text }}»
+  {% endif %}
+{% endmacro %}
+
+{% macro content_type_plural(content_type) %}
+  {{ content_type_texts.get(content_type, 'content') }}
+{% endmacro %}
+
+{% macro film_genre_plural(film_genre) %}
+  {{ film_genres_texts.get(film_genre, 'movie') }}
+{% endmacro %}
+
+
+{% macro show_gallery(form, context) %}
+  {% set filter_cnt = 0 %}
+  {% if form.search_text %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.content_type %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.content_provider %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.film_genre %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.country %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.free %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.new %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.release_date %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.top %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.season %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.episode %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+
+  # [search_text]
+  {% if filter_cnt == 0 or filter_cnt == 1 and form.search_text %}
+    {% text %}
+      Video content {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # content_type [+ search_text]
+  {% elif form.content_type and (filter_cnt == 1 or filter_cnt == 2 and form.search_text) %}
+    {% text %}
+      {{ content_type_plural(form.content_type) | capitalize }}
+      {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # film_genre [+ search_text]
+  {% elif form.film_genre and (filter_cnt == 1 or filter_cnt == 2 and form.search_text) %}
+    {% text %}
+      {{ film_genre_plural(form.film_genre) | capitalize }}
+      {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # Everything else
+  {% else %}
+    {{ gallery_opening() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro show_browser_gallery(from, context) %}
+  {% text %}
+    Here's what I could find
+  {% endtext %}
+{% endmacro %}
+
+{% macro show_season_gallery() %}
+  {% chooseline %}
+    Opening.
+    Just a second.
+    Just a second.
+    Let me open that.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro nothing_found() %}
+  {% chooseline %}
+    Nothing came up.
+    I couldn't find anything.
+    I wasn't able to find anything.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro all_results_filtered() %}
+  {% chooseline %}
+    Nothing came up. That could have something to do with kid-friendly search.
+    I wasn't able to find anything. Could that be because you have kid-friendly search on? Or maybe not.
+    Nothing. Check your settings to see if kid-friendly search is on.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro no_relevant_video() %}
+  {% chooseline %}
+    Better something than nothing. I think there's an idiom that goes something like that.
+    I don't have that video. But I do have lots of others, this one included.
+    Sorry, I couldn't find that. But I couldn't just leave you with nothing!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_already_available() %}
+  {% chooseline %}
+    That was already bought.
+    That content was already purchased.
+    That content was already paid for.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro cannot_autoplay_paid_video() %}
+  {% chooseline %}
+    That content isn't free,
+    That's paid content,
+  {% endchooseline %}
+  {% chooseline %}
+    opening the description
+    let me open the description
+    I can only open the description
+  {% endchooseline %}
+  .
+{% endmacro %}
+
+{% macro video_payment_push(req_info) %}
+  {% if req_info.experiments['new_video_payment_push_nlg'] != None %}
+    Pull up the Yandex app for fast and easy payment. I already sent a link to your phone.
+  {% else %}
+    {% chooseline %}
+      Open the Yandex app to continue with the payment.
+      Continue with payment in the Yandex app.
+      I'm going to send you a message you can open to pay for the movie.
+      If you're logged into the Yandex app, you'll get a payment link now. Once you've paid, the movie is all yours. If you didn't get anything, tap the movie on the app's main screen.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro video_tv_payment_without_push(req_info) %}
+  Oops, I don't know how to do that. Please use the remote control.
+{% endmacro %}
+
+{% macro video_provider_authorization_push() %}
+  You'll need to log in for that to work, so I'm going to send you a message. Check your phone!
+{% endmacro %}
+
+{% macro failed_to_send_payment_push() %}
+  {{ failed_to_send_push() }}
+{% endmacro %}
+
+{% macro failed_to_send_provider_authorization_push() %}
+  {{ failed_to_send_push() }}
+{% endmacro %}
+
+{% macro failed_to_send_push() %}
+  {% chooseline %}
+    Sending you a push notification didn't work.
+    I wasn't able to send you a push notification.
+  {% endchooseline %}
+  Please try again.
+{% endmacro %}
+
+{% macro show_video_description() %}
+  {% chooseline %}
+    Here's the description.
+    I'm pulling up the description.
+    One second.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro show_promo_webview() %}
+  {% chooseline %}
+    Here's a top collection I'm excited to show you!
+    Hooray! I just happened to put together the perfect selection for you.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro show_video_detailed_description() %}
+  {% chooseline %}
+    Here's detailed information.
+    One second.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_index_out_of_range(form) %}
+  {% chooseline %}
+    I'm afraid
+    Unfortunately,
+  {% endchooseline %}
+  there isn't a video with the number {{ form.video_index }} on the screen.
+{% endmacro %}
+
+{% macro non_authorized_user() %}
+  # TODO: provider name is not supported yet
+  {% chooseline %}
+    You'll need to log in with the provider to continue watching.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro please_connect_tv() %}
+  {% chooseline %}
+    You need to connect your Yandex.Station to the screen to watch videos, movies, and TV shows.
+    Connect your Yandex.Station to the screen to watch videos, movies, and TV shows.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_not_supported() %}
+  Video playback isn't supported on this device.
+{% endmacro %}
+
+{% macro yandex_plus_subscription_needed() %}
+  You need a Yandex.Plus subscription to watch movies on KinoPoisk.
+{% endmacro %}
+
+{% macro purchase_not_found() %}
+  That's paid content.
+{% endmacro %}
+
+{% macro purchase_expired() %}
+  {% chooseline %}
+    The movie rental period expired.
+    Your rental time ran out for that movie.
+    The content rental time expired.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro subscription_not_found() %}
+  {% chooseline %}
+    That content is only available with a {%tx%}Yandex Plus{%etx%}{%vc%}Yandex Plus{%evc%} subscription.
+    You'll need a {%tx%}Yandex Plus{%etx%}{%vc%}Yandex Plus{%evc%} subscription to watch that.
+    You don't have a {%tx%}Yandex Plus{%etx%}{%vc%}Yandex Plus{%evc%} subscription.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro geo_constraint_violation() %}
+  Viewing in this region has been restricted. The copyright holder decided that was best.
+{% endmacro %}
+
+{% macro licenses_not_found() %}
+  Access to that content is locked. Unfortunately, that's what the copyright holder decided to do.
+{% endmacro %}
+
+{% macro service_constraint_violation() %}
+  That content is unavailable on this device. Sorry about that.
+{% endmacro %}
+
+{% macro supported_streams_not_found() %}
+  I can't turn that movie on from this device since it's the wrong version.
+{% endmacro %}
+
+{% macro nothing_is_playing() %}
+  {% chooseline %}
+    I can't since nothing is playing right now.
+    That won't work. Nothing is playing right now.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro trailer_not_found() %}
+  {% chooseline %}
+      I'm sorry, I couldn't find anything.
+      It doesn't look like there's a trailer.
+	  I couldn't find a trailer.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro attentions_general(form, context, default_action) %}
+  # availability of the scenario
+  {% if 'video_not_supported' in context.attentions %}
+    {{ video_not_supported() }}
+  {% elif 'no_tv_is_plugged_in' in context.attentions %}
+    {{ please_connect_tv() }}
+
+  # unsupported feature
+  {% elif 'feature_not_supported' in context.attentions %}
+    {{ inability() }}
+
+  # playing content
+  {% elif 'video_autoplay' in context.attentions %}
+    {{ video_autoplay() }}
+  {% elif 'video_autoselect' in context.attentions %}
+    {{ show_video_description() }}
+  {% elif 'play_channel' in context.attentions %}
+    {{ video_autoplay() }}
+
+  # cannot run player command
+  {% elif 'nothing_is_playing' in context.attentions %}
+    {{ nothing_is_playing() }}
+
+  # content search problem
+  {% elif 'video_no_good_result' in context.attentions %}
+    {{ no_relevant_video() }}
+  {% elif 'all_results_filtered' in context.attentions %}
+    {{ all_results_filtered() }}
+
+  # description
+  {% elif 'video_detailed_description' in context.attentions %}
+      {{ show_video_detailed_description() }}
+
+  # ny promo
+  {% elif 'show_promo_webview' in context.attentions %}
+       {{ show_promo_webview() }}
+
+  # galleries
+  {% elif 'video_gallery' in context.attentions %}
+    {{ show_gallery(form, context) }}
+  {% elif 'video_index_out_of_range' in context.attentions %}
+    {{ video_index_out_of_range(form) }}
+  {% elif 'video_season_gallery' in context.attentions %}
+    {{ show_season_gallery() }}
+  {% elif 'no_such_season' in context.attentions %}
+    {{ no_such_season() }}
+  {% elif 'no_such_episode' in context.attentions %}
+    {{ no_such_episode() }}
+  {% elif 'browser_video_gallery' in context.attentions %}
+    {{ show_browser_gallery(form, context) }}
+
+  # authorization, subscription, paid content
+  {% elif 'video_non_authorized_user' in context.attentions %}
+    {{ non_authorized_user() }}
+  {% elif 'video_tv_payment_without_push' in context.attentions %}
+    {{ video_tv_payment_without_push(req_info) }}
+  {% elif 'video_sent_auth_push' in context.attentions %}
+    {{ video_provider_authorization_push() }}
+  {% elif 'video_failed_to_send_auth_push' in context.attentions %}
+    {{ failed_to_send_provider_authorization_push() }}
+  {% elif 'video_cannot_autoplay_because_its_paid' in context.attentions %}
+    {{ cannot_autoplay_paid_video() }}
+  {% elif 'sent_buy_video_push' in context.attentions %}
+    {{ video_payment_push(req_info) }}
+  {% elif 'video_failed_to_send_push' in context.attentions %}
+    {{ failed_to_send_payment_push() }}
+  {% elif 'video_yandex_plus_subscription_needed' in context.attentions %}
+    {{ yandex_plus_subscription_needed() }}
+  {% elif 'video_already_available' in context.attentions %}
+    {{ video_already_available() }}
+
+  # licence problems
+  {% elif 'video_error_purchase_not_found' in context.attentions %}
+    {{ purchase_not_found() }}
+  {% elif 'video_error_purchase_expired' in context.attentions %}
+    {{ purchase_expired() }}
+  {% elif 'video_error_subscription_not_found' in context.attentions %}
+    {{ subscription_not_found() }}
+  {% elif 'video_error_geo_constraint_violation' in context.attentions %}
+    {{ geo_constraint_violation() }}
+  {% elif 'video_error_licenses_not_found' in context.attentions %}
+    {{ licenses_not_found() }}
+  {% elif 'video_error_service_constraint_violation' in context.attentions %}
+    {{ service_constraint_violation() }}
+  {% elif 'video_error_supported_streams_not_found' in context.attentions %}
+    {{ supported_streams_not_found() }}
+  {% elif 'video_disabled_provider' in context.attentions %}
+    {{ disabled_provider() }}
+  {% elif 'no_next_video' in context.attentions %}
+    {{ no_next_video() }}
+  {% elif 'no_previous_video' in context.attentions %}
+    {{ no_previous_video() }}
+
+  # default cases
+  {% else %}
+    {% if default_action == 'nothing_found' %}
+      {{ nothing_found() }}
+    {% elif default_action == 'show_description' %}
+      {{ show_video_description() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}

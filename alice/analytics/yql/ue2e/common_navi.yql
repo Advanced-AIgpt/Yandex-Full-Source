@@ -1,0 +1,85 @@
+PRAGMA yt.InferSchema;
+
+$get_intent = Python2::get_intent(ParseType("(String?) -> String"),
+@@
+def get_intent(intent):
+    if not intent: return "NO_INTENT"
+    if "iot_do" in intent: return "iot_do"
+    if "skill_discovery" in intent: return "skill_discovery"
+    if 'handcrafted' in intent: return 'handcrafted'
+
+    parts = intent.split('\t')
+    if len(parts) <= 2:
+        return parts[-1]
+    if parts[-1] == 'ellipsis':
+        return '.'.join(parts[2:-1])
+    return '.'.join(parts[2:])
+@@
+);
+
+$arcadia_slices_path = "arc://alice/analytics/tasks/VA-571/slices_mapping.py?rev=" || {{param.revision->quote() ?? "6907605"->quote()}};
+PRAGMA File("slices_mapping.py", $arcadia_slices_path);
+$script = FileContent("slices_mapping.py");
+$generalize_toloka_intent = Python2::toloka_intent_to_general_intent(ParseType("(String?)->String"), $script);
+$is_command_intent = Python2::is_command_intent(ParseType("(String?)->Bool"), $script);
+
+
+$all = (
+    SELECT 
+        $get_intent(intent) as intent, result, UNWRAP(toloka_intent) as toloka_intent, app,
+        $generalize_toloka_intent(toloka_intent) as general_toloka_intent
+    from {{input1}}
+    WHERE mark IS NOT NULL
+);
+
+$stats=(SELECT
+    IF(GROUPING(app) == 0, app, '_total_') AS app,
+    intent,
+    count_if(result=='good') as good,
+    count_if(result=='part') as part,
+    count(*) as total
+    from $all
+    GROUP BY intent, ROLLUP (app)
+);
+
+$toloka_stats=(SELECT
+    IF(GROUPING(app) == 0, app, '_total_') AS app,
+    toloka_intent,
+    count_if(result=='good') as good,
+    count_if(result=='part') as part,
+    count(*) as total
+    from $all
+    GROUP BY toloka_intent, ROLLUP (app)
+);
+
+$stats_total=(SELECT
+    IF(GROUPING(app) == 0, app, '_total_') AS app,
+    count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    GROUP BY ROLLUP (app)
+);
+
+$stats_commands=(SELECT
+    IF(GROUPING(app) == 0, app, '_total_') AS app,
+    count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where $is_command_intent(toloka_intent)
+    GROUP BY ROLLUP (app)
+);
+
+$stats_nocommands=(SELECT
+    IF(GROUPING(app) == 0, app, '_total_') AS app,
+    count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where not $is_command_intent(toloka_intent)
+    GROUP BY ROLLUP (app)
+);

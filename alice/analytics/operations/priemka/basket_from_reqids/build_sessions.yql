@@ -1,0 +1,261 @@
+-- get all relevant sessions matching input uuid and session_id and add context
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.HybridDqExecution;
+PRAGMA dq.EnableFullResultWrite;
+$context_len = {{param["context_len"]}};
+$context_len_after = {{param["context_len_after"]}};
+$unlimited = 1000000000;
+$same_uuid_limit = IF({{param["unique_uuids"]->quote()}} == 'true', 1, $unlimited);
+
+
+EVALUATE IF {{param["use_only_given_contexts"]->quote()}} == 'false' DO BEGIN
+    -- по-умолчанию доклеиваем константное число `$context_len` контекстов из логов
+    -- к !каждому! req_id из входных данных
+
+    INSERT INTO @source_main_requests WITH TRUNCATE
+    SELECT
+        req_id,
+        request_source,
+        $context_len as needed_context_len,
+    FROM {{input1}};
+
+    COMMIT;
+END DO
+ELSE DO BEGIN
+    -- при галочке `use_only_given_contexts` оставляем контексты из исходных данных
+    -- для этого в `needed_context_len` подсчитываем их количество
+    -- при этом число "основных" запросов остаётся такое же (GROUP BY session_id)
+
+    INSERT INTO @source_main_requests WITH TRUNCATE
+    SELECT
+        MAX_BY(req_id, session_sequence) as req_id,
+        MAX_BY(request_source, session_sequence) as request_source,
+        COUNT(*) - 1 as needed_context_len,
+    FROM {{input1}}
+    GROUP BY session_id;
+
+    COMMIT;
+END DO;
+
+
+$sessions_raw =
+    SELECT *
+    FROM (
+        SELECT
+    -- копия fix_click_input_type
+    -- из https://a.yandex-team.ru/arc/trunk/arcadia/alice/analytics/utils/yt/basket_common.py?rev=r9044614#L336
+            IF(s.input_type == 'click' and s.query IS NOT NULL, 'text', s.input_type) AS input_type,
+            s.* WITHOUT s.input_type
+        FROM
+            {{concat_input2}} AS s
+    )
+    WHERE
+    -- вот эти фильтры копируют get_common_filters()
+    -- из https://a.yandex-team.ru/arc/trunk/arcadia/alice/analytics/utils/yt/basket_common.py?rev=r9044614#L296
+        NOT do_not_use_user_logs
+        AND NOT (`uuid` ILIKE 'uu/ffffffffffffffff%' OR
+             `uuid` ILIKE 'uu/deadbeef%' OR
+             `uuid` ILIKE 'uu/dddddddddddddddd%')
+        AND server_time_ms != 0
+        AND server_time_ms IS NOT NULL
+
+        AND input_type in ('text', 'voice')
+;
+
+
+$main_requests_before_unique =
+    SELECT
+        sessions_raw.*,
+        input_requests.request_source AS request_source,
+        input_requests.needed_context_len AS needed_context_len,
+    FROM (
+        SELECT
+            `uuid`,
+            req_id AS main_req_id,
+            fielddate,
+            session_id,
+            session_sequence AS main_session_sequence,
+            input_type AS main_input_type
+        FROM
+            $sessions_raw
+    ) AS sessions_raw
+    JOIN @source_main_requests AS input_requests
+    ON
+        sessions_raw.main_req_id == input_requests.req_id
+;
+
+-- ============== Filter for unique uuids ======================
+$main_requests =
+    SELECT *
+        WITHOUT rn
+    FROM (
+        SELECT
+            ROW_NUMBER() OVER w AS rn,
+            s.*
+        FROM
+            $main_requests_before_unique AS s
+        WINDOW
+            w AS (
+                PARTITION BY `uuid`
+            )
+    )
+    WHERE
+        rn <= $same_uuid_limit;  -- $same_uuid_limit приходит из кода кубика "build sessions". равен 1 если разрешены только уникальные ууиды
+
+-- ============== ADD CONTEXT ======================
+
+$sessions_with_unlimited_context =
+    SELECT
+        mr.*,
+        sr.session_sequence AS real_session_sequence,
+        sr.* WITHOUT sr.session_sequence,
+        sr.fielddate,
+        sr.`uuid`
+    FROM
+        $main_requests AS mr
+    JOIN
+        $sessions_raw AS sr
+    ON
+        mr.session_id == sr.session_id
+;
+
+-- ====================== get_context_reducer ==============
+$sessions_with_row_sequence =
+    SELECT
+        ROW_NUMBER() OVER w AS row_sequence,  -- temporary index for sequence calculation
+        s.*
+    FROM
+        $sessions_with_unlimited_context AS s
+    WINDOW
+        w AS
+        (
+            PARTITION BY main_req_id
+            ORDER BY real_session_sequence
+        )
+;
+
+$main_requests_with_row_sequence =
+    SELECT
+        main_req_id,
+        row_sequence AS main_row_sequence,
+    FROM $sessions_with_row_sequence
+    WHERE main_req_id == req_id
+;
+
+$sessions_with_row_sequence_and_main =
+    SELECT
+        sws.*,
+        cast(mr.main_row_sequence AS Int64) - sws.row_sequence AS reversed_session_sequence,
+    FROM (
+        SELECT *
+        FROM
+            $sessions_with_row_sequence
+    ) AS sws
+    JOIN (
+        SELECT *
+        FROM
+            $main_requests_with_row_sequence
+    ) AS mr
+    ON
+        sws.main_req_id == mr.main_req_id
+;
+
+$sessions_with_context =
+    SELECT *
+    FROM
+        $sessions_with_row_sequence_and_main
+    WHERE
+        reversed_session_sequence <= needed_context_len
+        AND reversed_session_sequence >= - $context_len_after
+;
+
+$sessions_with_session_sequence =
+    SELECT
+        ROW_NUMBER() OVER w - 1 AS session_sequence,
+        s.* WITHOUT needed_context_len
+    FROM
+        $sessions_with_context AS s
+    WINDOW
+        w AS
+        (
+            PARTITION BY main_req_id
+            ORDER BY reversed_session_sequence DESC
+        )
+;
+
+-- MAIN OUTPUT of sessions with context
+INSERT INTO {{output1}}
+    WITH TRUNCATE
+SELECT
+    s.*,
+    WITHOUT row_sequence,
+    real_session_sequence
+FROM
+    $sessions_with_session_sequence AS s
+ORDER BY
+    main_req_id,
+    session_sequence
+;
+
+-- output for wonderlogs / vins join feed
+-- can be removed once racing_join learns to process uuid and quickly load only the needed fields
+INSERT INTO {{output2}}
+    WITH TRUNCATE
+SELECT
+    fielddate,
+    String::ReplaceAll(`uuid`, 'uu/', '') AS _uuid,
+    `uuid`,
+    req_id,
+    server_time_ms
+FROM
+    $sessions_with_session_sequence
+;
+
+-- ====================== informational output ==============
+-- delete below this line if no longer needed
+
+-- $main_requests for debug
+INSERT INTO {{output4}}
+    WITH TRUNCATE
+SELECT *
+FROM
+    $sessions_with_unlimited_context
+;
+
+-- 'console' output of table counts
+SELECT
+    "input" AS table,
+    count(*) AS cnt
+FROM
+    {{input1}}
+UNION ALL
+SELECT
+    "sessions_input" AS table,
+    count(*) AS cnt
+FROM
+    {{concat_input2}}
+UNION ALL
+SELECT
+    "sessions_raw" AS table,
+    count(*) AS cnt
+FROM
+    $sessions_raw
+UNION ALL
+SELECT
+    "main_requests" AS table,
+    count(*) AS cnt
+FROM
+    $main_requests
+UNION ALL
+SELECT
+    "sessions_with_unlimited_context" AS table,
+    count(*) AS cnt
+FROM
+    $sessions_with_unlimited_context
+UNION ALL
+SELECT
+    "sessions_with_session_sequence" AS table,
+    count(*) AS cnt
+FROM
+    $sessions_with_session_sequence
+;

@@ -1,0 +1,66 @@
+PRAGMA yt.InferSchema = '50';
+
+$wer_threshold = 0.;
+
+$result = (SELECT * FROM {{input1}} AS in1 JOIN {{input2}} AS in2 USING (mds_key));
+$result = (SELECT wer <= $wer_threshold AS asr_is_good, r.* FROM $result AS r);
+
+INSERT INTO {{output1}} 
+SELECT * WITHOUT _other FROM $result;
+
+$res_per_ticket = (
+SELECT 
+    key,
+    status,
+    summary,
+    priority,
+    sample_count ?? 0 AS sample_count,
+    sample_count ?? 0 < 3 AS not_enough_samples,
+    good_part ?? 0.0 AS good_part
+FROM (
+        SELECT 
+          ticket,
+          COUNT_IF(asr_is_good IS NOT NULL) AS sample_count,
+          COUNT_IF(asr_is_good) * 1.0 / COUNT_IF(asr_is_good IS NOT NULL) AS good_part
+        FROM $result GROUP BY ticket
+    ) AS res 
+    RIGHT JOIN ANY {{input3}} AS tickets ON res.ticket == tickets.key 
+);
+
+$res_per_ticket = (
+SELECT
+    CASE 
+        WHEN status != "closed" AND not_enough_samples THEN "not_enough_samples"
+        WHEN status == "closed" AND NOT not_enough_samples AND good_part <= 0.2 THEN "open"
+        WHEN status != "closed" AND NOT not_enough_samples AND good_part >= 0.75 THEN "close"
+        ELSE Nothing(String?)
+    END AS change,
+    "https://st.yandex-team.ru/" || key AS ticket_url,
+    a.*
+FROM $res_per_ticket  AS a
+);
+
+INSERT INTO {{output2}}
+SELECT * FROM $res_per_ticket WHERE change IS NOT NULL
+ORDER BY change;
+
+$weight = ($priority) -> {
+  RETURN CASE $priority
+    WHEN "minor" THEN 1
+    WHEN "trivial" THEN 1
+    WHEN "normal" THEN 10
+    WHEN "critical" THEN 100
+    WHEN "blocker" THEN 100
+    ELSE 10
+  END
+};
+
+INSERT INTO {{output3}}
+SELECT 
+    COUNT(*) AS total, 
+    COUNT_IF(change IS NULL AND status != "closed") AS num_open_unchanged,
+    COUNT_IF(change == "close") AS num_closed,
+    COUNT_IF(change == "not_enough_samples") AS num_not_enough_samples,
+    COUNT_IF(change == "open") AS num_reopen,
+   CAST(SUM_IF($weight(priority), change == "open") AS Int64) ?? 0 - CAST(SUM_IF($weight(priority), change ?? "" == "close") AS Int64) ?? 0 AS zbp_score_possible_effect
+FROM $res_per_ticket;

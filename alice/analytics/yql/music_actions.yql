@@ -1,0 +1,100 @@
+PRAGMA File("libdj_udf.so", "https://proxy.sandbox.yandex-team.ru/last/DJ_UDF");
+PRAGMA UDF("libdj_udf.so");
+
+$src = "//home/mlmarines/music/actions/latest";
+$tracks_meta = "//home/music-data/music-metadata-v2/tracks/last";
+$dst = "//home/alice/dialog/music_actions";
+
+$like_actions = {"PN_Music#AT_Like", "PN_Music#AT_RadioLike"}; -- TODO: process "PN_Music#AT_Dislike"
+$like_cutoff = 5000;
+$rest_actions = {"PN_Music#AT_Skip", "PN_Music#AT_RadioSkip", "PN_Music#AT_Play", "PN_Music#AT_RadioPlay"};
+$rest_cutoff = 1000;
+
+$get_is_alice = ($profile) -> {
+    RETURN DJ::GetProfileErfs(DJ::ProfileFromProto($profile), false, false, "PN_Music#ERFT_IsAlice");
+};
+
+$filtered = 
+select * from
+    (select
+        String::ReplaceAll(`id`, 'p', '') as puid,
+        `timestamp` as action_timestamp,
+        to_id as track_id,
+        DJ::MakeActionType(action_namespace, action_type) AS action_type
+    from $src
+    where 
+        DJ::MakeObjectType(namespace, type) == "PN_Common#OT_User"
+        and DJ::MakeObjectType(to_namespace, to_type) == "PN_Music#OT_Track"
+        and ((ListHasItems($get_is_alice(context_profile)) and $get_is_alice(context_profile)[0].Value.`Bool`) 
+            or (DJ::MakeActionType(action_namespace, action_type) in $like_actions)))
+where action_type in setunion($like_actions, $rest_actions);
+
+$last = 
+select 
+    puid,
+    action_type,
+    if(action_type in $like_actions, 
+        bottom_by(track_id, action_timestamp, $like_cutoff),
+        bottom_by(track_id, action_timestamp, $rest_cutoff)
+    ) as track_ids,
+    if(action_type in $like_actions, 
+        bottom(action_timestamp, $like_cutoff),
+        bottom(action_timestamp, $rest_cutoff)
+    ) as action_timestamps
+from $filtered
+group by puid, action_type;
+
+$last_flattened = 
+select 
+    puid,
+    action_type,
+    zipped.0 as action_timestamp,
+    zipped.1 as track_id 
+from 
+    (select 
+        puid,
+        action_type,
+        listzip(action_timestamps, track_ids) as zipped 
+    from $last) 
+flatten list by zipped;
+
+$tracks = 
+select 
+    cast(track_id as string) as track_id,
+    genres,
+    listconcat(
+        listmap(
+            listsort(
+                if(
+                    listlength(Yson::ConvertToInt64List(main_artist)) > 0,
+                    Yson::ConvertToInt64List(main_artist),
+                    Yson::ConvertToInt64List(artist_performer)
+                )
+            ),
+            ($x) -> {return cast($x as string)}
+        ), "_"
+    ) as artist_id
+from $tracks_meta;
+
+$popularity = 
+select track_id, some(popularity) as popularity
+from (
+    select
+        cast(id as string) as track_id,
+	    Yson::From(AsDict(
+		    AsTuple('play', playCount),
+		    AsTuple('users', uniqueUsers)
+	    )) as popularity
+    from {{input1}})
+group  by track_id;
+
+insert into $dst with truncate
+select *
+from (
+	select * 
+	from $last_flattened as t11
+	left join $tracks as t12
+	using(track_id)
+	) as t21
+left join $popularity as t22
+using(track_id);

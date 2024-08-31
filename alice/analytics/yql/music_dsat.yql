@@ -1,0 +1,212 @@
+USE hahn; 
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+PRAGMA yt.Pool = "voice";
+PRAGMA yson.DisableStrict; 
+pragma yt.MaxRowWeight = "16M";
+
+$start = "2021-02-15";
+$end = "2021-02-15";
+
+$script = @@
+import json, cyson
+def get_track_values(track):
+    HEARTBEAT_EPS = 35.
+    values = {}
+    percent_max = 0.
+    ts_diff = 0.
+    prev_ts = track[0].get('send_timestamp')
+    for heartbeat in track:
+        cur_played = heartbeat.get('percent_played')
+        if (cur_played > 0 and cur_played < 100 and cur_played > percent_max):
+            percent_max = heartbeat.get('percent_played')
+        if heartbeat.get('send_timestamp') - prev_ts <= HEARTBEAT_EPS:
+            ts_diff += heartbeat.get('send_timestamp') - prev_ts
+        prev_ts = heartbeat.get('send_timestamp')
+    values["percent_played"] = percent_max
+    values["tlt"] = ts_diff
+    return values
+
+def make_row(uuid, user_data, req_id, action_type, action_data, ts, ts_diff):
+    return {
+        'uuid': uuid,
+        'user_data': user_data,
+        'req_id': req_id,
+        'action_type': action_type,
+        'action_data': action_data,
+        'ts': ts,
+        'ts_diff': ts_diff
+    }
+
+def reducer(key, values):
+    track = []
+    prev_heartbeat = None
+    prev_ts = None
+    prev_req_id = None
+    prev_track_data = None
+    processed_req_ids = set()
+
+    for req_id, joined_timestamp, user_data, query_data, track_data, percent_played in values:
+        if req_id != prev_req_id and req_id not in processed_req_ids:
+            if track:
+                prev_track_data.update(get_track_values(track))
+                ts = track[0]['send_timestamp']
+                ts_diff = (ts - prev_ts) if prev_ts else None
+                yield make_row(key, user_data, track[0]['req_id'], 'listening', prev_track_data, ts, ts_diff)
+                prev_ts = ts
+                track = []
+                prev_heartbeat = None
+            ts = int(joined_timestamp/1000.)
+            ts_diff = (ts - prev_ts) if prev_ts else None
+            yield make_row(key, user_data, req_id, 'query', query_data, ts, ts_diff)
+            prev_ts = ts
+            prev_req_id = req_id
+
+        if track_data and track_data.get('track_id'):
+            heartbeat = {
+                'req_id': req_id,
+                'track_id': track_data['track_id'],
+                'send_timestamp': joined_timestamp/1000,
+                'percent_played': percent_played
+            }
+            if (prev_heartbeat and prev_heartbeat.get('track_id') != heartbeat.get('track_id')):
+                track.append(heartbeat)  # include next track event!
+                track_data.update(get_track_values(track))
+                ts = track[0]['send_timestamp']
+                ts_diff = (ts - prev_ts) if prev_ts else None
+                yield make_row(key, user_data, track[0]['req_id'], 'listening', track_data, ts, ts_diff)
+                prev_ts = ts
+                track = []
+            track.append(heartbeat)
+            prev_heartbeat = heartbeat
+            prev_track_data = track_data
+        processed_req_ids.add(req_id)
+
+    if track:
+        prev_track_data.update(get_track_values(track))
+        ts = track[0]['send_timestamp']
+        ts_diff = (ts - prev_ts) if prev_ts else None
+        yield make_row(key, user_data, track[0]['req_id'], 'listening', track_data, ts, ts_diff)
+
+reducer._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$reduce = Python2::reducer(Callable<
+    (
+        String?,
+        Stream<Tuple<String?, Int64?, Yson, Yson, Yson?, Double?>>
+    ) -> Stream<Struct<
+        `uuid`:String?,
+        user_data:Yson?,
+        req_id:String?,
+        action_type:String?,
+        action_data:Yson?,
+        ts:Uint64?,
+        ts_diff:Int64?
+>>>, $script);
+
+$prepared = "//home/alice/dialog/prepared_logs_expboxes";
+$heartbeats = "//home/alice/dialog/heartbeats";
+$tracks = "//home/music-data/music-metadata-v2/tracks/" || $end;
+$artists = "//home/music-data/music-metadata-v2/artists/" || $end;
+$events = aslist(
+    "progressHeartbeatMusic",
+    "progressHeartbeatRadio",
+    "progressHeartbeatRadio2",
+    "startAudio",
+    "playAudio",
+    "yandexRadio2Heartbeat",
+    "audioClientHeartbeat",
+    "audioClientPlayRequest",
+    "audioClientPlayRequestFulfill",
+    "multiroomHeartbeat",
+    "bluetoothHeartbeat");
+
+$heartbeats_q =
+select req_id, cast(track_id as int64) as track_id, send_timestamp, event_name, percent_played
+from range($heartbeats, $start, $end)
+where event_name in $events;
+
+$uuids_with_music_or_hbs = 
+select distinct `uuid` 
+from range($prepared, $start, $end) 
+where 
+    generic_scenario == 'music' 
+    or req_id in (select distinct req_id from $heartbeats_q);
+
+$prepared_q = 
+select
+    `uuid`, server_time_ms, req_id,
+    Yson::Serialize(Yson::From(asstruct(
+        puid as puid,
+        device_id as device_id,
+        app as app,
+        device as device,
+        child_confidence as child_confidence,
+        cohort as cohort,
+        is_tv_plugged_in as is_tv_plugged_in,
+        subscription as subscription
+    ))) as user_data,
+    Yson::Serialize(Yson::From(asstruct(
+        generic_scenario as scenario,
+        intent as intent,
+        music_answer_type as music_answer_type,
+        music_genre as music_genre,
+        sound_level as sound_level,
+        input_type as input_type,
+        query as query,
+        reply as reply
+    ))) as query_data
+from range($prepared, $start, $end)
+where 
+    app in ('quasar', 'small_smart_speakers')
+    and `uuid` in $uuids_with_music_or_hbs;
+
+$joined = 
+select 
+    if(send_timestamp is not null, cast(send_timestamp as Uint64)*1000, server_time_ms) as joined_timestamp,
+    t.* without send_timestamp, server_time_ms 
+from (
+    select * from $heartbeats_q as t1 
+    right join $prepared_q as t2 using(req_id)) as t;
+
+$tracks1 = 
+select 
+    track_id, title as track_name,
+    listconcat(Yson::ConvertToStringList(genres), '; ') as genres,
+    if(
+        listlength(Yson::ConvertToInt64List(main_artist)) > 0,
+        Yson::ConvertToInt64List(main_artist),
+        Yson::ConvertToInt64List(artist_performer)
+    ) as artists
+from $tracks;
+
+$tracks2 = 
+select * 
+from 
+    (select t.* without artists 
+    from $tracks1 as t 
+    flatten list by artists as artist_id) as t1 
+join 
+    (select name as artist_name, artist_id 
+    from $artists) as t2 
+using(artist_id);
+
+$tracks3 = 
+select 
+    track_id,
+    Yson::Serialize(Yson::From(asstruct(
+        track_id as track_id,
+        track_name as track_name,
+        genres as genres,
+        listconcat(aggregate_list(artist_name), '; ') as artists
+    ))) as track_data
+from $tracks2
+group by track_id, track_name, genres;
+
+$joined_with_track_data = select * from $joined as t1 left join $tracks3 as t2 using(track_id);
+
+insert into `//home/voice/nstbezz/dsat_music` with truncate
+reduce $joined_with_track_data
+presort joined_timestamp
+on `uuid` using $reduce((req_id, joined_timestamp, user_data, query_data, track_data, percent_played));

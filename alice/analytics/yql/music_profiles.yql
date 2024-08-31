@@ -1,0 +1,19 @@
+PRAGMA File("libdj_udf.so", "https://proxy.sandbox.yandex-team.ru/last/DJ_UDF");
+PRAGMA UDF("libdj_udf.so");
+
+$get_tracks = ($profile, $counter_type) -> {
+    RETURN ListMap(DJ::GetProfileCounters(DJ::ProfileFromProto($profile), false, false, false, "PN_Music#OT_Track", $counter_type, "RT_Max_30d"), ($x) -> { RETURN $x.ObjectId; });
+};
+
+$profiles = "home/dj_unity/profiles/users/latest/user_profiles";
+
+insert into {{output1}} with truncate
+select
+    `id`,
+    $get_tracks(profile, "PN_Music#CT_BasicOwnPlay") AS own_plays,
+    $get_tracks(profile, "PN_Music#CT_BasicOwnSkip") AS own_skips,
+    $get_tracks(profile, "PN_Music#CT_BasicRecommendationPlay") AS recommendation_plays,
+    $get_tracks(profile, "PN_Music#CT_BasicRecommendationSkip") AS recommendation_skips,
+    $get_tracks(profile, "PN_Music#CT_BasicLike") AS likes,
+from $profiles
+where String::StartsWith(id, "music/");

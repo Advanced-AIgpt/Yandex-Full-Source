@@ -1,0 +1,154 @@
+Use hahn;
+-- PRAGMA  yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$context_input = "//home/voice/jdkondratenko/VA-1984/context_data/general_markup_input";
+$screenshot_urls = "//home/voice/jdkondratenko/VA-1984/context_data/screenshots_urls_uniq";
+$context_output = "//home/voice/jdkondratenko/VA-1984/context_data/general_markup_input_ready_tasks";
+
+$patch_script = @@
+import cyson
+
+def patch_session(session, x=0):
+    if len(session) >= x + 1:
+        first_dict = session[-1 - x]
+    
+        query = first_dict["_query"]
+        answer = first_dict["_reply"]
+        
+        return {"query": query, "answer": answer}
+    return None
+
+patch_session._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_script2 = @@
+import cyson
+
+def patch_session2(session, x=0):
+    if len(session) >= x + 1:
+        first_dict = session[-1 - x]
+    
+        req_id = first_dict.get("req_id", None)
+        
+        return req_id
+    return None
+
+patch_session2._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_session = Python2::patch_session(ParseType("(Yson?, Int64)->Yson?"), $patch_script);
+$patch_session2 = Python2::patch_session2(ParseType("(Yson?, Int64)->String?"), $patch_script2);
+
+
+$parsed = (
+    SELECT
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 0) as action0, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 1) as action1, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 2) as action2, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 3) as action3, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 4) as action4, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 5) as action5, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 6) as action6, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 7) as action7, 
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 8) as action8,
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 9) as action9,
+        $patch_session(Yson::SerializePretty(Yson::From(session)), 10) as action10,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 0) as req_id0,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 1) as req_id1,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 2) as req_id2,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 3) as req_id3,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 4) as req_id4,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 5) as req_id5,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 6) as req_id6,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 7) as req_id7,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 8) as req_id8,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 9) as req_id9,
+        $patch_session2(Yson::SerializePretty(Yson::From(session)), 10) as req_id10,
+        a.*
+    FROM $context_input as a
+);
+
+$q0 = (
+    SELECT a.*, b.downloadUrl as url0
+    FROM $parsed as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id0 = b.request_id
+);
+
+$q1 = (
+    SELECT a.*, b.downloadUrl as url1
+    FROM $q0 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id1 = b.request_id
+);
+
+$q2 = (
+    SELECT a.*, b.downloadUrl as url2
+    FROM $q1 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id2 = b.request_id
+);
+
+$q3 = (
+    SELECT a.*, b.downloadUrl as url3
+    FROM $q2 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id3 = b.request_id
+);
+
+$q4 = (
+    SELECT a.*, b.downloadUrl as url4
+    FROM $q3 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id4 = b.request_id
+);
+
+$q5 = (
+    SELECT a.*, b.downloadUrl as url5
+    FROM $q4 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id5 = b.request_id
+);
+
+$q6 = (
+    SELECT a.*, b.downloadUrl as url6
+    FROM $q5 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id6 = b.request_id
+);
+
+$q7 = (
+    SELECT a.*, b.downloadUrl as url7
+    FROM $q6 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id7 = b.request_id
+);
+
+$q8 = (
+    SELECT a.*, b.downloadUrl as url8
+    FROM $q7 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id8 = b.request_id
+);
+
+$q9 = (
+    SELECT a.*, b.downloadUrl as url9
+    FROM $q8 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id9 = b.request_id
+);
+
+$q10 = (
+    SELECT a.*, b.downloadUrl as url10
+    FROM $q9 as a
+    LEFT JOIN $screenshot_urls as b
+    ON a.req_id10 = b.request_id
+);
+
+INSERT INTO $context_output WITH TRUNCATE 
+SELECT request_id, session_id, action0, url0, action1, url1, action2, url2, action3, 
+url3, action4, url4, action5, url5, action6, url6, action7, url7, action8, url8,
+    action9, url9, action10, url10
+FROM $q10;

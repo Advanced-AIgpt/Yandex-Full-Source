@@ -1,0 +1,19 @@
+USE hahn;
+PRAGMA yt.ErasureCodecCpu="8.0";
+PRAGMA yt.MaxJobCount="1000000";
+
+$date_start = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String);
+$date_end = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(1) AS String);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/reboot/pings` WITH TRUNCATE 
+SELECT Platform, DeviceId, `Timestamp`, QuasmodromGroup,
+t.iso_eventtime AS iso_eventtime, MetricName, MetricValue, SoftwareVersion
+FROM RANGE('//logs/smartdevicesinfrastructur-devices-metrics/1d', $date_start, $date_end) AS t 
+INNER JOIN 
+(
+        SELECT DISTINCT DeviceID, OriginalModel
+        FROM `//home/voice/nadezhda17/common/wifi_problems/reboot/manual_device_power_on`
+) AS e 
+ON e.DeviceID = t.DeviceId AND e.OriginalModel = t.Platform
+WHERE MetricName = 'systemMetrics'
+ORDER BY DeviceId, `Timestamp`;

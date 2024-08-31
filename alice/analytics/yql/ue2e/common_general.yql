@@ -1,0 +1,87 @@
+PRAGMA yt.InferSchema = '1000';
+
+$get_intent = Python2::get_intent(ParseType("(String?) -> String"),
+@@
+def get_intent(intent):
+    if not intent: return "NO_INTENT"
+    if "iot_do" in intent: return "iot_do"
+    if "skill_discovery" in intent: return "skill_discovery"
+    if 'handcrafted' in intent: return 'handcrafted'
+
+    parts = intent.split('.')
+    if len(parts) <= 2:
+        return parts[-1]
+    if parts[-1] == 'ellipsis':
+        return '.'.join(parts[2:-1])
+    return '.'.join(parts[2:])
+@@
+);
+
+$arcadia_slices_path = "arc://alice/analytics/tasks/VA-571/slices_mapping.py?rev=" || {{param.revision->quote() ?? "6907605"->quote()}};
+PRAGMA File("slices_mapping.py", $arcadia_slices_path);
+$script = FileContent("slices_mapping.py");
+$generalize_toloka_intent = Python2::toloka_intent_to_general_intent(ParseType("(String?)->String"), $script);
+$is_command_intent = Python2::is_command_intent(ParseType("(String?)->Bool"), $script);
+
+
+$all = (
+    SELECT
+        $get_intent(intent) as intent, result, UNWRAP(toloka_intent) as toloka_intent, action,
+        $generalize_toloka_intent(toloka_intent) as general_toloka_intent
+    from {{input1}}
+    WHERE result NOT IN ("UNIPROXY_ERROR", "RENDER_ERROR")
+);
+
+$stats=(SELECT
+    intent,
+    count_if(result=='good' and action like "Открывается поиск по запросу%") as good_serp,
+    count_if(result=='good' and action not like "Открывается поиск по запросу%") as good_noserp,
+    count_if(result=='part' and action like "Открывается поиск по запросу%") as part_serp,
+    count_if(result=='part' and action not like "Открывается поиск по запросу%") as part_noserp,
+    count(*) as total
+    from $all
+    GROUP BY intent
+);
+
+$toloka_stats=(SELECT
+    toloka_intent,
+    count_if(result=='good' and action like "Открывается поиск по запросу%") as good_serp,
+    count_if(result=='good' and action not like "Открывается поиск по запросу%") as good_noserp,
+    count_if(result=='part' and action like "Открывается поиск по запросу%") as part_serp,
+    count_if(result=='part' and action not like "Открывается поиск по запросу%") as part_noserp,
+    count(*) as total
+    from $all
+    GROUP BY toloka_intent
+);
+
+$stats_total=(SELECT
+    count_if(result=='good' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good_serp,
+    count_if(result=='good' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good_noserp,
+    count_if(result=='part' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_serp,
+    count_if(result=='part' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_noserp,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+);
+
+$stats_commands=(SELECT
+    count_if(result=='good' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good_serp,
+    count_if(result=='good' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and toloka_intent == "toloka_gc")) as good_noserp,
+    count_if(result=='part' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_serp,
+    count_if(result=='part' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_noserp,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where $is_command_intent(toloka_intent)
+);
+
+$stats_nocommands=(SELECT
+    count_if(result=='good' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good_serp,
+    count_if(result=='good' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good_noserp,
+    count_if(result=='part' and action like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_serp,
+    count_if(result=='part' and action not like "Открывается поиск по запросу%" and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part_noserp,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where not $is_command_intent(toloka_intent)
+);

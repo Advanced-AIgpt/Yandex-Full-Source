@@ -1,0 +1,54 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+DECLARE $param_dict AS Dict<String, String>;
+$date_first = $param_dict['date_first'];
+$date_last = $param_dict['date_last'];
+
+$iot_devices_from_response = ($response) -> {
+    RETURN
+    Yson::ConvertToList(
+        ListFilter(
+            Yson::ConvertToList($response.meta),
+            ($x) -> {RETURN Yson::ConvertToString($x.type) == 'smart_home_meta'}
+        )[0].payload.smart_home_info.devices
+    );
+};
+
+$device_types = ($devices) -> {
+    RETURN ListMap($devices, ($x) -> {RETURN Yson::ConvertToString($x.type)});
+};
+
+$filter_types = ($types) -> {
+    RETURN ListFilter($types, ($x) -> {
+        RETURN NOT String::Contains($x, 'smart_speaker') AND NOT String::Contains($x, 'yandex.module')});
+};
+
+$uuid_iot_first_day_portion = (
+    SELECT `uuid`, MIN(fielddate) AS first_day
+    FROM (
+        SELECT `uuid`, TableName() AS fielddate
+        FROM RANGE(`//home/voice/vins/logs/dialogs`, $date_first, $date_last)
+        WHERE ListLength($filter_types($device_types($iot_devices_from_response(response)))) > 0
+    )
+    GROUP BY `uuid`
+);
+
+INSERT INTO `//home/alice/dialog/misc/device_id_iot_first_day_portion` WITH TRUNCATE
+SELECT device_id, MIN(first_day) AS iot_first_day, SOME(device_init_date) AS device_init_date
+FROM `//home/alice/dialog/misc/uuid_to_device_init_date_portion` AS ud
+JOIN $uuid_iot_first_day_portion AS uif
+USING(`uuid`)
+GROUP BY ud.device_id AS device_id;
+COMMIT;
+
+INSERT INTO `//home/alice/dialog/misc/device_id_iot_first_day` WITH TRUNCATE
+SELECT *
+FROM `//home/alice/dialog/misc/device_id_iot_first_day`
+UNION ALL
+SELECT *
+FROM `//home/alice/dialog/misc/device_id_iot_first_day_portion` AS last
+LEFT ONLY JOIN `//home/alice/dialog/misc/device_id_iot_first_day` AS prev
+USING(device_id);
+COMMIT;

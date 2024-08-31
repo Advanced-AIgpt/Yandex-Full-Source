@@ -1,0 +1,188 @@
+-- code for "Parse_metrika" YQL cube
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$format = DateTime::Format("%Y-%m-%d");
+
+$reportEnvironmentValueByKey = ($keys, $values, $keyValue) -> {
+    $idx = ListIndexOf($keys, $keyValue);
+    RETURN CAST($values[$idx] AS Utf8)??'';    };
+
+$appmetrica_source = '//logs/appmetrica-yandex-events/1d';
+$appmetrica_start = {{param[start_date]}};
+$appmetrica_end = {{param[job_date]}};
+
+$quasar_backend_devices =  SELECT * FROM `//home/quasar-dev/backend/snapshots/current/device`;
+$subscription_devices_table = SELECT device_id FROM {{param[subscription_devices_table]}};
+$blacklist_puids_table = SELECT * FROM {{param[blacklist_puids_table]}};
+$megamind_features_table = SELECT * FROM {{param[megamind_features_table]}};
+$megamind_merge_date = {{param[megamind_merge_date]}};
+
+-- QUERY 0 part 1 ($appmetrica_dump)
+-- take Appmetrica 1 day log, only our API key (consider using other EventType set for speed/completeness)
+-- extract device_type, hdmiPlugged, devprod from ReportEnvironment_Keys/Values
+$appmetrica_dump =
+SELECT
+    DeviceID as device_id,
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id") AS device_id_re,
+    `UUID` AS `uuid`,
+    AccountID AS puid,
+    AppVersionName AS app_version,
+    RegionID AS geo_id,
+    ReceiveTimestamp AS event_timestamp,
+    ReceiveDate AS fielddate,
+    Model AS model,
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") AS device_type,
+    Manufacturer AS manufacturer,
+    IF (NOT ($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "hdmiPlugged") IS NULL)
+        AND (cast($reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "hdmiPlugged") AS string) == '1'),
+        1, 0) AS hdmi_plugged,
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "quasmodrom_group") ??
+        $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "buildType") ?? '-' AS devprod,
+FROM range ($appmetrica_source, $appmetrica_start, $appmetrica_end)
+WHERE
+    APIKey = 999537
+    AND EventType in (2, 4)
+;
+
+-- QUERY 0 part 2
+-- combine rows with device_id from DeviceID and from ReportEnvironment
+
+$q0 =
+SELECT
+    * without device_id_re
+FROM $appmetrica_dump
+UNION ALL
+SELECT
+    device_id_re as device_id,
+    `uuid`,
+    puid,
+    app_version,
+    geo_id,
+    event_timestamp,
+    fielddate,
+    model,
+    device_type,
+    manufacturer,
+    hdmi_plugged,
+    devprod
+FROM $appmetrica_dump
+WHERE (device_id_re IS NOT NULL) AND (device_id_re != device_id )
+;
+
+-- QUERY 1
+-- GROUP BY device_id, fielddate
+-- select feature values based on mode / latest value
+$q1 =
+SELECT
+    fielddate,
+    device_id,
+    MODE(`uuid`)[0].Value AS `uuid`,
+    MODE(puid)[0].Value AS puid,
+    MAX_BY(app_version, event_timestamp) AS app_version,
+    cast(MODE(geo_id)[0].Value AS int64) AS geo_id,
+
+    MODE(model)[0].Value AS model,
+    MODE(device_type)[0].Value AS device_type,
+    MODE(manufacturer)[0].Value AS manufacturer,
+
+    cast (MAX(hdmi_plugged) == 1 AS bool?) AS hdmi_plugged,
+
+    cast(MAX_BY(devprod, event_timestamp) AS string) AS devprod
+
+FROM $q0
+GROUP BY device_id, fielddate
+;
+
+-- select device_type
+$dayuse_raw =
+SELECT
+    $format(AddTimezone(DateTime::FromSeconds(CAST(fielddate AS UInt32)), "Europe/Moscow")) AS fielddate,
+    device_id,
+    `uuid`,
+    puid,
+    app_version,
+    geo_id,
+    model,
+    CASE
+        WHEN device_type IS NULL OR device_type == ""
+            THEN CASE model
+                WHEN 'Station'                  THEN 'yandexstation'
+                WHEN 'YandexModule-00002'       THEN 'yandexmodule'
+                WHEN 'KidPhone3G'               THEN 'elariwatch'
+                ELSE model
+                END
+        ELSE
+            CASE
+            WHEN device_type == 'desktop'       THEN model
+            WHEN device_type == 'elariwatch'    THEN 'elariwatch'
+            WHEN device_type == 'Station'       THEN IF(model == 'Station', 'yandexstation', model)
+            WHEN device_type == 'YandexModule2-00001' THEN 'yandexmodule'
+            ELSE device_type
+            END
+        END
+    AS device_type,
+    manufacturer,
+    hdmi_plugged,
+    devprod
+FROM $q1
+;
+
+-- prepare artefact from megamind feats cube
+$megamind_cube =
+SELECT
+    fielddate,
+    device_type,
+    device_id,
+    NULL as app_version,
+    NULL as devprod,
+    NULL as geo_id,
+    NULL as hdmi_plugged,
+    NULL AS manufacturer,
+    NULL AS model,
+    puid,
+    `uuid`,
+FROM $megamind_features_table
+WHERE fielddate >= $megamind_merge_date
+    AND app IN ['small_smart_speakers', 'quasar']
+    AND device_id IS NOT NULL
+;
+
+$megamind_unique =
+SELECT
+    mm.*,
+FROM
+    $megamind_cube as mm
+LEFT ONLY JOIN
+    $dayuse_raw as du
+ON mm.device_id == du.device_id AND mm.fielddate == du.fielddate
+;
+
+$dayuse_with_mm =
+SELECT
+    just('AM') as source,
+    du.*
+FROM $dayuse_raw as du
+UNION ALL
+SELECT
+    just('MM') as source,
+    mm.*
+FROM $megamind_unique as mm
+;
+
+-- QUERY 3
+-- adding subscription info, whiltelist and blacklist feats
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    a.*,
+    if (qb.id is NULL, 'invalid',
+        if (a.puid in $blacklist_puids_table, 'blacklisted', NULL)) as exclude,
+    sd.device_id IS NOT NULL AS is_subscription_device
+FROM $dayuse_with_mm AS a
+LEFT JOIN
+    $quasar_backend_devices AS qb
+ON a.device_id == qb.id
+LEFT JOIN
+    $subscription_devices_table AS sd
+ON a.device_id == sd.device_id
+;

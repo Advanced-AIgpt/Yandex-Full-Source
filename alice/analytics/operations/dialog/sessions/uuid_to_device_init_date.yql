@@ -1,0 +1,40 @@
+USE hahn;
+
+DECLARE $param_dict AS Dict<String, String>;
+
+$date_first = $param_dict['date_first'];
+$date_last = $param_dict['date_last'];
+
+$fixed_quasar_init = (
+    SELECT device_id, MIN(init_date) AS init_date, MIN_BY(device_type, init_date) AS device_type
+    FROM `//home/marketing-data/andrewha/Station/backup/quasar_init`
+    GROUP BY device_id
+);
+
+$uuid_to_device_id_portion = (
+    SELECT `uuid`, device_id FROM (
+        SELECT DISTINCT `uuid`, device_id
+        FROM RANGE('//home/alice/dialog/prepared_logs_expboxes', $date_first, $date_last)
+        WHERE
+        app??'' IN ('quasar', 'small_smart_speakers')
+    ) AS p
+    LEFT ONLY JOIN `//home/alice/dialog/misc/uuid_to_device_init_date`
+    USING (`uuid`)
+);
+
+INSERT INTO `//home/alice/dialog/misc/uuid_to_device_init_date_portion` WITH TRUNCATE
+SELECT `uuid`, ud.device_id AS device_id, init_date AS device_init_date
+FROM $uuid_to_device_id_portion AS ud
+JOIN $fixed_quasar_init AS qi
+USING (device_id);
+COMMIT;
+
+INSERT INTO `//home/alice/dialog/misc/uuid_to_device_init_date` WITH TRUNCATE
+SELECT *
+FROM `//home/alice/dialog/misc/uuid_to_device_init_date`
+UNION ALL
+SELECT *
+FROM `//home/alice/dialog/misc/uuid_to_device_init_date_portion` AS last
+LEFT ONLY JOIN `//home/alice/dialog/misc/uuid_to_device_init_date` AS prev
+USING(`uuid`);
+COMMIT;

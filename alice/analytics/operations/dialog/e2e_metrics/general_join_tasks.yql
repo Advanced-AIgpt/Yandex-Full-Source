@@ -1,0 +1,46 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA SimpleColumns;
+
+$script = @@
+import json
+def get_asr(VinsResponse):
+    if VinsResponse:
+        return json.loads(VinsResponse)['directive']['payload']['megamind_analytics_info']['original_utterance']
+    return ''
+@@;
+$get_asr = Python2::get_asr(Callable<(String?)->String>, $script);
+
+$get_voice = ($arg) -> {
+    RETURN String::ReplaceAll($arg, "getfile", "getaudio") || "?norm=1"
+};
+
+$basket = (
+    SELECT *
+    FROM {{input3}}
+    WHERE ListLength(String::SplitToList(session_id, '__')) == 1 OR session_sequence == 1
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    IF(toloka_tasks.url IS NULL AND results.result IS NULL, "RENDER_ERROR", results.result) as result,
+    toloka_tasks.url AS screenshot_url,
+    toloka_tasks.intent AS intent,
+    toloka_tasks.action AS action,
+    toloka_tasks.hashsum AS hashsum,
+    results.* WITHOUT  results.result
+FROM (
+    SELECT
+        basket.request_id as req_id,
+        basket.session_id as session_id,
+        basket.toloka_intent AS toloka_intent,
+        basket.app_preset AS app,
+        basket.text AS text,
+        $get_voice(basket.voice_url) as voice_url,
+        $get_asr(uniproxy_results.VinsResponse) as asr_text,
+        uniproxy_results.SetraceUrl AS setrace_url,
+        basket.basket AS basket,
+        IF(uniproxy_results.RequestId IS NULL, "UNIPROXY_ERROR", IF(uniproxy_results.VinsResponse IS NULL, "EMPTY_VINS_RESPONSE", NULL)) AS result
+    FROM $basket as basket
+    LEFT JOIN {{input2}} as uniproxy_results ON basket.request_id == uniproxy_results.RequestId
+) AS results
+LEFT JOIN {{input1}} AS toloka_tasks ON results.req_id == Yson::ConvertToString(toloka_tasks.info.request_id)

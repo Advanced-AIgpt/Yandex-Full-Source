@@ -1,0 +1,14 @@
+Use hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.Pool = "voice";
+
+$joined_table = "//home/voice/irinfox/ue2e_baskets/joined_data_2022_07_07"; -- тут должен быть путь от таблички сбора
+$sampled_table = "//home/voice/irinfox/ue2e_baskets/sampled_data/quasar_random_5000"; -- тут должен путь от таблички из семплинга
+$output_table = "//home/voice/irinfox/ue2e_baskets/joined_data/quasar_random_5000"; -- joined data to store during the whole pipeline process
+
+-- границами дней жертвуем; генерит табличку поменьше, чем исходная огромная, чтоб ей дальше оперировать в разметках
+INSERT INTO $output_table WITH TRUNCATE
+SELECT joined_data.*, sample_data.sample_type as sample_type
+FROM $sampled_table as sample_data
+JOIN $joined_table as joined_data
+ON sample_data.`uuid` == joined_data.`uuid` and sample_data.fielddate == joined_data.fielddate;

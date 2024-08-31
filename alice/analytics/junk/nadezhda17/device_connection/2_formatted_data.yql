@@ -1,0 +1,123 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--достать из урла тип устройста 
+$get_device = ($URL) -> (String::ReplaceAll(String::SplitToList($URL, '/')[5], 
+'devices.types.smart_speaker.', ''));
+
+--парсим урл чтобы достать от туда параметры которые могут пригодится в будущем
+$get_info = ($URL) -> (ListFilter(ListMap(String::SplitToList($URL, '&'), 
+($x) -> (String::SplitToList($x, '='))), ($x) -> ($x[0] IN 
+('os_version', 'model', 'manufacturer', 'app_version_name', 
+'app_platform', 'app_id', 'bleId', 'isFirstSetup'))));
+
+--содерждательная часть урла
+$get_tail = ($URL) -> (String::SplitToList(String::JoinFromList(
+ListSkip(String::SplitToList($URL, '/'), 6), '/'), '?')[0]);
+
+--форматируем данные из счётчиков
+$connection_process_formatted = 
+( 
+    SELECT IF(CounterID = 86757633, 'УД', 'ПП') AS app, OSFamily AS OSName,
+    CAST(CAST(EventDate + DateTime::IntervalFromHours(3) AS Date) AS String) AS EventDate, 
+    EventTime + DateTime::IntervalFromHours(3) AS EventTime, 
+    CAST(PassportUserID AS String) AS puid, 
+    $get_tail(URL) AS tail, 
+    $get_device(URL) AS device, 
+    $get_info(URL) AS add_info, 
+    ListFilter($get_info(URL), ($x) -> ($x[0] = 'bleId'))[0][1] AS bleId
+    FROM `//home/voice/nadezhda17/common/device_connection/tmp_connection_process`
+);
+
+--ПРигодится дальше
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/tmp_connection_process_formatted` WITH TRUNCATE 
+SELECT *
+FROM $connection_process_formatted
+WHERE tail != '';
+
+--группируем по сессиям с простоем не больше получаса
+$sessions_data = 
+(
+    SELECT app, OSName, EventDate, EventTime, 
+    puid, device, tail, bleId, add_info,
+    SUM(next_session) OVER w + 1 AS session_id
+    FROM 
+    (
+        SELECT app, OSName, EventDate, EventTime, 
+        puid, device, tail, bleId, add_info,
+        IF(EventTime - LAG(EventTime) OVER w > DateTime::IntervalFromMinutes(30), 1, 0) AS next_session
+        FROM $connection_process_formatted
+        WHERE tail != ''
+        WINDOW w AS (PARTITION BY app, OSName, puid, device ORDER BY EventTime)
+    )
+    WINDOW w AS (PARTITION BY app, OSName, puid, device ORDER BY EventTime)
+);
+
+--групированные сессии
+$grouped_sessions = 
+(
+    SELECT app, OSName, puid, device, session_id, MAX(bleId) AS bleId, 
+    SOME(add_info) AS add_info, MAX(EventDate) AS EventDate,
+    ListSort(AGGREGATE_LIST(AsStruct(EventTime AS ts, tail AS tail)), ($x) -> ($x.ts)) AS session
+    FROM $sessions_data
+    GROUP BY app, OSName, puid, device, session_id
+);
+
+--учимся доставать из сессии нужные нам хвосты
+$filter_by_one_event = ($session, $event) -> (IF(ListLength(ListFilter($session, ($x) -> 
+(String::Contains($x.tail, $event??'AAA')))) > 0, 1, 0));
+
+$filter_by_events = ($session, $events) -> (
+ListMax(ListMap($events, ($event) -> ($filter_by_one_event($session, $event)))));
+
+--увидел инструкцию
+$instruction = AsList('instruction');
+--начал выбирать wifi 
+$wifi_select = AsList('wifi-select');
+
+--финальные статусы при подключении по ble
+$ble_success = AsList('ble/success');
+$ble_fail = AsList('ble/fail', 'ble/discovery-error');
+
+--финальные статусы при подключении звуком
+$sonic_success = AsList('sonic/success');
+$sonic_fail = AsList('sonic/not-found', 'sonic/token-error', 'sonic/discovery-error');
+
+--финальные статусы при подключении через wifi
+$ap_success = AsList('ap/success');
+$ap_fail = AsList('ap/not-connected', 'ap/token-error', 'ap/problem', 'ap/not-found', 'ap/discovery-error');
+
+--достаём из сессий факт нужного события
+$session_for_metric = 
+(
+    SELECT EventDate, app, OSName, puid, device, session_id, bleId, 
+    $filter_by_events(session, $instruction) as instruction,
+    $filter_by_events(session, $wifi_select) as wifi_select,
+    $filter_by_events(session, $ble_success) as ble_success,
+    $filter_by_events(session, $ble_fail) as ble_fail,
+    $filter_by_events(session, $sonic_success) as sonic_success,
+    $filter_by_events(session, $sonic_fail) as sonic_fail,
+    $filter_by_events(session, $ap_success) as ap_success,
+    $filter_by_events(session, $ap_fail) as ap_fail, 
+    session[0].ts AS start_ts, 
+    listreverse(session)[0].ts AS finish_ts, 
+    session, add_info
+    FROM $grouped_sessions
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/session_for_metric` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $session_for_metric
+    UNION ALL 
+    SELECT s.*
+    FROM  `//home/voice/nadezhda17/common/device_connection/session_for_metric` AS s 
+    LEFT ONLY JOIN $session_for_metric AS sm ON sm.EventDate = s.EventDate 
+    AND sm.app = s.app AND sm.OSName = s.OSName AND sm.puid = s.puid AND sm.device = s.device
+)
+--сразу закладываем что таблица может распухнуть и её размер надо регулировать
+WHERE EventDate >= CAST(CAST(CurrentUtcDate() - DateTime::IntervalFromDays(30) AS Date) AS String)
+ORDER BY EventDate, puid, device;
+

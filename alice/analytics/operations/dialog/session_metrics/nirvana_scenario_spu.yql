@@ -1,0 +1,319 @@
+--https://hitman.yandex-team.ru/projects/metrics_dialog/make_dialog_sessions/
+--https://hitman.yandex-team.ru/projects/metrics_dialog/PA_usage_weekly/
+--https://hitman.yandex-team.ru/projects/metrics_dialog/PA_usage_monthly/
+USE hahn;
+PRAGMA yt.InferSchema='100';
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = '1';
+PRAGMA GroupByLimit = "1300";
+PRAGMA GroupByCubeLimit = "8";
+
+$utils_arc_path = "arc://alice/analytics/operations/dialog/sessions/intent_scenario_mapping.py?hash=" || $arc_commit ;
+PRAGMA File("intent_scenario_mapping.py", $utils_arc_path);
+$get_main_intent_part = Python2::get_main_intent_part(ParseType("(String?)->String"), FileContent("intent_scenario_mapping.py"));
+
+$get_age_category = Python::get_age_category(
+    Callable<(Double?) -> String>,@@
+def get_age_category(child_confidence):
+    CHILD_THRESHOLD = 0.8
+    if child_confidence is not None:
+        return 'child' if child_confidence >= CHILD_THRESHOLD else 'adult'
+    return 'unknown'
+@@
+);
+
+
+$round_to_scale = ($date) -> {RETURN
+    CASE $scale
+        WHEN "daily" THEN $date
+        WHEN "weekly" THEN CAST(DateTime::MakeDate(DateTime::StartOfWeek(DateTime::ParseIso8601($date))) AS String)
+        WHEN "monthly" THEN CAST(DateTime::MakeDate(DateTime::StartOfMonth(DateTime::ParseIso8601($date))) AS String)
+        ELSE Ensure("Unknown scale", False, "Unknown scale")
+    END
+};
+
+
+$udfScript1 =@@
+COMMANDS = ['commands_other', 'video_commands', 'player_commands', 'search_commands', 'sound_commands', 'stop', 'feedback']
+CONTINUOUS = ['video', 'music', 'tv_stream', 'tv_broadcast', 'radio', 'meditation', 'morning_show', 'music_ambient_sound', 'music_fairy_tale', 'music_podcast']
+STOP = {'player_commands':['player_pause'], 'stop':['all'], 'sleep_timer':['sleep_timer_set'], 'ontofacts':['film_gallery']}
+def is_continuous_start(generic_scenario):
+    return generic_scenario in CONTINUOUS
+def is_continuous_continue(main_intent):
+    return (main_intent == 'player_continue')
+def is_continuous_stop(generic_scenario, main_intent):
+    return (generic_scenario in STOP and ( STOP[ generic_scenario ] == ['all']
+            or main_intent in STOP[ generic_scenario ]))
+def is_command(generic_scenario, main_intent):
+    return (generic_scenario in COMMANDS
+            or main_intent in ['alarm_stop_playing', 'alarm_reminder'])
+def is_boltalka(generic_scenario):
+    return generic_scenario == 'general_conversation'
+def is_search(main_intent):
+    return (main_intent in ['factoid', 'entity_name'])
+def classify_intent(generic_scenario, main_intent):
+    generic_scenario = generic_scenario.decode('utf-8')
+    main_intent = main_intent.decode('utf-8')
+    intent_dict = {}
+    intent_dict['is_command']             = is_command(generic_scenario, main_intent)
+    intent_dict['is_continuous_start']    = is_continuous_start(generic_scenario)
+    intent_dict['is_continuous_continue'] = is_continuous_continue(main_intent)
+    intent_dict['is_continuous_stop']     = is_continuous_stop(generic_scenario, main_intent)
+    intent_dict['is_boltalka']            = is_boltalka(generic_scenario)
+    intent_dict['is_search']              = is_search(main_intent)
+    return intent_dict
+@@;
+
+$python_classify_intent = Python::classify_intent(
+    Callable<
+        (String, String) -> Struct<
+        is_command:Bool,
+        is_continuous_start:Bool,
+        is_continuous_continue:Bool,
+        is_continuous_stop:Bool,
+        is_boltalka:Bool,
+        is_search:Bool,
+        >>,
+        $udfScript1
+);
+
+$classify_intent_table = (
+    SELECT
+    app??'' AS app,
+    $round_to_scale(fielddate)??'' AS fielddate,
+    platform??'' AS platform,
+    version??'' AS version,
+    cohort??'' AS cohort,
+    is_new??'' AS is_new,
+    age_category,
+    CAST(country_id??-1 AS String) AS country_id,
+    input_type??'' AS input_type,
+    req_id,
+    client_time,
+    user,
+    query??'' AS query,
+    reply??'' AS reply,
+    session_id,
+    generic_scenario??"" AS scenario,
+    intent_dict.is_command AS is_command,
+    intent_dict.is_boltalka AS is_boltalka,
+    intent_dict.is_search AS is_search,
+    intent_dict.is_continuous_stop AS is_continuous_stop,
+    intent_dict.is_continuous_continue AS is_continuous_continue,
+    intent_dict.is_continuous_start AS is_continuous_start,
+    device,
+    is_tv_plugged_in??false AS is_tv_plugged_in,
+    WeakField(trash_or_empty_request, Bool, False)??False AS trash_or_empty_request,
+    WITHOUT intent_dict
+    FROM (
+        SELECT $python_classify_intent(generic_scenario??'', $get_main_intent_part(intent??'')) as intent_dict,
+        $get_age_category(child_confidence) AS age_category,
+        IF (app IN ["quasar", "small_smart_speakers"], UNWRAP(user_id), UNWRAP(`uuid`))  as user,
+        IF (app??"" IN ["quasar", "small_smart_speakers"], IF(device??"" != "", device??"other", "other"), platform??'other_platform')  as device,
+        t.* WITHOUT `uuid`, user_id, device
+        FROM RANGE($source, $begin, $end) AS t
+    )
+);
+
+$udfScript2 = @@
+import datetime
+LONG_GAP = 1800
+LONG_BOLTALKA_SESSION = 3
+def mark_session(user_fielddate, data_lst):
+    scenario_client_time = dict()
+    current_continuous_scenario = ''
+    current_continuous_scenario_playing = False
+    boltalka_count = 0
+    for el in data_lst:
+        is_session = False
+        diff = el.client_time
+        if el.input_type == 'tech'.encode('utf-8'):
+            pass
+        elif el.scenario not in (''.encode('utf-8'), 'error'.encode('utf-8'), 'empty'.encode('utf-8'), 'side_speech'.encode('utf-8')):
+            if el.is_boltalka:
+                if el.is_continuous_stop:
+                    diff = 0
+                else:
+                    diff = el.client_time - scenario_client_time.get('boltalka'.encode('utf-8'), 0)
+                    scenario_client_time['boltalka'.encode('utf-8')] = el.client_time
+                    if diff > LONG_GAP:
+                        boltalka_count = 1
+                    else:
+                        boltalka_count += 1
+                        is_session = (boltalka_count == LONG_BOLTALKA_SESSION)
+            else:
+                boltalka_count = 0
+                if el.is_search and len(el.query.split()) == 1:
+                    diff = 0
+                else:
+                    diff = el.client_time - scenario_client_time.get(el.scenario, 0)
+                    scenario_client_time[el.scenario] = el.client_time
+                if not el.is_command and diff >= LONG_GAP:
+                    if el.scenario == current_continuous_scenario and current_continuous_scenario_playing:
+                        is_session = False
+                    else:
+                        is_session = True
+            if el.is_continuous_continue and current_continuous_scenario:
+                current_continuous_scenario_playing = True
+            if el.is_continuous_stop and current_continuous_scenario:
+                current_continuous_scenario_playing = False
+            if el.is_continuous_start:
+                current_continuous_scenario = el.scenario
+                current_continuous_scenario_playing = True
+        yield ({'user': el.user,
+        'fielddate': el.fielddate,
+        'app': el.app,
+        'platform': el.platform,
+        'version': el.version,
+        'cohort': el.cohort,
+        'is_new': el.is_new,
+        'age_category': el.age_category,
+        'country_id': el.country_id,
+        'input_type': el.input_type,
+        'session_id': el.session_id,
+        'scenario': el.scenario,
+        'is_session': is_session,
+        'device': el.device,
+        'is_tv_plugged_in': el.is_tv_plugged_in,
+        'trash_or_empty_request': el.trash_or_empty_request
+        })
+@@;
+
+$python_mark_session = Python::mark_session(
+    Callable<
+        (Tuple<String, String>, Stream<Struct<user:String,
+        fielddate:String,
+        app:String,
+        platform:String,
+        version:String,
+        cohort:String,
+        is_new:String,
+        age_category:String,
+        country_id:String,
+        input_type:String,
+        client_time:Int64?,
+        scenario:String,
+        is_command:Bool,
+        query:String,
+        reply:String,
+        session_id:String,
+        is_continuous_start:Bool,
+        is_continuous_continue:Bool,
+        is_continuous_stop:Bool,
+        is_boltalka:Bool,
+        is_search:Bool,
+        device:String,
+        is_tv_plugged_in:Bool,
+        trash_or_empty_request:Bool,
+        >>) ->
+        Stream<Struct<user:String, fielddate:String,
+        app:String,
+        platform:String,
+        version:String,
+        cohort:String,
+        is_new:String,
+        age_category:String,
+        country_id:String,
+        input_type:String,
+        session_id:String,
+        scenario:String,
+        is_session:Bool,
+        device:String,
+        is_tv_plugged_in:Bool,
+        trash_or_empty_request:Bool,
+        >>>,
+        $udfScript2
+);
+
+$mark_session_table = (
+    REDUCE $classify_intent_table
+    PRESORT client_time ASC
+    ON user, fielddate
+    USING $python_mark_session(AsStruct(user as user, fielddate AS fielddate,
+    app AS app,
+    platform AS platform,
+    version AS version,
+    cohort AS cohort,
+    is_new AS is_new,
+    age_category AS age_category,
+    country_id AS country_id,
+    input_type AS input_type,
+    client_time as client_time,
+    scenario AS scenario,
+    query AS query,
+    reply AS reply,
+    session_id??"" AS session_id,
+    is_command as is_command,
+    is_boltalka as is_boltalka,
+    is_search as is_search,
+    is_continuous_stop as is_continuous_stop,
+    is_continuous_start as is_continuous_start,
+    is_continuous_continue as is_continuous_continue,
+    device as device,
+    is_tv_plugged_in as is_tv_plugged_in,
+    trash_or_empty_request as trash_or_empty_request,
+    ))
+);
+
+$is_correct_query = ($input_type, $trash_or_empty_request, $scenario) -> {
+    return $input_type NOT IN ['tech', 'scenario'] AND
+            NOT $trash_or_empty_request AND
+            $scenario NOT IN ['side_speech'];
+};
+
+-- If you want to add GROUP BY parameter you should change GroupByLimit and GroupByCubeLimit
+$spu_total = (
+    SELECT
+    fielddate,
+    scenario??'_total_' AS scenario,
+    app??'_total_' AS app,
+    age_category??'_total_' AS age_category,
+    device??'_total_' AS device,
+    country_id??'_total_' AS country_id,
+    is_new??'_total_' AS is_new,
+    IF(is_tv_plugged_in is NULL,"_total_", IF(is_tv_plugged_in, "TV plugged", "TV unpluged") ) as is_tv_plugged_in,
+    '_total_' AS platform,
+    '_total_' AS version,
+    '_total_' AS cohort,
+    COUNT(DISTINCT session_id) AS old_sessions,
+    COUNT(DISTINCT IF($is_correct_query(input_type, trash_or_empty_request, scenario), user, NULL)) AS users,
+    COUNT_IF($is_correct_query(input_type, trash_or_empty_request, scenario)) AS queries,
+    COUNT_IF(input_type == 'voice') AS voice_queries,
+    COUNT_IF(input_type == 'text') AS text_queries,
+    COUNT_IF(input_type == 'click') AS click_queries,
+    COUNT_IF(input_type == 'push') AS push_queries,
+    COUNT_IF(input_type == 'scenario') AS scenario_queries,
+    COUNT_IF(input_type == 'tech') AS tech_queries,
+    COUNT_IF(input_type NOT IN ('voice', 'text', 'click', 'push', 'scenario', 'tech')) AS other_queries,
+    COUNT_IF(is_session) AS sessions,
+    COUNT(DISTINCT IF(input_type=='scenario', user, NULL)) AS scenario_users
+    FROM $mark_session_table
+    GROUP BY
+        fielddate,
+        CUBE(app, scenario, age_category, device, country_id, is_new, is_tv_plugged_in)
+);
+
+EVALUATE IF $scale == "daily" DO BEGIN
+    UPSERT INTO stat.`VoiceTech/Dialog/session_metrics/generic_scenario_spu_and_other_version2/daily`
+    SELECT *
+    FROM $spu_total
+    -- prevent "Empty values for dimensions: scenario"
+    WHERE scenario != '';
+END DO;
+
+EVALUATE IF $scale == "weekly" DO BEGIN
+    UPSERT INTO stat.`VoiceTech/Dialog/session_metrics/generic_scenario_spu_and_other_version2/weekly`
+    SELECT *
+    FROM $spu_total
+    -- prevent "Empty values for dimensions: scenario"
+    WHERE scenario != '';
+END DO;
+
+EVALUATE IF $scale == "monthly" DO BEGIN
+    UPSERT INTO stat.`VoiceTech/Dialog/session_metrics/generic_scenario_spu_and_other_version2/monthly`
+    SELECT *
+    FROM $spu_total
+    -- prevent "Empty values for dimensions: scenario"
+    WHERE scenario != '';
+END DO;

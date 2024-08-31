@@ -1,0 +1,78 @@
+USE hahn;
+PRAGMA yt.UseColumnarStatistics = 'false'; 
+
+--приклеиваем (пытаемся приклеить) правильную станцию
+$searchapp_setup = 
+(
+    SELECT fielddate, puid, device_id, 
+    lat, lon, location_source, location_precision, 
+    (location_ts??event_ts) AS location_ts,
+    event_ts, recieve_ts, quasar_device_id
+    FROM `//home/voice/nadezhda17/common/speakers_location/searchapp_appmetrica_aggregated` 
+    WHERE puid IS NOT NULL
+);
+
+$quasar = 
+(
+    SELECT device_id AS quasar_device_id, puid, fielddate, ts AS quasar_ts
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data`
+);
+
+$matched1 = 
+(
+    SELECT fielddate, puid, device_id, 
+    lat, lon, location_source, location_precision, location_ts,
+    event_ts, recieve_ts,
+    MIN_BY(quasar_device_id, time_diff) AS quasar_device_id
+    FROM 
+    (
+        SELECT s.fielddate AS fielddate, s.puid AS puid, device_id, 
+        lat, lon, location_source, location_precision, location_ts,
+        event_ts, recieve_ts,
+        s.quasar_device_id??q.quasar_device_id AS quasar_device_id, 
+        Math::Abs(DateTime::ToMinutes(quasar_ts - location_ts)) AS time_diff
+        FROM $searchapp_setup AS s 
+        INNER JOIN $quasar AS q ON s.puid = q.puid AND s.fielddate = q.fielddate 
+    )
+    WHERE time_diff <= 12 * 60
+    GROUP BY fielddate, puid, device_id, 
+    lat, lon, location_source, location_precision, location_ts,
+    event_ts, recieve_ts
+);
+
+$not_matched1 = 
+(
+    SELECT s.*
+    FROM $searchapp_setup AS s
+    LEFT ONLY JOIN $matched1 AS m ON m.puid = s.puid AND m.device_id = s.device_id AND m.fielddate = s.fielddate
+);
+
+$matched2 = 
+(
+    SELECT fielddate, puid, device_id, 
+    lat, lon, location_source, location_precision, location_ts,
+    event_ts, recieve_ts,
+    MIN_BY(quasar_device_id, time_diff) AS quasar_device_id
+    FROM 
+    (
+        SELECT s.fielddate AS fielddate, s.puid AS puid, device_id, 
+        lat, lon, location_source, location_precision, location_ts,
+        event_ts, recieve_ts,
+        s.quasar_device_id??q.quasar_device_id AS quasar_device_id, 
+        Math::Abs(DateTime::ToMinutes(quasar_ts - location_ts)) AS time_diff
+        FROM $not_matched1 AS s 
+        INNER JOIN $quasar AS q ON s.puid = q.puid
+    )
+    WHERE time_diff <= 12 * 60
+    GROUP BY fielddate, puid, device_id, 
+    lat, lon, location_source, location_precision, location_ts,
+    event_ts, recieve_ts
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/searchapp_quasar_setup` WITH TRUNCATE 
+SELECT *
+FROM $matched1
+UNION ALL 
+SELECT *
+FROM $matched2;

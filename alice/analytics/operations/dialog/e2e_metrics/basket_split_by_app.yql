@@ -1,0 +1,33 @@
+$arc_commit = {{param.arc_commit->quote() ?? "b2c23abe67d6540f2d8fdfd5ff76b89acd9a0ac8"->quote()}};
+$basket_common_path = "arc://alice/analytics/utils/yt/basket_common.py?hash=" || $arc_commit;
+PRAGMA File("basket_common.py", $basket_common_path);
+$basket_common = FileContent("basket_common.py");
+
+$get_apps_by_type = Python2::get_apps_by_type(Callable<(String?)->List<String>>, $basket_common);
+
+$GENERAL_APPS = $get_apps_by_type('general');
+
+$BASKET_LIST_FORCE_QUASAR_RELEVANCE = AsList(
+    "home/alice/toloka/accept/e2e_smart_home/basket",
+    "home/alice/toloka/kpi/e2e_smart_home/basket",
+    "home/alice/toloka/accept/e2e_smart_home_from_online/basket",
+    "e2e_smart_home_from_online",
+    "e2e_smart_home", "e2e_smart_home_kpi"
+);
+$replace = Re2::Replace("^//");
+$basket_name = $replace({{input1->table_quote()}}, '');
+
+$general_part = (
+    SELECT * FROM {{input1}}
+    WHERE
+        NOT ($basket_name IN $BASKET_LIST_FORCE_QUASAR_RELEVANCE OR WeakField(basket, String) IN $BASKET_LIST_FORCE_QUASAR_RELEVANCE)
+        AND app_preset IN $GENERAL_APPS
+);
+
+INSERT INTO {{output1}}
+SELECT * FROM {{input1}}
+LEFT ONLY JOIN $general_part AS general_part
+USING (request_id);
+
+INSERT INTO {{output2}}
+SELECT * FROM $general_part;

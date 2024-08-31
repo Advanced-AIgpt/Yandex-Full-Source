@@ -1,0 +1,72 @@
+Use hahn;
+PRAGMA yt.InferSchema;
+
+$filter_fresh = CAST({{param.filter_fresh ?? True}} AS Bool);
+$sample_size = UNWRAP(CAST({{param.sample_size ?? 11000}} AS Uint64));
+$do_map = CAST({{param.do_map ?? True}} AS Bool);
+$split_geo_stream = CAST({{param.split_geo_stream ?? False}} AS Bool);
+
+-- get fresh mapping revision, overwise use revision from basket sampling
+$arcadia_slices_path = "arc://alice/analytics/tasks/VA-571/slices_mapping.py?rev=" || {{param.revision->quote() ?? "6907605"->quote()}};
+PRAGMA File("slices_mapping.py", $arcadia_slices_path);
+$script = FileContent("slices_mapping.py");
+$get_sampling_intent = Python2::toloka_intent_to_sampling_intent(ParseType("(String?, Bool?)->String"), $script);
+$is_fresh_query = Python2::is_fresh_query(ParseType("(String?)->Bool"), $script);
+
+-- Добавлен хак для навигатора и авто, который делает гео-поток более дробным. 
+DEFINE ACTION $make_sample($input, $output, $sample_size) AS
+    -- Подготовка данных для семплирования по интентам
+    $prepare = (
+        SELECT 
+            i.*, "total" as source,
+            IF($do_map, $get_sampling_intent(WeakField(toloka_intent, String), $split_geo_stream), COALESCE(WeakField(toloka_intent, String), WeakField(generic_scenario, String))) as sampling_intent,  -- более сгруппированный интент
+            Digest::MurMurHash((COALESCE(WeakField(query, String), WeakField(asr_text, String), "")) || (WeakField(annotation_query, String) ?? "")) as query_hash -- hash от asr запроса и проаннотированного запроса
+        FROM $input as i
+        WHERE IF($filter_fresh, not $is_fresh_query(WeakField(toloka_intent, String)), True)
+    );
+
+    -- считаем частоту сгруппированного интента
+    $intent_freqs = (
+        SELECT sampling_intent, COUNT(*) as sampling_intent_freq
+        FROM $prepare
+        GROUP BY sampling_intent
+    );
+
+    -- считаем частоту хеша(запрос, проаннотированный запрос) внутри сгруппированного интента
+    $query_hash_freqs = (
+        SELECT sampling_intent, query_hash, COUNT(*) as query_intent_freq
+        FROM $prepare
+        GROUP BY sampling_intent, query_hash
+    );
+
+    -- считаем знаменатель, чтоб нормировать хеш внутри интента
+    $query_hash_freqs_denom = (
+        SELECT sampling_intent, SUM(Math::Sqrt(CAST(query_intent_freq As Double))) as query_intent_freq_denom
+        FROM $query_hash_freqs
+        GROUP BY sampling_intent
+    );
+
+    -- считаем вес как призведение корней частот, резервируем 100 за маленькими интентами, корень позволит чуть больше вытянуть хвостовые запросы
+    $with_weight = (
+        SELECT p.*, 
+            (Math::Sqrt(CAST(ListMax(AsList(sampling_intent_freq, 100)) AS Double)))
+            * (Math::Sqrt(CAST(query_intent_freq AS Double)) / (CAST(query_intent_freq * query_intent_freq_denom AS Double))) as weight
+        FROM $prepare as p
+        JOIN $intent_freqs as intent_freq
+        ON p.sampling_intent == intent_freq.sampling_intent
+        JOIN $query_hash_freqs as query_hash
+        ON p.sampling_intent == query_hash.sampling_intent and p.query_hash == query_hash.query_hash
+        JOIN $query_hash_freqs_denom as query_hash_denom
+        ON p.sampling_intent == query_hash_denom.sampling_intent
+    );
+
+    -- используем https://en.wikipedia.org/wiki/Reservoir_sampling; request_id должен быть уникальным; но сортировка обратная, т.к. мы своими преобразованиями прибили вес
+    INSERT INTO $output WITH TRUNCATE
+    SELECT *
+    FROM $with_weight
+    ORDER BY Math::Log(RANDOM(COALESCE(WeakField(request_id, String), WeakField(req_id, String)))) / weight DESC
+    LIMIT $sample_size;
+
+END DEFINE;
+
+DO $make_sample({{input->table_quote()}}, {{output->table_quote()}}, $sample_size);

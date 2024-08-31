@@ -1,0 +1,56 @@
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema;
+USE hahn;
+
+
+$parsed_mark = (
+    SELECT Yson::ConvertToString(inputValues.contact_id) AS lookup_key,
+        Yson::ConvertToString(inputValues.request_id) AS request_id,
+        Yson::ConvertToString(inputValues.display_name) AS display_name,
+        Yson::ConvertToString(outputValues.`result`) AS relevance
+    FROM {{input1}}
+);
+
+
+
+$join_with_mark = (
+    SELECT
+        r.request_id AS request_id,
+        Yson::From(ListSort(AGGREGATE_LIST(<|
+        'order': r.priority,
+        'lookup_key': r.lookup_key,
+        'relevance': IF(l.relevance IS NOT NULL, l.relevance, 'target'),
+        'display_name': IF(l.display_name IS NOT NULL, l.display_name, r.target_display_name)
+    |>), ($x) -> {RETURN $x.order})) AS answer
+    FROM $parsed_mark AS l
+    RIGHT JOIN (
+        SELECT request_id,
+            contacts.0 AS priority,
+            Yson::ConvertToString((contacts.1).lookup_key) AS lookup_key,
+            target_display_name
+        FROM {{input2}}
+        FLATTEN BY contacts
+    ) as r
+    ON l.request_id == r.request_id AND l.lookup_key == r.lookup_key
+    GROUP BY r.request_id
+);
+
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT l.request_id AS req_id,
+    asr_text,
+    setrace_url,
+    app_preset as app,
+    intent,
+    text,
+    voice_url,
+    IF(answer is null, Yson::From([]), answer) as answer,
+    'input_basket' AS basket, -- for yt metrics calculator
+    'good' AS result, -- for yt metrics calculator
+    false as fraud, -- for yt metrics calculator
+    Yson::From({'target_lookup_key':target_lookup_key,
+        'target_contact_id':l.target_contact_id,
+        'display_name': l.target_display_name}) as target
+FROM {{input2}} AS l
+LEFT JOIN $join_with_mark AS r
+ON l.request_id == r.request_id

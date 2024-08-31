@@ -1,0 +1,67 @@
+-- COMMON FUNCTIONS for 1d and 2d postroll stats
+
+$input = {{param.postrolls_folder}} || "/" || $start_date;
+$output = {{param.postrolls_stats}} || "/" || $start_date;
+
+$ms_in_m = 60000;
+
+$get_handcrafted_intent = ($intent) -> {
+    return if ($intent regexp 'handcrafted', ListLast(String::SplitToList($intent, '.')), null)
+}
+;
+
+$get_time_diff = ($server_time_ms, $alice_speech_end_ms, $converge_server_time_ms) -> {
+    $postroll_time = max_of($server_time_ms, coalesce($alice_speech_end_ms, $server_time_ms));
+
+    return max_of($converge_server_time_ms - $postroll_time, 0);
+}
+;
+
+$feedback_timeout_ms = 15000;
+$child_threshold = 0.8;
+
+$bad_intents = AsList(
+	"rude",
+	"harassment",
+	"user_reactions_negative_feedback"
+);
+
+INSERT INTO $output with truncate
+select
+    fielddate, fielddatehour, item_info, intent, generic_scenario, app, recommendation_phrase,
+    postroll_id, is_new, is_child,
+    count(*) as shows,
+    count_if(next_generic_scenario = "stop" and ms_till_next_request < $feedback_timeout_ms) as stop_response,
+    count_if(next_generic_scenario = "do_nothing" and ms_till_next_request < $feedback_timeout_ms) as decline_response,
+    count_if($get_handcrafted_intent(next_intent) in $bad_intents and ms_till_next_request < $feedback_timeout_ms) as rude_response,
+    if ($count_2d_convergence == True, count_if(first_converge_req_id is not null), null) as converged,
+    if ($count_2d_convergence == True, sum(num_converged_queries), null) as converged_num_queries,
+    if ($count_2d_convergence == True, count_if(first_converge_req_id is not null and converged_is_child == True), null) as converged_child,
+    count_if(next_req_id == first_converge_req_id) as instant_conv,
+    count_if(m_till_convergence <= 1) as converged_1m,
+    count_if(m_till_convergence <= 15) as converged_15m,
+    count_if(m_till_convergence <= 60) as converged_60m,
+    if ($count_2d_convergence == True, count_if(m_till_convergence <= 180), null) as converged_180m,
+    if ($count_2d_convergence == True, count_if(m_till_convergence <= 1440), null) as converged_1440m,
+    count_if(m_till_convergence <= 1 and converged_is_child == True) as converged_1m_child,
+    count_if(m_till_convergence <= 15 and converged_is_child == True) as converged_15m_child,
+    count_if(m_till_convergence <= 60 and converged_is_child == True) as converged_60m_child,
+    if ($count_2d_convergence == True, count_if(m_till_convergence <= 180 and converged_is_child == True), null) as converged_180m_child,
+    if ($count_2d_convergence == True, count_if(m_till_convergence <= 1440 and converged_is_child == True), null) as converged_1440m_child,
+    if ($count_2d_convergence == True, 1.0*sum(first_converge_timespent_ms)/$ms_in_m, null) as first_converge_timespent_m,
+    if ($count_2d_convergence == True, 1.0*sum(first_converge_timespent_ms)/$ms_in_m, null) as first_converge_child_timespent_m,
+    if ($count_2d_convergence == True, 1.0*sum(total_timespent_ms)/$ms_in_m, null) as total_timespent_m,
+    if ($count_2d_convergence == True, 1.0*sum(child_total_timespent_ms)/$ms_in_m, null) as child_total_timespent_m
+from (
+    select
+        1.0*$get_time_diff(server_time_ms, alice_speech_end_ms, first_converge_server_time_ms)/$ms_in_m as m_till_convergence,
+        $get_time_diff(server_time_ms, alice_speech_end_ms, next_server_time_ms) as ms_till_next_request,
+        coalesce(first_converge_child_confidence, 0) >= $child_threshold as converged_is_child,
+        t.*,
+    from $input as t
+)
+group by
+    fielddate,
+    DateTime::Format("%Y-%m-%d %H:00:00")(DateTime::FromMilliseconds(cast(server_time_ms as Uint64))) as fielddatehour,
+    item_info, intent, generic_scenario, app, recommendation_phrase, postroll_id, is_new, (coalesce(child_confidence, 0) >= $child_threshold) as is_child
+;

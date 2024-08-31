@@ -1,0 +1,35 @@
+USE hahn;
+PRAGMA yt.InferSchema = "1000";
+PRAGMA SimpleColumns;
+
+$arcadia_slices_path = "arc://alice/analytics/tasks/VA-571/slices_mapping.py?rev=" || {{param.revision->quote() ?? "6688634"->quote()}};
+PRAGMA File("slices_mapping.py", $arcadia_slices_path);
+$script = FileContent("slices_mapping.py");
+$generalize_toloka_intent = Python2::toloka_intent_to_general_intent(ParseType("(String?)->String"), $script);
+
+INSERT INTO {{output1}}
+SELECT
+    prod.toloka_intent as toloka_intent,
+    prod.req_id as req_id,
+    prod.app as app,
+    prod.voice_url as voice_url,
+    prod.session_id as session_id,
+    $generalize_toloka_intent(prod.toloka_intent) as general_toloka_intent,
+    prod.result as prod_result,
+    WeakField(prod.fraud, Bool) as prod_fraud,
+    prod.asr_text as prod_asr_text,
+    prod.intent as prod_vins_intent,
+    prod.generic_scenario as prod_generic_scenario,
+    prod.mark as prod_mark,
+    prod.session as prod_session,
+    test.result as test_result,
+    WeakField(test.fraud, Bool) as test_fraud,
+    test.asr_text as test_asr_text,
+    test.intent as test_vins_intent,
+    test.generic_scenario as test_generic_scenario,
+    test.mark as test_mark,
+    test.session as test_session,
+    test.mark - prod.mark AS metric_diff
+FROM {{input2}} as prod
+JOIN {{input1}} as test
+USING(req_id)

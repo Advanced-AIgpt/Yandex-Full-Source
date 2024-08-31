@@ -1,0 +1,218 @@
+PRAGMA yt.InferSchema="100";
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+PRAGMA dq.AnalyzeQuery = '0';
+PRAGMA RegexUseRe2='true';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$bulbasaur_prod_logs_path = '//home/logfeller/logs/vsdev-bulbasaur-production-logs/1d';
+$logs_selection =
+    SELECT * FROM RANGE ($bulbasaur_prod_logs_path, {{param.start_date}}, {{param.end_date}});
+
+$parse_time = DateTime::Parse("%Y-%m-%d %H:%M:%S");
+
+-- process log entries with actions features to extract methods (types of commands)
+$actions0 =
+    SELECT
+        request_id,
+        user_id,
+        iso_eventtime,
+        CASE
+        WHEN msg LIKE '%/scenarios/%/actions%' THEN 'scenarios'
+        WHEN msg LIKE '%devices/%/action%' THEN 'searchapp_ui'
+        WHEN msg LIKE '%groups/%/actions%' THEN 'searchapp_ui_groups'
+        WHEN msg LIKE '%/devices/actions%' THEN 'voice'
+        WHEN msg LIKE '%/megamind/apply%' THEN 'voice'
+        WHEN msg LIKE '%/time_machine/launches/%/invoke%' THEN 'scheduled'
+        ELSE 'unkhown'
+        END AS method
+    FROM $logs_selection
+    WHERE (
+        msg LIKE '%/scenarios/%/actions%') OR (msg LIKE '%devices/%/action%')
+    OR (msg LIKE '%/devices/actions%') OR (msg LIKE '%groups/%/actions%')
+    OR (msg LIKE '%/megamind/apply%') OR (msg LIKE '%/time_machine/launches/%/invoke%')
+;
+$actions =
+    SELECT
+        MIN(iso_eventtime) AS iso_eventtime,
+        request_id,
+        SOME(user_id) AS user_id,
+        SOME(method) AS method   -- есть случаи разного method в запросах, сейчас берётся случайный
+    FROM $actions0
+    GROUP COMPACT BY request_id;
+
+-- regex to extract features
+$capture_uid_1 = Re2::Capture("uid: '(?P<uid>\\d+)'");          --- ПП (searchapp_ui) + scenarios ---
+$capture_uid_2 = Re2::Capture('default_uid\":(?P<uid>\\d+)');   --- Голос ----
+$capture_uid_3 = Re2::Capture('header: (?P<uid>\\d+)');         --- Time machine ----
+
+-- extract user ids ()
+-- may be replaced once user_id field is present everywhere in relevant log fields
+$users =
+    SELECT
+        request_id,
+        $capture_uid_1(LOGS.msg).uid AS user_id
+    FROM $logs_selection AS LOGS
+    WHERE msg LIKE "Got data from blackbox%"
+    UNION ALL
+    SELECT
+        request_id,
+        $capture_uid_2(LOGS.msg).uid AS user_id
+    FROM $logs_selection AS LOGS
+    WHERE msg LIKE 'got raw data from tvm: {\"default_uid\"%'
+    UNION ALL
+    SELECT
+        request_id,
+        $capture_uid_3(LOGS.msg).uid AS user_id
+    FROM $logs_selection AS LOGS
+    WHERE msg LIKE 'got user UID in X-Ya-User-ID header%'
+-- this block allows to catch puids from most other events, but needs to be tested for differences.
+--     UNION ALL
+--     SELECT
+--         request_id, user_id
+--     FROM $logs_selection AS LOGS
+--     WHERE msg in ['ProviderResultActionsStat', 'ProviderActionsStat']
+;
+
+$users =
+    SELECT DISTINCT *
+    FROM $users;
+-- $users = select some(TableRow()) AS r from $users group compact by request_id, user_id; -- alt code
+
+-- extract single device ids and feats from ProviderActionsStat / ProviderStatesStat
+-- some records contain multiple devices - FLATTEN is needed
+$iot_devices =
+    SELECT
+        request_id,
+        source,
+        device['device_id'] AS iot_device_id,
+        device['device_type'] AS iot_device_type,
+        device['skill_id'] AS skill_id,
+        msg
+    FROM (
+        SELECT
+            request_id,
+            source,
+            ListFlatMap(Yson::ConvertToList(`_rest`['requested_actions']??`_rest`['requested_states']),
+                ($x) -> {
+                    return ListMap(
+                        Yson::ConvertToList($x['devices']),
+                        ($y) -> {
+                            return AsDict(
+                                AsTuple('device_id', Unwrap(Yson::ConvertToString($y['device_id']))),
+                                AsTuple('device_type', Unwrap(Yson::ConvertToString($y['device_type']))),
+                                AsTuple('skill_id', Unwrap(Yson::ConvertToString($x['skill_id']))))
+                        }
+                    )
+                }
+            ) AS devices,
+            msg
+        FROM $logs_selection AS LOGS
+        WHERE msg IN ("ProviderActionsStat", "ProviderStatesStat")
+    )
+    FLATTEN BY
+        devices AS device
+;
+$iot_devices =
+    SELECT DISTINCT *
+    FROM $iot_devices;
+;
+
+$pushes=
+    SELECT
+        request_id,
+        device_id,
+        AGGREGATE_LIST(push_id) AS push_id
+    FROM (
+        SELECT
+            request_id,
+            Yson::ConvertToStringList(devices) AS device_id,
+            Yson::ConvertToString(DictLookup(_rest, 'push_id')) AS push_id,
+        FROM $logs_selection
+        )
+    FLATTEN BY device_id
+    WHERE push_id IS NOT NULL
+    GROUP COMPACT BY request_id, device_id
+;
+
+$timestamps_raw =
+-- collecting important timestamps
+    SELECT
+        request_id,
+        MIN(ts) AS ts,
+        'megamind_apply_request' AS ts_key
+    FROM $logs_selection
+    WHERE msg = 'megamind_apply_request'
+    GROUP BY request_id
+UNION ALL
+    SELECT
+        request_id,
+        MIN(ts) AS ts,
+        'sent delivery push to notificator' AS ts_key
+    FROM $logs_selection
+    WHERE msg = 'sent delivery push to notificator'
+    GROUP BY request_id
+UNION ALL
+    SELECT
+        request_id,
+        MIN(ts) AS ts,
+        'request_begin' AS ts_key
+    FROM $logs_selection
+    GROUP BY request_id
+UNION ALL
+    SELECT
+        request_id,
+        max(ts) AS ts,
+        'request_end' AS ts_key
+    FROM $logs_selection
+    GROUP BY request_id
+;
+
+$timestamps=
+-- repacking timestamps into dict
+SELECT
+    request_id,
+    ToDict(AGGREGATE_LIST(AsTuple(ts_key, ts ))) AS timestamps
+FROM $timestamps_raw
+GROUP BY request_id
+;
+
+$daily_events = (
+    SELECT
+        A.request_id AS req_id,
+        CAST(DateTime::MakeDate($parse_time(A.iso_eventtime)) AS String) AS fielddate,
+        A.iso_eventtime AS iso_eventtime,
+        T.timestamps AS timestamps,
+        D.iot_device_id AS device_id,
+        IF(D.msg=="ProviderStatesStat" AND A.method='voice', 'query', A.method) AS method,
+        D.source AS source,
+        String::ReplaceAll(D.iot_device_type, 'devices.types.', '') AS device_type,
+        D.skill_id AS skill_id,
+        U.user_id AS puid,
+        P.push_id AS push_id,
+    -- A.user_id AS puid_a,  -- easier user_id source, still has omissions though
+    FROM
+        $actions AS A
+    JOIN
+        ANY
+        $timestamps AS T
+    ON (
+        A.request_id==T.request_id)
+    JOIN
+        ANY
+        $users AS U
+    ON (
+        A.request_id==U.request_id)
+    LEFT JOIN
+        $iot_devices AS D
+    ON (
+        U.request_id==D.request_id)
+    LEFT JOIN
+        $pushes AS P
+    ON
+        D.request_id == P.request_id AND D.iot_device_id == P.device_id
+);
+
+INSERT INTO {{output1}}  WITH TRUNCATE
+SELECT *
+FROM $daily_events;

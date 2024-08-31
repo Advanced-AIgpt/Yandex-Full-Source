@@ -1,0 +1,36 @@
+-- combines new table with old
+-- removes duplicates, then union
+-- tested here: https://yql.yandex-team.ru/Operations/YSUXGRJKfXo7lZEZwCYIjI7ndSunjGRuaGBXINQdLvM=
+
+-- remove from previous table all records with fielddate < start_date
+-- this is important for rerun / fix / update situations
+$q_old_truncated =
+SELECT
+    *
+FROM {{input2}}
+WHERE
+    fielddate < {{param[start_date]}}
+;
+
+-- select new unique records from freshly updated table
+-- left only join ensures no duplication
+$q_update =
+SELECT
+    new.*
+FROM
+    (SELECT
+    *
+    FROM {{input1}}
+    ) AS new
+LEFT ONLY JOIN
+    $q_old_truncated AS old
+ON new.device_id == old.device_id AND new.fielddate == old.fielddate
+;
+
+-- combine tables and insert to output_path
+INSERT INTO {{param[output_path]}} WITH TRUNCATE
+    SELECT * FROM $q_old_truncated
+UNION ALL
+    SELECT * FROM $q_update
+ORDER BY fielddate, device_type, device_id
+;

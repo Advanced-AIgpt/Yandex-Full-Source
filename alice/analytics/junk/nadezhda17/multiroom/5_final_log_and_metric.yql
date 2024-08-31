@@ -1,0 +1,125 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(5) AS String)};
+
+--была директива включения мультирума
+$call_start_multiroom = 
+(
+    SELECT master_device_id, fielddate, generic_scenario, group, puid, ts, start_multiroom,
+    query, reply, req_id, room, 
+    IF(ListLength(room_device_ids1) > 0, room_device_ids1, room_device_ids2) AS room_device_ids
+    FROM 
+    (
+        SELECT device_id AS master_device_id, fielddate, generic_scenario, group, puid, ts, start_multiroom,
+        query, reply, req_id, room, 
+        Yson::ConvertToStringList(start_multiroom.room_device_ids) AS room_device_ids1,
+        Yson::ConvertToStringList(start_multiroom.payload.room_device_ids) AS room_device_ids2
+        FROM `//home/voice/nadezhda17/common/multiroom/multiroom_music_logs`
+        WHERE $date_filter(fielddate)
+    )
+);
+
+$multiroom_devices = (SELECT DISTINCT device_id FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices`);
+
+--парсим от туда устройства, которые могут мультирум
+$devices = 
+(
+    SELECT t.*
+    FROM
+    (
+        SELECT req_id, fielddate, master_device_id, slave_device_id
+        FROM 
+        (
+            SELECT req_id, fielddate, master_device_id, slave_device_id
+            FROM $call_start_multiroom AS c 
+            FLATTEN LIST BY room_device_ids AS slave_device_id
+        )
+        WHERE master_device_id != slave_device_id
+        ORDER BY fielddate
+    ) AS t 
+    INNER JOIN $multiroom_devices AS d1 ON d1.device_id = t.master_device_id
+    INNER JOIN $multiroom_devices AS d2 ON d2.device_id = t.slave_device_id   
+);
+
+--смотрим на их гео
+$geo = 
+(
+    SELECT device_id, fielddate, MAX_BY(lat, ts) AS lat, MAX_BY(lon, ts) AS lon, 
+    MAX_BY(radius, ts) AS radius, MAX_BY(wifi, ts) AS wifi, MAX(ts) AS ts
+    FROM `//home/voice/nadezhda17/common/multiroom/geo_devices`
+    WHERE $date_filter(fielddate)
+    GROUP BY device_id, fielddate
+);
+
+--проклеиваем гео
+$matched = 
+(
+    SELECT req_id, d.fielddate AS fielddate, master_device_id, slave_device_id, 
+    Geo::CalculatePointsDifference(m.lat, m.lon, s.lat, s.lon) AS distance
+    FROM $devices AS d 
+    LEFT JOIN $geo AS m ON d.master_device_id = m.device_id AND m.fielddate = d.fielddate
+    LEFT JOIN $geo AS s ON d.slave_device_id = s.device_id AND s.fielddate = d.fielddate
+);
+
+--выбираем только тех, кто правда может сыграть 
+$realy_can_play = 
+(
+    SELECT req_id, master_device_id, fielddate, AGGREGATE_LIST_DISTINCT(slave_device_id) AS room_device_ids
+    FROM $matched
+    WHERE distance <= 1000
+    GROUP BY req_id, master_device_id, fielddate
+);
+
+--отмечаем тех, кто имел шансы сыграть 
+$etalon_multiroom_start = 
+(
+    SELECT c.master_device_id AS master_device_id, c.fielddate as fielddate, generic_scenario, group, puid, ts,
+    query, reply, c.req_id AS req_id, room, r.room_device_ids AS room_device_ids
+    FROM $call_start_multiroom AS c 
+    INNER JOIN $realy_can_play AS r ON r.master_device_id = c.master_device_id AND c.req_id = r.req_id AND c.fielddate = r.fielddate
+);
+
+--пролеиваем с хартбитами
+$matched = 
+(
+    SELECT e.*, play_room_device_ids, 
+    IF(ListLength(room_device_ids) > ListLength(play_room_device_ids??AsList()), 0, 1) AS all_device_play 
+    FROM $etalon_multiroom_start AS e
+    LEFT OUTER JOIN
+    (
+        SELECT req_id, fielddate, AGGREGATE_LIST_DISTINCT(device_id) AS play_room_device_ids
+        FROM `//home/voice/nadezhda17/common/multiroom/multiroom_heartbeats`
+        WHERE $date_filter(fielddate) 
+        GROUP BY fielddate, req_id
+    ) AS p ON p.req_id = e.req_id AND p.fielddate = e.fielddate
+);
+
+$get_duration = ($music) -> {RETURN CAST(ListSum(ListMap($music, ($x) -> ($x.duration))) AS Uint64)*1.0/(60 * 1000000)};
+
+$final_multiroom_start_log = 
+(
+    SELECT req_id, MAX_BY(fielddate, ts) AS fielddate, MAX_BY(master_device_id, ts) AS master_device_id,
+    MAX_BY(all_device_play, ts) AS all_device_play, MAX_BY(duration, ts) AS duration, MAX_BY(generic_scenario, ts) AS generic_scenario, 
+    MAX_BY(group, ts) AS group, MAX_BY(play_room_device_ids, ts) AS play_room_device_ids, MAX_BY(puid, ts) AS puid,
+    MAX_BY(query, ts) AS query, MAX_BY(reply, ts) AS reply, MAX_BY(room, ts) AS room, MAX_BY(room_device_ids, ts) AS room_device_ids, 
+    MAX(ts) AS ts
+    FROM 
+    (
+        SELECT f.*, $get_duration(s.music) AS duration
+        FROM $matched AS f 
+        LEFT JOIN `//home/voice/nadezhda17/common/sessions_heartbeats_data` AS s ON s.req_id = f.req_id
+    )
+    GROUP BY req_id
+);
+
+--финальные мультирумные логи с устройствами которые должны были включиться и нет
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/final_multiroom_start_log` WITH TRUNCATE 
+SELECT * 
+FROM $final_multiroom_start_log
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/multiroom/final_multiroom_start_log` AS t 
+LEFT ONLY JOIN $final_multiroom_start_log AS f ON t.req_id = f.req_id
+AND t.master_device_id = f.master_device_id;

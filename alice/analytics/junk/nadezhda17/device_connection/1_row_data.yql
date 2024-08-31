@@ -1,0 +1,52 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/device_connection/tmp_connection_process`
+SELECT CounterID, 
+FROM_UNIXTIME(EventDate) AS EventDate, 
+FROM_UNIXTIME(EventTime) AS EventTime,
+PassportUserID, URL, OSFamily
+FROM concatYtTablesRange('//logs/hit-log/1d', 
+toString(date_sub(day, 3, toDate(NOW()))), 
+toString(date_sub(day, 1, toDate(NOW()))))
+WHERE CounterID IN (49488847, 86757633)
+AND URL LIKE '%pairing%'
+AND PassportUserID!= 0
+UNION ALL
+SELECT CounterID, EventDate, EventTime, PassportUserID, 
+CONCAT('https://yandex.ru/quasar/pairing/', 
+device_type, '/get-ble-device-wifi-list-failed?&bleId=', ble_id) AS URL,
+OSFamily
+FROM 
+(
+    SELECT CounterID, 
+    FROM_UNIXTIME(EventDate) AS EventDate, 
+    FROM_UNIXTIME(EventTime) AS EventTime,
+    arrayElement(ParsedParams_Key2, indexOf(ParsedParams_Key1, 'device_type')) AS device_type,
+    arrayElement(ParsedParams_Key2, indexOf(ParsedParams_Key1, 'ble_id')) AS ble_id,
+    PassportUserID, URL, OSFamily
+    FROM concatYtTablesRange('//logs/hit-log/1d', 
+    toString(date_sub(day, 3, toDate(NOW()))), 
+    toString(date_sub(day, 1, toDate(NOW()))))
+    WHERE CounterID IN (49488847, 86757633)
+    AND URL = 'goal://yandex.ru/get-ble-device-wifi-list-failed'
+    AND PassportUserID!= 0
+)
+UNION ALL
+SELECT CounterID, EventDate, EventTime, PassportUserID, 
+CONCAT('https://yandex.ru/quasar/pairing/', 
+device_type, '/get-ble-device-wifi-list-success-empty?&bleId=', ble_id) AS URL,
+OSFamily
+FROM 
+(
+    SELECT CounterID, 
+    FROM_UNIXTIME(EventDate) AS EventDate, 
+    FROM_UNIXTIME(EventTime) AS EventTime,
+    arrayElement(ParsedParams_Key2, indexOf(ParsedParams_Key1, 'device_type')) AS device_type,
+    arrayElement(ParsedParams_Key2, indexOf(ParsedParams_Key1, 'ble_id')) AS ble_id,
+    PassportUserID, URL, OSFamily
+    FROM concatYtTablesRange('//logs/hit-log/1d', 
+    toString(date_sub(day, 3, toDate(NOW()))), 
+    toString(date_sub(day, 1, toDate(NOW()))))
+    WHERE CounterID IN (49488847, 86757633)
+    AND URL = 'goal://yandex.ru/get-ble-device-wifi-list-success'
+    AND PassportUserID!= 0
+    AND arrayElement(ParsedParams_Key2, indexOf(ParsedParams_Key1, 'is_empty_list')) = 'true'
+);

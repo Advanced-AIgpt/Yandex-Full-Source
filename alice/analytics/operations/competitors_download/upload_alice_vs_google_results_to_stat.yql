@@ -1,0 +1,117 @@
+PRAGMA yt.InferSchema;
+
+$results_dir = "//home/voice/dialog/toloka/competitors_comparison/results";
+$processed_tables = "//home/voice/dialog/toloka/competitors_comparison/processed_tables";
+$search_penalty = 0.5;
+
+DEFINE ACTION $upload_stats($alice_table_name, $google_table_name) AS 
+    
+    $google_res = $results_dir || "/google/" || $google_table_name;
+    $alice_res = $results_dir || "/alice/" || $alice_table_name;
+    
+    $overall = (
+        SELECT COUNT(*) as overall_count, "all" as dummy_column
+        FROM $google_res
+        );
+        
+    $overall_alice = (
+        SELECT COUNT(*) as overall_count, "all" as dummy_column
+        FROM $alice_res
+    );
+    
+    $date = () -> {
+        $google_date = CAST(ListLast(String::SplitToList($google_table_name, '/')) as Date);
+        $alice_date =  Cast(ListLast(String::SplitToList($alice_table_name, '/')) as Date);
+        RETURN cast(DateTime::MakeDate(DateTime::StartOfWeek(DateTime::Split(IF($google_date > $alice_date, $google_date, $alice_date)))) as string);
+    };
+    
+    -- численные статистики
+    UPSERT INTO stat.`VoiceTech/Dialog/competitors_comparison/mobile_comparison/weekly`
+    SELECT 
+        Unwrap($date()) as fielddate,
+        COUNT_IF(result == "good") as good,
+        COUNT_IF(result == "good") - $search_penalty*COUNT_IF(fallback_to_search and result == "good") as good_with_penalty,
+        COUNT_IF(result == "part") as part,
+        COUNT_IF(result == "bad") as bad,
+        COUNT_IF(result == "cant") as cant,
+        COUNT(*) as total,
+        COUNT_IF(fallback_to_search) as fallback_to_search,
+        "google" as system
+    FROM $google_res;
+    
+    UPSERT INTO stat.`VoiceTech/Dialog/competitors_comparison/mobile_comparison/weekly`
+    SELECT 
+        Unwrap($date()) as fielddate,
+        COUNT_IF(result == "good") as good,
+        COUNT_IF(result == "good") - $search_penalty*COUNT_IF(fallback_to_search and result == "good") as good_with_penalty,
+        COUNT_IF(result == "part") as part,
+        COUNT_IF(result == "bad") as bad,
+        COUNT_IF(result == "cant") as cant,
+        COUNT(*) as total,
+        COUNT_IF(fallback_to_search) as fallback_to_search,
+        "alice" as system
+    FROM $alice_res;
+    
+    -- --- сравнения
+    $joined = (
+        SELECT 
+            g.result as g_result, ya.result as ya_result, g.url as g_url, ya.url as ya_url, g.request_id as request_id, g.info as g_info,
+            ya.info as ya_info, ya.toloka_intent as toloka_intent, g.fallback_to_search as g_fallback_to_search, ya.fallback_to_search as ya_fallback_to_search
+        FROM $google_res as g
+        JOIN $alice_res as ya
+        On g.request_id == ya.request_id
+    );
+    
+    UPSERT INTO stat.`VoiceTech/Dialog/competitors_comparison/mobile_comparison/weekly`
+    SELECT 
+        Unwrap($date()) as fielddate,
+        COUNT_IF(g_result == "good") as good,
+        COUNT_IF(g_result == "good") - $search_penalty*COUNT_IF(g_fallback_to_search and g_result == "good") as good_with_penalty,
+        COUNT_IF(g_result == "part") as part,
+        COUNT_IF(g_result == "bad") as bad,
+        COUNT_IF(g_result == "cant") as cant,
+        COUNT(*) as total,
+        COUNT_IF(g_fallback_to_search) as fallback_to_search,
+        "google_alice" as system
+    FROM
+    (SELECT *
+    FROM $joined
+    WHERE ya_result != "cant" and g_result != "cant");
+    
+    UPSERT INTO stat.`VoiceTech/Dialog/competitors_comparison/mobile_comparison/weekly`
+    SELECT 
+        Unwrap($date()) as fielddate,
+        COUNT_IF(ya_result == "good") as good,
+        COUNT_IF(ya_result == "good") - $search_penalty*COUNT_IF(ya_fallback_to_search and ya_result == "good") as good_with_penalty,
+        COUNT_IF(ya_result == "part") as part,
+        COUNT_IF(ya_result == "bad") as bad,
+        COUNT_IF(ya_result == "cant") as cant,
+        COUNT(*) as total,
+        COUNT_IF(ya_fallback_to_search) as fallback_to_search,
+        "alice_google" as system
+    FROM
+    (SELECT *
+    FROM $joined
+    WHERE ya_result != "cant" and g_result != "cant");
+    
+    INSERT INTO $processed_tables
+    SELECT UNWRAP($alice_table_name) as alice, UNWRAP($google_table_name) as google;
+
+END DEFINE;
+
+DEFINE SUBQUERY $tables($assistant) AS
+    $folder_path = $results_dir || "/" || $assistant;
+    SELECT ListSortAsc(AGGREGATE_LIST_DISTINCT(TableName(Path, "yt"))) as tables
+    FROM FOLDER($folder_path);
+END DEFINE;
+
+$alice_last_table = (SELECT ListLast(tables) as alice FROM $tables("alice"));
+$google_last_table = (SELECT ListLast(tables) as google FROM $tables("google"));
+
+$has_new_tables = (
+    SELECT IF(not ListHas(AGGREGATE_LIST(alice), $alice_last_table) and not ListHas(AGGREGATE_LIST(google), $google_last_table), True, False)
+    FROM $processed_tables
+);
+
+EVALUATE IF $has_new_tables 
+    DO $upload_stats($alice_last_table, $google_last_table);

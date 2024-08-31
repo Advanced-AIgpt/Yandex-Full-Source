@@ -1,0 +1,19 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$pings = 
+(
+    SELECT DeviceId, Platform, QuasmodromGroup, ConnectionType, TableName() AS fielddate,
+    Yson::ParseJson(MetricValue).pings AS pings, `Timestamp`, iso_eventtime
+    FROM FILTER(`//logs/smartdevicesinfrastructur-devices-metrics/1d`, $date_filter)
+    WHERE Platform IN ('yandexstation' , 'yandexstation_2', 'yandexmini', 
+    'yandexmini_2', 'yandexmicro', 'yandexmidi')
+    AND MetricName = 'systemMetrics'
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/wifi_problems/pings/raw_pings_temp` WITH TRUNCATE 
+SELECT *
+FROM $pings;

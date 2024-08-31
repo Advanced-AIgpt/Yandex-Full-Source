@@ -1,0 +1,74 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+
+$tags = AsList('businessNews', 'computersNews', 'cultureNews', 'incidentNews', 'indexNews', 
+'scienceNews', 'showbusinessNews', 'societyNews', 'sportNews', 'worldNews', 'localNews', 'commonNews', 
+'weather', 'nowcast', 'kurezyNews');
+
+$theme_name = ($tag) -> {RETURN CASE 
+    WHEN $tag = 'localNews' THEN 'Новости рядом'
+    WHEN $tag = 'commonNews' THEN 'Расскажи новости'
+    WHEN $tag = 'weather' THEN 'Какая погода сегодня'
+    WHEN $tag = 'nowcast' THEN 'Когда пойдёт дождь'
+    WHEN $tag = 'businessNews' THEN 'Новости экономика'
+    WHEN $tag = 'indexNews' THEN 'Новости главные'
+    WHEN $tag = 'worldNews' THEN 'Новости мировые'
+    WHEN $tag = 'cultureNews' THEN 'Новости культура'
+    WHEN $tag = 'sportNews' THEN 'Новости спорт'
+    WHEN $tag = 'scienceNews' THEN 'Новости наука'
+    WHEN $tag = 'societyNews' THEN 'Новости общества'
+    WHEN $tag = 'computersNews' THEN 'Новости технологии'
+    WHEN $tag = 'incidentNews' THEN 'Новости происшествия'
+    WHEN $tag = 'showbusinessNews' THEN 'Новости шоу бизнес'
+    WHEN $tag = 'kurezyNews' THEN 'Новости веселые'
+    ELSE 'Другое'
+    END
+};
+
+$regional_data = 
+(
+    SELECT shotId, MAX_BY(shotType, deleted) AS shotType, MAX_BY(tags, deleted) AS tags
+    FROM `//home/music/alicedj/shots_preparation/offline_alice_shots/results/regional`
+    GROUP BY shotId
+);
+
+$shots = 
+(
+    SELECT DISTINCT CAST(shotId AS String) AS track_id, shotType AS type, $theme_name(tag) AS theme_name, tag AS theme
+    FROM 
+    (
+        SELECT shotId, shotType, ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x IN $tags))[0]??Yson::ConvertToStringList(tags)[0] AS tag
+        FROM $regional_data
+        WHERE shotType = 'news'
+    )
+    UNION ALL 
+    SELECT CAST(shotId AS String) AS track_id, shotType AS type, shotText AS theme_name, 
+    ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x != 'radionews'))[0] AS theme
+    FROM `//home/music/alicedj/shots_preparation/offline_alice_shots/results/radionews`
+    UNION ALL 
+    SELECT CAST(shotId AS String) AS track_id, shotType AS type, 
+    String::JoinFromList(
+    ListSkip(String::SplitToList(ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x != 'radionews'))[0], '-'), 1)
+    , '-') AS theme_name, 
+    ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x != 'radionews'))[0] AS theme
+    FROM `//home/music/alicedj/shots_preparation/offline_alice_shots/results/independent`    
+    UNION ALL 
+    SELECT CAST(shotId AS String) AS track_id, shotType AS type, 
+    ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x != 'skill' 
+    AND $x NOT LIKE '%-%' AND $x != 'show_type_morning'))[0] AS theme_name, 
+    String::SplitToList(ListFilter(Yson::ConvertToStringList(tags), ($x) -> ($x LIKE '%-%'))[0], '-')[1] AS theme
+    FROM `//home/music/alicedj/shots_preparation/offline_alice_shots/results/skills` 
+);
+
+$podcast = 
+(
+    SELECT track_id, 'podcast' AS type, theme_name, theme
+    FROM `//home/music/elkalinina/alicedj/podcasts_v2` 
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/track_theme` WITH TRUNCATE 
+SELECT *
+FROM $podcast
+UNION ALL 
+SELECT *
+FROM $shots;

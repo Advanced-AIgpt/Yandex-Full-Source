@@ -1,0 +1,438 @@
+{% from "alice/bass/common_nlg/common/macros_ru.nlg" import inability %}
+
+{% set content_type_texts = {'tv_show': 'сериалы', 'movie': 'фильмы', 'video': 'видео', 'cartoon': 'мультфильмы', 'music_video': 'клипы'} %}
+{% set film_genres_texts = {'action': 'боевики', 'adventure': 'приключенческие фильмы', 'adult': 'фильмы для взрослых', 'anime': 'аниме', 'arthouse': 'артхаус', 'biopic': 'биографические фильмы',
+                            'by_comics': 'фильмы по комиксам', 'childrens': 'детские фильмы', 'comedy': 'комедии', 'concert': 'концерты', 'crime': 'криминальные фильмы', 'detective': 'детективы',
+                            'disaster': 'фильмы-катастрофы', 'documentary': 'документальные фильмы', 'drama': 'драмы', 'epic': 'эпические фильмы', 'erotica': 'эротика', 'family': 'семейные фильмы',
+                            'fantasy': 'фэнтези', 'historical': 'исторические фильмы', 'horror': 'фильмы ужасов', 'melodramas': 'мелодрамы', 'musical': 'мюзиклы', 'noir': 'фильмы-нуар', 'porno': 'порно',
+                            'romantic': 'романтические фильмы', 'science_video': 'научные фильмы', 'science_fiction': 'научная фантастика', 'show': 'шоу', 'sport_video': 'спортивные видео',
+                            'supernatural': 'мистика', 'thriller': 'триллеры', 'war': 'военные фильмы', 'westerns': 'вестерны', 'zombie': 'фильмы про зомби'} %}
+
+{% macro video_autoplay() %}
+  # TODO: варианты с тайтлом
+  {% chooseline %}
+    Включаю.
+    Запускаю.
+    Сейчас включу.
+    Секунду.
+    Секундочку.
+  {% endchooseline %}
+  {% if 'playing_westworld_tv_show' in context.attentions %}
+    {% maybe 0.25 %}
+      Надеюсь, хоть вы-то не андроид.
+    {% endmaybe %}
+  {% endif %}
+{% endmacro %}
+
+{% macro no_such_episode() %}
+  {% chooseline %}
+    Серии с таким номером нет.
+    Такой серии нет.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro no_such_season() %}
+  {% chooseline %}
+    Сезона с таким номером нет.
+    Такого сезона нет.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro gallery_opening() %}
+  {% chooseline %}
+    Вот что удалось найти.
+    Сейчас поищем.
+    Одну секунду.
+    Секундочку, сейчас найдем.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro disabled_provider() %}
+  Этот провайдер больше не доступен в Станции. Sic transit gloria mundi. Сделаем вид, как будто его и не было, и вы ничего не видели.
+{% endmacro %}
+
+{% macro no_next_video() %}
+  Для этого видео нет следующего
+{% endmacro %}
+
+{% macro no_previous_video() %}
+  Для этого видео нет предыдущего
+{% endmacro %}
+
+{% macro insert_search_text(form) %}
+  {% if form.search_text %}
+    по запросу «{{ form.search_text }}»
+  {% endif %}
+{% endmacro %}
+
+{% macro content_type_plural(content_type) %}
+  {{ content_type_texts.get(content_type, 'контент') }}
+{% endmacro %}
+
+{% macro film_genre_plural(film_genre) %}
+  {{ film_genres_texts.get(film_genre, 'кино') }}
+{% endmacro %}
+
+
+{% macro show_gallery(form, context) %}
+  {% set filter_cnt = 0 %}
+  {% if form.search_text %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.content_type %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.content_provider %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.film_genre %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.country %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.free %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.new %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.release_date %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.top %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.season %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+  {% if form.episode %} {% set filter_cnt = filter_cnt + 1 %} {% endif %}
+
+  # [search_text]
+  {% if filter_cnt == 0 or filter_cnt == 1 and form.search_text %}
+    {% text %}
+      Видео-контент {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # content_type [+ search_text]
+  {% elif form.content_type and (filter_cnt == 1 or filter_cnt == 2 and form.search_text) %}
+    {% text %}
+      {{ content_type_plural(form.content_type) | capitalize }}
+      {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # film_genre [+ search_text]
+  {% elif form.film_genre and (filter_cnt == 1 or filter_cnt == 2 and form.search_text) %}
+    {% text %}
+      {{ film_genre_plural(form.film_genre) | capitalize }}
+      {{ insert_search_text(form) }}
+    {% endtext %}
+    {% voice %}
+      {{ gallery_opening() }}
+    {% endvoice %}
+
+  # Everything else
+  {% else %}
+    {{ gallery_opening() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro show_browser_gallery(from, context) %}
+  {% text %}
+    Вот, что удалось найти
+  {% endtext %}
+{% endmacro %}
+
+{% macro show_season_gallery() %}
+  {% chooseline %}
+    Открываю.
+    Секунду.
+    Секундочку.
+    Сейчас открою.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro nothing_found() %}
+  {% chooseline %}
+    Ничего не нашлось.
+    Я ничего не нашла.
+    Я ничего не смогла найти.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro all_results_filtered() %}
+  {% chooseline %}
+    Ничего не нашлось. Возможно, это как-то связано с детским режимом поиска.
+    Я ничего не нашла. Может, из-за того, что у вас включён детский режим поиска. Или нет.
+    Ничего нет. Проверьте настройки: возможно, сработал детский режим поиска.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro no_relevant_video() %}
+  {% chooseline %}
+    Лучше что-то, чем ничего. Кажется, есть такая пословица.
+    У меня нет этого видео. Но есть много других, например, такое.
+    Извините, не нашла такого. Но не могу же я оставить вас ни с чем!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_already_available() %}
+  {% chooseline %}
+    Уже куплено.
+    Этот контент уже приобретен.
+    Этот контент уже был куплен.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro cannot_autoplay_paid_video() %}
+  {% chooseline %}
+    Этот контент платный,
+    Это платный контент,
+  {% endchooseline %}
+  {% chooseline %}
+    открываю описание
+    сейчас открою описание
+    могу только открыть описание
+  {% endchooseline %}
+  .
+{% endmacro %}
+
+{% macro video_payment_push(req_info) %}
+  {% if req_info.experiments['new_video_payment_push_nlg'] != None %}
+    Откройте приложение Яндекса для легкой и быстрой оплаты. Прислала вам ссылку в телефон.
+  {% else %}
+    {% chooseline %}
+      Откройте приложение Яндекс, чтобы продолжить оплату.
+      Продолжите оплату в приложении Яндекс.
+      Сейчас я пришлю вам сообщение — откройте его, чтобы оплатить фильм.
+      Если вы авторизованы в приложении Яндекс, сейчас вам придёт ссылка на оплату. После оплаты можно наслаждаться фильмом. Если вы ничего не получили, нажмите на карточку фильма на главном экране приложения.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro video_tv_payment_without_push(req_info) %}
+  Упс, так я пока не умею, сделайте это, пожалуйста, при помощи пульта.
+{% endmacro %}
+
+{% macro video_legatus_payment_without_push() %}
+  Открываю экран оплаты.
+{% endmacro %}
+
+{% macro video_provider_authorization_push() %}
+  Чтобы всё получилось, нужно авторизоваться. Для этого я отправлю вам сообщение. Проверьте телефон!
+{% endmacro %}
+
+{% macro failed_to_send_payment_push() %}
+  {{ failed_to_send_push() }}
+{% endmacro %}
+
+{% macro failed_to_send_provider_authorization_push() %}
+  {{ failed_to_send_push() }}
+{% endmacro %}
+
+{% macro failed_to_send_push() %}
+  {% chooseline %}
+    Не удалось отправить пуш-сообщение.
+    Я не смогла отправить пуш-сообщение.
+  {% endchooseline %}
+  Пожалуйста, попробуйте ещё раз.
+{% endmacro %}
+
+{% macro show_video_description() %}
+  # TODO: варианты с тайтлом
+  {% chooseline %}
+    Вот описание.
+    Открываю описание.
+    Одну секунду.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro show_promo_webview() %}
+  {% chooseline %}
+    Вот, собрала лучшее, не стыдно и показать!
+    Ура! Я как раз сделала для вас идеальную подборку.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro show_video_detailed_description() %}
+  {% chooseline %}
+    Вот подробная информация.
+    Одну секунду.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_index_out_of_range(form) %}
+  {% chooseline %}
+    Боюсь, что
+    К сожалению,
+  {% endchooseline %}
+  на экране нет видео с номером {{ form.video_index }}.
+{% endmacro %}
+
+{% macro non_authorized_user() %}
+  # TODO: provider name is not supported yet
+  {% chooseline %}
+    Для продолжения просмотра необходимо авторизоваться у провайдера.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro please_connect_tv() %}
+  {% chooseline %}
+    Чтобы смотреть видеоролики, фильмы и сериалы, нужно подключить Станцию к экрану.
+    Чтобы смотреть видеоролики, фильмы и сериалы, подключите Станцию к экрану.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro video_not_supported() %}
+  Воспроизведение видео не поддерживается на этом устройстве.
+{% endmacro %}
+
+{% macro yandex_plus_subscription_needed() %}
+  Чтобы смотреть фильмы на КиноПоиске, нужна подписка Яндекс.Плюс.
+{% endmacro %}
+
+{% macro purchase_not_found() %}
+  Это платный контент.
+{% endmacro %}
+
+{% macro purchase_expired() %}
+  {% chooseline %}
+    Истёк срок аренды фильма.
+    Срок аренды фильма закончился.
+    Срок аренды контента закончился.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro subscription_not_found() %}
+  {% chooseline %}
+    Этот контент доступен только по подписке {%tx%}Яндекс.Плюс{%etx%}{%vc%}Яндекс Плюс{%evc%}.
+    Для просмотра нужна подписка {%tx%}Яндекс.Плюс{%etx%}{%vc%}Яндекс Плюс{%evc%}.
+    У вас нет подписки {%tx%}Яндекс.Плюс{%etx%}{%vc%}Яндекс Плюс{%evc%}.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro geo_constraint_violation() %}
+  Просмотр в этом регионе ограничен. Так решил правообладатель.
+{% endmacro %}
+
+{% macro licenses_not_found() %}
+  Доступ к контенту закрыт. Увы, так решил правообладатель.
+{% endmacro %}
+
+{% macro service_constraint_violation() %}
+  На этом устройстве контент недоступен. Извините.
+{% endmacro %}
+
+{% macro supported_streams_not_found() %}
+  Не могу включить фильм на этом устройстве — не та версия.
+{% endmacro %}
+
+{% macro nothing_is_playing() %}
+  {% chooseline %}
+    Не могу, ведь сейчас ничего не играет.
+    Не получится. Сейчас ничего не играет.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro trailer_not_found() %}
+  {% chooseline %}
+      Извините, ничего не нашлось.
+      Кажется, трейлера здесь нет.
+	  Не получилось найти трейлер.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro attentions_general(form, context, default_action) %}
+  # availability of the scenario
+  {% if 'launch_youtube_app' in context.attentions %}
+    Секунду.
+  {% elif 'video_not_supported' in context.attentions %}
+    {{ video_not_supported() }}
+  {% elif 'no_tv_is_plugged_in' in context.attentions %}
+    {{ please_connect_tv() }}
+
+  # unsupported feature
+  {% elif 'feature_not_supported' in context.attentions %}
+    {{ inability() }}
+
+  # playing content
+  {% elif 'video_autoplay' in context.attentions %}
+    {{ video_autoplay() }}
+  {% elif 'video_autoselect' in context.attentions %}
+    {{ show_video_description() }}
+  {% elif 'play_channel' in context.attentions %}
+    {{ video_autoplay() }}
+
+  # cannot run player command
+  {% elif 'nothing_is_playing' in context.attentions %}
+    {{ nothing_is_playing() }}
+
+  # content search problem
+  {% elif 'video_no_good_result' in context.attentions %}
+    {{ no_relevant_video() }}
+  {% elif 'all_results_filtered' in context.attentions %}
+    {{ all_results_filtered() }}
+
+  # description
+  {% elif 'video_detailed_description' in context.attentions %}
+      {{ show_video_detailed_description() }}
+
+  # ny promo
+  {% elif 'show_promo_webview' in context.attentions %}
+       {{ show_promo_webview() }}
+
+  # galleries
+  {% elif 'video_gallery' in context.attentions %}
+    {{ show_gallery(form, context) }}
+  {% elif 'video_index_out_of_range' in context.attentions %}
+    {{ video_index_out_of_range(form) }}
+  {% elif 'video_season_gallery' in context.attentions %}
+    {{ show_season_gallery() }}
+  {% elif 'no_such_season' in context.attentions %}
+    {{ no_such_season() }}
+  {% elif 'no_such_episode' in context.attentions %}
+    {{ no_such_episode() }}
+  {% elif 'browser_video_gallery' in context.attentions %}
+    {{ show_browser_gallery(form, context) }}
+
+  # authorization, subscription, paid content
+  {% elif 'video_non_authorized_user' in context.attentions %}
+    {{ non_authorized_user() }}
+  {% elif 'video_tv_payment_without_push' in context.attentions %}
+    {{ video_tv_payment_without_push(req_info) }}
+  {% elif 'video_legatus_payment_without_push' in context.attentions %}
+    {{ video_legatus_payment_without_push() }}
+  {% elif 'video_sent_auth_push' in context.attentions %}
+    {{ video_provider_authorization_push() }}
+  {% elif 'video_failed_to_send_auth_push' in context.attentions %}
+    {{ failed_to_send_provider_authorization_push() }}
+  {% elif 'video_cannot_autoplay_because_its_paid' in context.attentions %}
+    {{ cannot_autoplay_paid_video() }}
+  {% elif 'sent_buy_video_push' in context.attentions %}
+    {{ video_payment_push(req_info) }}
+  {% elif 'video_failed_to_send_push' in context.attentions %}
+    {{ failed_to_send_payment_push() }}
+  {% elif 'video_yandex_plus_subscription_needed' in context.attentions %}
+    {{ yandex_plus_subscription_needed() }}
+  {% elif 'video_already_available' in context.attentions %}
+    {{ video_already_available() }}
+
+  # licence problems
+  {% elif 'video_error_purchase_not_found' in context.attentions %}
+    {{ purchase_not_found() }}
+  {% elif 'video_error_purchase_expired' in context.attentions %}
+    {{ purchase_expired() }}
+  {% elif 'video_error_subscription_not_found' in context.attentions %}
+    {{ subscription_not_found() }}
+  {% elif 'video_error_geo_constraint_violation' in context.attentions %}
+    {{ geo_constraint_violation() }}
+  {% elif 'video_error_licenses_not_found' in context.attentions %}
+    {{ licenses_not_found() }}
+  {% elif 'video_error_service_constraint_violation' in context.attentions %}
+    {{ service_constraint_violation() }}
+  {% elif 'video_error_supported_streams_not_found' in context.attentions %}
+    {{ supported_streams_not_found() }}
+  {% elif 'video_disabled_provider' in context.attentions %}
+    {{ disabled_provider() }}
+  {% elif 'no_next_video' in context.attentions %}
+    {{ no_next_video() }}
+  {% elif 'no_previous_video' in context.attentions %}
+    {{ no_previous_video() }}
+
+  # default cases
+  {% else %}
+    {% if default_action == 'nothing_found' %}
+      {{ nothing_found() }}
+    {% elif default_action == 'show_description' %}
+      {{ show_video_description() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}

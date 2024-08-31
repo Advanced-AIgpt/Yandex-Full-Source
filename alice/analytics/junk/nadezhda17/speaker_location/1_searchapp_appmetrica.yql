@@ -1,0 +1,78 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA  yt.UseColumnarStatistics = 'false'; 
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+--событие пилика
+$searchapp_appmetrica = 
+(
+    SELECT AppID, CAST(APIKey AS String) AS APIKey, CAST(EventID AS String) AS EventID, DeviceID, AccountID, 
+    CAST(CAST(DateTime::FromSeconds(CAST(EventDate AS Uint32)) AS Date) AS String) as fielddate, EventTimestamp, ReceiveTimestamp
+    FROM FILTER(`//logs/superapp-metrika-mobile-log/1d`, $date_filter)
+    WHERE (EventName = 'TIMING_EVENT' AND EventValue LIKE '%QUASAR_SETUP%' AND EventValue LIKE '%SENDING_WIFI_OVER_SOUND%') 
+    OR (EventName = 'UI_ACTION_EVENT' AND EventValue LIKE '%play_pairing_sound%')
+);
+
+$capture_device_id = Re2::Capture(".*&pairedDeviceId=([^&]*)&.*");
+$quasar_device_id = ($EventValue) -> {RETURN  $capture_device_id($EventValue)._1};
+
+--когда рядом с пиликом было событие содержащее quasar_device_id
+$quasar_device_id = 
+(
+    SELECT DeviceID, EventTimestamp, $quasar_device_id(EventValue) AS quasar_device_id
+    FROM FILTER(`//logs/superapp-metrika-mobile-log/1d`, $date_filter)
+    WHERE Url::Decode(EventValue) LIKE  '%%https://yandex.ru/quasar%%' AND Url::Decode(EventValue) LIKE '%pairedDeviceId=%'
+);
+
+$searchapp_appmetrica_with_quasar_device_id = 
+(
+    SELECT sa.AppID AS AppID, sa.APIKey AS APIKey, sa.EventID AS EventID, sa.DeviceID AS DeviceID, sa.AccountID AS AccountID, 
+    sa.fielddate AS fielddate, sa.EventTimestamp AS EventTimestamp, sa.ReceiveTimestamp AS ReceiveTimestamp, SOME(quasar_device_id) AS quasar_device_id
+    FROM $searchapp_appmetrica AS sa 
+    INNER JOIN $quasar_device_id AS q ON q.DeviceID = sa.DeviceID 
+    WHERE (q.EventTimestamp >= sa.EventTimestamp AND q.EventTimestamp - sa.EventTimestamp <= 600)
+    OR (sa.EventTimestamp >= q.EventTimestamp AND sa.EventTimestamp - q.EventTimestamp <= 600)
+    GROUP BY sa.AppID, sa.APIKey, sa.EventID, sa.DeviceID, sa.AccountID, sa.fielddate, sa.EventTimestamp, sa.ReceiveTimestamp
+);
+
+--кому можем добавляем device_id
+$searchapp_appmetrica = 
+(
+    SELECT sa.*, NULL AS quasar_device_id
+    FROM $searchapp_appmetrica AS sa 
+    LEFT ONLY JOIN $searchapp_appmetrica_with_quasar_device_id AS q ON sa.EventID = q.EventID
+    UNION ALL 
+    SELECT *
+    FROM $searchapp_appmetrica_with_quasar_device_id
+);
+
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+$searchapp_location = 
+(
+    SELECT sa.EventID AS EventID, sa.DeviceID AS device_id, sa.AccountID AS puid, sa.fielddate AS fielddate,
+    $s_to_datetime(sa.EventTimestamp) AS event_ts, $s_to_datetime(sa.ReceiveTimestamp) AS recieve_ts,
+    sa.quasar_device_id AS quasar_device_id,
+    CAST(l.Latitude AS Double) AS lat, CAST(l.Longitude AS Double) AS lon, 
+    l.LocationSource AS location_source, 
+    $s_to_datetime(l.LocationTimestamp) AS location_ts, 
+    CAST(l.LocationPrecision AS Int32) AS location_precision, 
+    FROM $searchapp_appmetrica AS sa 
+    LEFT OUTER JOIN FILTER(`//logs/appmetrica-location-log/1d`, $date_filter) AS l 
+    ON sa.AppID = l.AppID AND sa.APIKey = l.APIKey AND sa.DeviceID = l.DeviceID
+    AND sa.EventID = l.EventID 
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/searchapp_appmetrica` WITH TRUNCATE
+SELECT *
+FROM 
+(
+    SELECT device_id, puid, fielddate, EventID, event_ts, recieve_ts, lat, lon, location_source, location_ts, location_precision, quasar_device_id
+    FROM `//home/voice/nadezhda17/common/speakers_location/searchapp_appmetrica` AS d
+    LEFT ONLY JOIN $searchapp_location AS s ON s.EventID = d.EventID
+    UNION ALL 
+    SELECT *
+    FROM $searchapp_location
+)
+ORDER BY device_id, puid, fielddate, event_ts;

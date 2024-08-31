@@ -1,0 +1,108 @@
+USE hahn;
+
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+Pragma yson.disablestrict;
+
+$src = {{param.appmetrica_dir}};
+$src_dialogs = {{param.dialogs_dir}};
+$dst = {{param.heartbeats_dir}};
+$date = {{param.date}};
+
+$events = aslist(
+    "progressHeartbeatVideo",
+    "progressHeartbeatMusic",
+    "progressHeartbeatRadio",
+    "progressHeartbeatRadio2",
+    "startAudio",
+    "playAudio",
+    "yandexRadio2Heartbeat",
+    "audioClientHeartbeat",
+    "audioClientPlayRequest",
+    "audioClientPlayRequestFulfill",
+    "bluetoothHeartbeat",
+    "multiroomHeartbeat");
+
+$script = @@
+import json
+def values(s):
+    r = {}
+    r["req_id"] = ""
+    r["provider"] = ""
+    r["percent_played"] = 0.0
+    r["track_id"] = ""
+    r["video_url"] = ""
+    r["parent_req_id"] = ""
+    r["name"] = ""
+    try:
+        sjs = json.loads(s)
+        r["req_id"] = sjs.get("vinsRequestId", "") or sjs.get("vins_request_id", "")
+        r["provider"] = sjs.get("provider", "")
+        r["percent_played"] = max(float(sjs.get("percentPlayed", 0)), float(sjs.get("percent_played", 0)))
+        r["track_id"] = sjs.get("trackId", '') or sjs.get("id", '')
+        r["video_url"] = sjs.get("videoUrl", '')
+        r["parent_req_id"] = sjs.get("vinsParentRequestId", "") or sjs.get("vins_parent_request_id", "")
+        r["name"] = sjs.get("name", '')
+    except:
+        pass
+    return r
+@@;
+$values = Python2::values(Callable<(String?)->Struct<req_id:String,provider:String,percent_played:Double,track_id:String,video_url:String, parent_req_id:String, name:String>?>, $script);
+
+$src_dialogs_date = $src_dialogs || $date;
+$dst_date = $dst || $date;
+
+$get_parent_request_id = ($analytics_info) -> {
+    RETURN Yson::ConvertToString(DictPayloads(Yson::ConvertToDict(Yson::Parse($analytics_info).analytics_info))[0].parent_request_id)
+};
+
+$dialogs = (
+    select request_id,
+    $get_parent_request_id(analytics_info) as dialogs_parent_request_id,
+    from $src_dialogs_date
+    where $get_parent_request_id(analytics_info) is not null
+);
+
+$heartbeats = (
+select
+    "uu/" || `UUID` as `uuid`,
+    DeviceID as device_id,
+    Model as model,
+    EventName as event_name,
+    EventTimestamp as send_timestamp,
+    LogfellerTimestamp as logfeller_timestamp,
+    dt,
+    event_values.req_id as req_id,
+    event_values.provider as provider,
+    event_values.percent_played as percent_played,
+    event_values.track_id as track_id,
+    event_values.video_url as video_url,
+    event_values.parent_req_id as parent_req_id,
+    ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'tandem_device_id')] ?? '' AS tandem_device_id,
+    ReportEnvironment_Values[ListIndexOf(ReportEnvironment_Keys, 'tandem_device_connected')] ?? '' AS tandem_connection_state
+from
+    (select
+        `UUID`,
+        DeviceID,
+        EventName,
+        EventValue,
+        EventTimestamp,
+        LogfellerTimestamp,
+        Model,
+        $date as dt,
+        $values(EventValue) as event_values,
+        ReportEnvironment_Keys,
+        ReportEnvironment_Values
+    from like($src, $date || '%')
+    where APIKey == 999537 and EventName in $events
+    )
+where event_values.name != "play_tts"
+);
+
+insert into $dst_date with truncate
+select h.*,
+if(h.parent_req_id != "" or d.dialogs_parent_request_id is null, h.parent_req_id, d.dialogs_parent_request_id) as parent_req_id,
+without h.parent_req_id
+from $heartbeats as h
+left join $dialogs as d
+on d.request_id == h.req_id;

@@ -1,0 +1,193 @@
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+$three_days_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+--определение типа шоу
+$show_type_prev = ($analytics_info) -> {RETURN  Yson::ConvertToString(ListFilter(
+Yson::ConvertToList($analytics_info.analytics_info.HollywoodHardcodedMusic.scenario_analytics_info.objects), 
+($x) -> (Yson::ConvertToString($x.id) = 'show.type'))[0].human_readable)};
+$morning_show_profile = ($analytics_info) -> {RETURN Yson::SerializePretty(ListFilter(Yson::ConvertToList($analytics_info.users_info.HollywoodHardcodedMusic.scenario_user_info.properties), 
+($x) -> (Yson::ConvertToString($x.human_readable) = 'Morning show customisation'))[0].morning_show_profile)};
+$format = ($source) -> {RETURN String::JoinFromList(ListSkip(String::SplitToList($source, '-'), 1), '-')};
+$news = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.news_config.news_providers), ($x) -> 
+(Yson::ConvertToString($x.rubric) || ' from ' || $format(Yson::ConvertToString($x.news_source))))};
+$topics = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.topics_config.topics), ($x) -> (Yson::ConvertToString($x.podcast)))};
+
+--req_id утреннего шоу из сессий
+$morning_show_total_req_id = 
+(
+    SELECT fielddate, req_id, puid, device_id, ts, query, reply, generic_scenario, `uuid`,
+    CASE WHEN show_type_prev??'morning' != 'morning' THEN show_type_prev || '_show'
+    WHEN ListLength(topics) = 0 AND ListLength(news) = 1 AND String::StartsWith((news[0]??''), '__mixed_news__') THEN 'new morning show default settings'
+    WHEN (ListLength(topics) > 0 OR ListLength(news) > 0) THEN 'new morning show custom settings'
+    ELSE 'morning_show'
+    END AS show_type
+    FROM
+    (
+        SELECT DISTINCT req_id, app, puid, fielddate, device_id,
+        $news($morning_show_profile(analytics_info)) AS news,
+        $topics($morning_show_profile(analytics_info)) AS topics, 
+        $show_type_prev(analytics_info) AS show_type_prev,
+        server_time_ms/1000 AS ts, `uuid`,
+        query, reply, generic_scenario,
+        FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $three_days_ago)
+        WHERE generic_scenario = 'morning_show'
+        AND app IN ('quasar', 'small_smart_speakers')
+        AND req_id = (parent_req_id??req_id)
+    )
+);
+
+--req_id из бека музыки
+$music_req_id = 
+(
+    SELECT DISTINCT req_id
+    FROM FILTER(`//logs/music-quasar-plays-log/1d`, $three_days_ago)
+);
+
+--req_id из хартбитов
+$heartbeats_req_id = 
+(
+    SELECT DISTINCT req_id
+    FROM FILTER(`//home/alice/dialog/heartbeats`, $three_days_ago)
+    WHERE event_name = 'progressHeartbeatMusic'
+);
+
+$without_show = 
+(
+    SELECT s.*
+    FROM $morning_show_total_req_id AS s
+    LEFT ONLY JOIN $music_req_id AS m ON s.req_id = m.req_id
+    LEFT ONLY JOIN $heartbeats_req_id AS h ON s.req_id = h.req_id
+);
+
+--Нет плюса
+$plus_problem = 
+(
+    SELECT w.*, 'plus_problem' AS type
+    FROM $without_show as w
+    WHERE reply LIKE '%Яндекс.Плюс%'
+);
+
+--Проблемы включения колонки
+$speaker_problems_turning_on = 
+(
+    SELECT w.*, 'speaker_turning_on_problems' AS type
+    FROM $without_show as w
+    WHERE reply NOT LIKE '%Яндекс.Плюс%'
+    AND (reply = "EMPTY" OR reply = '')
+);
+
+--Проблемы включения родом из бекенда
+$backend_problems_turning_on = 
+(
+    SELECT w.*, 'backend_turning_on_problems' AS type
+    FROM $without_show as w
+    WHERE reply NOT LIKE '%Яндекс.Плюс%'
+    AND NOT (reply = "EMPTY" OR reply = '')
+);
+
+--Факт зажеванной пленки
+$chewed_film = 
+(
+    SELECT CAST(EventTimestamp as UInt32) as EventTimestamp, DeviceID
+    FROM FILTER(`//logs/appmetrica-yandex-events/1d`, $three_days_ago)
+    WHERE APIKey = 999537
+    AND EventName = 'mediadPlaybackError'
+);
+
+--Случаи с зажеванной пленкой
+$problems_chewed_film = 
+(
+    SELECT show_type, device_id, `uuid`, fielddate, puid, generic_scenario, problem_ts,
+    MIN_BY(query, time_diff) as query,
+    MIN_BY(reply, time_diff) as reply,
+    MIN_BY(ts, time_diff) AS ts,
+    MIN_BY(req_id, time_diff) AS req_id,
+    'chewed_film' AS type
+    FROM
+    (
+        SELECT m.*, (b.EventTimestamp - m.ts) AS time_diff, b.EventTimestamp as problem_ts
+        FROM $morning_show_total_req_id AS m 
+        INNER JOIN $chewed_film AS b ON b.DeviceID = m.device_id
+        WHERE b.EventTimestamp - m.ts BETWEEN 0 AND 600
+    )
+    GROUP BY show_type, device_id, `uuid`, fielddate, puid, generic_scenario, problem_ts
+);
+
+--примеры для дебага
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/falls` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT * 
+    FROM $problems_chewed_film
+    UNION ALL 
+    SELECT *
+    FROM $speaker_problems_turning_on
+    UNION ALL 
+    SELECT *
+    FROM $backend_problems_turning_on
+    UNION ALL 
+    SELECT *
+    FROM $plus_problem
+)
+ORDER BY ts DESC;
+
+$errors =
+(
+    SELECT m.fielddate AS fielddate, 
+    m.show_type AS show_type,
+    COUNT(DISTINCT m.req_id) AS total_req_amount, 
+    COUNT(DISTINCT st.req_id) AS speaker_problems_turning_on,
+    COUNT(DISTINCT bt.req_id) AS backend_problems_turning_on,
+    COUNT(DISTINCT pp.req_id) AS plus_problem, 
+    COUNT(DISTINCT cf.req_id) AS problems_chewed_film,
+    FROM $morning_show_total_req_id AS m 
+    LEFT OUTER JOIN $speaker_problems_turning_on AS st ON st.req_id = m.req_id
+    LEFT OUTER JOIN $backend_problems_turning_on AS bt ON bt.req_id = m.req_id
+    LEFT OUTER JOIN $plus_problem AS pp ON pp.req_id = m.req_id
+    LEFT OUTER JOIN $problems_chewed_film AS cf ON cf. req_id = m.req_id
+    GROUP BY m.fielddate, m.show_type
+    UNION ALL
+    SELECT m.fielddate AS fielddate, 
+    'Total' AS show_type,
+    COUNT(DISTINCT m.req_id) AS total_req_amount, 
+    COUNT(DISTINCT st.req_id) AS speaker_problems_turning_on,
+    COUNT(DISTINCT bt.req_id) AS backend_problems_turning_on,
+    COUNT(DISTINCT pp.req_id) AS plus_problem, 
+    COUNT(DISTINCT cf.req_id) AS problems_chewed_film,
+    FROM $morning_show_total_req_id AS m 
+    LEFT OUTER JOIN $speaker_problems_turning_on AS st ON st.req_id = m.req_id
+    LEFT OUTER JOIN $backend_problems_turning_on AS bt ON bt.req_id = m.req_id
+    LEFT OUTER JOIN $plus_problem AS pp ON pp.req_id = m.req_id
+    LEFT OUTER JOIN $problems_chewed_film AS cf ON cf. req_id = m.req_id
+    GROUP BY m.fielddate 
+);
+
+
+$result = 
+(
+    SELECT fielddate, 'Total' AS show_type, SUM(total_req_amount) AS total_req_amount, 
+    SUM(speaker_problems_turning_on) AS speaker_problems_turning_on,
+    SUM(backend_problems_turning_on) AS backend_problems_turning_on,
+    SUM(plus_problem) AS plus_problem,
+    SUM(problems_chewed_film) AS problems_chewed_film,
+    FROM $errors
+    GROUP BY fielddate
+    UNION ALL 
+    SELECT *
+    FROM $errors
+);
+
+--для графика падений
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/unavailability` WITH TRUNCATE 
+SELECT *
+FROM $result
+UNION ALL 
+SELECT u.*
+FROM `//home/voice/nadezhda17/common/morning_show/unavailability` AS u 
+LEFT ONLY JOIN $result AS e ON e.fielddate = u.fielddate
+;

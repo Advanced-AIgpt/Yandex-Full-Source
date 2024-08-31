@@ -1,0 +1,27 @@
+-- code for "RETN: JOIN RETENTION CUBE" YQL cube
+-- tested
+
+-- retention YQL part 3 testing
+
+$dayuse_with_activations_and_features = SELECT * FROM {{input1}};
+$advanced_activations_features = SELECT * FROM {{input2}};
+
+
+INSERT INTO {{param[output_path]}} WITH TRUNCATE
+SELECT
+    a.*,
+    b.*
+FROM(
+    SELECT
+    * WITHOUT iot_active_devices, geo_id
+    FROM $dayuse_with_activations_and_features
+    ) as a
+LEFT JOIN (
+    SELECT
+    * WITHOUT activation_date
+    FROM
+    $advanced_activations_features
+    ) as b
+ON a.device_id == b.device_id
+ORDER BY activation_date, device_type, device_id, fielddate
+;

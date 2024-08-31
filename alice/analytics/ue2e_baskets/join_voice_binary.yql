@@ -1,0 +1,24 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_mock";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_mock";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_mock";
+$voice_data = "//home/voice/jdkondratenko/VA-2304/quasar_voice_binary";
+
+DEFINE ACTION $fix_format($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    (SELECT a.*, b.voice_binary as voice_binary
+    FROM (SELECT *
+    FROM $input_table as a 
+    WHERE reversed_session_sequence = 0) as a
+    JOIN $voice_data as b 
+    ON a.real_reqid = b.request_id)
+    UNION ALL
+    (SELECT NULL as voice_binary, a.* FROM $input_table as a WHERE reversed_session_sequence != 0);
+
+END DEFINE;
+
+DO $fix_format($accept, $accept);
+DO $fix_format($kpi, $kpi);
+DO $fix_format($dev, $dev);

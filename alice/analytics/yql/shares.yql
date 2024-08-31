@@ -1,0 +1,23 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+Pragma yson.disablestrict;
+
+$start = {{param.date}};
+$end = {{param.date}};
+$vins = "//home/voice/vins/logs/dialogs";
+
+$q = 
+select `uuid`, TableName() as dt,
+Yson::ConvertToString(Yson::Parse(request).request_id) as req_id,
+Yson::ConvertToString(Yson::Parse(request).callback_args.data.video_descriptor.provider_name) as provider_name,
+if(Yson::ConvertToString(Yson::Parse(request).callback_args.data.video_descriptor.provider_item_id) like '%http%', "web", "system") as src,
+Yson::ConvertToString(Yson::Parse(response).directives[0].name) as directive_name
+from range($vins, $start, $end)
+where Yson::ConvertToString(Yson::Parse(request).callback_args.name) == "quasar.play_video_by_descriptor"
+and Yson::ConvertToString(Yson::Parse(request).request_id) not like '%ffff%' and `uuid` not like '%ffff%' and `uuid` not like '%deadbeef%';
+
+insert into `//home/voice/nstbezz/datasets/quasar_shares`
+select dt, provider_name, `action`, count(distinct req_id) as cnt_events, count(distinct `uuid`) as cnt_uuid
+from $q
+group by provider_name, if(directive_name == "video_play", "video_play", "other") as `action`, dt;
+

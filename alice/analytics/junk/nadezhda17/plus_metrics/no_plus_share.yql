@@ -1,0 +1,128 @@
+USE hahn;
+
+$start_date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(17) AS String);
+
+--активированные устройства
+$new_devices = 
+(
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status` 
+    WHERE init_date >= $start_date
+);
+
+$uniq_device_puid = 
+(
+    SELECT DISTINCT puid
+    FROM $new_devices
+);
+
+--статусы подписок 
+$subscriptions = 
+(
+    SELECT puid, ListSort(AGGREGATE_LIST_DISTINCT(fielddate)) AS plus_days
+    FROM
+    (
+        SELECT DISTINCT f.fielddate AS fielddate, f.puid AS puid
+        FROM `//home/msdata/user-profiles-cumulative/v1/last` AS f 
+        INNER JOIN $uniq_device_puid AS u ON u.puid = f.puid
+        WHERE state = 'active'
+        AND f.fielddate >= $start_date
+        UNION ALL 
+        SELECT DISTINCT f.fielddate AS fielddate, f.puid AS puid
+        FROM `//home/msdata/opk-profiles-cumulative/v1/last` AS f 
+        INNER JOIN $uniq_device_puid AS u ON u.puid = f.puid
+        WHERE is_active
+        AND f.fielddate >= $start_date
+    )
+    GROUP BY puid
+);
+
+--для нового устройства собираем когда оно было активно 
+$new_devices_subscriptions = 
+(
+    SELECT m.*, plus_days??AsList() AS plus_days
+    FROM $new_devices AS m 
+    LEFT OUTER JOIN $subscriptions AS s ON m.puid = s.puid
+);
+
+$plus_days_filter = ($init_date, $plus_days) -> {RETURN ListFilter($plus_days, ($date) -> ($date >= $init_date))};
+$date_diff = ($max_date, $min_date) -> {RETURN DateTime::ToDays(CAST($max_date AS Date) - CAST($min_date AS Date))};
+
+--ищем первую дату подписки после активации колонки
+$new_devices_subscriptions = 
+(
+    SELECT app, device, device_id, init_date, last_socket_date, promo_activate_day, product_name, region_id,
+    puid, subscription_state, subscription_device, 
+    ListMin($plus_days_filter(init_date, plus_days)) AS plus_date, 
+    $plus_days_filter(init_date, plus_days) AS plus_days, 
+    IF(ListMin($plus_days_filter(init_date, plus_days)) IS NULL, 100, 
+    $date_diff(ListMin($plus_days_filter(init_date, plus_days)), init_date)) AS delay
+    FROM $new_devices_subscriptions
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/subscription_status_full` WITH TRUNCATE 
+SELECT *
+FROM $new_devices_subscriptions
+UNION ALL 
+SELECT ss.*
+FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status_full` AS ss 
+LEFT ONLY JOIN $new_devices_subscriptions AS n ON n.device_id = ss.device_id;
+
+COMMIT;
+
+$table = 
+(
+    SELECT init_date, app, device, device_id, delay,
+    Geo::RoundRegionById(CAST(region_id??213 AS Int32), 'country').name AS country
+    FROM $new_devices_subscriptions
+    WHERE NOT subscription_device
+    AND device IN ('yandexmini', 'yandexmini_2',
+    'yandexstation', 'yandexstation_2', 'yandexmicro',
+    'jbl_link_portable', 'jbl_link_music', 'linkplay_a98', 'prestigio_smart_mate', 'wk7y', 'lightcomm')
+);
+
+$table = 
+(
+    SELECT init_date, device, device_id, delay, country AS geo 
+    FROM $table
+    WHERE country IN ('Россия', 'Беларусь', 'Казахстан', 'Израиль')
+    UNION ALL 
+    SELECT init_date, device, device_id, delay, 'РБКИ' AS geo 
+    FROM $table
+    WHERE country IN ('Россия', 'Беларусь', 'Казахстан', 'Израиль')
+    UNION ALL 
+    SELECT init_date, device, device_id, delay, 'НЕ РБКИ' AS geo 
+    FROM $table
+    WHERE country NOT IN ('Россия', 'Беларусь', 'Казахстан', 'Израиль')
+    UNION ALL 
+    SELECT init_date, device, device_id, delay, 'Total' AS geo 
+    FROM $table
+);
+
+$plot_no_plus_share = 
+(
+    SELECT init_date, geo, device AS app, new_device_amount, 
+    IF(init_date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String), NULL, no_plus_2_days) AS no_plus_2_days, 
+    IF(init_date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(8) AS String), NULL, no_plus_7_days) AS no_plus_7_days, 
+    IF(init_date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(15) AS String), NULL, no_plus_14_days) AS no_plus_14_days
+    FROM
+    (
+        SELECT init_date, geo, device??'Total' AS device, 
+        COUNT(*) AS new_device_amount,
+        100 - COUNT_IF(delay <= 2)*100.0/COUNT(*) AS no_plus_2_days,
+        100 - COUNT_IF(delay <= 7)*100.0/COUNT(*) AS no_plus_7_days,
+        100 - COUNT_IF(delay <= 14)*100.0/COUNT(*) AS no_plus_14_days,
+        FROM $table
+        GROUP BY GROUPING SETS ((init_date, geo), (init_date, device, geo))
+    )
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/plus_metrics/plot_no_plus_share` WITH TRUNCATE 
+SELECT *
+FROM $plot_no_plus_share
+UNION ALL 
+SELECT ss.*
+FROM `//home/voice/nadezhda17/common/plus_metrics/plot_no_plus_share` AS ss 
+LEFT ONLY JOIN $plot_no_plus_share AS n ON n.init_date = ss.init_date
+AND n.app = ss.app AND n.geo = ss.geo
+;

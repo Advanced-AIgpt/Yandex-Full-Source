@@ -1,0 +1,31 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA SimpleColumns;
+
+$annotated = (
+    SELECT
+        to_annotate.mds_key AS mds_key,
+        annotated.query AS text
+    FROM {{input3}} AS to_annotate
+    LEFT JOIN {{input2}} AS annotated USING (mds_key)
+);
+
+$replaced_text = (
+    SELECT
+        IF(annotated.mds_key IS NULL, basket.text, annotated.text) AS text,
+        annotated.mds_key as annotated_mds_key, annotated.text as annotated_text,
+        basket.* WITHOUT basket.text
+    FROM {{input1}} AS basket
+    LEFT JOIN $annotated AS annotated USING (mds_key)
+);
+
+$badly_annotated_session_ids = (
+    SELECT session_id
+    FROM $replaced_text
+    WHERE annotated_mds_key IS NOT NULL AND annotated_text IS NULL
+);
+
+
+INSERT INTO {{output1}}
+SELECT r.* WITHOUT r.annotated_mds_key, r.annotated_text
+FROM $replaced_text as r
+WHERE session_id not in $badly_annotated_session_ids;

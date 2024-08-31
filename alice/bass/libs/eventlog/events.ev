@@ -1,0 +1,105 @@
+option optimize_for = SPEED;
+
+import "google/protobuf/descriptor.proto";
+import "library/cpp/eventlog/proto/events_extension.proto";
+
+extend google.protobuf.MessageOptions {
+  optional string SubReqId = 40001 [ default = "" ];
+}
+
+package NBASSEvents;
+
+message TBaseEvent {
+//    optional string SubReqId = 100;
+    extensions 100 to 106;
+};
+
+message TVinsRequest {
+    option (message_id) = 10100;
+    optional string HostName = 1;
+    optional string BassReqId = 2;
+    optional string Cgi = 3;
+    optional string RequestJson = 4;
+}
+
+message TSetupRequest {
+    option (message_id) = 10200;
+    optional string HostName = 1;
+    optional string BassReqId = 2;
+    optional string Cgi = 3;
+    optional string RequestJson = 4;
+}
+
+message TResponse {
+    option (message_id) = 10300;
+    optional bool HasError = 1;
+    optional string ResponseJson = 2;
+};
+
+message TContinuableResponse {
+    option (message_id) = 10310;
+    optional bool HasError = 1;
+    optional string ResponseJson = 2;
+};
+
+message TApplyResponse {
+    option (message_id) = 10320;
+    optional bool HasError = 1;
+    optional string ResponseJson = 2;
+};
+
+// Emitted when setup request is finished
+message TSetupResponse {
+    option (message_id) = 10400;
+    // Response json
+    optional string ResponseJson = 1;
+    // True if whole setup request is invalid
+    optional bool Failed = 2;
+    // Number of requested forms is failed
+    optional uint32 FormsFailed = 3;
+}
+
+message TSetupProcessFormFail {
+    option (message_id) = 10410;
+    extend TBaseEvent {
+        optional string SubReqId = 100;
+    };
+    required string FormName  = 1;
+    required string ErrorType = 2;
+    required string ErrorMsg  = 3;
+}
+
+message TDebug {
+    option (message_id) = 10500;
+    optional string Message = 1;
+}
+
+message TError {
+    option (message_id) = 10600;
+    optional string Message = 1;
+    optional string Type = 2;
+}
+
+message TContextCreated {
+    option (message_id) = 10700;
+    optional string ReqId = 1;
+    optional string FormName = 2;
+    optional string Utterance = 3;
+    repeated string Slots = 4;
+    optional string Uuid = 5;
+    optional string DeviceId = 6;
+    optional string ClientId = 7;
+};
+
+message TFormSwitching {
+    option (message_id) = 10800;
+    optional string From = 1;
+    optional string To = 2;
+    optional bool WithCallback = 3;
+};
+
+message TSlotsCopied {
+    option (message_id) = 10900;
+    optional string From = 1;
+    repeated string Slots = 2;
+};

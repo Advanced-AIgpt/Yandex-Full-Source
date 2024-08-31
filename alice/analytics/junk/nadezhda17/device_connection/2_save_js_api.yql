@@ -1,0 +1,16 @@
+USE hahn;
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/js_api` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/device_connection/js_api_tmp`
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/device_connection/js_api` AS t 
+    LEFT ONLY JOIN `//home/voice/nadezhda17/common/device_connection/js_api_tmp` AS a ON 
+    a.APIKey = t.APIKey AND a.DeviceID = t.DeviceID AND a.AccountID = t.AccountID 
+AND a.ts = t.ts AND a.method = t.method
+)
+WHERE ts >= CurrentUtcDate() - DateTime::IntervalFromDays(90);

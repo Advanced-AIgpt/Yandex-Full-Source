@@ -1,0 +1,189 @@
+USE hahn;
+
+PRAGMA OrderedColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$job_date = {{param.job_date}};
+$raw_recalc_period = {{param.raw_recalc_period}};
+
+$mobileadssdk_path = '//home/logfeller/logs/mobileadssdk-metrika-mobile-log/1d';
+$bs_squeeze_path = {{param.bs_squeeze_path}};
+
+$recalc_period = UNWRAP(CAST($raw_recalc_period AS Int64));
+
+$date_pattern = "%Y-%m-%d";
+$datetime_suffix = "T00:00:00";
+$date_format = DateTime::Format($date_pattern);
+$time_zone = 'Europe/Moscow';
+
+$timestamp_to_date = ($timestamp) -> {
+    RETURN $date_format(AddTimezone(DateTime::FromSeconds(CAST($timestamp AS Uint32)), $time_zone))
+};
+
+$string_date_add_days = ($date, $days) -> {
+    RETURN $date_format(DateTime::MakeDate(DateTime::Parse($date_pattern)($date)) + Interval("P1D") * $days);
+};
+
+$frst_date = $string_date_add_days($job_date, -$recalc_period);
+$last_date = $job_date;
+
+
+$filter = ($r) -> { RETURN TRUE };
+
+$tracking = (
+    SELECT
+        cast(hitlogid AS Uint64) AS hitlogid,
+        cast(position AS Uint64) AS position,
+        cast(fraudbits AS Uint64) AS fraudbits,
+        cast(action AS String) AS action
+    FROM range(`//logs/bs-chtracking-log/1d`, $frst_date, $last_date)
+    WHERE $filter(TableRow())
+);
+
+$tracking = (
+    SELECT
+        hitlogid,
+        position,
+        fraudbits,
+        cast(count_if(action = 'start') AS Int64) AS starts,
+        cast(count_if(action = 'first-quartile') AS Int64) AS first_quartiles,
+        cast(count_if(action = 'midpoint') AS Int64) AS midpoints,
+        cast(count_if(action = 'third-quartile') AS Int64) AS third_quartiles,
+        cast(count_if(action = 'complete') AS Int64) AS completes,
+        cast(count_if(action = 'mute') AS Int64) AS mutes,
+        cast(count_if(action = 'unmute') AS Int64) AS unmutes,
+        cast(count_if(action = 'pause') AS Int64) AS pauses,
+        cast(count_if(action = 'resumes') AS Int64) AS resumes,
+        cast(count_if(action = 'skip') AS Int64) AS skips,
+        cast(count_if(action = 'render') AS Int64) AS renders,
+        cast(count_if(action = 'mrc-impression') AS Int64) AS mrc_impressions,
+        cast(count_if(action = 'true-view') AS Int64) AS true_views
+    FROM $tracking --here fraudbits == 0
+
+    GROUP BY hitlogid,
+            position,
+            fraudbits);
+
+
+
+$filter = ($r) -> { RETURN $r.placeid in (542, 1542) };
+
+$event =(
+    SELECT uniqid,
+        `uuid`,
+        $timestamp_to_date(eventtime) AS fielddate,
+        bannerid,
+        hitlogid,
+        position,
+        fraudbits,
+        countertype,
+        eventcost,
+        videoduration
+    FROM range(`//cooked_logs/bs-chevent-cooked-log/1d`, $frst_date, $last_date) AS a
+    JOIN ANY `home/yabs/dict/PageImpArtmon` AS b ON a.pageid = b.PageID
+    AND a.impid = b.ImpID
+    WHERE $filter(TableRow())
+        AND VideoCategoryID in (1018,
+                                1019) -- TV filtration
+);
+
+$event = (
+    SELECT uniqid,
+        `uuid`,
+        some(fielddate) AS fielddate,
+        bannerid,
+        hitlogid,
+        position,
+        cast(count_if(countertype = 1 AND fraudbits = 0) AS Int64) AS shows,
+        cast(count_if(countertype = 2 AND fraudbits = 0) AS Int64) AS clicks,
+        sum_if(eventcost, fraudbits = 0) / 1e6 * 30 / 1.18 ?? 0 AS cost,
+        sum(videoduration) AS videoduration
+    FROM $event
+    GROUP BY uniqid,
+            `uuid`,
+            bannerid,
+            hitlogid,
+            position
+);
+
+$event = (
+    SELECT
+        chevent.*,
+        tracking.*,
+        chevent.videoduration / 60.0 AS max_duration,
+        CASE
+            WHEN tracking.completes = 1 THEN chevent.videoduration
+            WHEN tracking.third_quartiles = 1 THEN 0.75 * chevent.videoduration
+            WHEN tracking.midpoints = 1 THEN 0.5 * videoduration
+            WHEN tracking.first_quartiles = 1 THEN 0.25 * chevent.videoduration
+            ELSE 0
+        END / 60.0 AS approx_duration
+    WITHOUT
+        tracking.hitlogid,
+        tracking.position,
+        chevent.videoduration
+    FROM $event AS chevent
+    LEFT JOIN $tracking AS tracking ON tracking.hitlogid = chevent.hitlogid AND tracking.position = chevent.position
+);
+
+INSERT INTO $bs_squeeze_path WITH TRUNCATE
+
+SELECT
+    *
+FROM (
+    SELECT
+        event.*,
+        appmetrica.*
+    FROM (
+        SELECT
+            uniqid,
+            `uuid`,
+            fielddate,
+            fraudbits,
+            sum(shows) ?? 0 AS shows,
+            sum(clicks) ?? 0 AS clicks,
+            sum(cost) ?? 0 AS cost,
+            sum(starts) ?? 0 AS starts,
+            sum(first_quartiles) ?? 0 AS first_quartiles,
+            sum(midpoints) ?? 0 AS midpoints,
+            sum(third_quartiles) ?? 0 AS third_quartiles,
+            sum(completes) ?? 0 AS completes,
+            sum(mutes) ?? 0 AS mutes,
+            sum(unmutes) ?? 0 AS unmutes,
+            sum(pauses) ?? 0 AS pauses,
+            sum(resumes) ?? 0 AS resumes,
+            sum(skips) ?? 0 AS skips,
+            sum(renders) ?? 0 AS renders,
+            sum(mrc_impressions) ?? 0 AS mrc_impressions,
+            sum(true_views) ?? 0 AS true_views,
+            sum(max_duration) ?? 0 AS max_duration,
+            sum(approx_duration) ?? 0 AS approx_duration
+        FROM $event AS event
+        GROUP BY uniqid,
+                `uuid`,
+                UNWRAP(fielddate) AS fielddate,
+                fraudbits ?? 0 AS fraudbits
+    ) AS event
+    LEFT JOIN (
+        SELECT
+            MAX(DeviceID) AS DeviceID,
+            `uuid`,
+            MAX(`NetworksInterfaces_Macs`[ListIndexOf(`NetworksInterfaces_Names`, 'eth0')]) AS eth0,
+            MAX(`NetworksInterfaces_Macs`[ListIndexOf(`NetworksInterfaces_Names`, 'wlan0')]) AS wlan0,
+            MAX(NVL(
+                `NetworksInterfaces_Macs`[ListIndexOf(`NetworksInterfaces_Names`, 'eth0')],
+                `NetworksInterfaces_Macs`[ListIndexOf(`NetworksInterfaces_Names`, 'wlan0')]
+            )) AS mac_id
+        FROM RANGE($mobileadssdk_path, $frst_date, $last_date)
+        WHERE (APIKey = 132355 OR APIKey = 132360) AND EventType IN (4, 11) AND (AppID = 'com.yandex.tv.videoplayer')
+        GROUP BY `UUID` AS `uuid`
+    ) AS appmetrica USING (`uuid`)
+
+    UNION ALL
+
+    SELECT
+        *
+    FROM $bs_squeeze_path
+    WHERE fielddate < $frst_date OR fielddate > $last_date
+)
+ORDER BY fielddate, mac_id

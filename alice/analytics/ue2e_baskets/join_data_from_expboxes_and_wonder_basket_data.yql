@@ -1,0 +1,90 @@
+Use hahn;
+pragma yt.Pool = "voice";
+pragma yson.DisableStrict = "1";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.Auth = 'robot-voice-qa_yql_token';
+PRAGMA dq.AnalyzeQuery = "1";
+PRAGMA yt.InferSchema = '100';
+
+$prepared_logs_expboxes = "//home/alice/dialog/prepared_logs_expboxes";
+
+$date_start = "2021-08-07";
+$date_end = "2021-08-07";
+
+$wonder_basket_logs = "//home/alice-dev/ran1s/basket/wonder/basket-data";
+$output_dir = "//home/voice/egd3700/TASKS/VA-2268/new_data/";
+$joined_logs_out = $output_dir || "joined_data_eavesdropping_"  || $date_start || "_" || $date_end;
+
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yandex_phone", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+$tv_apps = AsList("tv");
+$input_types = AsList("voice", "text", "click");
+
+$patch_script = @@
+import cyson
+
+def patch_vins(vins_request, ignore_keys):
+    for ignore_key in ignore_keys:
+        if '.' in ignore_key:
+            ignore_parts = ignore_key.split('.')
+            cur_dict = vins_request or {}
+            for ignore_part in ignore_parts[:-1]:
+                cur_dict = cur_dict.get(ignore_part, {}) or {}
+            cur_dict.pop(ignore_parts[-1], None)
+    return vins_request
+
+patch_vins._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_vins_request = Python2::patch_vins(ParseType("(Yson?, List<String>)->Yson"), $patch_script);
+$ignore_options = AsList(
+                         "additional_options.bass_options.cookies", "additional_options.expflags", "additional_options.expboxes",
+                         "additional_options.oauth_token", "additional_options.bass_url"
+);
+
+$expboxes_data = (
+    SELECT
+        IF(app == "yandex_phone", "launcher", app) as app, is_new, query, input_type, session_sequence, session_id, reply, generic_scenario,
+        intent, fielddate, req_id as request_id, skill_id, do_not_use_user_logs, `uuid`,
+        Yson::SerializePretty(Yson::Lookup(other, "callback")) as callback
+    FROM RANGE($prepared_logs_expboxes, $date_start, $date_end)
+    WHERE
+        (do_not_use_user_logs is null or not do_not_use_user_logs) and app in ListExtend($quasar_apps, $general_apps, $navi_apps, $tv_apps)
+        and input_type in $input_types and query is not null and String::Strip(query) != ""
+);
+
+$wonder_basket_data = (
+    SELECT
+        Yson::LookupString(request, "request_id") as request_id,
+        substring(uniproxy_mds_key, 52) as mds_key,
+        directives,
+        analytics_info,
+        trash_or_empty as is_empty_asr,
+        client_tz,
+        Yson::LookupString(request, "device_id") as device_id,
+        $patch_vins_request(request, $ignore_options) as vins_full_request
+    FROM RANGE($wonder_basket_logs, $date_start, $date_end)
+    WHERE
+        Yson::LookupString(request, "lang") == "ru-RU"
+        and ListHas(Yson::ConvertToInt64List(request.test_ids), 283725)
+);
+
+$joined_logs = (
+    SELECT *
+    FROM $wonder_basket_data as wonderlogs
+    JOIN $expboxes_data as expboxes
+    USING(request_id)
+    WHERE is_empty_asr == False or is_empty_asr is null
+);
+
+INSERT INTO $joined_logs_out WITH TRUNCATE
+SELECT
+    request_id, SOME(skill_id) as skill_id, SOME(input_type) as input_type, SOME(mds_key) as mds_key, SOME(reply) as reply, SOME(directives) as directives,
+    SOME(fielddate) as fielddate, SOME(query) as query, SOME(`uuid`) as `uuid`, SOME(analytics_info) as analytics_info, SOME(is_empty_asr) as is_empty_asr,
+    SOME(callback) as callback, SOME(is_new) as is_new, SOME(intent) as intent, SOME(client_tz) as client_tz, SOME(app) as app, SOME(vins_full_request) as vins_full_request,
+    SOME(session_id) as session_id, SOME(session_sequence) as session_sequence, SOME(do_not_use_user_logs) as do_not_use_user_logs,
+    SOME(generic_scenario) as generic_scenario, SOME(device_id) as device_id
+FROM $joined_logs
+GROUP BY request_id;

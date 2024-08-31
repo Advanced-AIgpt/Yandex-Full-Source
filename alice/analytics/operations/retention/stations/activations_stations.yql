@@ -1,0 +1,96 @@
+-- построение таблиц активаций всех известных станций
+
+$dayuse_cube = SELECT * FROM {{param[dayuse_table]}};
+$blacklist_puids_table = SELECT * FROM {{param[blacklist_puids_table]}};
+$blacklist_pairs_stations_table = SELECT * FROM {{param[blacklist_pairs_stations_table]}};
+$activations_stations_table = {{param[activations_stations_table]}};  -- output table
+
+-- selecting dayuse records with defined ids
+$dayuse_prefiltered =
+SELECT
+    device_id,
+    fielddate,
+    device_type,
+    is_subscription_device,
+    -- model,
+    puid,
+    app_version,
+    geo_id,
+    exclude,
+FROM $dayuse_cube
+;
+
+$dayuse_good =
+SELECT
+    a.*,
+FROM (
+    SELECT * FROM $dayuse_prefiltered
+    WHERE exclude IS NULL
+    AND puid IS NOT NULL
+    ) AS a
+LEFT ONLY JOIN
+    (SELECT device_id, puid
+    FROM $blacklist_pairs_stations_table
+    ) AS b
+ON a.puid == b.puid AND a.device_id = b.device_id
+;
+
+$dayuse_good_groupped =
+SELECT
+    device_id,
+    min(fielddate) AS activation_date,
+    some(device_type) AS device_type,
+    NULL AS exclude,
+    MIN_BY(puid, fielddate) AS activation_puid,
+    MIN_BY(geo_id, fielddate) AS activation_geo_id
+FROM $dayuse_good
+GROUP BY device_id
+;
+
+$dayuse_bad_groupped =
+SELECT
+    device_id,
+    min (fielddate) AS activation_date,
+    some (device_type) AS device_type,
+    some (exclude) AS exclude,
+    MIN_BY(puid, fielddate) AS activation_puid,
+    MIN_BY(geo_id, fielddate) AS activation_geo_id
+FROM $dayuse_prefiltered
+WHERE device_id not in (SELECT device_id FROM $dayuse_good_groupped)
+GROUP BY device_id
+;
+
+$activation_history_addition =
+-- таблица с историческими данными для устройств, не попавших в dayuse,особенно в период до 2021-08-01
+-- тест https://yql.yandex-team.ru/Operations/YUDuZQVK8HLJXBgyby8yM1QCPghH8DYbK_YCBYFM4hI=
+SELECT
+    a.*,
+    if (c.id is NULL, 'invalid', null) as exclude
+FROM
+    (SELECT
+        device_id,
+        init_date AS activation_date,
+        device_type,
+        region_id as activation_geo_id,
+        just (NULL) AS activation_puid,
+    FROM `//home/marketing-data/andrewha/Station/backup/quasar_init`
+    ) as a
+LEFT ONLY JOIN
+    (SELECT device_id FROM $dayuse_good_groupped) as good
+    ON a.device_id == good.device_id
+LEFT ONLY JOIN
+    (SELECT device_id FROM $dayuse_bad_groupped) as bad
+    ON a.device_id == bad.device_id
+LEFT JOIN
+    (SELECT id FROM `home/quasar-dev/backend/snapshots/current/device`) as c
+    ON a.device_id == c.id
+;
+
+INSERT INTO $activations_stations_table WITH TRUNCATE
+SELECT * FROM $dayuse_good_groupped
+UNION ALL
+SELECT * FROM $dayuse_bad_groupped
+UNION ALL
+SELECT * FROM $activation_history_addition
+ORDER BY activation_date, device_type, device_id
+;

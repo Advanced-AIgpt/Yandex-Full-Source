@@ -1,0 +1,277 @@
+USE hahn;
+PRAGMA yt.Pool = 'voice';
+PRAGMA yson.DisableStrict;
+PRAGMA yt.UseColumnarStatistics = 'false'; 
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--ошибки за последние пару дней
+$date_filter = ($date) -> {RETURN CAST($date AS Date) >= CurrentUtcDate() - DateTime::IntervalFromDays(3)};
+
+$device_filter = ($room_device_ids, $play_room_device_ids) -> {RETURN 
+ListFilter($room_device_ids, ($x) -> ($x NOT IN $play_room_device_ids))??$room_device_ids};
+
+--мастер играл дольше секунды
+$data = 
+(
+    SELECT fielddate, f.req_id AS req_id, puid, master_device_id, ts, room_device_ids, play_room_device_ids,
+    $device_filter(room_device_ids, play_room_device_ids??AsList()) AS fail_devices,
+    FROM `//home/voice/nadezhda17/common/multiroom/final_multiroom_start_log` AS f
+    WHERE $date_filter(fielddate)
+    AND duration > 0.08
+);
+
+--распарсили результаты
+$parsed_data =
+(
+    SELECT fielddate, req_id, puid, master_device_id, ts,
+    slave_device_id, IF(ListHas(play_room_device_ids, slave_device_id), 1, 0) AS play
+    FROM $data AS d
+    FLATTEN LIST BY room_device_ids AS slave_device_id
+);
+
+$devices = 
+(
+    SELECT DISTINCT device_id
+    FROM
+    (
+        SELECT master_device_id AS device_id
+        FROM $parsed_data
+        UNION ALL 
+        SELECT slave_device_id AS device_id
+        FROM $parsed_data
+    )
+);
+
+---события аппметрики
+$events = AsList(
+    'progressHeartbeatMusic',	
+    'startAudio',	
+    'playAudio',	
+    'audioClientHeartbeat',	
+    'audioClientPlayRequest',	
+    'audioClientPlayRequestFulfill',	
+    'multiroomHeartbeat', 	
+    'valid_jwt_token', 
+    'glagold_heartbeat',  
+);
+ 
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+ 
+$appmetrica_raw = 
+(
+    SELECT DeviceID, OriginalModel, AppVersionName, 
+    ReportEnvironment_Keys, ReportEnvironment_Values,
+    EventDateTime, EventName, EventValue, iso_eventtime
+    FROM FILTER(`//logs/appmetrica-yandex-events/1d`, $date_filter) AS l 
+    WHERE APIKey = 999537
+    AND EventName IN $events
+    AND DeviceID IN $devices
+);
+
+
+$appmetrica = 
+(
+    SELECT SUBSTRING(iso_eventtime, 0, 10) AS fielddate,
+    DeviceID AS device_id, OriginalModel AS device, 
+    ListFilter(ListZip(ReportEnvironment_Keys, ReportEnvironment_Values), 
+    ($x) -> ($x.0 = 'quasmodrom_group'))[0].1 AS quasmodrom_group,
+    CAST(String::SplitToList(AppVersionName, '.')[1] AS Int32) AS app_version,
+    $s_to_datetime(EventDateTime) AS ts, 
+    EventName AS event_name, 
+    Yson::ParseJson(EventValue) AS event_value,
+    Yson::ConvertToString(Yson::ParseJson(EventValue).vinsRequestId)??
+    Yson::ConvertToString(Yson::ParseJson(EventValue).vins_request_id) AS req_id,
+    FROM  $appmetrica_raw
+);
+
+$query_ts = 
+(
+    SELECT p.req_id AS req_id, 
+    p.master_device_id AS master_device_id, 
+    p.slave_device_id AS slave_device_id, 
+    MIN(a.ts) - DateTime::IntervalFromMinutes(2) AS min_ts, 
+    MIN(a.ts) + DateTime::IntervalFromMinutes(2) AS max_ts, 
+    FROM $appmetrica AS a 
+    INNER JOIN
+    (
+        SELECT fielddate, req_id, master_device_id, slave_device_id
+        FROM $parsed_data
+    ) AS p ON a.req_id = p.req_id
+    GROUP BY p.req_id, p.master_device_id, p.slave_device_id
+);
+
+$full_matched = 
+(
+    SELECT a.*, m.app_version as master_app_version, s.app_version as slave_app_version, 
+    m.quasmodrom_group AS master_quasmodrom_group, s.quasmodrom_group AS slave_quasmodrom_group
+    FROM $parsed_data AS a 
+    LEFT JOIN 
+    (
+        SELECT t.master_device_id AS master_device_id, t.req_id AS req_id, d.fielddate AS fielddate,
+        MAX(d.app_version) as app_version, MAX(d.quasmodrom_group) as quasmodrom_group
+        FROM $query_ts AS t 
+        INNER JOIN $appmetrica AS d ON d.device_id = t.master_device_id
+        WHERE d.ts BETWEEN t.min_ts AND t.max_ts
+        GROUP BY t.master_device_id, t.req_id, d.fielddate 
+    ) AS m ON m.master_device_id = a.master_device_id AND m.req_id = a.req_id AND m.fielddate = a.fielddate
+    LEFT JOIN 
+    (
+        SELECT t.slave_device_id AS slave_device_id, t.req_id AS req_id, d.fielddate AS fielddate, 
+        MAX(d.app_version) as app_version, MAX(d.quasmodrom_group) as quasmodrom_group
+        FROM $query_ts AS t 
+        INNER JOIN $appmetrica AS d ON d.device_id = t.slave_device_id
+        WHERE d.ts BETWEEN t.min_ts AND t.max_ts
+        GROUP BY t.slave_device_id, t.req_id, d.fielddate 
+    ) AS s ON s.slave_device_id = a.slave_device_id AND s.req_id = a.req_id AND s.fielddate = a.fielddate
+);
+
+$res_full = 
+(
+    SELECT fielddate, AVG(play) AS play, 
+    COUNT(req_id) AS reqs_amount, COUNT(DISTINCT puid) AS users_amount
+    FROM 
+    (
+        SELECT fielddate, req_id, puid, MIN(play) AS play
+        FROM $full_matched
+        WHERE master_app_version IS NOT NULL AND slave_app_version IS NOT NULL
+        GROUP BY fielddate, req_id, puid
+    )
+    GROUP BY fielddate
+);
+
+$matched_glagold_heartbeat = 
+(
+    SELECT a.*, m.app_version as master_app_version, s.app_version as slave_app_version, 
+    m.quasmodrom_group AS master_quasmodrom_group, s.quasmodrom_group AS slave_quasmodrom_group,
+    m.event_value AS master_event_value, s.event_value AS slave_event_value
+    FROM $parsed_data AS a 
+    LEFT JOIN 
+    (
+        SELECT t.master_device_id AS master_device_id, t.req_id AS req_id, d.fielddate AS fielddate,
+        MAX(d.app_version) as app_version, MAX(d.quasmodrom_group) as quasmodrom_group, 
+        MAX_BY(d.event_value, d.ts) AS event_value
+        FROM $query_ts AS t 
+        INNER JOIN $appmetrica AS d ON d.device_id = t.master_device_id
+        WHERE d.ts BETWEEN t.min_ts AND t.max_ts
+        AND event_name = 'glagold_heartbeat'
+        GROUP BY t.master_device_id, t.req_id, d.fielddate 
+    ) AS m ON m.master_device_id = a.master_device_id AND m.req_id = a.req_id AND m.fielddate = a.fielddate
+    LEFT JOIN 
+    (
+        SELECT t.slave_device_id AS slave_device_id, t.req_id AS req_id, d.fielddate AS fielddate, 
+        MAX(d.app_version) as app_version, MAX(d.quasmodrom_group) as quasmodrom_group,
+        MAX_BY(d.event_value, d.ts) AS event_value
+        FROM $query_ts AS t 
+        INNER JOIN $appmetrica AS d ON d.device_id = t.slave_device_id
+        WHERE d.ts BETWEEN t.min_ts AND t.max_ts
+        AND event_name = 'glagold_heartbeat'
+        GROUP BY t.slave_device_id, t.req_id, d.fielddate 
+    ) AS s ON s.slave_device_id = a.slave_device_id AND s.req_id = a.req_id AND s.fielddate = a.fielddate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/glagol/fresh_data` WITH TRUNCATE 
+SELECT * 
+FROM $matched_glagold_heartbeat;
+
+$device_hb = ($hb, $device_id) -> 
+(ListFilter(DictItems(Yson::ConvertToDict($hb)), ($x) -> ($x.0 = $device_id))[0].1);
+$cluster_state = ($device_hb) -> (Yson::ConvertToString($device_hb.cluster_state));
+$wifi_mac = ($hb) -> (Yson::ConvertToString($hb.stats.wifi_mac));
+$cluster_host = ($hb) -> {RETURN Yson::ConvertToString($hb.cluster_host)};
+$visible_host = ($hb) -> {RETURN Yson::ConvertToString($hb.visible_host)};
+
+$good_data = 
+(
+    SELECT t.*,
+    CASE 
+    WHEN play = 1 THEN 'ok'
+    WHEN master_hb IS NULL OR slave_hb IS NULL THEN 'discovery_problems'
+    WHEN master_cluster_state = 'CONNECTED' AND slave_cluster_state = 'CONNECTED' THEN 'full_connection'
+    WHEN $cluster_host(master_hb) != $visible_host(master_hb) 
+    AND LEN($cluster_host(master_hb)) > 1
+    AND LEN($visible_host(master_hb)) > 1 THEN 'different_hosts'
+    WHEN $cluster_host(slave_hb) != $visible_host(slave_hb) 
+    AND LEN($cluster_host(slave_hb)) > 1
+    AND LEN($visible_host(slave_hb)) > 1 THEN 'different_hosts'
+    ELSE 'connection_problems' 
+    END AS problem_type
+    FROM 
+    (
+        SELECT fielddate, play, puid, req_id, ts,
+        master_app_version, 
+        master_device_id, 
+        $wifi_mac(master_event_value) AS master_wifi_mac, 
+        $cluster_state($device_hb(master_event_value, slave_device_id)) AS master_cluster_state,
+        $device_hb(master_event_value, slave_device_id) AS master_hb,
+        master_quasmodrom_group,
+        slave_app_version, 
+        slave_device_id, 
+        $wifi_mac(slave_event_value) AS slave_wifi_mac, 
+        $cluster_state($device_hb(slave_event_value, master_device_id)) AS slave_cluster_state,
+        $device_hb(slave_event_value, master_device_id) AS slave_hb,
+        slave_quasmodrom_group
+        FROM $matched_glagold_heartbeat
+    ) AS t
+    WHERE ((master_wifi_mac??slave_wifi_mac) = (slave_wifi_mac??master_wifi_mac)
+    OR (slave_cluster_state = 'CONNECTED' AND master_cluster_state = 'CONNECTED'))
+    AND MIN_OF(master_app_version, slave_app_version) >= 73
+    AND (master_quasmodrom_group??slave_quasmodrom_group) = (slave_quasmodrom_group??master_quasmodrom_group)
+);
+
+
+$problems_type = 
+(
+    SELECT quasmodrom_group, fielddate, COUNT(*) AS all_reqs_amount,
+    COUNT_IF(problem_type = 'ok') AS ok,
+    COUNT_IF(problem_type = 'discovery_problems') AS discovery_problems,
+    COUNT_IF(problem_type = 'full_connection') AS full_connection,
+    COUNT_IF(problem_type = 'different_hosts') AS different_hosts,
+    COUNT_IF(problem_type = 'connection_problems') AS connection_problems
+    FROM 
+    (
+        SELECT fielddate, slave_quasmodrom_group AS quasmodrom_group, req_id, 
+        MIN(play) AS play, MIN_BY(problem_type, play) AS problem_type
+        FROM $good_data
+        GROUP BY fielddate, slave_quasmodrom_group, req_id
+    )
+    GROUP BY quasmodrom_group, fielddate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/problems_type` WITH TRUNCATE 
+SELECT * 
+FROM $problems_type
+UNION ALL 
+SELECT p.*
+FROM `//home/voice/nadezhda17/common/multiroom/problems_type` AS p 
+LEFT ONLY JOIN $problems_type AS t ON p.fielddate = t.fielddate;
+
+
+$res_fresh = 
+(
+    SELECT fielddate, AVG(play) AS play, COUNT(req_id) AS reqs_amount, 
+    COUNT(DISTINCT puid) AS users_amount
+    FROM 
+    (
+        SELECT fielddate, req_id, puid, MIN(play) AS play
+        FROM $good_data
+        GROUP BY fielddate, req_id, puid
+    )
+    GROUP BY fielddate
+);
+
+$res = 
+(
+    SELECT r.fielddate AS fielddate, 
+    r.play AS full_play, r.reqs_amount AS full_reqs_amount, r.users_amount AS full_users_amount,
+    f.play AS fresh_play, f.reqs_amount AS fresh_reqs_amount, f.users_amount AS fresh_users_amount
+    FROM $res_full AS r 
+    INNER JOIN $res_fresh AS f ON r.fielddate = f.fielddate
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/metric_value` WITH TRUNCATE 
+SELECT *
+FROM $res
+UNION ALL 
+SELECT m.*
+FROM `//home/voice/nadezhda17/common/multiroom/metric_value` AS m 
+LEFT ONLY JOIN $res AS r ON r.fielddate = m.fielddate;

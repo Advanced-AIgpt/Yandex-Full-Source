@@ -1,0 +1,81 @@
+USE hahn;
+
+$get_duration = ($music) -> {RETURN CAST(ListSum(ListMap($music, ($x) -> ($x.duration))) AS Uint64)*1.0/(60 * 1000000)};
+
+$data = 
+(
+    SELECT generic_scenario, fielddate, req_id, query, reply, music_answer_type,
+    $get_duration(music) AS duration,
+    $get_duration(ListTake(music, 1)) AS first_track_duration,
+    $get_duration(ListSkip(music, 1)) AS reco_duration
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data` 
+    WHERE fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(60) AS String) 
+    AND music IS NOT NULL
+);
+
+$data = 
+(
+    SELECT req_id, query, reply, generic_scenario, music_answer_type,
+    CASE 
+    WHEN generic_scenario = 'music' AND music_answer_type = 'filters' AND reply = 'Включаю.' THEN 'play_music'
+    WHEN generic_scenario = 'music' AND music_answer_type = 'filters' AND reply != 'Включаю.' THEN 'filters'
+    WHEN generic_scenario = 'music' THEN music_answer_type
+    WHEN generic_scenario IN ('music', 'music_fairy_tale') 
+    AND (reply = 'Включаю подборку \"Детские сказки\"' OR reply LIKE "Включаю сказки%") THEN 'play_fairy_tale'
+    ELSE generic_scenario 
+    END AS type, 
+    duration, first_track_duration, reco_duration
+    FROM $data
+);
+
+$grouped_duration = 
+(
+    SELECT type, SUM(duration) AS duration
+    FROM 
+    (
+        SELECT req_id, type || '_first_track' AS type, first_track_duration AS duration
+        FROM $data
+        WHERE type IN ('track', 'music_fairy_tale')
+        UNION ALL 
+        SELECT req_id, type || '_reco' AS type, reco_duration??0 AS duration
+        FROM $data
+        WHERE type IN ('track', 'music_fairy_tale')
+        UNION ALL 
+        SELECT req_id, type, duration
+        FROM $data
+        WHERE type NOT IN ('track', 'music_fairy_tale')
+    )
+    WHERE type IN ('album', 'artist', 'empty', 'filters', 'morning_show', 'music_ambient_sound', 'music_fairy_tale_first_track', 
+    'music_fairy_tale_reco', 'music_result', 'play_fairy_tale', 'play_music', 'playlist', 'track_first_track', 'track_reco')
+    GROUP BY type  
+);
+
+$total_duration = 
+(
+    SELECT SUM(duration)
+    FROM $grouped_duration
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/music/duration_pie` WITH TRUNCATE 
+SELECT type, duration*1.0/$total_duration AS duration_share
+FROM $grouped_duration;
+
+$grouped_reqs = 
+(
+    SELECT type, COUNT(DISTINCT req_id) AS req_amount
+    FROM $data
+    WHERE type IN ('album', 'artist', 'empty', 'filters', 'morning_show', 'music_ambient_sound', 'music_fairy_tale', 
+    'music_result', 'play_fairy_tale', 'play_music', 'playlist', 'track')
+    GROUP BY type
+);
+
+$total_reqs = 
+(
+    SELECT SUM(req_amount)
+    FROM $grouped_reqs
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/music/reqs_pie` WITH TRUNCATE 
+SELECT type, req_amount*1.0/$total_reqs AS req_share
+FROM $grouped_reqs;
+

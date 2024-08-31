@@ -1,0 +1,118 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+
+--кому отправили письмо за последние две недели
+$new_puids = 
+(
+    SELECT Yson::ConvertToString(Yson::ParseJson(context).context.yandex_puid) as puid
+    FROM FILTER(`//home/voice/yandex-speechkit-sendr-delivery-log`, ($x) -> ($x >= CAST(CurrentUtcdate() - DateTime::IntervalFromDays(14) AS String))) as t
+    WHERE account = 'yandex.speechkit'
+    AND (ListHas(Yson::ConvertToStringList(Yson::ParseJson(tags)), 'subscribe_regular') OR 
+    ListHas(Yson::ConvertToStringList(Yson::ParseJson(tags)), 'subscribe_regular_mini') OR
+    ListHas(Yson::ConvertToStringList(Yson::ParseJson(tags)), 'subscribe_regular_lite')
+    )
+);
+
+--история отправленных писем
+INSERT INTO `//home/voice/nadezhda17/mails/used/puid` WITH TRUNCATE 
+SELECT *
+FROM $new_puids
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/mails/used/puid` AS u 
+LEFT ONLY JOIN $new_puids AS n ON n.puid = u.puid;
+
+COMMIT;
+
+--устройства
+$devices = 
+(
+    SELECT d.id AS device_id, p.name AS device_type, 
+    SUBSTRING(CAST(first_activation_date AS String), 0, 10) AS init_date
+    FROM `//home/quasar-dev/backend/snapshots/current/device` AS d 
+    INNER JOIN `//home/quasar-dev/backend/snapshots/current/platform` AS p ON p.id = d.platform_id
+    WHERE p.name IN ('yandexstation', 'yandexmini', 'yandexmicro')
+    --активировали более трех дней назад
+    AND SUBSTRING(CAST(first_activation_date AS String), 0, 10) <= CAST(CurrentUtcdate() - DateTime::IntervalFromDays(3) AS String)
+    AND SUBSTRING(CAST(first_activation_date AS String), 0, 10) >= CAST(CurrentUtcdate() - DateTime::IntervalFromDays(10) AS String)
+);
+
+$seven_days_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(7) AS String)};
+$three_weeks = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(21) AS String)};
+
+--активации промокода
+$used_device_promo = 
+(
+    SELECT deviceid AS device_id, SUBSTRING(CAST(promoactivationtime AS String), 0, 10) AS promo_activate_day
+    FROM FILTER(`//home/paskills/billing/snapshots`, 
+    ($date) -> ($date = CAST(CurrentUtcDate() AS String)), `v_used_device_promo`)
+);
+
+--пользователи с активной подпиской
+$plus_users = 
+(
+        SELECT puid, subscription_state, start_date, end_date, product_name
+        FROM `//home/msdata/user-profiles-cumulative/v1/last`
+        WHERE state = 'active' 
+        --статус подписки на вчера
+        AND $seven_days_ago(fielddate)
+        UNION ALL 
+        SELECT puid, status AS subscription_state, NULL AS start_date, 
+        NULL AS end_date, 'opk_profile' AS product_name
+        FROM `//home/msdata/opk-profiles-cumulative/v1/last`
+        WHERE is_active 
+        --статус подписки на вчера
+        AND $seven_days_ago(fielddate)
+);
+
+--или была музыка в течение последних недель
+$with_music =
+(
+    SELECT DISTINCT puid
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data` 
+    WHERE music IS NOT NULL 
+    AND $three_weeks(fielddate)
+);
+
+$subscription_devices = 
+(
+    SELECT DISTINCT puid
+    FROM `//home/voice/nadezhda17/common/plus_metrics/subscription_status`
+    WHERE subscription_device
+);
+
+
+--пользователи без подписки, без активированного промика
+$final_list = 
+(
+    SELECT a.*, d.device_type AS device_type
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a 
+    INNER JOIN $devices AS d ON d.device_id = a.device_id
+    LEFT ONLY JOIN $used_device_promo AS u ON u.device_id = a.device_id
+    LEFT ONLY JOIN $plus_users AS p ON p.puid = a.puid
+    LEFT ONLY JOIN $with_music AS w ON w.puid = a.puid
+    LEFT ONLY JOIN $subscription_devices AS sd ON sd.puid = a.puid
+    LEFT ONLY JOIN `//home/voice/nadezhda17/mails/used/puid` AS s ON s.puid = a.puid
+    WHERE a.puid IS NOT NULL
+);
+
+$total_amount = (SELECT COUNT(DISTINCT puid) FROM $final_list);
+
+INSERT INTO `//home/voice/nadezhda17/mails/yandexstation` WITH TRUNCATE 
+SELECT f.*, puid AS yandex_puid
+FROM $final_list AS f
+WHERE device_type = 'yandexstation' AND device_id NOT LIKE 'FF%'
+AND $total_amount <= 5000;
+
+INSERT INTO `//home/voice/nadezhda17/mails/yandexmini` WITH TRUNCATE 
+SELECT f.*, puid AS yandex_puid
+FROM $final_list as f
+WHERE device_type = 'yandexmini' AND device_id LIKE 'FF%'
+AND $total_amount <= 5000;
+
+
+INSERT INTO `//home/voice/nadezhda17/mails/yandexmicro` WITH TRUNCATE 
+SELECT f.*, puid AS yandex_puid
+FROM $final_list as f
+WHERE device_type = 'yandexmicro' AND device_id LIKE 'L%'
+AND $total_amount <= 5000;

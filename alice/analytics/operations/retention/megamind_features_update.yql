@@ -1,0 +1,71 @@
+-- code for "MEGAMIND FEATURES UPDATE" YQL cube
+
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$start_date = {{param[start_date]}};
+$end_date   = {{param[end_date]}};
+$expboxes   = '//home/alice/dialog/prepared_logs_expboxes';
+$CHILD_CONFIDENCE_THRESHOLD = 0.8;
+
+$prev_table =
+SELECT
+    *
+FROM {{param[prev_table]}}
+WHERE fielddate < $start_date
+;
+
+$aggregate_expboxes =
+SELECT
+    fielddate,
+    device_id,
+    some (app) AS app,
+    some(device) AS device_type,
+    some(puid) AS puid,
+    some(`uuid`) AS `uuid`,
+    count(*) AS cnt_req,
+    count(DISTINCT generic_scenario) AS cnt_scen,
+    AGGREGATE_LIST_DISTINCT(generic_scenario) AS generic_scenarios,
+    IF (max(child_confidence) >= $CHILD_CONFIDENCE_THRESHOLD, 1, 0) AS has_child_requests
+FROM range ($expboxes, $start_date, $end_date)
+WHERE
+    app IN ['quasar', 'small_smart_speakers', 'tv']
+GROUP BY device_id, fielddate
+;
+
+$update_table =
+SELECT
+    fielddate,
+    device_id,
+    app,
+    CASE
+        WHEN device_type == 'Yandex Station'            THEN 'yandexstation'
+        WHEN device_type == 'Yandex Station_2'          THEN 'yandexstation_2'
+        WHEN device_type == 'yandexstation station_2'   THEN 'yandexstation_2'
+        WHEN device_type == 'Yandextation'              THEN 'yandexstation_2'
+        WHEN device_type == 'Yandex yandexmini'         THEN 'yandexmini'
+        WHEN device_type == 'Yandex yandexmini_2'       THEN 'yandexmini_2'
+        WHEN device_type == 'Yandex yandexmicro'        THEN 'yandexmicro'
+        WHEN device_type == 'Yandex yandexmidi'         THEN 'yandexmidi'
+        WHEN device_type == 'Yandex YandexModule-00002' THEN 'yandexmodule'
+        WHEN device_type == 'JBL jbl_link_portable'     THEN 'jbl_link_portable'
+        WHEN device_type == 'JBL jbl_link_music'        THEN 'jbl_link_music'
+        WHEN device_type == 'Irbis linkplay_a98'        THEN 'linkplay_a98'
+        WHEN device_type == 'Elari elari_a98'           THEN 'elari_a98'
+        WHEN device_type == 'Dexp lightcomm'            THEN 'lightcomm'
+        WHEN device_type == 'LG wk7y'                   THEN 'wk7y'
+        ELSE device_type
+        END
+    AS device_type,
+    cnt_req,
+    cnt_scen,
+    generic_scenarios,
+    has_child_requests,
+FROM $aggregate_expboxes
+;
+
+INSERT INTO {{param[output_path]}} WITH TRUNCATE
+SELECT * FROM $prev_table
+UNION ALL
+SELECT * FROM $update_table
+ORDER BY fielddate, device_id
+;

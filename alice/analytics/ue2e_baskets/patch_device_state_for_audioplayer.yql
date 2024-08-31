@@ -1,0 +1,82 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_presets";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_presets";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_presets";
+
+$process_action = @@
+import cyson
+
+def get_path(data, path, default=None):
+    try:
+        for item in path:
+            data = data[item]
+        return data
+    except (KeyError, TypeError, IndexError):
+        return default
+
+def process_action(state):
+    if state and state.get("music") and not state.get("audio_player"):
+        music = state.get("music")
+        audio_player = {}
+
+        currently_playing_last_play_timestamp = get_path(music, ['currently_playing', 'last_play_timestamp'])
+        currently_playing_track_id = get_path(music, ['currently_playing', 'track_id'])
+        track_info_track_id = get_path(music, ['currently_playing', 'track_info', 'id'])
+        track_info_title = get_path(music, ['currently_playing', 'track_info', 'title'])
+        artist_name = get_path(music, ['currently_playing', 'track_info', 'artists', 0, 'name'])
+        track_info_duration = get_path(music, ['currently_playing', 'track_info', 'durationMs'])
+        paused = get_path(music, ['player', 'pause']) or False
+
+        audio_player["current_stream"] = {}
+        if currently_playing_last_play_timestamp:
+            audio_player["current_stream"]["last_play_timestamp"] = currently_playing_last_play_timestamp + 1
+        if music.get("last_play_timestamp"):
+            audio_player["current_stream"]["last_play_timestamp"] = music["last_play_timestamp"] + 1
+        if currently_playing_track_id:
+            audio_player["current_stream"]["stream_id"] = currently_playing_track_id
+        if track_info_track_id:
+            audio_player["current_stream"]["stream_id"] = track_info_track_id
+        if track_info_title:
+            audio_player["current_stream"]["title"] = track_info_title
+        if artist_name:
+            audio_player["current_stream"]["subtitle"] = artist_name
+
+        if track_info_duration:
+            audio_player["duration_ms"] = track_info_duration
+        else:
+            audio_player["duration_ms"] = 180000
+        if music.get("last_play_timestamp"):
+            audio_player["last_play_timestamp"] = music["last_play_timestamp"] + 1
+
+        audio_player["last_stop_timestamp"] = 0 if not paused else (music.get("last_play_timestamp") + 3000 if music.get("last_play_timestamp") else 0)
+        audio_player["offset_ms"] = 0
+        audio_player["played_ms"] = 0
+        audio_player["player_state"] = "Stopped" if paused else "Playing"
+        audio_player["scenario_meta"] = {
+            "owner": "music"
+        }
+        if artist_name:
+            audio_player["scenario_meta"]["what_is_playing_answer"] = artist_name + ', песня \"' + track_info_title + '\"'
+        else:
+            audio_player["scenario_meta"]["what_is_playing_answer"] = track_info_title
+
+        state["audio_player"] = audio_player
+    return state
+
+process_action._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$process_action = Python2:: process_action(ParseType("(Yson?)->Yson?"), $process_action);
+
+DEFINE ACTION $patch_for_audioplayer($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT $process_action(device_state) as device_state, a.* WITHOUT a.device_state
+    FROM $input_table as a;
+
+END DEFINE;
+
+DO $patch_for_audioplayer($accept, $accept);
+DO $patch_for_audioplayer($kpi, $kpi);
+DO $patch_for_audioplayer($dev, $dev);

@@ -1,0 +1,134 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Выборка диалогов</title>
+    <link rel=stylesheet type=text/css href='{% static "css/bootstrap.min.css" %}' media='all'>
+    <link rel=stylesheet type=text/css href='{% static "css/base.css" %}' media='all'>
+    <link rel=stylesheet type=text/css href='{% static "css/dialogs.css" %}' media='all'>
+    <script src='{% static "js/jquery.min.js" %}'></script>
+    <script src='{% static "js/d3.min.js" %}'></script>
+</head>
+
+<body>
+    <blockquote class="bg-danger">
+         <img src="{% static "icons/nda.png" %}" height="40" />
+        <strong>Приватные данные. Только для служебного использования.</strong>
+    </blockquote>
+
+    <table class="tab-bar">
+        <tr>
+            <td onclick="location.href='/'" class="active">Выборка диалогов</td>
+            <td onclick="location.href='/toloka-quality'">Выборка плохих ответов</td>
+        </tr>
+    </table>
+
+    <form id="selectors">
+        <table>
+            <tr>
+                <th><label for="id_st">From:</label></th>
+                <td>
+                    <input type="text" name="st" id="id_st" value="{{ default_date }} 00:00">
+                    <ul id="err_st" class="errorlist"></ul>
+                </td>
+                <th><label for="id_et">To:</label></th>
+                <td>
+                    <input type="text" name="et" id="id_et" value="{{ default_date }} 23:59">
+                    <ul id="err_et" class="errorlist"></ul>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="id_uuid">Uuid:</label></th>
+                <td>
+                    <input type="text" name="uuid" id="id_uuid">
+                    <span class="helper" title="id пользователя (например, uu/333fr97vg938761037923c3gv146vvv8)">?</span>
+                    <ul id="err_uuid" class="errorlist"></ul>
+                </td>
+                <th><label for="id_app">App:</label></th>
+                <td>
+                    <select name="app" id="id_app">
+                        <option value="" selected="selected">---</option>
+                    </select>
+                    <ul id="err_app" class="errorlist"></ul>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="id_query">Query:</label></th>
+                <td>
+                    <input type="text" name="query" id="id_query">
+                    <span class="helper" title="Часть запроса / регулярное выражение">?</span>
+                    <ul id="err_query" class="errorlist"></ul>
+                </td>
+                <th><label for="id_reply">Reply:</label></th>
+                <td>
+                    <input type="text" name="reply" id="id_reply">
+                    <span class="helper" title="Часть ответа / регулярное выражение">?</span>
+                    <ul id="err_reply" class="errorlist"></ul>
+                </td>
+            </tr>
+            <tr>
+                <th><label for="id_intent">Intent:</label></th>
+                <td>
+                    <input type="text" name="intent" id="id_intent">
+                    <span class="helper" title="Часть intent / регулярное выражение">?</span>
+                    <ul id="err_intent" class="errorlist"></ul>
+                </td>
+                <th><label for="id_skill_id">Skill:</label></th>
+                <td>
+                    <select name="skill_id" id="id_skill_id">
+                        <option value="" selected="selected">---</option>
+                    </select>
+                    <ul id="err_skill_id" class="errorlist"></ul>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="checkbox" name="stats_daily" id="id_stats_daily" value=1>
+                </td>
+                <td>
+                    <label for="id_stats_daily">Посчитать статистику по дням</label>
+                </td>
+            </tr>
+            <tr>
+                <th></th>
+                <td colspan="3">
+                    <ul id="err_all" class="errorlist"></ul>
+                    <input type="submit" value="🔍 Искать" />
+                </td>
+            </tr>
+        </table>
+    </form>
+
+    <div id="query-waiter" align="center" hidden="hidden">
+        <img src="{% static 'icons/waiting.gif' %}" width="100" height="100" />
+    </div>
+
+    <div id="statistics">
+        <strong id="total"></strong>
+        <span id="counts_display">по дням</span>
+        <table id="counts">
+            <thead>
+                <tr>
+                    <th>date</th>
+                    <th>count</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <table id="query-result" class="">
+        <thead>
+            <tr></tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script src='{% static "js/dialogs.js" %}'></script>
+</body>
+
+</html>

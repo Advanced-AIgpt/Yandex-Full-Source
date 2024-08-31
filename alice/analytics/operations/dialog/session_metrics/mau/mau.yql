@@ -1,0 +1,29 @@
+USE hahn;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+DECLARE $param_dict AS Dict<String, String>;
+$date = $param_dict['date'];
+
+$source = '//home/voice/darayavaus/VA-1300/timespent_60/' || $date;
+
+$portion = '//home/voice/dialog/misc/portion/mau';
+
+INSERT INTO $portion WITH TRUNCATE
+SELECT fielddate, app, CAST((SOME(users)??0) + (SOME(devices)??0) AS Uint64) AS users
+FROM $source
+GROUP BY fielddate, app
+;
+COMMIT;
+
+$base = '//home/voice/dialog/misc/mau';
+
+INSERT INTO $base WITH TRUNCATE
+SELECT * FROM $base
+UNION ALL
+SELECT * FROM $portion AS portion
+LEFT ONLY JOIN $base AS base
+USING(app, fielddate);
+
+UPSERT INTO stat.`//VoiceTech/Dialog/session_metrics/mau/daily`
+SELECT Unwrap(app) AS app, Unwrap(fielddate) AS fielddate,  users
+FROM `//home/voice/dialog/misc/portion/mau`;

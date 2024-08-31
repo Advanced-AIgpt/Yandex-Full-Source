@@ -1,0 +1,82 @@
+PRAGMA Yson.DisableStrict;
+PRAGMA yt.InferSchema = '100';
+
+-- Используется в: https://hitman.yandex-team.ru/projects/metrics_dialog/ue2e_online_metric
+
+$patch_script = @@
+import cyson
+
+def patch_action(action, ann_text):
+    if action:
+        if ann_text:
+            action["query"] = ann_text
+        action.pop("voice_url", None)
+    return action
+
+def patch_state(state, location):
+    index_to_pop = None
+    if state and state.get("extra"):
+        for ind, el in enumerate(state.get("extra")):
+            if el["type"] == "Местоположение пользователя":
+                if location:
+                    el["content"] = location
+                else:
+                    index_to_pop = ind
+        if index_to_pop is not None:
+            state["extra"].pop(index_to_pop)
+    return state
+
+patch_action._yql_convert_yson = (cyson.loads, cyson.dumps)
+patch_state._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_action = Python2::patch_action(ParseType("(Yson?, String?)->Yson?"), $patch_script);
+$patch_state = Python2::patch_state(ParseType("(Yson?, String?)->Yson?"), $patch_script);
+$location_by_coordinates = ($lat, $lon) -> {RETURN IF($lat IS NOT NULL AND $lon IS NOT NULL, Geo::RoundRegionByLocation($lat, $lon, "town").name || ", " || Geo::RoundRegionByLocation($lat, $lon, "region").name, NULL)};
+
+$get_el_from_state_place = ($state, $el_name) -> {
+    RETURN ListNotNull(ListMap(ListFilter(Yson::ConvertToList($state.extra), ($x) -> {RETURN Yson::ConvertToString($x.type) == "Местоположение пользователя";}), ($x) -> {
+        RETURN Yson::LookupDouble($x.content, $el_name);
+        }))[0]
+};
+
+$voice_urls_to_text = (
+    SELECT
+        if (mds_key LIKE '%asr-logs%',
+            "https://speechbase.voicetech.yandex-team.ru/getfile/" || mds_key || "?norm=1&storage-type=s3&s3-bucket=voicelogs",
+            "https://speechbase-yt.voicetech.yandex.net/getaudio/" || mds_key || "?norm=1"
+            ) AS voice_url,
+         text
+    FROM {{input2}}
+);
+
+$voice_urls_from_eval_set = (
+    SELECT
+        Yson::LookupString(action0, "voice_url") as voice_url0, d.*
+    FROM {{input1}} as d
+);
+
+$with_ann_text = (
+   SELECT
+       data.req_id as req_id, $patch_action(action0, ann.text) as action0
+   FROM (
+       SELECT * FROM $voice_urls_from_eval_set
+       WHERE voice_url0 is not Null
+   ) as data
+   JOIN $voice_urls_to_text as ann
+   ON data.voice_url0 == ann.voice_url
+);
+
+-- подменяем тексты проаннотированными текстами, убираем voice_url
+-- оставляем только те запросы, которые либо были проаннотированы, либо исходно были текстовыми
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    IF(input.voice_url0 is null, input.action0, ann.action0) as action0, $patch_action(input.action1, Null) as action1,
+    $patch_state(input.state0, $location_by_coordinates($get_el_from_state_place(input.state0, "lat"), $get_el_from_state_place(input.state0, "lon"))) as state0,
+    $patch_state(input.state1, $location_by_coordinates($get_el_from_state_place(input.state1, "lat"), $get_el_from_state_place(input.state1, "lon"))) as state1,
+    ListMap(Yson::ConvertToList(session), ($state) -> {RETURN $patch_state($state, $location_by_coordinates($get_el_from_state_place($state, "lat"), $get_el_from_state_place($state, "lon")));}) as session,
+    input.* WITHOUT input.action0, input.action1, input.voice_url0, input.state0, input.state1, input.session
+FROM $voice_urls_from_eval_set as input
+LEFT JOIN $with_ann_text as ann
+ON input.req_id == ann.req_id
+WHERE ann.action0 is not Null or input.voice_url0 is null;

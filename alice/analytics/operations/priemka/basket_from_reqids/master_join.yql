@@ -1,0 +1,89 @@
+PRAGMA yt.HybridDqExecution;
+PRAGMA dq.EnableInsert;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$voice_source = {{param["voice_source"]}};
+$voice_url_common = "https://speechbase.voicetech.yandex-team.ru/getaudio/";
+
+$vld_selection =
+-- extract / rename fields before join
+SELECT
+    Yson::ConvertToString(request.request_id) AS req_id,
+    experiments,
+    form_name,
+    request.device_state AS device_state,
+    request.additional_options AS request_additional_options,
+    response.directives ?? Yson::From(AsList()) as directives,
+    analytics_info,
+    analytics_info.iot_user_info AS iot_config,
+    'unknown' as filtration_level,
+FROM
+    {{concat_input3}}
+;
+
+$wl_with_mds =
+    SELECT
+        a.*,
+        String::ReplaceAll(
+            TryMember(TryMember(a.asr, "voice_by_uniproxy", null), "mds", null),
+            "http://storage-int.mds.yandex.net:80/get-speechbase/",
+            ""
+        ) AS uniproxy_mds_key,
+        TryMember(TryMember(a.asr, "data", null), "mds_key", null) AS asr_mds_key
+    FROM {{concat_input2}} AS a
+;
+
+$wl_selection =
+    SELECT
+        _megamind_request_id AS req_id,
+        IF ($voice_source == 'uniproxy', uniproxy_mds_key, asr_mds_key) AS mds_key,
+        IF (
+            $voice_source == 'uniproxy',
+            IF (a.uniproxy_mds_key IS NULL, NULL, $voice_url_common || a.uniproxy_mds_key || '?norm=1'),
+            IF (a.asr_mds_key IS NULL, NULL, $voice_url_common || a.asr_mds_key || '?norm=1&storage-type=s3&s3-bucket=voicelogs')
+        ) AS voice_url,
+        a.* WITHOUT a.uniproxy_mds_key, a.asr_mds_key
+    FROM $wl_with_mds AS a
+;
+
+-- уникализация данных из wonderlog'ов, т.к. там попадаются полные дубли
+$wl_uniq =
+    SELECT *
+    FROM (
+        SELECT SOME(TableRow())
+        FROM $wl_selection
+        GROUP BY req_id
+    )
+    FLATTEN COLUMNS
+;
+
+$master_join_result=
+SELECT
+    sess.*,
+    wl.*,
+    vld.*,
+    WITHOUT vld.req_id, wl.req_id
+FROM
+    {{input1}} AS sess
+LEFT JOIN
+    $wl_uniq as wl
+ON
+    sess.req_id == wl.req_id
+JOIN
+    $vld_selection AS vld
+ON
+    sess.req_id == vld.req_id
+;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT * FROM $master_join_result;
+
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT
+    req_id,
+    mds_key,
+    voice_url
+FROM $master_join_result
+WHERE req_id == main_req_id
+;

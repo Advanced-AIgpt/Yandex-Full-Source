@@ -1,0 +1,253 @@
+{%- set input_node = input_nodes[stage] -%}
+{%- set is_run_stage = (stage == "run") -%}
+{%- set is_continue_stage = (stage == "continue") -%}
+{%- macro apphost_copy(is_transferring_to_pure) -%}{{"_APP_HOST_COPY" if is_transferring_to_pure}}{%- endmacro %}
+{%- macro node_name(name, is_transferring) -%}SCENARIO_{{name}}{{apphost_copy(is_transferring)}}_{{stage|upper}}{%- endmacro %}
+{%- macro apphost_copy_node_name(name) -%}{{node_name(name, True)}}{%- endmacro %}
+{%- set nodes = [] %}
+{%- for config in graphs %}
+    {%- do nodes.append((node_name(config.Name.upper()), config.is_pure, config)) %}
+    {%- if config.Handlers.IsTransferringToAppHostPure and stage in config.stages %}
+        {%- do nodes.append((apphost_copy_node_name(config.Name.upper()), True, config)) %}
+    {%- endif %}
+{%- endfor %}
+{%- macro node_type(is_pure) -%}{{"mm_scenario" if is_pure else "http"}}{% endmacro %}
+{%- macro request_type(is_pure) -%}{{"pure" if is_pure else "http_proxy"}}{% endmacro %}
+{%- macro request_name(name, is_pure) -%}scenario_{{name}}_{{stage}}_{{request_type(is_pure)}}_request{%- endmacro %}
+{%- macro response_name(name, is_pure) -%}scenario_{{name}}_{{stage}}_{{request_type(is_pure)}}_response{%- endmacro %}
+{%- macro request_meta_name(name) -%}scenario_{{name}}_request_meta->mm_scenario_request_meta{%- endmacro %}
+{%- macro backend_proxy_name(name) -%}ALICE__SCENARIO_{{name|upper}}_PROXY{%- endmacro %}
+{%- macro datasource_name(ds) -%}{{"!" if ds.IsRequired}}^datasource_{{ds.Type}}{%- endmacro -%}
+{%- set enable_continue_node = "ENABLE_CONTINUE_ITEMS" -%}
+{%- set post_classify_node = "WALKER_POST_CLASSIFY" -%}
+{%- macro start_item_name(name) -%}start_{{name}}_continue{%- endmacro %}
+{
+    "monitoring": {
+        "alerts": [
+            {
+                "crit": 0.1,
+                "operation": "perc",
+                "prior": 10,
+                "type": "failures",
+                "warn": 0.09
+            }
+        ]
+    },
+    "settings": {
+        "allow_empty_response": true,
+        "edge_expressions": {
+        {%- set edges = [] %}
+        {%- for (node_name, is_pure, config) in nodes %}
+            {%- set item_name = request_name(config.Name, is_pure) %}
+            {%- do edges.append((input_node, node_name, item_name, config.Name)) %}
+            {%- do edges.append(("FLAGS", node_name, item_name, config.Name)) %}
+            {%- if is_run_stage and is_pure and config.DataSources %}
+                {%- do edges.append(("DATASOURCES", node_name, item_name, config.Name)) %}
+                {%- if config.has_web_search_datasource %}
+                    {%- do edges.append(("WEB_SEARCH_DATASOURCES", node_name, item_name, config.Name)) %}
+                {%- endif %}
+            {%- endif %}
+        {%- endfor %}
+
+        {%- if is_run_stage %}
+            {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+                {%- set item_name = request_name(config.Name, is_pure) %}
+                {%- for cds in config.conditional_datasources %}
+                    "DATASOURCE_{{cds}}->{{node_name}}": "{{input_node}}[{{item_name}}] && {{input_node}}[need_conditional_datasource_{{config.Name}}_{{cds}}]",
+                {%- endfor %}
+                {%- for cds in config.conditional_websearch_datasources %}
+                    "WEBSEARCH_DATASOURCE_{{cds}}->{{node_name}}": "{{input_node}}[{{item_name}}] && {{input_node}}[need_conditional_datasource_{{config.Name}}_{{cds}}]",
+                {%- endfor %}
+            {%- endfor %}
+        {%- endif %}
+
+        {%- for (input_dep, node_name, item_name, name) in edges|sort_tuple(0, 1) %}
+            "{{input_dep}}->{{node_name}}": "{{input_node}}[{{item_name}}]"
+            {{- "," if not loop.last }}
+        {%- endfor %}
+        },
+        "input_deps": [
+            "FLAGS",
+            {%- if is_continue_stage %}
+            "WALKER_CLASSIFY_WINNER",
+            "SCENARIO_CONTINUE_SETUP",
+            "{{post_classify_node}}"
+            {%- else %}
+            "{{input_node}}"
+            {%- endif %}
+            {%- if is_run_stage %},
+            "DATASOURCES",
+            "WEB_SEARCH_DATASOURCES"
+            {%- endif %}
+        ],
+        "node_deps": {
+            "RESPONSE": {
+                "input_deps": [
+                {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+                    {%- set node_type = node_type(is_pure) %}
+                    {%- set item_name = response_name(config.Name, is_pure) %}
+                    "{{node_name}}@{{node_type}}_response->{{item_name}}"
+                    {{- "," if not loop.last }}
+                {%- endfor %}
+                ]
+            },
+            {%- if is_run_stage %}
+                {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+                    {%- for cds in config.conditional_datasources %}
+                        "DATASOURCE_{{cds}}": {
+                            "input_deps": [
+                                "DATASOURCES@^datasource_{{cds}}"
+                            ]
+                        },
+                    {%- endfor %}
+                    {%- for cds in config.conditional_websearch_datasources %}
+                        "WEBSEARCH_DATASOURCE_{{cds}}": {
+                            "input_deps": [
+                                "WEB_SEARCH_DATASOURCES@^datasource_{{cds}}"
+                            ]
+                        },
+                    {%- endfor %}
+                {%- endfor %}
+            {%- endif %}
+            {%- if is_continue_stage %}
+            "{{enable_continue_node}}": {
+                "input_deps": [
+                    "{{post_classify_node}}",
+                    "WALKER_CLASSIFY_WINNER"
+                ]
+            },
+            "{{input_node}}": {
+                "input_deps": [
+                    "{{post_classify_node}}",
+                    "SCENARIO_CONTINUE_SETUP"
+                ]
+            },
+            {%- endif %}
+            {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+            "{{node_name}}": {
+                "input_deps": [
+                    "FLAGS",
+                    {%- if is_run_stage %}
+                        {%- for cds in config.conditional_datasources %}
+                            "DATASOURCE_{{cds}}->DATASOURCES@!^datasource_{{cds}}",
+                        {%- endfor %}
+                        {%- for cds in config.conditional_websearch_datasources %}
+                            "WEBSEARCH_DATASOURCE_{{cds}}->DATASOURCES@!^datasource_{{cds}}",
+                        {%- endfor %}
+                    {%- endif %}
+                    {%- if config.Name == "HollywoodMusic" and is_continue_stage %}
+                    "{{enable_continue_node}}@!^{{start_item_name(config.Name)}}",
+                    {%- endif %}
+                    {%- set node_type = node_type(is_pure) %}
+                    {%- set item_name = request_name(config.Name, is_pure) %}
+                    {%- set meta_item_name = request_meta_name(config.Name) + ",!^" if is_pure %}
+                    {%- if is_continue_stage %}
+                    "!{{input_node}}->{{post_classify_node}}@!^{{meta_item_name}}{{item_name}}->{{node_type}}_request"
+                    {%- else %}
+                    "{{input_node}}@!^{{meta_item_name}}{{item_name}}->{{node_type}}_request"
+                    {%- endif %}
+                    {%- if is_run_stage and is_pure and config.DataSources -%},
+                    {%- set items = [] %}
+                    {%- for ds in config.datasources|sort(attribute="Type") -%}
+                        {%- do items.append(datasource_name(ds)) %}
+                    {%- endfor %}
+                    "DATASOURCES@{{items|join(",")}}"
+                    {%- if config.web_search_datasources -%},
+                    {%- set items = [] %}
+                    {%- for ds in config.web_search_datasources|sort(attribute="Type") -%}
+                        {%- do items.append(datasource_name(ds)) %}
+                    {%- endfor %}
+                    "WEB_SEARCH_DATASOURCES->DATASOURCES@{{items|join(",")}}"
+                    {%- endif %}
+                    {%- endif %}
+                ]
+            }{{- "," if not loop.last }}
+            {%- endfor %}
+        },
+        "nodes": {
+        {%- if is_run_stage %}
+            {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+                {%- for cds in config.conditional_datasources %}
+                    "DATASOURCE_{{cds}}": {
+                        "node_type": "TRANSPARENT"
+                    },
+                {%- endfor %}
+                {%- for cds in config.conditional_websearch_datasources %}
+                    "WEBSEARCH_DATASOURCE_{{cds}}": {
+                        "node_type": "TRANSPARENT"
+                    },
+                {%- endfor %}
+            {%- endfor %}
+        {%- endif %}
+        {%- if is_continue_stage %}
+            "{{enable_continue_node}}": {
+                "node_type": "TRANSPARENT_STREAMING"
+            },
+            "{{input_node}}": {
+                "node_type": "TRANSPARENT_STREAMING"
+            },
+        {%- endif %}
+        {%- for (node_name, is_pure, config) in nodes|sort_tuple(0) %}
+        {%- set timeout = config.timeouts.HandlersConfig[stage.capitalize()] %}
+            "{{node_name}}": {
+                {%- if not is_pure %}
+                "alias_config": {
+                    "addr_alias": [
+                        "{{config.Name}}"
+                    ]
+                },
+                {%- endif %}
+                "backend_name": "{{"SELF" if is_pure else backend_proxy_name(config.Name) }}",
+                "node_type": "DEFAULT",
+                "params": {
+                    "attempts": {
+                        "max_attempts": {{1 if is_pure else timeout.MaxAttempts}}
+                    },
+                    {%- if is_pure %}
+                    "handler": "/_subhost/{{config.graph_prefix}}_{{stage}}",
+                    {%- endif %}
+                    "responsibles": {
+                        {%- set responsibles = config.Responsibles %}
+                        {%- if responsibles.AbcServices %}
+                        "abc_service": [
+                            {%- for abc_service in responsibles.AbcServices %}
+                            {
+                                {%- if abc_service.DutySlugs %}
+                                "duty_slugs": {{ abc_service.DutySlugs|to_list|jsonify }},
+                                {%- endif %}
+                                {%- if abc_service.Scopes %}
+                                "role_scopes": {{ abc_service.Scopes|to_list|jsonify }},
+                                {%- endif %}
+                                "slug": "{{ abc_service.Name }}"
+                            }{{ "," if not loop.last }}
+                            {%- endfor %}
+                        ],
+                        {%- endif %}
+                        {%- if responsibles.Logins %}
+                        "logins": {{ responsibles.Logins|to_list|jsonify }},
+                        {%- endif %}
+                        "messenger_chat_names": [
+                            "MegamindDuty"
+                        ]
+                    },
+                    {%- if not is_pure and timeout.HasField("RetryPeriodMs") %}
+                    "soft_timeout": "{{timeout.RetryPeriodMs}}ms",
+                    {%- endif %}
+                    "timeout": "{{timeout.TimeoutMs}}ms"
+                }
+            }{{ "," if not loop.last }}
+        {%- endfor %}
+        },
+        "output_deps": [
+            "RESPONSE"
+        ],
+        "responsibles": {
+            "logins": [
+                "akhruslan",
+                "petrk"
+            ]
+        },
+        "streaming_no_block_outputs": true
+    }
+}
+

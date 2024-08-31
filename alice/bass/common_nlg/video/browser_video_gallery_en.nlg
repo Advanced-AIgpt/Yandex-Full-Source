@@ -1,0 +1,102 @@
+{% from "alice/bass/common_nlg/common/cards.nlg" import open_uri_action_for_item_in_list with context%}
+
+{% macro print_number(number, form1, form2, form3) -%}
+    {%- if number > 0 -%}
+        {{ number }}&nbsp;
+        {%- if number > 20 -%}
+            {%- set number = number % 10 -%}
+        {%- endif -%}
+        {%- if number == 1 -%}
+            {{ form1 }}
+        {%- elif number < 5 and  number > 0 -%}
+            {{ form2 }}
+        {%- else -%}
+            {{ form3 }}
+        {%- endif -%}
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro print_time(duration) -%}
+    {%- set hours = duration // 3600 -%}
+    {%- set minutes = duration % 3600 // 60 -%}
+    {%- set seconds = duration % 60 -%}
+    {%- if hours != 0 -%}
+        {{ print_number(hours, 'hour ', 'hours ', 'hours ') }}
+    {%- endif -%}
+    {%- if minutes != 0 %}{{ minutes }} min {% endif -%}
+    {%- if seconds != 0 %}{{ seconds }} sec{% endif -%}
+{%- endmacro %}
+
+{% macro print_view_count(video) -%}
+   {%- if video.view_count -%}
+       {{ "<" }}font color=\"{{ '#7F7F7F' }}\"{{ ">" }}{{ print_number(video.view_count, 'view', 'views', 'views') }}{{ "<"}}\/font{{ ">" }}{{ "<" }}br{{ ">" }}
+   {%- endif -%}
+{%- endmacro %}
+
+{% macro print_duration(video) -%}
+   {%- if video.duration -%}
+        {{ "<" }}font color=\"{{ '#7F7F7F' }}\"{{ ">" }}{{ print_time(video.duration) }}{{ "<" }}\/font{{ ">" }}
+   {%- endif -%}
+{%- endmacro %}
+
+{% card browser_video_gallery_card %}
+{
+    {% if context.is_desktop or req_info.experiments['video_yabro_result_open_uri'] == None %}
+        {% set directive = 'open_uri' if req_info.experiments['video_yabro_result_open_uri'] != None else 'open_recomendaited_video' %}
+
+        {% set json_open_str = '[{"type":"client_action","name":"assistant_type_silent","payload":{"cards":[{"type":"simple_text","text":"Opening"}],"dialog_id":"alice"}},{"type":"client_action","name":"' + directive + '","payload":{"uri":"' %}
+        {% set json_open = json_open_str | urlencode %}
+        {% set json_close = '"}}]' | urlencode %}
+    {% endif %}
+
+    "background": [
+        {
+            "type": "div-solid-background",
+            "color": "{{ '#FFFFFF' }}"
+        }
+    ],
+    "states": [
+        {
+            "state_id": 1,
+            "blocks": [
+                {% for video in form.browser_video_gallery.videos %}
+                    {
+                        "type": "div-separator-block",
+                        "size": "xs"
+                    },
+                    {
+                        "side_element": {
+                            "element": {
+                                "type": "div-image-element",
+                                "ratio": 1.66,
+                                "image_url": "{{ video.thumbnail_url_16x9 }}"
+                            },
+                            "position": "left",
+                            "size": "l"
+                        },
+                        "text_max_lines": 2,
+                        "title_max_lines": 2,
+                        "title": "{{ video.name | html_escape }}",
+                        "title_style": "title_s",
+                        "text": "{{ print_view_count(video) }}{{ print_duration(video) }}",
+                        "type": "div-universal-block",
+                        "text_style": "text_s",
+                        "action": {
+                            {% if context.is_desktop or req_info.experiments['video_yabro_result_open_uri'] == None %}
+                                "url": "{{ 'yabro-action' }}://?directives={{ json_open }}{{ video.play_uri | replace('%22', '%5C%22') }}{{ json_close }}",
+                            {% else %}
+                                "url": "{{ open_uri_action_for_item_in_list(video.play_uri, 'video_gallery_item', item_number=None, analytics_tag=None) }}",
+                            {% endif %}
+                            "log_id": "whole_card"
+                        }
+                    },
+                {% endfor %}
+                {
+                    "type": "div-separator-block",
+                    "size": "s"
+                }
+            ]
+        }
+    ]
+}
+{% endcard %}

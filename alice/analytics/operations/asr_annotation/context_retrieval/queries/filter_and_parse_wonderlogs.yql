@@ -1,0 +1,29 @@
+$prefix = "https://speechbase.voicetech.yandex-team.ru/getaudio/";
+$suffix = "?storage-type=s3&s3-bucket=voicelogs&norm=1";
+
+$get_spotter_mds_key = ($s) -> { RETURN String::JoinFromList(ListSkip(String::SplitToList($s, "/"), 4), "/") };
+$join_strings = ($s1, $s2, $s3) -> { RETURN $s1 || $s2 || $s3 };
+
+insert into $parsed_logs with truncate
+select
+    asr.data.mds_key as mds_key,
+    $join_strings($prefix, asr.data.mds_key, $suffix) as asr_mds_url,
+    $get_spotter_mds_key(spotter.mds_url) as spotter_mds_key,
+    $join_strings($prefix, $get_spotter_mds_key(spotter.mds_url), $suffix) as spotter_mds_url,
+    asr.activation_type as activation_type,
+    String::JoinFromList(asr.data.recognition.words, " ") as asr_text,
+    asr.topics.model as topic,
+    _message_id,
+    _message_id in (select * from $requests) as is_target,
+    speechkit_request.application.client_time as client_time,
+    speechkit_request.application.device_model as device_model,
+    speechkit_request.request.device_state.alarm_state.currently_playing as alarm_playing,
+    $join_strings(cast(speechkit_request.request.device_state.sound_level as string), "/", cast(speechkit_request.request.device_state.sound_max_level as string)) as sound_level,
+    speechkit_request.request.device_state.music.currently_playing.track_id as current_music_track,
+    speechkit_request.request.device_state.music.player.pause as is_music_player_paused,
+    speechkit_request.request.device_state.is_tv_plugged_in as is_tv_plugged_in,
+    speechkit_response.voice_response.output_speech.text as voice_response_text,
+    ListMap(speechkit_response.response.cards, ($x) -> { RETURN $x.text; }) as response_cards,
+    ListMap(speechkit_response.response.directives, ($x) -> { RETURN $x.name || " " || $x.sub_name; }) as response_directives
+from range("//home/alice/wonder/logs", $first_log_date, $last_log_date)
+where _message_id in (select _message_id from $message_ids_for_requests_and_contexts) and asr.data.mds_key is not null;

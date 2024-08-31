@@ -1,0 +1,25 @@
+OWNER(
+    g:amanda
+    alkapov
+)
+
+RECURSE(
+    adapter
+    app
+    avatars
+    controller
+    core
+    divrenderer
+    editor
+    hash
+    linker
+    passport
+    product
+    sensors
+    session
+    skill
+    staff
+    uaas
+    uuid
+    xiva
+)

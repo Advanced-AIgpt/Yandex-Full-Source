@@ -1,0 +1,81 @@
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+--определение типа шоу
+$show_type_prev = ($analytics_info) -> {RETURN  Yson::ConvertToString(ListFilter(
+Yson::ConvertToList(DictPayloads(Yson::ConvertToDict($analytics_info.analytics_info))[0].scenario_analytics_info.objects),
+($x) -> (Yson::ConvertToString($x.id) = 'show.type'))[0].human_readable)};
+$morning_show_profile = ($analytics_info) -> {RETURN Yson::SerializePretty(ListFilter(Yson::ConvertToList($analytics_info.users_info.HollywoodHardcodedMusic.scenario_user_info.properties),
+($x) -> (Yson::ConvertToString($x.human_readable) = 'Morning show customisation'))[0].morning_show_profile)};
+$format = ($source) -> {RETURN String::JoinFromList(ListSkip(String::SplitToList($source, '-'), 1), '-')};
+$news = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.news_config.news_providers), ($x) ->
+(Yson::ConvertToString($x.rubric) || ' from ' || $format(Yson::ConvertToString($x.news_source))))};
+$topics = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.topics_config.topics), ($x) -> (Yson::ConvertToString($x.podcast)))};
+
+$month_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(30) AS String)};
+$week_ago = ($date) -> {RETURN CAST(CAST($date AS Date) - DateTime::IntervalFromDays(7) AS String)};
+
+--req_id утреннего шоу из сессий
+$month_data =
+(
+    SELECT DISTINCT fielddate, puid, show_type
+    FROM
+    (
+        SELECT  fielddate, puid,
+        CASE WHEN show_type_prev??'morning' != 'morning' THEN show_type_prev || '_show'
+        WHEN ListLength(topics) = 0 AND ListLength(news) = 1 AND String::StartsWith((news[0]??''), '__mixed_news__') THEN 'new morning show default settings'
+        WHEN (ListLength(topics) > 0 OR ListLength(news) > 0) THEN 'new morning show custom settings'
+        ELSE 'morning_show'
+        END AS show_type
+        FROM
+        (
+            SELECT DISTINCT req_id, app, puid, fielddate,
+            $news($morning_show_profile(analytics_info)) AS news,
+            $topics($morning_show_profile(analytics_info)) AS topics,
+            $show_type_prev(analytics_info) AS show_type_prev
+            FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $month_ago)
+            WHERE generic_scenario = 'morning_show'
+            AND (parent_req_id == req_id or (parent_req_id ?? "") == "")
+            AND input_type != "tech"
+        )
+    )
+);
+
+
+$uniq_dates =
+(
+    SELECT DISTINCT fielddate
+    FROM $month_data
+);
+
+
+$show_wau =
+(
+    SELECT f.fielddate AS fielddate, d.show_type AS show_type, COUNT(DISTINCT d.puid) AS user_amount
+    FROM $month_data AS d
+    CROSS JOIN $uniq_dates AS f
+    WHERE d.fielddate BETWEEN $week_ago(f.fielddate) AND f.fielddate
+    GROUP BY f.fielddate, d.show_type
+    UNION ALL
+    SELECT f.fielddate AS fielddate, 'Total' AS show_type, COUNT(DISTINCT d.puid) AS user_amount
+    FROM $month_data AS d
+    CROSS JOIN $uniq_dates AS f
+    WHERE d.fielddate BETWEEN $week_ago(f.fielddate) AND f.fielddate
+    GROUP BY f.fielddate
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/morning_show_wau` WITH TRUNCATE
+SELECT *
+FROM
+(
+    SELECT fielddate, user_amount, show_type
+    FROM $show_wau AS w
+    LEFT ONLY JOIN `//home/voice/nadezhda17/common/morning_show/morning_show_wau` AS m ON w.fielddate = m.fielddate
+    UNION ALL
+    SELECT fielddate, user_amount, show_type
+    FROM `//home/voice/nadezhda17/common/morning_show/morning_show_wau`
+)
+ORDER BY fielddate, show_type;

@@ -1,0 +1,105 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$morning_show_profile = ($analytics_info) -> (Yson::SerializePretty(ListFilter(Yson::ConvertToList($analytics_info.users_info.HollywoodHardcodedMusic.scenario_user_info.properties),
+($x) -> (Yson::ConvertToString($x.human_readable) = 'Morning show customisation'))[0].morning_show_profile));
+
+$show_type_prev = ($analytics_info) -> {RETURN  Yson::ConvertToString(ListFilter(
+Yson::ConvertToList(DictPayloads(Yson::ConvertToDict($analytics_info.analytics_info))[0].scenario_analytics_info.objects),
+($x) -> (Yson::ConvertToString($x.id) = 'show.type'))[0].human_readable)};
+
+$format = ($source) -> (String::JoinFromList(ListSkip(String::SplitToList($source, '-'), 1), '-'));
+
+$skills = ($morning_show_profile) -> (ListMap(Yson::ConvertToList($morning_show_profile.skills_config.skill_providers), ($x) ->
+(String::SplitToList(Yson::ConvertToString($x.skill_slug), '-')[1] )));
+$news = ($morning_show_profile) -> (ListMap(Yson::ConvertToList($morning_show_profile.news_config.news_providers), ($x) ->
+(Yson::ConvertToString($x.rubric) || ' from ' || $format(Yson::ConvertToString($x.news_source)))));
+$topics = ($morning_show_profile) -> (ListMap(Yson::ConvertToList($morning_show_profile.topics_config.topics), ($x) -> (Yson::ConvertToString($x.podcast))));
+
+$two_weeks_ago = ($date) -> {RETURN $date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$data =
+(
+    SELECT fielddate, req_id, puid,
+    $news($morning_show_profile(analytics_info)) AS news,
+    $topics($morning_show_profile(analytics_info)) AS topics,
+    $skills($morning_show_profile(analytics_info)) AS skills,
+    ListLength($topics($morning_show_profile(analytics_info))) AS topics_amount,
+    $show_type_prev(analytics_info) as show_type_prev,
+    IF(CAST(Yson::SerializePretty(analytics_info) AS String) LIKE '%child%', 'children_show', 'morning_show') AS show_type
+    FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $two_weeks_ago)
+    WHERE app IN ('quasar', 'small_smart_speakers')
+    AND generic_scenario = 'morning_show'
+    AND (parent_req_id == req_id or (parent_req_id ?? "") == "")
+    AND input_type != "tech"
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/show_settings_stat` WITH TRUNCATE
+SELECT fielddate, type??"Total" as type, COUNT(DISTINCT req_id) AS req_amount, COUNT(DISTINCT puid) AS user_amount
+FROM
+(
+    SELECT fielddate, req_id, puid,
+    CASE WHEN show_type_prev??'morning' != 'morning' THEN show_type_prev || '_show'
+    WHEN ListLength(topics) = 0 AND ListLength(news) = 1 AND String::StartsWith((news[0]??''), '__mixed_news__') THEN 'new morning show default settings'
+    WHEN (ListLength(topics) > 0 OR ListLength(news) > 0) THEN 'new morning show custom settings'
+    ELSE 'morning_show'
+    END AS type
+    FROM $data
+)
+GROUP BY GROUPING SETS(
+        (fielddate, type),
+        (fielddate)
+        )
+UNION ALL
+SELECT *
+FROM `//home/voice/nadezhda17/common/morning_show/show_settings_stat`
+WHERE NOT $two_weeks_ago(fielddate)
+;
+
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/skills_stat` WITH TRUNCATE
+SELECT skill, COUNT(DISTINCT puid) AS user_amount
+FROM
+(
+    SELECT skill, puid
+    FROM $data
+    FLATTEN LIST BY skills AS skill
+)
+GROUP BY skill;
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/news_stat` WITH TRUNCATE
+SELECT news_topic, COUNT(DISTINCT puid) AS user_amount
+FROM
+(
+    SELECT news_topic, puid
+    FROM $data
+    FLATTEN LIST BY news AS news_topic
+)
+WHERE NOT String::StartsWith((news_topic??''), '__mixed_news__')
+GROUP BY news_topic;
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/topic_stat` WITH TRUNCATE
+SELECT topic, COUNT(DISTINCT puid) AS user_amount
+FROM
+(
+    SELECT topic, puid
+    FROM $data
+    FLATTEN LIST BY topics AS topic
+)
+GROUP BY topic;
+
+$data =
+(
+    SELECT puid, MAX_BY(topics_amount, fielddate) AS topics_amount
+    FROM $data
+    GROUP BY puid
+);
+
+$all_users = (SELECT COUNT(*) FROM $data);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/topic_amount` WITH TRUNCATE
+SELECT topics_amount, COUNT(puid) AS user_amount, COUNT(puid)*1.0/$all_users AS user_share
+FROM $data
+GROUP BY topics_amount;
+

@@ -1,0 +1,49 @@
+USE hahn;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+$event_list = 
+(
+    'progressHeartbeatMusic',
+    'startAudio',
+    'playAudio',
+    'audioClientHeartbeat',
+    'audioClientPlayRequest',
+    'audioClientPlayRequestFulfill'
+);
+
+--были задетектированы хартбиты мультирума
+$multiroom_heartbeats = 
+(
+    SELECT  device_id, fielddate, req_id, MIN(ts) AS start_ts, MAX(ts) AS finish_ts
+    FROM 
+    (
+        SELECT h.device_id AS device_id, dt AS fielddate, 
+        IF((parent_req_id??'') != '', parent_req_id, req_id) AS req_id,
+        $s_to_datetime(send_timestamp) AS ts
+        FROM FILTER(`//home/alice/dialog/heartbeats`, $date_filter) AS h 
+        INNER JOIN (SELECT DISTINCT device_id FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices`) AS md 
+        ON md.device_id = h.device_id
+        WHERE event_name IN $event_list   
+        UNION ALL 
+        SELECT h.device_id AS device_id, dt AS fielddate, 
+        IF((parent_req_id??'') != '', parent_req_id, req_id) AS req_id,
+        $s_to_datetime(send_timestamp) AS ts
+        FROM FILTER(`//home/alice/dialog/heartbeats`, $date_filter) AS h 
+        WHERE event_name = 'multiroomHeartbeat'
+
+    )
+    GROUP BY device_id, fielddate, req_id
+    ORDER BY fielddate, device_id
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/multiroom/multiroom_heartbeats` WITH TRUNCATE 
+SELECT *
+FROM $multiroom_heartbeats
+UNION ALL 
+SELECT mh.*
+FROM `//home/voice/nadezhda17/common/multiroom/multiroom_heartbeats`  AS mh 
+LEFT ONLY JOIN $multiroom_heartbeats AS t ON t.fielddate = mh.fielddate AND t.device_id = mh.device_id
+;

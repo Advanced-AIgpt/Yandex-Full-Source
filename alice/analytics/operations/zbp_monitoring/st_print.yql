@@ -1,0 +1,59 @@
+PRAGMA yt.InferSchema("50");
+PRAGMA SimpleColumns;
+$python_script = "arc:" || {{param[python_path]}};
+PRAGMA File("script.py", $python_script);
+
+$old_date = {{param[old_date]}};
+$new_date = {{param[new_date]}};
+$old_nirvana_link = {{param[old_nirvana_url]}};
+$new_nirvana_link = {{param[new_nirvana_url]}};
+
+$script = FileContent("script.py");
+
+$summonees_reopen = ListCreate(String);
+$summonees_close = ListCreate(String);
+$summonees_not_enough = ListCreate(String);
+
+$dict_summoners = AsDict(
+    AsTuple("open", $summonees_reopen),
+    AsTuple("close", $summonees_close),
+    AsTuple("not_enough_samples", $summonees_not_enough)
+);
+
+$information = "\n<{Информация\nЧтобы исключить этот тикет из проверки поставьте ему тег %%zbp_asr_auto_monitoring__ignore%%. Подробнее про автоматическую проверку читайте в %%VA-1591%%. При вопросах призовите ((https://abc.yandex-team.ru/services/aliceanalytics/duty/?role=1775 дежурного)).\nЕсли вы воспроизводите баг для корзинки, то используете реалистичные фразы. Подумайте, в каком сценарии Алисы может появится запрос с этим словом. Обратите внимание на поверхность, если она не указана, то выберите подходящую для этого сценария (музыка - колонки, построение маршрута - навигатор) или ту, на которой проблема лучше воспроизводится. Если тикет не сводится к неправильному распознаванию определенных слов и фраз, то, возможно, его стоит исключить из автоматической проверки.}>";
+
+$make_header = Python3::make_header(Callable<(String, String, String, String)->String>, $script);
+$header = $make_header($new_date, $new_nirvana_link, $old_date, $old_nirvana_link);
+$tail = "</table></body></html>#>";
+$dtype_struct = Struct<'app':String,'asr_is_good':Bool?,'asr_text':String?,'audio':Tagged<String?,'audio/webm'>,'setrace_url':String?,'text':String?,'wer':Double?,'werp':Double?>;
+$dtype_out = Dict<String?, $dtype_struct>?;
+$pretty_print = Python3::pretty_print(Callable<($dtype_out, $dtype_out)->String>, $script);
+$make_text = Python3::make_text(Callable<(String, Double, Uint64)->String>, $script);
+
+INSERT INTO {{output1}} 
+SELECT 
+     key,
+    "close" AS transition,   
+    "fixed" AS resolution
+ FROM {{input2}} WHERE change == "close"
+UNION ALL
+SELECT 
+     key,
+    "reopen" AS transition
+ FROM {{input2}} WHERE change == "open";
+
+INSERT INTO {{output2}} 
+SELECT
+    x.key as key, 
+    $dict_summoners[x.change] AS summonees,
+    case
+        when x.change == "open"
+        then $make_text(Unwrap(x.change), x.good_part, x.sample_count) || $header || $pretty_print(b.new_summary, b.old_summary) || $tail || $information
+        else $make_text(Unwrap(x.change), x.good_part, x.sample_count) || $information
+    end as text
+FROM {{input2}} as x
+left join {{input1}} as b
+on b.ticket == x.key
+WHERE x.change != "not_enough_samples";
+
+SELECT Ensure("OK", COUNT_IF(change == "bad") < 5, "Too many 'bad', is it ok?"), Ensure("OK", COUNT_IF(change == "good") < 10, "Too many 'good', is it ok?") FROM {{input2}}

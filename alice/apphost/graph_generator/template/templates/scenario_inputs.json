@@ -1,0 +1,59 @@
+{%- macro input_item_name(scenario) -%}^scenario_{{scenario.Name}}_input{%- endmacro -%}
+{%- set input_items = [] %}
+{%- for scenario in scenarios|sort(attribute="Name") -%}
+    {%- do input_items.append(input_item_name(scenario)) %}
+{%- endfor %}
+{
+    "monitoring": {
+        "alerts": [
+            {
+                "crit": 0.1,
+                "operation": "perc",
+                "prior": 10,
+                "type": "failures",
+                "warn": 0.09
+            }
+        ]
+    },
+    "settings": {
+        "allow_empty_response": true,
+        "input_deps": [
+            "WALKER_RUN_STAGE0"
+        ],
+        "node_deps": {
+            "SCENARIO_INPUTS": {
+                "input_deps": [
+                    "WALKER_RUN_STAGE0@{{input_items|join(",")}}"
+                ]
+            },
+            "RESPONSE": {
+                "input_deps": [
+                    "SCENARIO_INPUTS"
+                ]
+            }
+        },
+        "nodes": {
+            "SCENARIO_INPUTS": {
+                "node_type": "TRANSPARENT"
+            }
+        },
+        "output_deps": [
+            "RESPONSE"
+        ],
+        "responsibles": {
+            "abc_service": [
+                {
+                    "duty_slugs": [
+                        "alice_duty_senior",
+                        "alice_duty_executive"
+                    ],
+                    "slug": "aliceruntime"
+                }
+            ],
+            "messenger_chat_names": [
+                "MegamindDuty"
+            ]
+        }
+    }
+}
+

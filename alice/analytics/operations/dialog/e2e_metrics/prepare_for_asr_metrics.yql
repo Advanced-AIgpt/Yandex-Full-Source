@@ -1,0 +1,14 @@
+PRAGMA yt.InferSchema = "1000";
+
+$get_asr_slice = ($general_toloka_intent, $text) -> {
+    $latin_music = IF($general_toloka_intent == 'music' and $text regexp '[a-zA-Z]', "latin_music", Null);
+
+    RETURN String::JoinFromList(ListUniq(AsList($general_toloka_intent, $latin_music)), ';');
+};
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    asr_text, text, req_id as request_id,
+    $get_asr_slice(general_toloka_intent, text) as asr_slice
+FROM {{input1}}
+WHERE voice_url is not Null and result != "UNIPROXY_ERROR";

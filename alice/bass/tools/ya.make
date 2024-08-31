@@ -1,0 +1,18 @@
+RECURSE(
+    bass_assessment
+    bass_logs
+    bass_release_bot
+    bno
+    config_validator
+    evlog_dumper
+    find_request
+    fixlist_builder
+    nav_1st_url
+    partials_usage
+    smallgeo
+    video
+    vins_client
+    yasm_panel_generator
+    yastroka_fixlist
+    yav_wrapper
+)

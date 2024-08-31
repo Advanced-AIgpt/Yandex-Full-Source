@@ -1,0 +1,47 @@
+service: megamind
+title: Logviewer
+
+ci:
+  release-title-source: flow
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+
+  releases:
+    release-logviewer:
+      title: Release Logviewer
+      flow: logviewer-flow
+      auto: true
+      stages:
+        build:
+          title: Build
+          displace: true
+        stable:
+          title: Deploy to Stable
+
+  flows:
+    logviewer-flow:
+      title: Logviewer
+      jobs:
+        build:
+          title: Build package
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/analytics/new_logviewer/deploy/packages/logviewer-package.json
+            resource_type: LOGVIEWER_PACKAGE
+            package_type: tarball
+        stable-logviewer-deploy:
+          title: Stable Logviewer deploy
+          task: common/deploy/release
+          stage: stable
+          manual: true
+          input:
+            config:
+              sandboxResourceType: LOGVIEWER_PACKAGE
+              commonReleaseData:
+                releaseStage: stable
+                releaseNotes: Release from CI
+              stageName: logviewer-stable
+          needs:
+            - build

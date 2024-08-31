@@ -1,0 +1,170 @@
+Use hahn;
+PRAGMA  yt.Pool = "voice";
+PRAGMA RegexUseRe2='true';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+$app = "quasar";
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/";
+$sampled_restricted_dir = $restricted_dir || "sampled_data/";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/sampled_data/";
+$reannotation_res_dir = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/all/after_yang/";
+$annotations_final_table = "//home/voice/jdkondratenko/VA-2304/annotation_results/" || $app; 
+$output_table_prefix = "//home/voice/jdkondratenko/VA-2304/intents/" || $app || "_input";
+
+$joined_data = "//home/voice/jdkondratenko/VA-2304/joined_data_eavesdropping_2021-02-26_2021-08-29";
+$joined_empty_data = "//home/alice/jdkondratenko/VA-2304/sampled_data/quasar_empty_data";
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+
+$certain = $reannotation_res_dir || "certain"; 
+$empty = $reannotation_res_dir || "unclear_words_and_empty";
+
+$annotation_res = (
+    SELECT mds_key, query, full_text, url, IF(query != "" and not (query regexp "<SPN>"), "intent", IF(query regexp "<SPN>", "trash", "autoverdict")) as annotated_type
+    FROM CONCAT($certain, $empty)
+);
+
+SELECT annotated_type, COUNT(*) as cnt
+FROM $annotation_res
+GROUP BY annotated_type
+INTO RESULT `annotation stats`;
+
+-- запись результатов, которые потом в корзинку можно брать
+INSERT INTO $annotations_final_table WITH TRUNCATE 
+SELECT *
+FROM $annotation_res
+WHERE annotated_type != "trash";
+
+$for_intents = (
+    SELECT mds_key, query
+    FROM $annotation_res
+    WHERE annotated_type == "intent"
+);
+
+-- формат для интентов: "rnd", "context_len", "app", "query1", "type", "prev_reqid", "reqid",  "dialog_hash_id", "mds_url", "query0", "query2", "prev_intent", "prev_mds_url", "intent"
+$accept_basket = $common_dir || $app || "_accept_with_asr";
+$kpi_basket = $sampled_restricted_dir || $app || "_kpi_with_asr";
+$dev_basket = $common_dir || $app || "_dev_with_asr";
+$accept_basket_no_asr = $common_dir || $app || "_accept_empty_asr";
+$kpi_basket_no_asr = $sampled_restricted_dir || $app || "_kpi_empty_asr";
+$dev_basket_no_asr = $common_dir || $app || "_dev_empty_asr";
+
+$data_with_prev_scenario_by_session = (
+    SELECT 
+        j.request_id as request_id, j.session_id as session_id, 
+        LAG(intent) OVER w as prev_intent, LAG(mds_key) OVER w as prev_mds_key, LAG(reply) OVER w as prev_reply, 
+        LAG(query) OVER w as prev_query, LAG(request_id) OVER w as prev_request_id
+    FROM (SELECT * FROM $joined_data WHERE app in $quasar_apps) as j
+    WINDOW w AS (
+        PARTITION BY session_id
+        ORDER BY session_sequence
+    )
+);
+
+$data_with_prev_scenario_by_uuid = (
+    SELECT 
+        request_id, client_time, prev_client_time, 
+        IF(different_session, null, prev_intent) as prev_intent, IF(different_session, null, prev_mds_key) as prev_mds_key,
+        IF(different_session, null, prev_reply) as prev_reply, IF(different_session, null, prev_query) as prev_query,
+        IF(different_session, null, prev_request_id) as prev_request_id
+    FROM (
+        SELECT 
+            j.request_id as request_id, j.client_time as client_time, LAG(client_time) OVER w as prev_client_time,
+            IF((j.client_time - LAG(client_time) OVER w) > 1800, True, False) as different_session,
+            LAG(intent) OVER w as prev_intent, LAG(mds_key) OVER w as prev_mds_key, LAG(reply) OVER w as prev_reply, 
+            LAG(query) OVER w as prev_query, LAG(request_id) OVER w as prev_request_id
+        FROM (
+            SELECT 
+                MIN_BY(`uuid`, source) as `uuid`, request_id, MIN_BY(mds_key, source) as mds_key, MIN_BY(client_time, source) as client_time, 
+                MIN_BY(intent, source) as intent, MIN_BY(reply, source) as reply, MIN_BY(query, source) as query
+            FROM (
+                SELECT `uuid`, request_id, mds_key, CAST(Yson::LookupString(vins_full_request, "client_time") as Uint32) as client_time, intent, reply, query, "vins" as source 
+                FROM $joined_data
+                WHERE app in $quasar_apps
+                UNION ALL
+                SELECT 'uu/' || String::ReplaceAll(`uuid`, '-', '') as `uuid`, request_id, mds_key, CAST(Yson::LookupString(vins_full_request, "client_time") as Uint32) as client_time, "" as intent, "" as reply, "" as query, "empty" as source
+                FROM $joined_empty_data
+                WHERE app in $quasar_apps
+            )
+            GROUP BY request_id
+        ) as j
+        WINDOW w AS (
+            PARTITION BY `uuid`
+            ORDER BY client_time
+        )
+    )
+);
+
+$output_table_full = $output_table_prefix || "_full";
+$output_table_uniq = $output_table_prefix || "_uniq";
+
+INSERT INTO $output_table_full WITH TRUNCATE 
+SELECT 
+    IF(s.prev_query is not null and s.prev_reply is not null, 3, 1) as context_len, 
+    b.app as app, s.prev_query ?? "" as query0, s.prev_reply ?? "" as query1,
+    a.query as query2, -- !!аннотированный голос!!
+    b.mds_key as mds_url, b.input_type as type, b.request_id as reqid,
+    String::JoinFromList(String::SplitToList(b.intent, '\t'), '.') as intent,
+    String::JoinFromList(String::SplitToList(s.prev_intent ?? "", '\t'), '.') as prev_intent,
+    s.prev_mds_key as prev_mds_url, s.prev_request_id ?? "" as prev_reqid,
+    Digest::MurMurHash((s.prev_query ?? "") || (s.prev_reply ?? "") || a.query) as dialog_hash_id
+FROM ( 
+    -- accept и kpi могут пересекаться
+    SELECT 
+        mds_key, SOME(request_id) as request_id, SOME(app) as app, SOME(input_type) as input_type, SOME(intent) as intent
+    FROM CONCAT($accept_basket, $kpi_basket, $dev_basket)
+    GROUP BY mds_key
+)  as b 
+JOIN $for_intents as a
+ON a.mds_key == b.mds_key
+JOIN $data_with_prev_scenario_by_session as s
+ON b.request_id == s.request_id;
+
+INSERT INTO $output_table_full
+SELECT 
+    IF(s.prev_query is not null and s.prev_reply is not null, 3, 1) as context_len, 
+    b.app as app, s.prev_query ?? "" as query0, s.prev_reply ?? "" as query1,
+    a.query as query2, -- !!аннотированный голос!!
+    b.mds_key as mds_url, b.input_type as type, b.request_id as reqid,
+    "" as intent, -- для записей, в которых asr ответил пустотой, не может быть интента, т.к. ничто не отправлялось на бекенд
+    String::JoinFromList(String::SplitToList(s.prev_intent ?? "", '\t'), '.') as prev_intent,
+    s.prev_mds_key as prev_mds_url, s.prev_request_id ?? "" as prev_reqid,
+    Digest::MurMurHash((s.prev_query ?? "") || (s.prev_reply ?? "") || a.query) as dialog_hash_id
+FROM (
+    SELECT 
+        mds_key, SOME(request_id) as request_id, SOME(app) as app, SOME(input_type) as input_type
+    FROM CONCAT($accept_basket_no_asr, $kpi_basket_no_asr, $dev_basket_no_asr)
+    GROUP BY mds_key
+) as b
+JOIN $for_intents as a
+ON a.mds_key == b.mds_key
+JOIN $data_with_prev_scenario_by_uuid as s
+ON b.request_id == s.request_id;
+
+COMMIT;
+
+$uniq = (
+    SELECT 
+        RANDOM(dialog_hash_id) as rnd,
+        SOME(query0) as query0,
+        SOME(query1) as query1,
+        SOME(query2) as query2,
+        SOME(intent) as intent,
+        SOME(type) as type,
+        SOME(context_len) as context_len,
+        SOME(prev_intent) as prev_intent,
+        SOME(reqid) as reqid,
+        SOME(prev_reqid) as prev_reqid,
+        dialog_hash_id,
+        SOME(mds_url) as mds_url,
+        SOME(prev_mds_url) as prev_mds_url,
+        SOME(app) as app
+    FROM $output_table_full
+    GROUP BY dialog_hash_id
+);
+
+INSERT INTO $output_table_uniq WITH TRUNCATE 
+SELECT IF(query0 = "", NULL, query0) as query0, IF(query1 = "", NULL, query1) as query1, IF(query2 = "", NULL, query2) as query2, a.* WITHOUT a.query0, a.query1, a.query2
+FROM $uniq as a
+ORDER BY rnd;

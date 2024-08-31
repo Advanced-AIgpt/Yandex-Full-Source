@@ -1,0 +1,36 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict;
+
+$last_action = ($session) -> {RETURN $session[ListLength(Yson::ConvertToList($session)) - 1]};
+
+$tasks = (
+    SELECT req_id, session, state0, hashsum, answer_standard
+    FROM {{concat_input1}}
+    WITH SCHEMA Struct<req_id:String, session:Yson, state0:Yson, hashsum:String, answer_standard:String?>
+);
+
+INSERT INTO {{output1}}
+SELECT
+    with_response.request_id AS req_id,
+    with_response.session_id AS session_id,
+    with_response.intent AS intent,
+    with_response.mm_scenario AS mm_scenario,
+    with_response.generic_scenario AS generic_scenario,
+    with_response.toloka_intent AS toloka_intent,
+    with_response.result AS result,
+    with_response.asr_text AS asr_text,
+    with_response.app AS app,
+    with_response.text AS text,
+    with_response.voice_url AS voice_url,
+    with_response.has_ivi_in_state_or_query AS has_ivi_in_state_or_query,
+    with_response.setrace_url AS setrace_url,
+    with_response.basket AS basket,
+    tasks.hashsum AS hashsum,
+    tasks.session AS session,
+    tasks.state0 AS state0,
+    tasks.answer_standard as answer_standard,
+    Yson::ConvertToString($last_action(tasks.session).answer) AS answer,
+    Yson::ConvertToString($last_action(tasks.session).action) AS action,
+    Yson::ConvertToString($last_action(tasks.session).generic_scenario_human_readable) AS generic_scenario_human_readable
+FROM {{input2}} AS with_response
+LEFT JOIN $tasks AS tasks ON with_response.request_id = tasks.req_id

@@ -1,0 +1,271 @@
+Use hahn;
+PRAGMA yt.InferSchema = '100';
+PRAGMA yson.DisableStrict;
+PRAGMA yt.Pool = "voice";
+
+-- set scale and dates from hitman
+$start_date = {{param.start_date}};
+$end_date = {{param.end_date}};
+$scale = {{param.scale}};
+
+--$start_date = "2021-05-17";
+--$end_date = "2021-05-17";
+--$scale = "daily";
+
+$expboxes_logs = "//home/alice/dialog/prepared_logs_expboxes";
+$reask_report_path = "VoiceTech/Dialog/session_metrics/alice_reask_metrics_with_type/" || $scale;
+$reask_ddos_report_path = "VoiceTech/Dialog/session_metrics/reask_percent_metrics_with_type/" || $scale;
+
+-- reask type to reask intents
+$reasks = AsDict(
+    AsTuple("reask_song", AsList("music\treask")),
+    AsTuple("gc_fraud", AsList(
+        "personal_assistant\thandcrafted\tfraud_request_cant_do",
+        "personal_assistant\thandcrafted\tfraud_request_do_not_know",
+        "personal_assistant\tscenarios\tmicrointents\tfraud_request_cant_do",
+        "personal_assistant\tscenarios\tmicrointents\tfraud_request_do_not_know"
+    ))
+);
+
+$get_reask_type = ($intent) -> (ListNotNull(ListMap(DictItems($reasks), ($x) -> {RETURN IF(ListHas($x.1, $intent), $x.0, Null)}))[0]);
+
+--в yql нельзя получить такое динамически из подзапроса без выноса в отдельный yql, поэтому если написал функцию гудов для своего типа переспроса, то добавь тип переспроса сюда
+$good_reasks_defined = AsList("reask_song");
+
+$round_to_scale = ($date) -> {RETURN 
+    CASE $scale 
+        WHEN "daily" THEN $date
+        WHEN "weekly" THEN CAST(DateTime::MakeDate(DateTime::StartOfWeek(DateTime::ParseIso8601($date))) AS String)
+        WHEN "monthly" THEN CAST(DateTime::MakeDate(DateTime::StartOfMonth(DateTime::ParseIso8601($date))) AS String)
+        ELSE Ensure("Unknown scale", False, "Unknown scale")
+    END
+};
+
+$stop_limit = 14; -- seconds
+$reask_limit = 12; -- seconds
+$session_end = 20*60; -- 20 minutes in seconds
+
+$expboxes_data = (
+    SELECT 
+        $round_to_scale(fielddate) as fielddate,
+        app, query, reply, generic_scenario, server_time_ms, is_new,
+        `uuid`, user_id, device_id, req_id as request_id,
+        ListHas(ListFlatten(DictPayloads($reasks)), intent) as reask_used,
+        $get_reask_type(intent) as reask_type
+    FROM RANGE($expboxes_logs, $start_date, $end_date)
+);
+
+
+$with_next_query = (
+    SELECT 
+        e.*,
+        LAG(reask_used) OVER w as prev_reask_used,
+        LAG(generic_scenario) OVER w as prev_generic_scenario,
+        LEAD(reask_used) OVER w as next_reask_used,
+        (LAG(reask_type) OVER w)??'no_reask' as prev_reask_type, -- чтоб избежать сравнения с null, с которым плохо работают логические операции
+        (LEAD(reask_type) OVER w)??'no_reask' as next_reask_type,
+        LEAD(generic_scenario) OVER w as next_generic_scenario,
+        (LEAD(server_time_ms) OVER w - server_time_ms) / 1000.0 as time_delta,
+        LEAD(generic_scenario, 2) OVER w as next_next_generic_scenario,
+        (LEAD(server_time_ms, 2) OVER w - LEAD(server_time_ms) OVER w) / 1000.0 as time_delta_between_next,
+        LEAD(reask_used, 2) OVER w as third_reask,
+        (LEAD(reask_type, 2) OVER w)??'no_reask' as third_reask_type
+    FROM $expboxes_data as e
+    WINDOW w AS (
+        PARTITION BY user_id
+        ORDER BY server_time_ms
+    )
+);
+
+-- тут определения функций того, что такое хороший переспрос
+DEFINE SUBQUERY $with_good_reasks() AS
+    SELECT 
+        e.*,
+        AsDict(
+            AsTuple('reask_song',
+            
+                reask_type == "reask_song" and prev_reask_type != "reask_song"
+                and not (
+                    (next_generic_scenario == "stop" and time_delta <= $stop_limit) -- стопнули
+                    or time_delta >= $session_end -- на этом закончилась сессия
+                    or (next_reask_type == "reask_song" or third_reask_type == "reask_song") -- ещё раз вернулись в переспрос
+                    or (next_next_generic_scenario == "stop" and next_generic_scenario regexp "music" and time_delta_between_next <= $stop_limit) -- стопнули музыку, которую мы включили на переспрос (=включили не то) или попросили включить просто музыку
+                    or (next_next_generic_scenario regexp "music" and time_delta_between_next <= $reask_limit and next_generic_scenario regexp "music")
+                )
+            ),
+            --AsTuple('gc_fraud', 
+            --    (reask_type == "gc_fraud" and prev_reask_type != "gc_fraud")
+            --    and prev_generic_scenario != "general_conversation" and next_generic_scenario != "general_conversation"
+            --)
+        ) as good_reask_dict
+    FROM $with_next_query as e
+END DEFINE;
+
+
+DEFINE SUBQUERY $count_overall_stats($source) AS    
+    SELECT 
+        fielddate,
+        reask_type??'_total_' as reask_type,
+        app??'_total_' as app,
+        is_new??'_total_' as is_new,
+        COUNT(DISTINCT user_id) as users,
+        COUNT(*) as queries,
+    FROM $source()
+    GROUP BY GROUPING SETS (
+        (fielddate, app, is_new, reask_type),
+        (fielddate, is_new, reask_type),
+        (fielddate, app, reask_type),
+        (fielddate, app, is_new),
+        (fielddate, reask_type),
+        (fielddate, is_new),
+        (fielddate, app),
+        (fielddate)
+    );
+
+END DEFINE;
+
+DEFINE SUBQUERY $count_type_stats($source) AS    
+    SELECT 
+        fielddate,
+        reask_type,
+        app??'_total_' as app,
+        is_new??'_total_' as is_new,
+        COUNT(DISTINCT user_id) as users,
+        COUNT(*) as queries,
+    FROM $source()
+    GROUP BY GROUPING SETS (
+        (fielddate, app, is_new, reask_type),
+        (fielddate, is_new, reask_type),
+        (fielddate, app, reask_type),
+        (fielddate, reask_type)
+    );
+
+END DEFINE;
+
+-- блок для расчёта персентилей
+$groupped_users = (
+    -- верхняя группировка нужна, чтоб считать сумму по переспросам; 
+    -- чтоб если на пользователя пришёлся переспрос А и переспрос Б, то для расчёта медианы мы взяли сумму по этим переспросам, а не 2 независимые строчки
+    SELECT fielddate, app, is_new, user_id, '_total_' as reask_type, COUNT(*) as cnt
+    FROM $expboxes_data
+    WHERE reask_used
+    GROUP BY fielddate, app, is_new, user_id
+    UNION ALL
+    SELECT fielddate, app, is_new, user_id, reask_type, COUNT(*) as cnt
+    FROM $expboxes_data
+    WHERE reask_used
+    GROUP BY fielddate, app, is_new, user_id, reask_type
+);
+
+$by_user_stats = (
+    SELECT *
+    FROM (
+        SELECT 
+            fielddate, 
+            app??'_total_' as app,
+            is_new??'_total_' as is_new,
+            reask_type??'empty' as reask_type, -- _total_ придёт из отдельного union, а там, где приходит null - это дубликат для рядов переспрос А, переспрос Б
+            <|'reasks_p50':MEDIAN(cnt), 'reasks_p75':PERCENTILE(cnt, 0.75), 'reasks_p95':PERCENTILE(cnt, 0.95), 'reasks_p99':PERCENTILE(cnt, 0.99)|> as reasks,
+        FROM $groupped_users
+        GROUP BY GROUPING SETS (
+            (fielddate, app, is_new, reask_type),
+            (fielddate, app, is_new),
+            (fielddate, app, reask_type),
+            (fielddate, is_new, reask_type),
+            (fielddate, reask_type),
+            (fielddate, is_new),
+            (fielddate, app),
+            (fielddate)
+        )
+    )
+    WHERE reask_type != "empty"
+);
+
+DEFINE SUBQUERY $percent_metrics_subq($flags) AS
+        SELECT 
+            fielddate,
+            app,
+            is_new,
+            reask_type,
+            SOME(st.reasks) as reasks,
+            <|
+                'users_p50':COUNT_IF(gr.cnt > st.reasks.reasks_p50),
+                'users_p75':COUNT_IF(gr.cnt >= st.reasks.reasks_p75),
+                'users_p95':COUNT_IF(gr.cnt >= st.reasks.reasks_p95),
+                'users_p99':COUNT_IF(gr.cnt >= st.reasks.reasks_p99)
+            |> as users,
+        FROM $groupped_users as gr
+        JOIN $by_user_stats as st
+        ON st.fielddate == gr.fielddate and st.is_new == IF($flags.1, '_total_', UNWRAP(gr.is_new)) and st.app == IF($flags.0, '_total_', UNWRAP(gr.app)) and st.reask_type == gr.reask_type
+        GROUP BY UNWRAP(st.fielddate) as fielddate, IF($flags.0, '_total_', UNWRAP(gr.app)) AS app , IF($flags.1, '_total_', UNWRAP(gr.is_new)) AS is_new , UNWRAP(gr.reask_type) as reask_type
+END DEFINE;
+
+-- перебор флагов для группировки
+$percent_metrics_stat = SubqueryExtendFor([(false, false), (true, false), (false, true), (true, true)], $percent_metrics_subq);
+
+$percent_metrics = (
+    SELECT *
+    FROM 
+        (PROCESS $percent_metrics_stat())
+    FLATTEN COLUMNS
+);
+
+DEFINE ACTION $count_good_reask_stats($reask_type) AS
+    
+    DEFINE SUBQUERY $good_reasks() AS SELECT * FROM $with_good_reasks() WHERE IF(DictContains(good_reask_dict, $reask_type), CAST(DictLookup(good_reask_dict, $reask_type) As Bool), False) END DEFINE;
+    
+    INSERT INTO @tmp_table
+    SELECT *
+    FROM $count_type_stats($good_reasks);
+END DEFINE;
+
+DEFINE ACTION $count_good_reask_totals() AS   
+    DEFINE SUBQUERY $good_reasks() AS 
+        SELECT '_total_' as reask_type, w.* WITHOUT reask_type 
+        FROM $with_good_reasks() as w 
+        WHERE ListAny(DictPayloads(good_reask_dict)) 
+    END DEFINE;
+
+    INSERT INTO @tmp_table
+    SELECT *
+    FROM $count_type_stats($good_reasks);
+
+END DEFINE;
+
+EVALUATE FOR $reask_type in DictKeys($reasks)
+    DO $count_good_reask_stats($reask_type);
+COMMIT;
+
+-- хочу выводить total good reasks статистику только если для всех типов переспросов определён хороший переспрос
+EVALUATE IF DictLength(SetDifference(ToSet(DictKeys($reasks)), ToSet($good_reasks_defined))) == 0 
+    DO $count_good_reask_totals();
+COMMIT;
+
+$good_reasks_stat = (SELECT * FROM @tmp_table);
+DEFINE SUBQUERY $reasks() AS SELECT * FROM $with_good_reasks() WHERE reask_used END DEFINE;
+
+
+-- заливка данных в отчёты
+Use stat;
+
+UPSERT INTO $reask_ddos_report_path
+ERASE BY (fielddate)
+SELECT *
+FROM $percent_metrics;
+
+UPSERT INTO $reask_report_path
+ERASE BY (fielddate)
+SELECT
+    UNWRAP(reask.fielddate) as fielddate,
+    UNWRAP(reask.app) as app,
+    UNWRAP(reask.is_new) as is_new,
+    UNWRAP(reask.reask_type) as reask_type,
+    reask.queries as queries,
+    reask.users as users,
+    good_reasks.queries as good_reask_queries,
+    good_reasks.users as good_reask_users
+FROM $count_overall_stats($reasks) as reask
+LEFT JOIN $good_reasks_stat as good_reasks
+ON reask.fielddate == good_reasks.fielddate and reask.app == good_reasks.app 
+    and reask.is_new == good_reasks.is_new 
+    and reask.reask_type == good_reasks.reask_type;

@@ -1,0 +1,124 @@
+service: amanda
+title: Amanda
+ci:
+  release-title-source: flow
+  secret: sec-01egbpyhg5khecds4jmrk3ty6h
+  runtime:
+    sandbox-owner: VINS
+  releases:
+    amanda-testing:
+      title: Deploy to testing
+      flow: amanda-testing-flow
+      stages:
+        testing-deploy:
+          title: Build and deploy Amanda testing
+      auto: true
+    amanda-stable:
+      title: Deploy to stable
+      flow: amanda-stable-flow
+      stages:
+        build:
+          title: Build Amanda package
+        prestable:
+          title: Deploy Amanda prestable
+        stable:
+          title: Deploy Amanda stable
+  flows:
+    amanda-testing-flow:
+      title: Amanda testing
+      jobs:
+        build:
+          title: Build Amanda package
+          task: common/arcadia/ya_package_2
+          input:
+            packages: alice/amanda/deploy/packages/amanda-package.json
+            resource_type: AMANDA_PACKAGE
+            package_type: tarball
+          stage: testing-deploy
+        deploy:
+          needs: build
+          title: Deploy to testing
+          task: common/deploy/create_release
+          input:
+            config:
+              stage_id: amanda-testing
+              patches:
+                - sandbox:
+                    sandbox_resource_type: AMANDA_PACKAGE
+                    static:
+                        deploy_unit_id: amanda
+                        layer_ref: amanda-package
+    amanda-stable-flow:
+      title: Amanda stable
+      jobs:
+        build:
+          title: Build Amanda package
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            packages: alice/amanda/deploy/packages/amanda-package.json
+            resource_type: AMANDA_PACKAGE
+            package_type: tarball
+        prestable:
+          needs: build
+          title: Deploy to prestable
+          task: common/deploy/create_release
+          manual: true
+          stage: prestable
+          input:
+            config:
+              stage_id: amanda-prestable
+              patches:
+                - sandbox:
+                    sandbox_resource_type: AMANDA_PACKAGE
+                    static:
+                        deploy_unit_id: amanda
+                        layer_ref: amanda-package
+        create-infra:
+          title: Create Infra event
+          needs: prestable
+          task: common/monitoring/infra_create
+          manual: true
+          stage: stable
+          input:
+            config:
+              textual:
+                title: Release Amanda Stable
+              status:
+                severity: MINOR
+                type: MAINTENANCE
+              placement:
+                serviceId: 2044
+                environmentId: 3187
+        stable:
+          needs: create-infra
+          title: Deploy to stable
+          task: common/deploy/create_release
+          input:
+            config:
+              stage_id: amanda-stable
+              patches:
+                - sandbox:
+                    sandbox_resource_type: AMANDA_PACKAGE
+                    static:
+                        deploy_unit_id: amanda
+                        layer_ref: amanda-package
+        close-infra:
+          title: Close Infra event
+          needs: stable
+          task: common/monitoring/infra_close
+          input:
+            config: { }
+
+arcanum:
+  review:
+    groups:
+    - name: "amanda_developers"
+      roles:
+      - "amanda:developer"
+    override_policy: "override"
+    rules:
+    - reviewers:
+      - name: "amanda_developers"
+        ship: 1
+        assign: 2

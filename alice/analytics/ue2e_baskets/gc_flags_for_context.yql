@@ -1,0 +1,58 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_presets";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_presets";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_presets";
+$accept_with_gc_flags = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_gc_flags";
+$kpi_with_gc_flags = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_gc_flags";
+$dev_with_gc_flags = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_gc_flags";
+$reply = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/for_reply";
+
+$patch_experiments_for_gc = @@
+import cyson
+import base64
+
+def get_flag_for_text(t):
+    return "hw_gc_mocked_reply={}".format(base64.b64encode(t).decode("utf-8"))
+
+
+def patch_experiments_for_gc(experiments, reply):
+    """
+    fix context for general_conversation using reply from logs
+    """
+    if not experiments:
+        experiments = {}
+    experiments["mm_scenario=GeneralConversation"] = "1"
+    experiments[get_flag_for_text(reply)] = "1"
+    return experiments
+
+patch_experiments_for_gc._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_experiments_for_gc = Python2:: patch_experiments_for_gc(ParseType("(Yson?, String?)->Yson?"), $patch_experiments_for_gc);
+
+DEFINE ACTION $patch_gc_context($input_table, $output_table) AS
+
+    $for_flags = (
+        SELECT a.*
+        FROM $input_table as a 
+        WHERE a.reversed_session_sequence != 0 AND (real_generic_scenario IN ("general_conversation", "external_skill_gc"))
+    );
+
+    $with_flags = (
+        SELECT $patch_experiments_for_gc(a.experiments, b.reply_from_logs) as experiments, a.* WITHOUT a.experiments
+        FROM $for_flags as a 
+        JOIN $reply as b 
+        USING(request_id)
+    );
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    (SELECT * FROM $with_flags)
+    UNION ALL
+    (SELECT a.* FROM $input_table as a LEFT ONLY JOIN $with_flags as b USING(request_id))
+
+END DEFINE;
+
+DO $patch_gc_context($accept, $accept_with_gc_flags);
+DO $patch_gc_context($kpi, $kpi_with_gc_flags);
+DO $patch_gc_context($dev, $dev_with_gc_flags);

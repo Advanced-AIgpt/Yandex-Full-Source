@@ -1,0 +1,95 @@
+Use hahn;
+-- PRAGMA  yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$app = "quasar";
+$restricted_dir = "//home/voice/jdkondratenko/VA-2304/";
+
+$context_intput_asr = $restricted_dir || "context_data/" || $app || "_with_asr";
+$context_intput_no_asr = $restricted_dir || "context_data/" || $app || "_empty_asr";
+$context_output = $restricted_dir || "context_data/" || $app || "_markup_input";
+
+$patch_script = @@
+import cyson
+
+def patch_session(session, annotated_query, last_session_el):
+    if not session:
+        session = list()
+    
+    if last_session_el:
+        session.append(last_session_el)
+    
+    is_main_query = False
+    for request in session:
+        if request.get("current_row"):
+            request.update(request["current_row"])
+            request.pop("current_row", None)
+            is_main_query = True
+        
+        for ind in range(11):
+            # для контекстных запросов информация лежит внутри _yql_Lag
+            if request.get("_yql_Lag" + str(ind)) and not is_main_query:
+                request.update(request["_yql_Lag" + str(ind)])
+            request.pop("_yql_Lag" + str(ind), None)
+        
+        if is_main_query and annotated_query:
+            request["_query"] = annotated_query
+        else:
+            request["_query"] = request["query"]
+        
+        # rename for context task
+        request["_reply"] = request["reply"]
+        request["ts"] = request["client_time"]
+        request["tz"] = request["client_tz"]
+        request["req_id"] = request["request_id"]
+        
+        # содержимое device_state должно лежать без ключевого device_state
+        if request.get("device_state"):
+            request.update(request["device_state"])
+        
+        if not request.get("is_tv_plugged_in"):
+            request["is_tv_plugged_in"] = False
+        
+        if not request.get("sound_muted"):
+            request["sound_muted"] = False
+        
+        if not request.get("sound_level"):
+            request["sound_level"] = 1
+        
+        if request.get("meta") and "form" in request.get("meta") and "slots" in request["meta"]["form"]:
+            request["form_slots"] = request["meta"]["form"]["slots"]
+        
+        if not request.get("music"):
+            request["music"] = {}
+        
+        if not request.get("video"):
+            request["video"] = {}
+    
+        request.pop("query", None)
+        request.pop("reply", None)
+        request.pop("additional_options", None)
+        request.pop("experiments", None)
+        request.pop("device_state", None)
+        request.pop("client_time", None)
+        request.pop("client_tz", None)
+        request.pop("request_id", None)
+        
+        is_main_query = False
+        
+    return session
+
+patch_session._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_session = Python2::patch_session(ParseType("(Yson?, String?, Yson?)->List<Yson>"), $patch_script);
+
+
+INSERT INTO $context_output WITH TRUNCATE 
+SELECT 
+    request_id, session_id, $patch_session(Yson::SerializePretty(Yson::From(session)), query, Null) as session
+FROM $context_intput_asr
+UNION ALL
+SELECT 
+    request_id, prev_session_id ?? request_id as session_id, $patch_session(Yson::SerializePretty(Yson::From(session)), Null, query_data) as session
+FROM $context_intput_no_asr;

@@ -1,0 +1,258 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+PRAGMA TablePathPrefix = '//home/voice/dialog/misc/cohorts/portion';
+
+DECLARE $param_dict AS Dict<String, String>;
+$date_first = $param_dict['date_first'];
+$date_last = $param_dict['date_last'];
+
+$script = FileContent("link_name.py");
+$get_main_intent_part = Python2::get_main_intent_part(ParseType("(String?)->String"), $script);
+
+$udfScript1 =@@
+COMMANDS = ['commands_other', 'video_commands', 'player_commands', 'sound_commands', 'stop', 'feedback']
+CONTINUOUS = ['video', 'music', 'tv_stream', 'tv_broadcast', 'radio', 'meditation', 'morning_show', 'music_ambient_sound', 'music_fairy_tale', 'music_podcast']
+STOP = {'player_commands':['player_pause'], 'stop':['all'], 'sleep_timer':['sleep_timer_set'], 'ontofacts':['film_gallery']}
+
+def is_continuous_start(generic_scenario):
+    return generic_scenario in CONTINUOUS
+
+def is_continuous_continue(main_intent):
+    return (main_intent == 'player_continue')
+
+def is_continuous_stop(generic_scenario, main_intent):
+    return (generic_scenario in STOP and ( STOP[ generic_scenario ] == ['all']
+            or main_intent in STOP[ generic_scenario ]))
+
+def is_command(generic_scenario, main_intent):
+    return (generic_scenario in COMMANDS
+            or main_intent in ['alarm_stop_playing', 'alarm_reminder'])
+
+def is_boltalka(generic_scenario):
+    return generic_scenario == 'general_conversation'
+
+def is_search(main_intent):
+    return (main_intent in ['factoid', 'entity_name'])
+
+def classify_intent(generic_scenario, main_intent):
+    generic_scenario = generic_scenario.decode('utf-8')
+    main_intent = main_intent.decode('utf-8')
+    intent_dict = {}
+    intent_dict['is_command']             = is_command(generic_scenario, main_intent)
+    intent_dict['is_continuous_start']    = is_continuous_start(generic_scenario)
+    intent_dict['is_continuous_continue'] = is_continuous_continue(main_intent)
+    intent_dict['is_continuous_stop']     = is_continuous_stop(generic_scenario, main_intent)
+    intent_dict['is_boltalka']            = is_boltalka(generic_scenario)
+    intent_dict['is_search']              = is_search(main_intent)
+    return intent_dict
+@@;
+
+$python_classify_intent = Python::classify_intent(
+    Callable<
+        (String, String) -> Struct<
+        is_command:Bool,
+        is_continuous_start:Bool,
+        is_continuous_continue:Bool,
+        is_continuous_stop:Bool,
+        is_boltalka:Bool,
+        is_search:Bool,
+        >>,
+        $udfScript1
+);
+
+$udfScript2 = @@
+import datetime
+LONG_GAP = 1800
+LONG_BOLTALKA_SESSION = 3
+
+def mark_session(user_fielddate, data_lst):
+    scenario_client_time = dict()
+
+    current_continuous_scenario = ''
+    current_continuous_scenario_playing = False
+
+    boltalka_count = 0
+
+    for el in data_lst:
+        is_session = False
+        diff = el.client_time
+        if el.input_type == 'tech'.encode('utf-8'):
+            pass
+        elif el.scenario not in (''.encode('utf-8'), 'error'.encode('utf-8'), 'empty'.encode('utf-8'), 'side_speech'.encode('utf-8')):
+            if el.is_boltalka:
+                if el.is_continuous_stop:
+                    diff = 0
+                else:
+                    diff = el.client_time - scenario_client_time.get('boltalka'.encode('utf-8'), 0)
+                    scenario_client_time['boltalka'.encode('utf-8')] = el.client_time
+                    if diff > LONG_GAP:
+                        boltalka_count = 1
+                    else:
+                        boltalka_count += 1
+                        is_session = (boltalka_count == LONG_BOLTALKA_SESSION)
+            else:
+                boltalka_count = 0
+
+                if el.is_search and len(el.query.split()) == 1:
+                    diff = 0
+                else:
+                    diff = el.client_time - scenario_client_time.get(el.scenario, 0)
+                    scenario_client_time[el.scenario] = el.client_time
+
+                if not el.is_command and diff >= LONG_GAP:
+                    if el.scenario == current_continuous_scenario and current_continuous_scenario_playing:
+                        is_session = False
+                    else:
+                        is_session = True
+
+            if el.is_continuous_continue and current_continuous_scenario:
+                current_continuous_scenario_playing = True
+
+            if el.is_continuous_stop and current_continuous_scenario:
+                current_continuous_scenario_playing = False
+
+            if el.is_continuous_start:
+                current_continuous_scenario = el.scenario
+                current_continuous_scenario_playing = True
+
+        yield ({'user': el.user,
+        'fielddate': el.fielddate,
+        'app': el.app,
+        'platform': el.platform,
+        'version': el.version,
+        'cohort': el.cohort,
+        'is_new': el.is_new,
+        'client_time': el.client_time,
+        'time': datetime.datetime.fromtimestamp(el.client_time).strftime('%H:%M:%S'),
+        'scenario_delta': diff,
+        'query': el.query,
+        'reply': el.reply,
+        'input_type': el.input_type,
+        'session_id': el.session_id,
+        'main_intent': el.main_intent,
+        'scenario': el.scenario,
+        'is_command': el.is_command,
+        'is_boltalka': el.is_boltalka,
+        'is_search': el.is_search,
+        'is_continuous_start': el.is_continuous_start,
+        'is_continuous_continue': el.is_continuous_continue,
+        'is_continuous_stop': el.is_continuous_stop,
+        'current_continuous_scenario': current_continuous_scenario,
+        'current_continuous_scenario_playing': current_continuous_scenario_playing,
+        'boltalka_count': boltalka_count,
+        'is_session': is_session
+        })
+@@;
+
+$python_mark_session = Python::mark_session(
+    Callable<
+        (Tuple<String, String, String, String, String, String, String>, Stream<Struct<user:String,
+        fielddate:String,
+        app:String,
+        platform:String,
+        version:String,
+        cohort:String,
+        is_new:String,
+        input_type:String,
+        client_time:Int64?,
+        main_intent:String,
+        scenario:String,
+        is_command:Bool,
+        query:String,
+        reply:String,
+        session_id:String,
+        is_continuous_start:Bool,
+        is_continuous_continue:Bool,
+        is_continuous_stop:Bool,
+        is_boltalka:Bool,
+        is_search:Bool,
+        >>) ->
+        Stream<Struct<user:String, fielddate:String,
+        app:String,
+        platform:String,
+        version:String,
+        cohort:String,
+        is_new:String,
+        client_time:Int64?,
+        time:String,
+        query:String,
+        reply:String,
+        input_type:String,
+        session_id:String,
+        scenario:String,
+        main_intent:String,
+        scenario_delta:Uint64?,
+        is_command:Bool,
+        is_boltalka:Bool,
+        is_search:Bool,
+        is_continuous_start:Bool,
+        is_continuous_continue:Bool,
+        is_continuous_stop:Bool,
+        current_continuous_scenario:String,
+        current_continuous_scenario_playing:Bool,
+        boltalka_count:Uint64,
+        is_session:Bool
+        >>>,
+        $udfScript2
+);
+
+INSERT INTO `scenario` WITH TRUNCATE
+SELECT
+app??'' AS app,
+fielddate??'' AS fielddate,
+platform??'' AS platform,
+version??'' AS version,
+cohort??'' AS cohort,
+is_new??'' AS is_new,
+intent,
+input_type??'' AS input_type,
+req_id,
+client_time,
+user,
+query??'' AS query,
+reply??'' AS reply,
+session_id,
+generic_scenario??"" AS scenario,
+$get_main_intent_part(intent??'') AS main_intent,
+intent_dict.is_command AS is_command,
+intent_dict.is_boltalka AS is_boltalka,
+intent_dict.is_search AS is_search,
+intent_dict.is_continuous_stop AS is_continuous_stop,
+intent_dict.is_continuous_continue AS is_continuous_continue,
+intent_dict.is_continuous_start AS is_continuous_start,
+WITHOUT intent_dict
+FROM (
+SELECT $python_classify_intent(generic_scenario??'', $get_main_intent_part(intent??'')) as intent_dict,
+UNWRAP(`uuid`) as user, t.* WITHOUT `uuid`
+FROM RANGE(`//home/alice/dialog/prepared_logs_expboxes`, $date_first, $date_last) AS t
+WHERE (app??'') IN ('quasar', 'small_smart_speakers')
+) AS t;
+COMMIT;
+
+INSERT INTO `mark_session` WITH TRUNCATE
+REDUCE `scenario`
+PRESORT client_time ASC
+ON user, fielddate, app, platform, version, cohort, is_new
+USING $python_mark_session(AsStruct(user as user, fielddate AS fielddate,
+app AS app,
+platform AS platform,
+version AS version,
+cohort AS cohort,
+is_new AS is_new,
+input_type AS input_type,
+client_time as client_time,
+scenario AS scenario,
+query AS query,
+reply AS reply,
+session_id??"" AS session_id,
+main_intent as main_intent,
+is_command as is_command,
+is_boltalka as is_boltalka,
+is_search as is_search,
+is_continuous_stop as is_continuous_stop,
+is_continuous_start as is_continuous_start,
+is_continuous_continue as is_continuous_continue,
+));
+COMMIT;

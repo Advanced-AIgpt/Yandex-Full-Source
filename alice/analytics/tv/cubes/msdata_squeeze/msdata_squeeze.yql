@@ -1,0 +1,168 @@
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+USE hahn;
+
+$user_profiles_cumulative_path = "//home/msdata/user-profiles-cumulative/v1/last";
+$opk_profiles_cumulative_path = "//home/msdata/opk-profiles-cumulative/v1/last";
+$events_path = '//home/msdata/user-events-cumulative/v3/last';
+$tv_gift_campaign_tvlauncher = '[MUSIC-28580]TVLAUNCHERPROTOTYPE';
+$tv_gift_campaign_module365 = 'NEWPLUS[MBPROMO-1453]Module365';
+$tv_gift_campaign_module90 = 'KPAM[MUSIC-26401]Modul90days';
+$tv_gift_campaigns = [$tv_gift_campaign_tvlauncher, $tv_gift_campaign_module365, $tv_gift_campaign_module90];
+
+$format_date = DateTime::Format("%Y-%m-%d");
+$parse_date = ($date_string) -> {
+    RETURN DateTime::MakeDatetime((DateTime::Parse("%Y-%m-%d"))($date_string))
+};
+$add_days = ($date, $days) -> {
+    RETURN $format_date($parse_date($date) + DateTime::IntervalFromDays($days))
+};
+
+$tv_and_puid_activations = (
+    SELECT
+        -- new_device_id,
+        puid,
+        -- MIN(fielddate) AS request_date,
+        $add_days(MIN(fielddate), -1) as first_puid_date
+    FROM `//home/sda/cubes/tv/dayuse/last`
+    WHERE NOT is_factory_ip AND puid != '' AND puid IS NOT NULL
+    GROUP BY
+        -- coalesce(eth0, quasar_device_id) AS new_device_id,
+        puid
+);
+
+$profiles_tv_slice = (
+    SELECT
+        UNWRAP(fielddate) AS fielddate,
+        UNWRAP(state) AS state,
+        UNWRAP(puid) AS puid,
+        plus ?? false AS plus,
+        campaign ?? '' AS campaign,
+        dummy ?? false AS dummy,
+        bundle ?? '' AS bundle,
+        order_id ?? '' AS order_id,
+        declared_state ?? '' AS declared_state,
+        subscription_state ?? '' AS subscription_state,
+        child ?? false AS child,
+        promo_period_days ?? 0 AS promo_period_days,
+        (campaign IN $tv_gift_campaigns AND state IN ['active', 'future'] AND plus) AS has_requested_gift,
+        (campaign IN $tv_gift_campaigns AND state = 'active' AND plus) ?? false AS has_gift
+    FROM $user_profiles_cumulative_path
+    WHERE (
+        puid IN (
+            SELECT DISTINCT
+                puid
+            FROM $tv_and_puid_activations
+        ) OR campaign IN $tv_gift_campaigns
+    )
+    AND fielddate IS NOT NULL
+    AND state IS NOT NULL
+    AND puid IS NOT NULL
+    -- ORDER BY fielddate, state, puid
+);
+
+$payments = (
+    SELECT puid, fielddate, first_source, payment_rub, order_id
+    FROM $events_path
+    WHERE payment_rub > 0
+    AND puid IN (
+        SELECT DISTINCT
+            puid
+        FROM $tv_and_puid_activations
+    )
+    GROUP BY puid, fielddate, first_source, payment_rub, order_id
+);
+
+$share_condition = (
+    SELECT
+        puid,
+        first_puid_date,
+        CASE
+            WHEN last_premium_date_before_puid_activation is not null and DateTime::ToDays(CAST(first_puid_date AS Date) - CAST(last_premium_date_before_puid_activation AS Date)) < 30 THEN false
+            -- WHEN first_premium_date_after_puid_activation is null THEN false
+            -- WHEN DateTime::ToDays(CAST(first_premium_date_after_puid_activation AS Date) - CAST(first_puid_date AS Date)) > 30 THEN false
+            ELSE true
+        END AS is_rev_share
+    FROM (
+        SELECT
+            puid,
+            first_puid_date,
+            MAX(IF(profiles.fielddate < tv_and_puid.first_puid_date, profiles.fielddate)) AS last_premium_date_before_puid_activation,
+            MIN(IF(profiles.fielddate >= tv_and_puid.first_puid_date, profiles.fielddate)) AS first_premium_date_after_puid_activation
+        FROM $tv_and_puid_activations AS tv_and_puid
+        LEFT JOIN (
+            SELECT DISTINCT * FROM (
+            SELECT puid, fielddate
+            FROM $profiles_tv_slice
+            WHERE state = 'active' AND plus AND NOT dummy AND NOT child
+            UNION ALL
+            SELECT puid, fielddate
+            FROM $opk_profiles_cumulative_path
+            WHERE is_active AND puid IN (SELECT DISTINCT puid FROM $profiles_tv_slice))
+        ) AS profiles USING (puid)
+        GROUP BY tv_and_puid.puid AS puid, tv_and_puid.first_puid_date AS first_puid_date
+    )
+);
+
+$rev_share = (
+    SELECT
+        fielddate,
+        profiles.puid AS puid,
+        cond.first_puid_date AS first_puid_date,
+        (cond.is_rev_share AND profiles.fielddate >= cond.first_puid_date) AS is_rev_share,
+        payments.first_source AS first_source,
+        profiles.order_id AS order_id,
+        SUM(payments.payment_rub) AS payment,
+        SUM(Math::Round(payments.payment_rub / 1.2 * 0.15, -1)) AS revenue,
+        MAX(payments.puid IS NOT NULL AND payments.payment_rub >= 10) AS is_payment,
+        MAX(payments.puid IS NOT NULL AND payments.payment_rub >= 10 AND payments.first_source IN ('kinopoisk_yandextv', 'kinopoisk_yandextv_launcher')) AS is_tv_payment,
+        MAX(MAX(payments.puid IS NOT NULL AND payments.payment_rub >= 10)) OVER month_until_today AS is_paying,
+        MAX(MAX(payments.puid IS NOT NULL AND payments.payment_rub >= 10 AND payments.first_source IN ('kinopoisk_yandextv', 'kinopoisk_yandextv_launcher'))) OVER month_until_today AS is_tv_paying
+    FROM $profiles_tv_slice AS profiles
+    LEFT JOIN $share_condition AS cond ON cond.puid = profiles.puid
+    LEFT JOIN $payments AS payments ON payments.fielddate = profiles.fielddate AND payments.puid = profiles.puid AND payments.order_id = profiles.order_id
+    GROUP BY
+        profiles.fielddate AS fielddate,
+        profiles.puid,
+        cond.first_puid_date,
+        cond.is_rev_share,
+        payments.first_source,
+        profiles.order_id
+    WINDOW month_until_today AS (PARTITION BY profiles.puid, profiles.order_id ORDER BY profiles.fielddate ROWS BETWEEN 31 PRECEDING AND CURRENT ROW)
+);
+
+$gift_activations = (
+    SELECT
+        puid,
+        MIN(fielddate) AS request_date,
+        MIN(IF(state = 'active', fielddate)) AS activation_date,
+        MIN_BY(campaign, fielddate) AS first_campaign,
+        MIN_BY(promo_period_days, fielddate) AS first_promo_period_days,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_tvlauncher, fielddate)) AS tvlauncher_activation_date,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_tvlauncher AND state = 'active', fielddate)) AS tvlauncher_usage_date,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_module365, fielddate)) AS module365_activation_date,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_module365 AND state = 'active', fielddate)) AS module365_usage_date,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_module90, fielddate)) AS module90_activation_date,
+        -- MIN_BY(campaign, IF(campaign = $tv_gift_campaign_module90 AND state = 'active', fielddate)) AS module90_usage_date,
+    FROM $profiles_tv_slice
+    WHERE campaign IN $tv_gift_campaigns
+        AND state IN ['active', 'future']
+        AND plus
+    GROUP BY puid
+);
+
+INSERT INTO `//home/sda/cubes/tv/msdata/last` WITH TRUNCATE
+SELECT
+    profiles.*,
+    gift.*,
+    IF(gift.request_date >= profiles.fielddate, gift.request_date) AS gift_request_date,
+    IF(gift.activation_date >= profiles.fielddate, gift.activation_date) AS gift_activation_date,
+    IF(gift.request_date >= profiles.fielddate, gift.first_campaign) AS gift_first_campaign,
+    IF(gift.request_date >= profiles.fielddate, gift.first_promo_period_days) AS gift_first_promo_period_days,
+    MAX(has_gift) OVER today_and_before ?? false AS had_gift,
+    rev_share.*
+FROM $profiles_tv_slice AS profiles
+LEFT JOIN $gift_activations AS gift ON profiles.puid = gift.puid
+LEFT JOIN $rev_share AS rev_share ON profiles.puid = rev_share.puid AND profiles.fielddate = rev_share.fielddate AND profiles.order_id = rev_share.order_id
+WINDOW today_and_before AS (PARTITION BY profiles.puid ORDER BY profiles.fielddate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+ORDER BY fielddate, state, puid

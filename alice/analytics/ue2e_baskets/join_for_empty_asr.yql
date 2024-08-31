@@ -1,0 +1,121 @@
+Use hahn;
+pragma yt.Pool = "voice";
+pragma yson.DisableStrict = "1";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+-- в датах чуток получилось смещение, логи логфеллера потёрлись быстрее, чем успели разобраться с запуском утилиты
+$date_start = "2019-08-04";
+$date_end = "2020-01-29";
+
+-- получается запуском утилиты
+$vins_data_from_uniproxy = "//home/alice/irinfox/VA-1190/vins_data_for_empty_asr";
+$voice_data = "//home/voice/irinfox/VA-1190/intermediate_data/voice_logs_without_exp_2019-07-30_2020-01-29";
+$output_table = "//home/voice/irinfox/VA-1190/joined_data_empty_asr_" || $date_start || "_" || $date_end;
+$common_dir = "//home/alice/irinfox/VA-1190/sampled_data/";
+$users_path='//home/voice/dialog/misc/uuids_info';
+$devices_path='//home/marketing-data/andrewha/Station/backup/quasar_init';
+$quasar_joined_data = $common_dir || "quasar_data_empty_asr";
+$general_joined_data = $common_dir || "general_data_empty_asr";
+$navi_joined_data = $common_dir || "navi_auto_data_empty_asr";
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+
+-- это вот эта функция: https://a.yandex-team.ru/arc/trunk/arcadia/alice/analytics/operations/dialog/sessions/usage_fields.py?rev=6266023#L52
+-- нельзя обратиться из yql из-за зависимости от nile
+$script = @@
+APP_LIST = {
+    "ru.yandex.searchplugin": "search_app_prod",
+    "ru.yandex.mobile": "search_app_prod",
+    "ru.yandex.searchplugin.beta": "search_app_beta",
+    "ru.yandex.mobile.search": "browser_prod",
+    "ru.yandex.mobile.search.ipad": "browser_prod",
+    "winsearchbar": "stroka",
+    "com.yandex.browser": "browser_prod",
+    "com.yandex.browser.alpha": "browser_alpha",
+    "com.yandex.browser.beta": "browser_beta",
+    "ru.yandex.yandexnavi": "navigator",
+    "ru.yandex.mobile.navigator": "navigator",
+    "com.yandex.launcher": "launcher",
+    "ru.yandex.quasar.services": "quasar",
+    "yandex.auto": "auto",
+    "ru.yandex.autolauncher": "auto",
+    "ru.yandex.iosdk.elariwatch": "elariwatch",
+    "aliced": "small_smart_speakers",
+    "YaBro": "yabro_prod",
+    "YaBro.beta": "yabro_beta",
+    "ru.yandex.quasar.app": "quasar",
+    "yandex.auto.old": "auto",
+    "ru.yandex.mobile.music": "music_app_prod",
+    "ru.yandex.music": "music_app_prod"
+}
+
+def get_app(app_id):
+    return APP_LIST.get(app_id, "other")
+@@;
+
+$map_app = Python2::get_app(ParseType("(String?)->String"), $script);
+
+$joined_data = (
+    SELECT $map_app(voice.vins_app_id) as app, voice.*, Yson::ConvertToString(vins.DeviceState.device_id) as device_id, vins.* WITHOUT voice.vins_app_id
+    FROM RANGE($vins_data_from_uniproxy, $date_start, $date_end) as vins
+    JOIN $voice_data as voice
+    ON voice.voice_request_id == vins.MessageId
+    WHERE is_empty_asr
+);
+
+-- фильтрация от прокачечных запросов и оставляем только русский
+$joined_data_filtered = ( 
+    SELECT * FROM $joined_data
+    WHERE 
+        not (String::StartsWith(voice_uuid, 'ffffffffffffffff') or String::StartsWith(voice_uuid, 'deadbeef') or String::StartsWith(voice_uuid, 'dddddddddddddddd'))
+        and Yson::LookupString(Application, "lang") in ("ru-RU", "ru")
+);
+
+-- уникализация и переименование
+-- при первом сборе, тут отсматривала, что отсеивается и в чём отличия: https://st.yandex-team.ru/VA-1190#5e3c81651984762a390b366e
+INSERT INTO $output_table WITH TRUNCATE
+SELECT 
+    vins_request_id as request_id, SOME(MessageId) as MessageId, SOME(Header) as Header,
+    SOME(ActivationType) as ActivationType,
+    SOME(app) as app,
+    "voice" as input_type, 'uu/' || SOME(voice_uuid) as `uuid`, SOME(voice_fielddate) as fielddate,
+    SOME(ResetSession) as ResetSession,
+    SOME(is_empty_asr) as is_empty_asr, 
+    SOME(Application) as Application, SOME(AdditionalOptions) as AdditionalOptions, 
+    SOME(mds_key) as mds_key, SOME(Location) as Location, SOME(IpAddr) as IpAddr, SOME(voice_request_id) as voice_request_id, SOME(DeviceState) as DeviceState, 
+    SOME(`Timestamp`) as `Timestamp`,
+    SOME(device_id) as device_id
+FROM $joined_data_filtered
+GROUP BY vins_request_id;
+
+COMMIT;
+
+INSERT INTO $general_joined_data WITH TRUNCATE 
+SELECT a.*, IF(DateTime::ToDays(CAST(fielddate AS DATE) - cast(b.first_day AS DATE)) < 7, "1 week", ">1 week") as is_new
+FROM (SELECT *
+FROM $output_table
+WHERE app in $general_apps) as a
+JOIN $users_path as b
+USING(`uuid`);
+
+INSERT INTO $quasar_joined_data WITH TRUNCATE 
+SELECT a.*, IF(DateTime::ToDays(CAST(fielddate AS DATE) - cast(b.init_date AS DATE)) < 7, "1 week", ">1 week") as is_new
+FROM (SELECT *
+FROM $output_table
+WHERE app in $quasar_apps) as a
+JOIN $devices_path as b
+USING(`device_id`);
+
+INSERT INTO $navi_joined_data WITH TRUNCATE 
+SELECT a.*, IF(DateTime::ToDays(CAST(fielddate AS DATE) - cast(b.first_day AS DATE)) < 7, "1 week", ">1 week") as is_new
+FROM (SELECT *
+FROM $output_table
+WHERE app in $navi_apps) as a
+JOIN $users_path as b
+USING(`uuid`);
+
+COMMIT;
+
+DROP TABLE $output_table;

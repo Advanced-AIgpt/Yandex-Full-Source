@@ -1,0 +1,106 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Amanda | Edit Device State</title>
+
+    <link href="https://div2html.s3.yandex.net/amanda/jsoneditor.min.css" rel="stylesheet" type="text/css">
+    <script src="https://div2html.s3.yandex.net/amanda/jsoneditor.min.js"></script>
+
+    <style type="text/css">
+        html, body {
+            height: 100%;
+            background: white;
+        }
+
+        #savedevicestate {
+            height: 100%;
+        }
+
+        .save-button {
+            width: auto !important;
+            padding: 0 10px !important;
+            background: red !important;
+            cursor: pointer !important;
+        }
+
+        .paste-example-button {
+            width: auto !important;
+            padding: 0 10px !important;
+            cursor: pointer !important;
+            background: none !important;
+        }
+
+        #jsoneditor {
+            height: 100%;
+            margin: -8px !important;
+        }
+    </style>
+</head>
+
+<body>
+
+<form id="savedevicestate" method="post">
+    <input id="devicestate" type="hidden" name="devicestate" value="{{.DeviceState}}">
+    <div id="jsoneditor"></div>
+</form>
+
+<script>
+    const container = document.getElementById('jsoneditor')
+    const deviceState = document.getElementById('devicestate')
+    const deviceStateForm = document.getElementById('savedevicestate')
+    const options = {
+        mode: 'code',
+        // modes: ['code', 'text', 'tree',],
+        // onChangeText: (value) => {
+        //     deviceState.value = JSON.stringify(value, null, 0)
+        // }
+    }
+    const editor = new JSONEditor(container, options)
+    window.onload = function () {
+        const saveButton = document.createElement('button')
+        saveButton.onclick = function () {
+            try {
+                deviceState.value = JSON.stringify(editor.get(), null, 0)
+                console.log('sending: ', deviceState.value)
+                deviceStateForm.submit()
+            } catch (e) {
+                alert(e)
+            }
+        }
+        saveButton.textContent = 'Сохранить'
+        saveButton.className = 'save-button'
+        saveButton.type = 'button'
+
+        const pasteExampleButton = document.createElement('button')
+        pasteExampleButton.onclick = function () {
+            editor.set({
+                'device_config': {
+                    'content_settings': 'without',
+                    'spotter': 'alisa'
+                },
+                'device_id': null,
+                'is_tv_plugged_in': false,
+                'sound_level': 5,
+                'sound_muted': true
+            })
+        }
+        pasteExampleButton.textContent = 'Вставить пример'
+        pasteExampleButton.className = 'paste-example-button'
+        pasteExampleButton.type = 'button'
+
+        const menu = document.getElementsByClassName('jsoneditor-menu').item(0)
+        menu.appendChild(saveButton)
+        menu.appendChild(pasteExampleButton)
+
+        try {
+            editor.set(JSON.parse(deviceState.value))
+        } catch (e) {
+            editor.setText(deviceState.value);
+        }
+
+        {{/*{{if .Message}} alert({{.Message}}) {{end}}*/}}
+    }
+</script>
+</body>
+
+</html>

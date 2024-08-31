@@ -1,0 +1,307 @@
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yson.DisableStrict;
+
+$three_days_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+--определение типа шоу
+$show_type_prev = ($analytics_info) -> {RETURN  Yson::ConvertToString(ListFilter(
+Yson::ConvertToList(DictPayloads(Yson::ConvertToDict($analytics_info.analytics_info))[0].scenario_analytics_info.objects),
+($x) -> (Yson::ConvertToString($x.id) = 'show.type'))[0].human_readable)};
+$morning_show_profile = ($analytics_info) -> {RETURN Yson::SerializePretty(ListFilter(Yson::ConvertToList($analytics_info.users_info.HollywoodHardcodedMusic.scenario_user_info.properties),
+($x) -> (Yson::ConvertToString($x.human_readable) = 'Morning show customisation'))[0].morning_show_profile)};
+$format = ($source) -> {RETURN String::JoinFromList(ListSkip(String::SplitToList($source, '-'), 1), '-')};
+$news = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.news_config.news_providers), ($x) ->
+(Yson::ConvertToString($x.rubric) || ' FROM ' || $format(Yson::ConvertToString($x.news_source))))};
+$topics = ($morning_show_profile) -> {RETURN ListMap(Yson::ConvertToList($morning_show_profile.topics_config.topics), ($x) -> (Yson::ConvertToString($x.podcast)))};
+
+--req_id утреннего шоу из сессий
+$morning_show_topics =
+(
+    SELECT distinct req_id,
+    CASE WHEN show_type_prev??'morning' != 'morning' THEN show_type_prev || '_show'
+    WHEN ListLength(topics) = 0 AND ListLength(news) = 1 AND String::StartsWith((news[0]??''), '__mixed_news__') THEN 'new morning show default settings'
+    WHEN (ListLength(topics) > 0 OR ListLength(news) > 0) THEN 'new morning show custom settings'
+    ELSE 'morning_show'
+    END AS show_type
+    FROM
+    (
+        SELECT DISTINCT req_id,
+        $news($morning_show_profile(analytics_info)) AS news,
+        $topics($morning_show_profile(analytics_info)) AS topics,
+        $show_type_prev(analytics_info) AS show_type_prev,
+        FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $three_days_ago)
+        WHERE generic_scenario = 'morning_show'
+        AND app IN ('quasar', 'small_smart_speakers')
+        AND input_type != "tech"
+        AND (req_id == parent_req_id or (parent_req_id ?? "") == "")
+    )
+);
+
+$timespent_precompute_tlt = (
+    SELECT fielddate, app, `uuid`, puid, req_id, show_type, 1.0*sum(tlt_tvt ?? 0)/1000 + 1.0*sum(tts ?? 0)/1000 as timespent_s
+    FROM (
+        SELECT fielddate, app, `uuid`, puid, l.req_id as req_id, scenario, show_type, tlt_tvt, tts
+        FROM (
+            SELECT fielddate, app, `uuid`, puid, scenario, if ((parent_req_id ?? "") == "", req_id, parent_req_id) as req_id, tlt_tvt, tts
+            FROM FILTER(`//home/alice/precomputes/timespent/precompute_timespent`, $three_days_ago)
+            WHERE scenario == "morning_show" and (app == "quasar" or app == "small_smart_speakers")
+        ) as l left join $morning_show_topics as r on l.req_id == r.req_id
+    )
+    WHERE show_type is not null
+    GROUP BY fielddate, app, req_id, `uuid`, puid, scenario, show_type
+)
+;
+
+$morning_show_req_id = (
+    SELECT l.fielddate as fielddate, l.app as app, l.req_id as req_id, l.parent_req_id as parent_req_id, l.puid as puid, r.show_type as show_type
+    FROM (
+        SELECT DISTINCT req_id, parent_req_id, app, puid, fielddate
+            FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $three_days_ago)
+            WHERE (generic_scenario = 'morning_show' or parent_scenario == "morning_show")
+            AND app IN ('quasar', 'small_smart_speakers')
+    ) as l
+    LEFT JOIN $morning_show_topics as r
+    on (if (l.parent_req_id != "", l.parent_req_id, l.req_id)) == r.req_id
+)
+;
+
+
+--проклеиваем с логами бекенда музыки
+$morning_show_log =
+(
+    SELECT fielddate, app, show_type, req_id, req_id AS show_req_id, puid, track_id, track_type,
+    MIN(ts) AS start_ts, MAX(duration) AS duration,
+    FROM
+    (
+        SELECT if (r.parent_req_id != "", r.parent_req_id, r.req_id) as req_id, fielddate, app, show_type,
+        CAST(uid AS String) AS puid, track_id, shot_type??track_type AS track_type, $s_to_datetime(unixtime) AS ts,
+        DateTime::IntervalFromSeconds(CAST(duration_seconds AS Int32)) AS duration
+        FROM FILTER(`//logs/music-quasar-plays-log/1d`, $three_days_ago) AS l
+        INNER JOIN $morning_show_req_id AS r ON l.req_id = r.req_id AND CAST(l.uid AS String) = r.puid
+    )
+    GROUP BY fielddate, app, show_type, req_id, track_id, track_type, puid
+);
+
+$ms_to_datetime = ($ms) -> {RETURN DateTime::FromMilliseconds(CAST($ms AS Uint64))};
+$null_sec = CAST(0 AS Interval);
+
+--сессия вокруг шоу
+$sessions_near_show =
+(
+    SELECT s.fielddate AS fielddate, s.app AS app, show_type, if (s.parent_req_id != "", s.parent_req_id, s.req_id) AS req_id, l.req_id AS show_req_id,
+    s.puid AS puid, NULL AS track_id, NULL AS track_type, intent,
+    $ms_to_datetime(server_time_ms) AS start_ts, generic_scenario,
+    query, reply
+    FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $three_days_ago) AS s
+    INNER JOIN
+    (
+        SELECT fielddate, req_id, puid, show_type, MIN(start_ts) AS min_ts, MAX(start_ts) AS max_ts
+        FROM $morning_show_log
+        GROUP BY fielddate, req_id, puid, show_type
+    ) AS l ON l.fielddate = s.fielddate AND l.puid = s.puid
+    WHERE $ms_to_datetime(s.server_time_ms) BETWEEN l.min_ts - DateTime::IntervalFromMinutes(1)
+    AND l.max_ts + DateTime::IntervalFromMinutes(5)
+);
+
+$intent_formatted = ($intent) -> {RETURN String::JoinFromList(String::SplitToList($intent, '\t'), '.')};
+
+--доклеили к музыкальному шоу соседние запросы
+$total_log =
+(
+    SELECT fielddate, app, show_type, req_id, show_req_id, puid, track_id, track_type, start_ts, duration, generic_scenario, $intent_formatted(intent) AS intent,
+    query, reply,
+    IF (((LEAD(start_ts) OVER w - start_ts)??duration) < DateTime::IntervalFromSeconds(0), DateTime::IntervalFromSeconds(0),
+    (LEAD(start_ts) OVER w - start_ts)??duration) AS time_diff
+    FROM
+    (
+        SELECT fielddate, app, show_type, req_id, show_req_id, puid, track_id, track_type, start_ts, duration,
+        'morning_show' AS generic_scenario, NULL AS query, NULL AS reply
+        FROM $morning_show_log
+        UNION ALL
+        SELECT fielddate, app, show_type, req_id, show_req_id, puid, track_id, track_type, start_ts,
+        $null_sec AS duration, generic_scenario, intent, query, reply
+        FROM $sessions_near_show
+    )
+    WINDOW w AS (ORDER BY fielddate, puid, start_ts)
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/last_days_sessions` WITH TRUNCATE
+SELECT t.*, ROW_NUMBER() OVER w AS index
+FROM $total_log as t
+WINDOW w AS (PARTITION BY show_req_id ORDER BY start_ts)
+ORDER BY show_req_id, start_ts;
+
+$tlt_v0 =
+(
+    SELECT fielddate, app, show_type,
+    COUNT(DISTINCT puid) AS uniq_user_amount, COUNT(DISTINCT req_id) AS uniq_req_amount,
+    SUM(tlt) AS total_tlt, AVG(tlt) AS avg_tlt, MEDIAN(tlt) AS median_tlt
+    FROM
+    (
+        SELECT fielddate, app??'Total' AS app, show_type??'Total' AS show_type,
+        puid, req_id, sum(timespent_s) AS tlt
+        FROM $timespent_precompute_tlt
+        GROUP BY GROUPING SETS(
+        (fielddate, puid, req_id),
+        (fielddate, app, puid, req_id),
+        (fielddate, show_type, puid, req_id),
+        (fielddate, show_type, app, puid, req_id)
+        )
+    )
+    GROUP BY fielddate, app, show_type
+);
+
+$tlt_v1 =
+(
+    SELECT fielddate, app, show_type, MEDIAN(tlt_v1) AS median_tlt_v1
+    FROM
+    (
+        SELECT fielddate, app, show_type, puid, MAX(tlt) as tlt_v1
+        FROM
+        (
+            SELECT fielddate, app??'Total' AS app, show_type??'Total' AS show_type,
+            puid, req_id, sum(timespent_s) AS tlt
+            FROM $timespent_precompute_tlt
+            GROUP BY GROUPING SETS(
+            (fielddate, puid, req_id),
+            (fielddate, app, puid, req_id),
+            (fielddate, show_type, puid, req_id),
+            (fielddate, show_type, app, puid, req_id)
+            )
+        )
+        GROUP BY fielddate, app, show_type, puid
+    )
+    GROUP BY fielddate, app, show_type
+);
+
+$tlt =
+(
+    SELECT t0.fielddate AS fielddate, t0.app AS app, t0.show_type AS show_type, uniq_user_amount, uniq_req_amount,
+    total_tlt, avg_tlt, median_tlt, median_tlt_v1
+    FROM $tlt_v0 AS t0
+    INNER JOIN $tlt_v1 AS t1 ON t0.fielddate = t1.fielddate AND t0.app = t1.app
+    AND t0.show_type = t1.show_type
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/tlt` WITH TRUNCATE
+SELECT *
+FROM $tlt
+UNION ALL
+SELECT fielddate, app, show_type??'morning_show' AS show_type, uniq_user_amount, uniq_req_amount,
+total_tlt, avg_tlt, median_tlt, median_tlt_v1
+FROM  `//home/voice/nadezhda17/common/morning_show/tlt` AS t
+LEFT ONLY JOIN $tlt as n ON n.fielddate = t.fielddate
+;
+
+COMMIT;
+
+-- скипнутые и стопнутые треки
+$track_seq =
+(
+    SELECT show_type, req_id, start_ts, track_id, ROW_NUMBER() OVER w AS track_number
+    FROM `//home/voice/nadezhda17/common/morning_show/last_days_sessions`
+    WHERE generic_scenario = 'morning_show'
+    AND track_id IS NOT NULL
+    WINDOW  w AS (PARTITION BY req_id ORDER BY start_ts)
+);
+
+$last_track =
+(
+    SELECT req_id, MAX_BY(track_id, start_ts) AS last_track_id
+    FROM $track_seq
+    GROUP BY req_id
+);
+
+$data =
+(
+    SELECT fielddate, show_type, show_req_id, track_id, track_type, track_number, stop, skip, listened_time, duration
+    FROM
+    (
+        SELECT fielddate, show_type, req_id, show_req_id, intent, start_ts, track_id, track_type, track_number,
+        IF(LEAD(intent) OVER w = 'personal_assistant.scenarios.player_next_track', 1, 0) AS skip,
+        stop, listened_time, duration
+        FROM
+        (
+            SELECT l.fielddate AS fielddate, l.show_type as show_type, l.req_id AS req_id, show_req_id, intent,
+            l.start_ts AS start_ts, l.track_id AS track_id,
+            CASE WHEN track_type = 'track' AND ListHas(pt.genres, 'PODCASTS') THEN 'PODCAST'
+            ELSE String::ToUpper(track_type) END AS track_type, track_number,
+            IF(lt.last_track_id IS NOT NULL, 1, 0) AS stop, l.time_diff AS listened_time,
+            l.duration AS duration
+            FROM `//home/voice/nadezhda17/common/morning_show/last_days_sessions` AS l
+            LEFT OUTER JOIN `//home/voice/nadezhda17/common/tracks` AS pt ON
+            CAST(pt.track_id AS String) = l.track_id
+            LEFT OUTER JOIN $track_seq AS t ON t.req_id = l.req_id AND t.track_id = l.track_id
+            LEFT OUTER JOIN $last_track AS lt ON lt.req_id = l.req_id And lt.last_track_id = l.track_id
+        )
+        WINDOW  w AS (PARTITION BY show_req_id ORDER BY start_ts)
+    )
+    WHERE track_id IS NOT NULL
+);
+
+$track_theme_by_days =
+(
+    SELECT fielddate, track_type, type, track_id, theme, theme_name,
+    COUNT(*) AS start_amount,
+    SUM(skip) AS skip_amount,
+    SUM(stop) AS stop_amount,
+    SUM(listened_time) AS total_listened_time,
+    SUM(duration) AS sum_duration,
+    DateTime::ToSeconds(SUM(listened_time))*1.0/DateTime::ToSeconds(SUM(duration)) AS listen_share
+    FROM
+    (
+        SELECT fielddate, show_req_id, show_type, track_type, theme, theme_name, type,
+        d.track_id AS track_id, duration, MIN_OF(listened_time, duration) AS listened_time, skip, stop
+        FROM $data AS d
+        LEFT JOIN `//home/voice/nadezhda17/common/morning_show/track_theme` AS p ON p.track_id = d.track_id
+        WHERE d.track_type IN ('NEWS', 'RADIONEWS', 'PODCAST', 'SKILL')
+    )
+    GROUP BY fielddate, track_type, type, track_id, theme, theme_name
+    ORDER BY fielddate, track_id
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/track_theme_by_days` WITH TRUNCATE
+SELECT *
+FROM $track_theme_by_days
+UNION ALL
+SELECT *
+FROM `//home/voice/nadezhda17/common/morning_show/track_theme_by_days` AS t
+LEFT ONLY JOIN $track_theme_by_days AS b ON b.fielddate = t.fielddate AND b.track_id = t.track_id;
+
+COMMIT;
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/track_theme_stat` WITH TRUNCATE
+SELECT theme_name, theme, type,
+DateTime::ToMinutes(SUM(total_listened_time)) AS total_listened_time_min,
+SUM(start_amount) AS start_amount,
+(SUM(skip_amount) + SUM(stop_amount))*1.0/SUM(start_amount) AS skip_stop_share
+FROM  `//home/voice/nadezhda17/common/morning_show/track_theme_by_days`
+WHERE fielddate >=  CAST(CurrentUtcDate() - DateTime::IntervalFromDays(14) AS String)
+GROUP BY theme_name, theme, type
+ORDER BY total_listened_time_min DESC;
+
+$data =
+(
+    SELECT track_type, show_req_id, show_type, track_id, skip, stop, ROW_NUMBER() OVER w AS index
+    FROM $data
+    WHERE track_type IN ('WEATHER', 'RADIONEWS', 'PODCAST', 'NEWS', 'SKILL')
+    WINDOW w AS (PARTITION BY track_type, show_req_id, show_type ORDER BY track_number)
+    ORDER BY show_req_id, track_type, index
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/track_stat` WITH TRUNCATE
+SELECT show_type, index, track_type,
+SUM(skip)*1.0/COUNT(*) AS skip_share,
+SUM(stop)*1.0/COUNT(*) AS stop_share,
+(SUM(skip) + SUM(stop))*1.0/COUNT(*) AS skip_and_stop_share,
+COUNT(*) AS total_amount
+FROM $data
+WHERE index <= 5
+AND show_type IN ('children_show', 'new morning show custom settings',
+'new morning show default settings')
+GROUP BY show_type, index, track_type HAVING COUNT(*) > 10
+ORDER BY show_type, track_type, total_amount DESC;

@@ -1,0 +1,151 @@
+--ВЫЧИСЛЯЕМ СТАТИСТИКУ ПО ПРОБЛЕМАМ В УШ
+
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+
+$unavailability_stats_path  = $show_charts_folder || "/unavailability_stats";
+$unavailability_examples_path = $show_charts_folder || "/unavailability_examples";
+
+$nlg_errors = AsList(
+    'Прошу прощения, что-то сломалось.',
+    'Произошла какая-то ошибка.',
+    'Извините, что-то пошло не так.',
+    'Даже идеальные помощники иногда ломаются.',
+    'Мне кажется, меня уронили.',
+    'О, кажется, мы с вами нашли во мне ошибку. Простите.',
+    'Мы меня сломали, но я обязательно починюсь.',
+    'что-то пошло не так'
+)
+;
+
+$nlg_errors_regexp = "(" || String::JoinFromList($nlg_errors, '|') || ")";
+
+$morning_show_launch = (
+    SELECT fielddate, req_id, puid, device_id, server_time_ms/1000 AS ts, query, reply, generic_scenario, `uuid`, input_type, parent_req_id
+    FROM RANGE(`//home/alice/dialog/prepared_logs_expboxes`, $date_start, $date_end)
+    WHERE app IN $show_apps
+    AND generic_scenario IN $show_scenarios
+)
+;
+
+$reqids_with_music =
+(
+    SELECT DISTINCT req_id
+    FROM (
+        SELECT DISTINCT req_id
+        FROM range(`//logs/music-quasar-plays-log/1d`, $date_start, $date_end)
+        UNION ALL
+        SELECT DISTINCT if ((parent_req_id ?? "" == ""), req_id, parent_req_id) AS req_id
+        FROM range(`//home/alice/dialog/heartbeats`, $date_start, $date_end)
+    )
+);
+
+
+-- У пользователя нет плюса
+$plus_problems =
+(
+    SELECT w.*, 'plus_problems' AS type
+    FROM $morning_show_launch AS w
+    WHERE reply LIKE '%Яндекс.Плюс%' and input_type == "voice"
+);
+
+-- Алиса говорит, что что-то сломалось
+$backend_problems = (
+    SELECT w.*, 'backend_problems' AS type
+    FROM $morning_show_launch AS w
+    WHERE reply IN $nlg_errors
+)
+;
+
+-- Шоу запустилось по старой схеме, но музыки не было
+$speaker_problems =
+(
+    SELECT w.*, 'speaker_turning_on_problems' AS type
+    FROM (
+        SELECT s.*
+        FROM (
+            SELECT *
+            FROM $morning_show_launch WHERE input_type == "voice"
+        ) AS s
+        LEFT ONLY JOIN $reqids_with_music AS m ON s.req_id = m.req_id
+    ) AS w
+    WHERE reply NOT LIKE '%Яндекс.Плюс%'
+    AND (reply = "EMPTY" OR reply = '')
+);
+
+--Факт зажеванной пленки
+$chewed_film =
+(
+    SELECT CAST(EventTimestamp AS UInt32) AS EventTimestamp, DeviceID
+    FROM range(`//logs/appmetrica-yandex-events/1d`, $date_start, $date_end)
+    WHERE APIKey = 999537
+    AND EventName = 'mediadPlaybackError'
+);
+
+--Случаи с зажеванной пленкой
+$chewed_film_problems =
+(
+    SELECT device_id, `uuid`, fielddate, puid, generic_scenario, problem_ts,
+    MIN_BY(query, time_diff) AS query,
+    MIN_BY(reply, time_diff) AS reply,
+    MIN_BY(ts, time_diff) AS ts,
+    MIN_BY(req_id, time_diff) AS req_id,
+    'chewed_film' AS type
+    FROM
+    (
+        SELECT m.*, (b.EventTimestamp - m.ts) AS time_diff, b.EventTimestamp AS problem_ts
+        FROM $morning_show_launch AS m
+        INNER JOIN $chewed_film AS b ON b.DeviceID = m.device_id
+        WHERE b.EventTimestamp - m.ts BETWEEN 0 AND 600
+    )
+    GROUP BY device_id, `uuid`, fielddate, puid, generic_scenario, problem_ts
+);
+
+$total_morning_show_queries = (
+    SELECT fielddate, COUNT(DISTINCT req_id) AS total_queries
+    FROM (
+        SELECT *
+        FROM $morning_show_launch
+        WHERE (parent_req_id == req_id OR (parent_req_id ?? "") == "")
+        AND input_type != "tech"
+    )
+    GROUP BY fielddate
+)
+;
+
+$all_problems = (
+    SELECT *
+    FROM $plus_problems
+    UNION ALL
+    SELECT *
+    FROM $backend_problems
+    UNION ALL
+    SELECT *
+    FROM $speaker_problems
+    UNION ALL
+    SELECT *
+    FROM $chewed_film_problems
+)
+;
+
+INSERT INTO $unavailability_examples_path WITH TRUNCATE
+SELECT *
+FROM $all_problems
+ORDER BY `uuid`, ts;
+
+INSERT INTO $unavailability_stats_path WITH TRUNCATE
+SELECT *
+FROM (
+    SELECT fielddate,
+        COUNT(DISTINCT req_id) AS total_errors,
+        count_if(type == "speaker_turning_on_problems") AS speaker_errors,
+        count_if(type == "chewed_film") AS chewed_problems,
+        count_if(type == "backend_problems") AS backend_problems,
+        count_if(type == "plus_problems") AS plus_problems
+    FROM $all_problems
+    GROUP BY fielddate
+) AS l left join $total_morning_show_queries AS r on l.fielddate == r.fielddate
+UNION ALL
+SELECT *
+FROM $unavailability_stats_path
+WHERE fielddate < $date_start OR fielddate > $date_end

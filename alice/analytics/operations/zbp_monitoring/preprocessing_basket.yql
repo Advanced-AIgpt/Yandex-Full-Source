@@ -1,0 +1,22 @@
+PRAGMA yt.InferSchema = '50';
+
+$basket = {{input1->table_quote()}};
+
+insert into {{output1}}
+select
+    mds_key as session_id,
+    "ffffffff-ffff-ffff-" || mds_key as request_id,
+    0 as session_sequence,
+    0 as reversed_session_sequence,
+    some(basket.app) as app_preset,
+    some(basket.`ticket`) as ticket,
+    some(basket.`lang`) as lang,
+    some(basket.`text`) as text,
+    some(basket.`voice_url`) as voice_url,
+    some(basket.`voice_binary`) as voice_binary
+from $basket as basket join {{input2 ?? "(select mds_key, Nothing(String?) as text from $basket)"}} as texts using (mds_key)
+group by basket.mds_key as mds_key;
+
+insert into {{output2}} select
+    texts.text as asr_text, basket.* 
+from $basket as basket join {{input2 ?? "(select mds_key, Nothing(String?) as text from $basket)"}} as texts using (mds_key);

@@ -1,0 +1,153 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict;
+
+$get_intent = Python2::get_intent(ParseType("(String?) -> String"),
+@@
+def get_intent(intent):
+    if not intent: return "NO_INTENT"
+    if "iot_do" in intent: return "iot_do"
+    if "skill_discovery" in intent: return "skill_discovery"
+    if 'handcrafted' in intent: return 'handcrafted'
+
+    parts = intent.split('\t')
+    if len(parts) <= 2:
+        return parts[-1]
+    if parts[-1] == 'ellipsis':
+        return '.'.join(parts[2:-1])
+    return '.'.join(parts[2:])
+@@
+);
+
+-- script from geo and item selector e2e
+$udfScript =@@
+MULTI_INTENT_KEYS =['taxi',
+                    'market',
+                    'alarm',
+                    'timer',
+                    'music',
+                    'video',
+                    'radio',
+                    'tv',
+                    'get_weather',
+                    'translate']
+
+def extract_scenario(intent, delimiter):
+    intent = intent.decode('utf-8')
+    delimiter = delimiter.decode('utf-8')
+    if not intent:
+        intent = 'NO_INTENT'
+    scenario, main_intent, action = intent, intent, 'empty'
+    intent_split = intent.split(delimiter)
+    if len(intent_split) < 2:
+        return {'main_intent': main_intent, 'scenario': scenario, 'action': action}
+    if intent_split[0] == 'mm':
+        intent_split = intent_split[1:]
+    main_intent = intent_split[1]
+    if intent_split[1] == 'scenarios':
+        if intent_split[2] == 'vinsless':
+            main_intent = intent_split[3]
+        else:
+            main_intent = intent_split[2]
+    scenario = main_intent
+    for key in MULTI_INTENT_KEYS:
+        if main_intent.find(key) != -1:
+            scenario = key
+            break
+    if main_intent == intent_split[-2]:
+        action = intent_split[-1]
+    return {'main_intent': main_intent, 'scenario': scenario, 'action': action}
+
+def classify_intent(intent, delimiter):
+    intent_dict = extract_scenario(intent, delimiter)
+
+    return intent_dict
+@@;
+
+$python_classify_intent = Python::classify_intent(
+    Callable<
+        (String, String) -> Struct<
+        main_intent:String,
+        scenario:String,
+        `action`:String,
+        >>,
+        $udfScript
+);
+
+$arcadia_slices_path = "arc://alice/analytics/tasks/VA-571/slices_mapping.py?rev=" || {{param.revision->quote() ?? "6780661"->quote()}};
+PRAGMA File("slices_mapping.py", $arcadia_slices_path);
+$script = FileContent("slices_mapping.py");
+$generalize_toloka_intent = Python2::toloka_intent_to_general_intent(ParseType("(String?)->String"), $script);
+$is_video_related_intent = Python2::is_video_related_intent(ParseType("(String?)->Bool"), $script);
+$is_command_intent = Python2::is_command_intent(ParseType("(String?)->Bool"), $script);
+$is_good_music_query = Python2::is_good_music_query(ParseType("(String?, String?, String?)->Bool"), $script);
+
+$all = (
+    SELECT
+        $get_intent(intent) as intent, generic_scenario, result, WeakField(has_ivi_in_state_or_query, Bool),
+        UNWRAP(toloka_intent) as toloka_intent, $generalize_toloka_intent(toloka_intent) as general_toloka_intent,
+        text as query, answer
+    from {{input1}}
+    WHERE mark IS NOT NULL
+);
+
+$stats=(SELECT
+    intent,
+    count_if(result=='good') as good,
+    count_if(result=='part') as part,
+    count(*) as total
+    from $all
+    GROUP BY intent
+);
+
+$toloka_stats=(SELECT
+    toloka_intent,
+    count_if(result=='good') as good,
+    count_if(result=='part') as part,
+    count(*) as total
+    from $all
+    GROUP BY toloka_intent
+);
+
+$stats_total=(SELECT
+    count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+);
+
+$stats_commands=(SELECT
+   count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where $is_command_intent(toloka_intent)
+);
+
+$stats_nocommands=(SELECT
+    count_if(result=='good' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as good,
+    count_if(result=='part' and not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc")) as part,
+    count_if(result!='bad' and intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") as gc,
+    count(*) as total
+    from $all
+    where not $is_command_intent(toloka_intent)
+);
+
+$stats_nocommands_ivi_weather_gc_iot=(
+    select
+        count_if(result=='good') as good,
+        count_if(result=='part') as part,
+        count(*) as total
+    from
+    (
+        select IF(answer IS NOT NULL AND $is_good_music_query(query, answer, generic_scenario), "good", IF((general_toloka_intent != "toloka_gc" and intent regexp "general_conversation"), "bad", result)) as result
+        from $all
+        where
+            general_toloka_intent != "weather" and not $is_command_intent(toloka_intent) and
+            not (toloka_intent == "action.other" and generic_scenario == "iot_do") and
+            not (intent regexp "general_conversation" and general_toloka_intent == "toloka_gc") and
+            not (has_ivi_in_state_or_query and $is_video_related_intent(toloka_intent))
+    )
+);
+

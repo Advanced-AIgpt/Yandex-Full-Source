@@ -1,0 +1,169 @@
+use hahn;
+
+PRAGMA yt.InferSchema = '100';
+PRAGMA GroupByLimit = "64";
+PRAGMA GroupByCubeLimit = "4";
+
+pragma yson.DisableStrict;
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+$eternal_no_postroll_testid = "286638";
+$ms_in_minute = 60*1000;
+$timespent_precompute_path = "//home/alice/precomputes/timespent/precompute_timespent";
+$success_condition_table = "//home/alice/charts/proactivity/applied_conditions_stats";
+$expboxes_path = "//home/alice/dialog/prepared_logs_expboxes";
+$success_condition_timespent_path = {{param.success_conditions_with_timespent}};
+
+$period_looking_back_days = 1;
+
+$date_regex = Hyperscan::Capture('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+$dates = (
+    select ListSort(AGGREGATE_LIST(d))
+    from (
+        select d
+        from (
+        SELECT $date_regex(Path) as d
+        FROM FOLDER($timespent_precompute_path)
+        )
+        WHERE d IS NOT NULL AND (d BETWEEN $date_start AND $date_end)
+    )
+);
+
+$period_ago = ($date, $period) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays($period))
+};
+
+$date_diff_days = ($date1, $date2) -> {
+    RETURN DateTime::ToDays(cast($date1 AS date) - cast($date2 as date))
+}
+;
+
+$postroll_queries = (
+    select fielddate, parent_timespent_req_id, `uuid`, req_id, `timestamp`, intents,
+        tts, tts_without_time_to_think, tlt_tvt, app, child_confidence, scenario
+    from (
+        SELECT l.req_id as req_id, l.fielddate as fielddate, l.`uuid` as `uuid`, scenario,
+            if ((parent_timespent_req_id ?? "") == "", l.req_id, parent_timespent_req_id) as parent_timespent_req_id,
+            `timestamp`, intents, tts, tts_without_time_to_think, tlt_tvt, l.app as app, l.child_confidence as child_confidence
+        from (
+            select fielddate, `uuid`, req_id, sum(tts) as tts, sum(tlt_tvt) as tlt_tvt, sum(min_of(tts_without_time_to_think, tts)) as tts_without_time_to_think,
+                some(scenario) as scenario, min_by(child_confidence, `timestamp`) as child_confidence, some(app) as app,
+                min_by(parent_timespent_req_id, `timestamp`) as parent_timespent_req_id, min(`timestamp`) as `timestamp`
+            from range($timespent_precompute_path, $date_start, $date_end)
+            group by fielddate, `uuid`, if ((parent_req_id ?? "") == "", req_id, parent_req_id) as req_id
+        ) as l left join (
+            select `uuid`, req_id, some(intents) as intents
+            from range($success_condition_table, $period_ago($date_start, $period_looking_back_days), $date_end)
+            group by `uuid`, req_id
+        ) as r on l.req_id == r.req_id and l.`uuid` == ("uu/" || r.`uuid`)
+    )
+    where (parent_timespent_req_id ?? "") != ""
+)
+;
+
+$reducer_script = @@#py
+from collections import defaultdict
+
+STACK_SCENARIOS = {'litres'}
+
+def get_timespent(session_data, rows):
+    session_in_progress = None
+    event = None
+    for next_event in rows:
+        if event is None:
+            event = next_event
+            continue
+        if event.intents:
+            if session_in_progress:
+                yield session_in_progress
+            session_in_progress = event
+            if next_event.intents and set(next_event.intents) != set(session_in_progress.intents):
+                session_in_progress.tts = session_in_progress.tts_without_time_to_think
+        elif (event.tlt_tvt == 0 or event.scenario in STACK_SCENARIOS) and session_in_progress is not None:
+            if next_event.intents and set(next_event.intents) != set(session_in_progress.intents):
+                session_in_progress.tts += event.tts_without_time_to_think
+            else:
+                session_in_progress.tts += event.tts
+            session_in_progress.tlt_tvt += event.tlt_tvt
+        elif session_in_progress is not None:
+            yield session_in_progress
+            session_in_progress = None
+
+        event = next_event
+
+    if event.intents:
+        if session_in_progress is not None:
+            yield session_in_progress
+        session_in_progress = event
+        if session_in_progress.tlt_tvt == 0:
+            session_in_progress.tts = session_in_progress.tts_without_time_to_think
+    elif (event.tlt_tvt == 0 or event.scenario in STACK_SCENARIOS) and session_in_progress is not None:
+        session_in_progress.tts += event.tts_without_time_to_think
+        session_in_progress.tlt_tvt += event.tlt_tvt
+
+    if session_in_progress:
+        yield session_in_progress
+@@
+;
+
+$get_timespent_from_reqid = Python2::get_timespent(Callable<(
+        Tuple<String?, String?>,
+        Stream<Struct<'app':String,'base_ids':List<String>?,'child_confidence':Double?,'fielddate':String,'intents':List<String>?,'parent_timespent_req_id':String?,'req_id':String?,'timestamp':Int64,'tlt_tvt':Int64,'tts':Int64,'tts_without_time_to_think':Int64,'uuid':String, 'scenario':String?>>
+    ) ->
+        Stream<Struct<'app':String,'base_ids':List<String>?,'child_confidence':Double?,'fielddate':String,'intents':List<String>?,'parent_timespent_req_id':String?,'req_id':String?,'timestamp':Int64,'tlt_tvt':Int64,'tts':Int64,'tts_without_time_to_think':Int64,'uuid':String, 'scenario':String?>>
+    >,
+    $reducer_script
+)
+;
+
+$timespent_on_reqid = (
+    SELECT *
+    from (
+        REDUCE $postroll_queries
+        PRESORT `timestamp`
+        ON `uuid`, parent_timespent_req_id
+        USING $get_timespent_from_reqid(TableRow())
+    )
+)
+;
+
+$expb_queries = (
+    select max(fielddate) as expb_fielddate, req_id, `uuid`, (some(expboxes) regexp $eternal_no_postroll_testid) as no_postroll, max_by(is_new, server_time_ms) as is_new
+    from range($expboxes_path, $period_ago($date_start, $period_looking_back_days), $date_end)
+    group by `uuid`, req_id
+)
+;
+
+$success_condition_timespent_on_reqid = (
+    select r.*, fielddate, tlt_tvt, tts, timespent_ms, no_postroll, is_new, child_confidence, timespent_app
+    from (
+        select fielddate, `uuid`, req_id, tlt_tvt, tts, tlt_tvt + tts as timespent_ms, no_postroll, is_new, child_confidence, app as timespent_app
+        from (
+            select *
+            from $timespent_on_reqid as l inner join $expb_queries as r on l.req_id == r.req_id and l.`uuid` == r.`uuid`
+        )
+        where intents is not null and no_postroll is not null and $date_diff_days(fielddate, expb_fielddate) <= $period_looking_back_days
+    ) as l inner join (
+        select *
+        from (
+            select some(tablerow()) as table_row
+            from range($success_condition_table, $period_ago($date_start, $period_looking_back_days), $date_end)
+            group by req_id, `uuid`
+        )
+        flatten columns
+    ) as r
+    on l.req_id == r.req_id and l.`uuid` == ('uu/' || r.`uuid`)
+)
+;
+
+
+evaluate for $i in $dates do begin
+    $timespent_insert_dir = $success_condition_timespent_path || "/" || $i;
+
+    insert into $timespent_insert_dir with truncate
+    select *
+    from $success_condition_timespent_on_reqid
+    where fielddate == $i
+    ;
+
+end do;

@@ -1,0 +1,33 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched";
+
+$process_action = @@
+import cyson
+
+def process_action(state):
+    return {}
+
+process_action._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$process_action = Python2:: process_action(ParseType("(Yson?)->Yson?"), $process_action);
+
+DEFINE ACTION $fix_format($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT 
+        Yson::ConvertToUint64(a.real_session_sequence) as real_session_sequence, 
+        Yson::ConvertToUint64(a.reversed_session_sequence) as reversed_session_sequence,
+        Yson::ConvertToUint64(a.session_sequence) as session_sequence,
+        $process_action(a.asr_options) as asr_options,
+        a.* WITHOUT a.asr_options, a.real_session_sequence, a.reversed_session_sequence, a.session_sequence
+    FROM $input_table as a;
+
+END DEFINE;
+
+DO $fix_format($accept, $accept);
+DO $fix_format($kpi, $kpi);
+DO $fix_format($dev, $dev);

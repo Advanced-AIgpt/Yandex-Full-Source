@@ -1,0 +1,91 @@
+USE hahn;
+PRAGMA yt.MaxJobCount="1000000";
+PRAGMA yson.DisableStrict;
+
+$device_power_on = 
+(
+    SELECT DeviceID AS device_id, substring(iso_eventtime, 0, 10) AS fielddate,
+    OriginalModel AS device, DateTime::FromSeconds(CAST(EventDateTime AS Uint32)) AS ts,
+    EventName AS event, diff_sec
+    FROM `//home/voice/nadezhda17/common/wifi_problems/reboot/manual_device_power_on`
+);
+
+$pings = 
+(
+    SELECT p.*, ts - LAG(ts) OVER w AS gap
+    FROM 
+    (
+        SELECT DISTINCT device_id, device, ts, QuasmodromGroup, SoftwareVersion
+        FROM 
+        (
+            SELECT DeviceId AS device_id, Platform AS device, SoftwareVersion,
+            DateTime::FromSeconds(CAST(`Timestamp` AS Uint32)) AS ts, QuasmodromGroup
+            FROM  `//home/voice/nadezhda17/common/wifi_problems/reboot/pings` 
+            WHERE Yson::ParseJson(MetricValue).pings.`8.8.8.8`.mean IS NOT NULL
+            OR Yson::ParseJson(MetricValue).pings.`quasar.yandex.ru`.mean IS NOT NULL
+        )
+    ) AS p
+    WINDOW w AS (PARTITION BY device_id ORDER BY ts)
+);
+
+$pings_around_device_power_on =
+(
+    SELECT m.device_id AS device_id, m.fielddate AS fielddate, m.ts AS ts, 
+    m.device AS device, m.diff_sec AS diff_sec,
+    MAX(gap) AS gap,
+    COUNT_IF(p.ts BETWEEN m.ts - DateTime::IntervalFromHours(1) AND m.ts) AS pings_before,
+    COUNT_IF(p.ts BETWEEN m.ts AND m.ts + DateTime::IntervalFromHours(1)) AS pings_after,
+    COUNT_IF(p.ts BETWEEN m.ts AND m.ts + DateTime::IntervalFromMinutes(15)) AS pings_after_15_min,
+    MAX_BY(p.SoftwareVersion, p.ts) AS next_SoftwareVersion,
+    MAX_BY(p.QuasmodromGroup, p.ts) AS QuasmodromGroup
+    FROM $device_power_on AS m 
+    INNER JOIN $pings AS p ON p.device_id = m.device_id
+    WHERE p.ts BETWEEN m.ts - DateTime::IntervalFromHours(1) AND m.ts + DateTime::IntervalFromHours(1)
+    GROUP BY m.device_id, m.fielddate, m.ts, m.device, m.diff_sec
+);
+
+$pings_around_device_power_on_with_SoftwareVersion = 
+(
+    SELECT p.device_id AS device_id, p.fielddate AS fielddate, p.ts as ts, p.device as device,  
+    p.diff_sec as diff_sec,  p.gap as gap,  p.pings_before as pings_before,  
+    p.pings_after as pings_after, p.pings_after_15_min AS pings_after_15_min, p.next_SoftwareVersion AS next_SoftwareVersion,
+    p.QuasmodromGroup as QuasmodromGroup, MAX_BY(pb.SoftwareVersion, pb.ts) AS prev_SoftwareVersion,
+    FROM $pings_around_device_power_on AS p 
+    INNER JOIN $pings AS pb ON pb.device_id = p.device_id
+    WHERE pb.ts < p.ts
+    GROUP BY p.device_id, p.fielddate, p.ts, p.device,  p.diff_sec,  p.gap,  
+    p.pings_before,  p.pings_after, p.pings_after_15_min, p.QuasmodromGroup, p.next_SoftwareVersion
+);
+
+$pings_around_device_power_on = 
+(
+    SELECT pa.*, NULL AS prev_SoftwareVersion
+    FROM $pings_around_device_power_on AS pa 
+    LEFT ONLY JOIN $pings_around_device_power_on_with_SoftwareVersion AS p ON p.device_id = pa.device_id AND p.ts = pa.ts
+    UNION ALL 
+    SELECT *
+    FROM $pings_around_device_power_on_with_SoftwareVersion
+);
+
+$device_power_on_fix_wifi =
+(
+    SELECT *
+    FROM $pings_around_device_power_on
+    WHERE pings_before <= 5
+    AND pings_after >= 50
+    AND (prev_SoftwareVersion??next_SoftwareVersion) = next_SoftwareVersion
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/wifi_problems/reboot/device_power_on_fix_wifi` WITH TRUNCATE
+SELECT *
+FROM 
+(
+    SELECT t.*
+    FROM  `//home/voice/nadezhda17/common/wifi_problems/reboot/device_power_on_fix_wifi` AS t
+    LEFT ONLY JOIN $device_power_on_fix_wifi AS d ON t.device_id = d.device_id AND t.fielddate = d.fielddate
+    AND d.ts = t.ts
+    UNION ALL 
+    SELECT *
+    FROM $device_power_on_fix_wifi
+)
+ORDER BY device_id, fielddate;

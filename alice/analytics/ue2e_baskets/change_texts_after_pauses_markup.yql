@@ -1,0 +1,40 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched";
+$accept_with_pauses = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_pauses";
+$kpi_with_pauses = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_pauses";
+$dev_with_pauses = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_pauses";
+$pauses1 = "//home/voice/jdkondratenko/VA-2304/pause_markup/quasar_1_output_fixed";
+$pauses2 = "//home/voice/jdkondratenko/VA-2304/pause_markup/quasar_2_output";
+$pauses3 = "//home/voice/jdkondratenko/VA-2304/pause_markup/quasar_3_output";
+$pauses4 = "//home/voice/jdkondratenko/VA-2304/pause_markup/quasar_4_output";
+
+$all_pauses = (
+    (SELECT * FROM $pauses1)
+    UNION ALL
+    (SELECT * FROM $pauses2)
+    UNION ALL
+    (SELECT * FROM $pauses3)
+    UNION ALL
+    (SELECT * FROM $pauses4)
+);
+
+DEFINE ACTION $fix_format($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    (SELECT IF(b.text IS NOT NULL, b.text, a.text) as text, a.* WITHOUT a.text
+    FROM (SELECT *
+    FROM $input_table as a 
+    WHERE reversed_session_sequence = 0) as a
+    LEFT JOIN $all_pauses as b 
+    ON a.real_reqid = b.uttid)
+    UNION ALL
+    (SELECT a.* FROM $input_table as a WHERE reversed_session_sequence != 0);
+
+END DEFINE;
+
+DO $fix_format($accept, $accept_with_pauses);
+DO $fix_format($kpi, $kpi_with_pauses);
+DO $fix_format($dev, $dev_with_pauses);

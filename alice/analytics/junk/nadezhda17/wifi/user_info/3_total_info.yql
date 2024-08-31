@@ -1,0 +1,34 @@
+USE hahn;
+
+$matched = 
+(
+    SELECT a.device_id as device_id, a.device AS device, a.puid AS puid, a.socket_fielddate AS socket_fielddate,
+    p.coordinates as coordinates, p.city AS city, p.country as country, 
+    p.ip as ip, p.provider as provider, p.wifi as wifi, 
+    w.AppVersionName as AppVersionName, w.quasmodrom_group as quasmodrom_group, 
+    w.wifi_mac as wifi_mac, w.wifi_ssid as wifi_ssid, 
+    r.manufacture AS manufacture
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a 
+    LEFT JOIN `//home/voice/nadezhda17/common/user_info/wifi_provider` AS p ON p.device_id = a.device_id
+    LEFT JOIN `//home/voice/nadezhda17/common/user_info/wifi_mac` AS w ON w.DeviceID = a.device_id
+    LEFT JOIN `//home/voice/nadezhda17/common/user_info/router_manufacture` AS r 
+    ON r.mac = substring(w.wifi_mac, 0, 8)
+    WHERE a.socket_fielddate >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)
+    AND a.device IN ('yandexstation', 'yandexmini', 'yandexstation_2', 
+    'yandexmicro', 'yandexmini_2', 'yandexmidi')
+    ORDER BY device_id, device
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/user_info/total_device_info` WITH TRUNCATE
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $matched 
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/user_info/total_device_info` AS t 
+    LEFT ONLY JOIN $matched AS m ON m.device_id = t.device_id
+)
+ORDER BY device_id, puid;
+

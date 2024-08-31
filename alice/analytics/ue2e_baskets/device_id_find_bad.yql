@@ -1,0 +1,34 @@
+use hahn;
+pragma yt.DefaultMaxJobFails="1";
+pragma yt.Pool='voice';
+
+$date = "2021-10-09";
+$staff_path = "yt://hahn/statbox/statbox-dict-by-name/staff_login_names.json/" || $date;
+$quasmodrom_account = "//home/quasar-dev/backend/snapshots/" || $date || "/account";
+$quasmodrom_account_device = "//home/quasar-dev/backend/snapshots/" || $date || "/account_device";
+$device_ids_baskets = "//home/voice/jdkondratenko/VA-2304/data_with_device_id";
+$output = "//home/voice/jdkondratenko/VA-2304/bad_device_id";
+
+PRAGMA File("staff", $staff_path);
+$staff_file = FileContent("staff");
+
+$script = @@
+import json
+def do_stuff(js):
+    res = json.loads(js)
+    res = [i.lower() for i in res.keys()]
+    return res
+@@;
+$parse = Python::do_stuff(Callable<(String?)->List<String?>>, $script);
+
+$staff_logins = (select login from (select $parse($staff_file) as a) flatten by a as login);
+
+$staff_dids = (select t2.device_id as device_id
+from (select id from $quasmodrom_account where String::ToLower(login) in $staff_logins) as t1 
+join $quasmodrom_account_device as t2 on t1.id == t2.account_id);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT a.*
+FROM $device_ids_baskets as a
+JOIN $staff_dids as b
+USING(device_id);

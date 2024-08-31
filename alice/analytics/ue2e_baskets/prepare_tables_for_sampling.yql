@@ -1,0 +1,78 @@
+Use hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.Pool = "voice";
+
+$joined_data = "//home/voice/jdkondratenko/VA-2304/joined_data_eavesdropping_2021-02-26_2021-08-29";
+$joined_empty_data = "//home/voice/jdkondratenko/VA-2304/empty_asr_data_eavesdropping_2021-02-26_2021-08-29";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/sampled_data/";
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+$tv_apps = AsList("tv");
+
+-- app_type to app list
+$APP_DICT = AsDict(
+    AsTuple("quasar", $quasar_apps),
+    AsTuple("general", $general_apps),
+    AsTuple("navi_auto", $navi_apps),
+    AsTuple("tv", $tv_apps),
+);
+
+$external_skill_activation_intents = AsList(
+    "external_skill\tactivate", "personal_assistant\tscenarios\texternal_skill\tactivate_only", 
+    "personal_assistant\tscenarios\texternal_skill"
+);
+
+$externall_skills = (
+    SELECT DISTINCT request_id
+    FROM $joined_data
+    WHERE generic_scenario == "dialogovo" and intent not in $external_skill_activation_intents
+);
+
+-- не берём в ue2e корзину запросы навыков из соображений приватности. Оставляем только запросы на активацию навыков
+$joined_data_filtered = (
+    SELECT *
+    FROM $joined_data
+    WHERE request_id not in $externall_skills
+);
+
+-- для ПП берём текстовые запросы и голосовые, у которых есть mds-ключ
+-- для станции и навика берём в корзину только голосовые запросы
+$is_good_type = ($mds_key, $input_type, $app) -> {
+    RETURN IF(
+        $app in DictLookup($APP_DICT, "general"), 
+        $input_type == "text" or ($input_type == "voice" and $mds_key is not null),
+        $input_type == "voice" and $mds_key is not null
+    );
+};
+
+DEFINE ACTION $prepare_for_sampling($app_type) AS
+    -- temporary tables for sampling
+    $joined_data_new = $common_dir || $app_type || "_data_new";
+    $joined_data_old = $common_dir || $app_type || "_data_old";
+    $empty_data = $common_dir || $app_type || "_empty_data";
+
+    INSERT INTO $joined_data_new WITH TRUNCATE
+    SELECT *
+    FROM $joined_data_filtered
+    WHERE app in DictLookup($APP_DICT, $app_type) and $is_good_type(mds_key, input_type, app) and is_new == "1 week";
+
+    INSERT INTO $joined_data_old WITH TRUNCATE
+    SELECT *
+    FROM $joined_data_filtered
+    WHERE app in DictLookup($APP_DICT, $app_type) and $is_good_type(mds_key, input_type, app) and is_new != "1 week";
+
+    INSERT INTO $empty_data WITH TRUNCATE
+    SELECT *
+    FROM $joined_empty_data
+    WHERE app in DictLookup($APP_DICT, $app_type)
+
+END DEFINE;
+
+-- generate temporary tables for sampling
+DO $prepare_for_sampling("quasar");
+DO $prepare_for_sampling("general");
+DO $prepare_for_sampling("navi_auto");
+DO $prepare_for_sampling("tv");
+

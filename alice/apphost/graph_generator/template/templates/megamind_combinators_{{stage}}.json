@@ -1,0 +1,139 @@
+{%- macro node_name(name) -%}COMBINATOR_{{name|upper}}_{{stage|upper}}{%- endmacro %}
+{%- set nodes = [] %}
+{%- for config in graphs %}
+    {%- do nodes.append((node_name(config.snake_case_name), config)) %}
+{%- endfor %}
+{%- set is_run_stage = (stage == "run") -%}
+{%- macro request_type() -%}combinator_request_apphost_type{% endmacro %}
+{%- macro response_type() -%}combinator_response_apphost_type{% endmacro %}
+{%- macro request_name(name) -%}{{request_type()}}_{{name}}{%- endmacro %}
+{%- macro response_name(name) -%}{{response_type()}}_{{name}}{%- endmacro %}
+{%- macro stage_request_type() -%}combinator_{{stage}}_request_apphost_type{% endmacro %}
+{%- macro stage_response_type() -%}combinator_{{stage}}_response_apphost_type{% endmacro %}
+{%- macro stage_request_name(name) -%}{{stage_request_type()}}_{{name}}{%- endmacro %}
+{%- macro stage_response_name(name) -%}{{stage_response_type()}}_{{name}}{%- endmacro %}
+{%- macro datasource_name(ds) -%}{{"!" if ds.IsRequired}}^{{ds.ItemName}}{%- endmacro -%}
+{
+    "monitoring": {
+        "alerts": [
+            {
+                "crit": 0.1,
+                "operation": "perc",
+                "prior": 10,
+                "type": "failures",
+                "warn": 0.09
+            }
+        ]
+    },
+    "settings": {
+        "allow_empty_response": true,
+        {%- set input_deps = ["COMBINATORS_SETUP", "SCENARIOS_RUN_STAGE"] %}
+        {%- if not is_run_stage %}
+            {%- do input_deps.extend(["SCENARIOS_CONTINUE_STAGE", "WALKER_CLASSIFY_WINNER"]) %}
+        {%- endif %}
+        {%- for config in graphs %}
+            {%- do input_deps.extend(config.input_deps) %}
+        {%- endfor %}
+        "input_deps": {{ input_deps|unique|sort|jsonify }},
+        "node_deps": {
+            {%- for (node_name, config) in nodes|sort_tuple(0) %}
+            "{{node_name}}": {
+                "input_deps": [
+                    {%- set item_name = request_name(config.Name) %}
+                    {%- set stage_item_name = stage_request_name(config.Name) %}
+
+                    {%- for dep in config.dependences|sort(attribute="NodeName") -%}
+                    {%- set items = [] %}
+                    {%- for item in dep.Items|sort(attribute="ItemName") -%}
+                        {%- do items.append(datasource_name(item)) %}
+                    {%- endfor %}
+                    "{{dep.NodeName}}@{{items|join(",")}}",
+                    {%- endfor %}
+
+                    {%- set setup_items = [""] %}
+                    {%- for dep in config.combinators_setup -%}
+                    {%- for item in dep.Items|sort(attribute="ItemName") -%}
+                        {%- do setup_items.append(datasource_name(item)) %}
+                    {%- endfor %}
+                    {%- endfor %}
+                    "!COMBINATORS_SETUP@!^{{item_name}}->{{request_type()}}{{setup_items|join(",")}}"
+
+                    {%- if not is_run_stage %},
+                    {%- set classify_winner_items = [""] %}
+                    {%- for dep in config.classify_winner -%}
+                    {%- for item in dep.Items|sort(attribute="ItemName") -%}
+                        {%- do classify_winner_items.append(datasource_name(item)) %}
+                    {%- endfor %}
+                    {%- endfor %}
+                    "!WALKER_CLASSIFY_WINNER@!^{{stage_item_name}}->{{stage_request_type()}}{{classify_winner_items|join(",")}}"
+                    {%- endif %}
+
+                    {%- if config.AcceptsAllScenarios %},
+                    "^SCENARIOS_RUN_STAGE->INPUT_SCENARIOS_RUN"
+                    {%- if not is_run_stage %},
+                    "^SCENARIOS_{{stage|upper}}_STAGE->INPUT_SCENARIOS_{{stage|upper}}"
+                    {%- endif %}
+                    {%- endif %}
+                ]
+            },
+            {%- endfor %}
+            "RESPONSE": {
+                "input_deps": [
+                {%- for (node_name,  config) in nodes|sort_tuple(0) %}
+                    "{{node_name}}@{{response_type()}}->{{response_name(config.Name) if is_run_stage else stage_response_name(config.Name)}}"
+                    {{- "," if not loop.last }}
+                {%- endfor %}
+                ]
+            }
+        },
+        "nodes": {
+        {%- for (node_name, config) in nodes|sort_tuple(0) %}
+            "{{node_name}}": {
+                "backend_name": "SELF",
+                "node_type": "DEFAULT",
+                "params": {
+                    "attempts": {
+                        "max_attempts": 1
+                    },
+                    "handler": "/_subhost/{{config.graph_prefix}}_{{stage}}",
+                    "responsibles": {
+                        {%- set responsibles = config.Responsibles %}
+                        {%- if responsibles.AbcServices %}
+                        "abc_service": [
+                            {%- for abc_service in responsibles.AbcServices %}
+                            {
+                                {%- if abc_service.DutySlugs %}
+                                "duty_slugs": {{ abc_service.DutySlugs|to_list|jsonify }},
+                                {%- endif %}
+                                {%- if abc_service.Scopes %}
+                                "role_scopes": {{ abc_service.Scopes|to_list|jsonify }},
+                                {%- endif %}
+                                "slug": "{{ abc_service.Name }}"
+                            }{{ "," if not loop.last }}
+                            {%- endfor %}
+                        ],
+                        {%- endif %}
+                        {%- if responsibles.Logins %}
+                        "logins": {{ responsibles.Logins|to_list|jsonify }},
+                        {%- endif %}
+                        "messenger_chat_names": [
+                            "MegamindDuty"
+                        ]
+                    },
+                    "timeout": "{{ "225ms" if is_run_stage else "4000ms" }}"
+                }
+            }{{ "," if not loop.last }}
+        {%- endfor %}
+        },
+        "output_deps": [
+            "RESPONSE"
+        ],
+        "responsibles": {
+            "logins": [
+                "nkodosov"
+            ]
+        },
+        "streaming_no_block_outputs": true
+    }
+}
+

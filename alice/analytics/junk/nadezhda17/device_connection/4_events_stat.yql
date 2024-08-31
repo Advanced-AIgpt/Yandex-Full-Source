@@ -1,0 +1,54 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--ограничимся важным набором моделей
+$device_white_list = AsList('yandex.station.micro', 'yandex.station.mini', 'yandex.station', 
+'yandex.station.mini_2_no_clock', 'yandex.station.mini_2', 'yandex.station_2', 
+'jbl.link_portable', 'jbl.link_music', 'yandex.station.midi');
+--и важным набором операционных систем
+$OSName_white_list = AsList('Android', 'iOS');
+
+--и добавляем статистику заходов на страницы
+$tmp_events_stat = 
+(
+    SELECT *
+    FROM 
+    (
+        SELECT EventDate, 'iOS' AS OSName, 
+        app??'Total' AS app, device??'Total' AS device, tail??'Total' AS tail, 
+        COUNT(*) AS events_amount, COUNT(DISTINCT puid) AS uniq_users_amount
+        FROM `//home/voice/nadezhda17/common/device_connection/tmp_connection_process_formatted`
+        WHERE OSName = 'iOS'
+        AND device IN $device_white_list
+        GROUP BY CUBE(EventDate, app, device, tail)
+        UNION ALL 
+        SELECT EventDate, 'Android' AS OSName, 
+        app??'Total' AS app, device??'Total' AS device, tail??'Total' AS tail, 
+        COUNT(*) AS events_amount, COUNT(DISTINCT puid) AS uniq_users_amount
+        FROM `//home/voice/nadezhda17/common/device_connection/tmp_connection_process_formatted`
+        WHERE OSName = 'Android'
+        AND device IN $device_white_list
+        GROUP BY CUBE(EventDate, app, device, tail)
+        UNION ALL 
+        SELECT EventDate, 'Total' AS OSName, 
+        app??'Total' AS app, device??'Total' AS device, tail??'Total' AS tail, 
+        COUNT(*) AS events_amount, COUNT(DISTINCT puid) AS uniq_users_amount
+        FROM `//home/voice/nadezhda17/common/device_connection/tmp_connection_process_formatted`
+        WHERE OSName IN ('iOS', 'Android')
+        AND device IN $device_white_list
+        GROUP BY CUBE(EventDate, app, device, tail)
+    )
+    WHERE EventDate != 'Total' AND tail != 'Total'
+    AND EventDate >= CAST(CAST(CurrentUtcDate() - DateTime::IntervalFromDays(2) AS Date) AS String)
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/events_stat` WITH TRUNCATE 
+SELECT *
+FROM $tmp_events_stat
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/device_connection/events_stat` AS e
+LEFT ONLY JOIN $tmp_events_stat AS t ON t.EventDate = e.EventDate and t.app = e.app 
+AND t.OSName = e.OSName AND t.device = e.device AND t.tail = e.tail;
+
+

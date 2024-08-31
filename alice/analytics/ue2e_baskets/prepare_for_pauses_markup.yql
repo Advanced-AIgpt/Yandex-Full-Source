@@ -1,0 +1,33 @@
+Use hahn;
+
+$accept = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_accept_intents_sample";
+$kpi = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_kpi_intents_sample";
+$dev = "//home/voice/jdkondratenko/VA-2304/stratification/quasar_dev_intents_sample";
+$annotation_output = "//home/voice/jdkondratenko/VA-2304/annotations/for_yang_quasar/quasar_1_after_yang";
+$voice_binary = "//home/voice/jdkondratenko/VA-2304/quasar_voice_binary";
+$output = "//home/voice/jdkondratenko/VA-2304/pause_markup/quasar_1";
+
+$baskets = (
+    SELECT * FROM (SELECT SOME(TableRow())
+    FROM (
+        (SELECT * FROM $accept)
+        UNION ALL
+        (SELECT * FROM $kpi)
+        UNION ALL
+        (SELECT * FROM $dev)
+    )
+    GROUP BY mds_key) FLATTEN COLUMNS
+);
+
+$for_join = (
+    SELECT a.*
+    FROM $voice_binary as a
+    JOIN $baskets as b
+    USING(request_id)
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT a.*, b.request_id as request_id, b.voice_binary as voice_binary
+FROM $annotation_output as a 
+JOIN $for_join as b
+USING(mds_key);

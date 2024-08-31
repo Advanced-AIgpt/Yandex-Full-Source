@@ -1,0 +1,109 @@
+PRAGMA SimpleColumns;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA file("app_projects", "yt://hahn/statbox/statbox-dict-last/tvandroid_model_specifications.json");
+PRAGMA file("tvandroid_drop_ip", "yt://hahn/statbox/statbox-dict-last/tvandroid_drop_ip.json");
+
+$job_date = {{param.date}};
+$recalc_period = unwrap(cast({{param.recalc_period}} as Int64));
+$update_period = unwrap(cast({{param.update_period}} as Int64));
+
+$precompute_path = "//home/smarttv/logs/tvandroid_sessions_precompute/1d";
+$msdata_path = '//home/msdata/user-profiles/v1';
+$ms_promo_path = '//home/mediabilling/mediabilling-promocode-campaigns';
+$tv_promo_path = '//home/paskills/billing/snapshots/' || $job_date || '/promocode_prototype';
+$tvsessions_path = "//home/smarttv/logs/tvandroid_sessions/1d";
+
+$date_pattern = "%Y-%m-%d";
+$date_format = DateTime::Format($date_pattern);
+
+$string_date_add_days = ($date, $days) -> {
+    RETURN $date_format(DateTime::MakeDate(DateTime::Parse($date_pattern)($date)) + Interval("P1D") * $days);
+};
+
+$first_date = $string_date_add_days($job_date, -($recalc_period + $update_period));
+$last_date = $job_date;
+
+$prototypes = (
+    SELECT prototype, 
+        max(platform LIKE 'yandexmodule%' OR platform LIKE 'yandex_tv_%') AS is_tv_gift
+    FROM $tv_promo_path
+    GROUP BY code AS prototype
+);
+
+$tv_gift_campaigns = (
+    SELECT distinct pm.name AS campaign, pt.is_tv_gift AS is_tv_gift
+    FROM $ms_promo_path AS pm
+    INNER JOIN $prototypes AS pt ON pm.prototypeCode = pt.prototype
+    WHERE prototypeCode IS NOT NULL
+);
+
+$msdata = (
+    SELECT
+        fielddate AS event_date,
+        puid,
+        MAX(plus) AS has_plus,
+        MAX(plus AND NOT dummy AND NOT trial) AS has_paid_plus,
+        MAX(trial AND gift.campaign IS NOT NULL AND gift.is_tv_gift) AS active_tv_gift,
+        MAX(trial AND gift.campaign IS NOT NULL AND NOT gift.is_tv_gift) AS active_other_gift,
+        MAX(trial AND gift.campaign IS NULL) AS active_other_trial,
+        MAX(trial AND declared_state != 'trial' AND gift.campaign IS NOT NULL AND gift.is_tv_gift) AS active_tv_gift_plus,
+        MAX(bundle LIKE '%lease%' AND product_name LIKE '%module%') AS has_leased_module
+    FROM RANGE($msdata_path, $first_date, $last_date) AS ms
+    LEFT JOIN $tv_gift_campaigns AS gift ON ms.campaign = gift.campaign
+    WHERE state = 'active'
+    GROUP BY 
+        ms.fielddate AS fielddate, 
+        ms.puid AS puid
+);
+
+-- yql died with memory limit per job error without union crutch
+$sessions_msdata_null = (
+    SELECT
+        tvsessions.*,
+        msdata.*,
+        tvsessions.platform = 'gntch' AND msdata.has_leased_module AS has_leased_module
+        WITHOUT
+        msdata.has_leased_module
+    FROM RANGE($precompute_path, $first_date, $last_date) AS tvsessions
+    LEFT JOIN $msdata AS msdata ON tvsessions.event_date = msdata.event_date AND tvsessions.puid = msdata.puid
+    WHERE tvsessions.puid IS NOT NULL
+
+    UNION ALL
+
+    SELECT *
+    FROM RANGE($precompute_path, $first_date, $last_date) AS tvsessions
+    WHERE puid IS NULL
+);
+
+$sessions_msdata = (
+    SELECT ss.*,
+        NVL(has_plus, false) AS has_plus,
+        NVL(has_paid_plus, false) AS has_paid_plus,
+        NVL(active_tv_gift, false) AS active_tv_gift,
+        NVL(active_other_gift, false) AS active_other_gift,
+        NVL(active_tv_gift_plus, false) AS active_tv_gift_plus,
+        NVL(active_other_trial, false) AS active_other_trial,
+        WITHOUT
+        has_plus,
+        has_paid_plus,
+        active_tv_gift,
+        active_other_gift,
+        active_tv_gift_plus,
+        active_other_trial,
+    FROM $sessions_msdata_null AS ss
+);
+
+$dates = ListMap(
+    ListFromRange(-$update_period, 1),
+    ($x) -> {
+        RETURN $string_date_add_days($job_date, $x);
+    }
+);
+
+EVALUATE FOR $date IN $dates DO BEGIN
+    $result_path = $tvsessions_path || "/" || $date;
+    INSERT INTO $result_path WITH TRUNCATE
+    SELECT *
+    FROM $sessions_msdata
+    WHERE event_date = $date
+END DO;

@@ -1,0 +1,146 @@
+-- add here expression for $device_retn_output_table. example:
+-- $device_retn_output_table = '//home/alice/cubes/iot/retention/device_retention';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$max_active_weeks = 52;
+
+$devices_table = SELECT * FROM {{input2}};
+
+$devices_table_decoded =
+SELECT
+    IF (de.type LIKE '%smart_speaker%', 'smart_speaker',
+        String::ReplaceAll(de.type, 'devices.types.', '')) AS type,
+    IF (de.original_type LIKE '%smart_speaker%', 'smart_speaker',
+        String::ReplaceAll(de.original_type, 'devices.types.', '')) AS original_type,
+    IF (de.skill_id == 'Q', 'Quasar',
+        IF (de.skill_id == 'T', 'Yandex',
+            skills.name)) ?? 'undefined' AS skill_name,
+    de.* WITHOUT de.type, de.original_type
+FROM
+    $devices_table AS de
+LEFT JOIN
+    (SELECT id, name FROM `//home/paskills/skills/stable`) AS skills
+ON de.skill_id == skills.id
+;
+
+$excluded_skills = ['VIRTUAL', 'QUALITY', 'eacb68b3-27dc-4d8d-bdbb-b4f6fb7babd2'];
+
+$events_tables =
+    SELECT * FROM RANGE('//home/alice/cubes/iot/events')
+    WHERE NOT(skill_id IN $excluded_skills)
+          AND FIND(req_id, 'ffffffff-ffff-ffff') IS NULL
+;
+
+$daily_events =
+SELECT
+    a.*,
+    b.activation_date AS activation_date,
+    DateTime::ToDays(cast(a.fielddate AS Date) - cast(b.activation_date AS Date)) / 7 AS week
+FROM
+    (SELECT
+        skill_id, external_id, fielddate,
+        count(*) AS cnt_events
+    FROM $events_tables
+    GROUP BY skill_id, external_id, fielddate
+    ) AS a
+JOIN
+    (SELECT
+        skill_id, external_id,
+        min(fielddate) AS activation_date
+    FROM $events_tables
+    GROUP BY skill_id, external_id
+    ) AS b
+ON a.skill_id == b.skill_id and a.external_id == b.external_id
+;
+
+-- device features from Devices table
+$device_features =
+SELECT
+    D.external_id AS external_id,
+    D.skill_id AS skill_id,
+    SOME(D.skill_name)AS skill_name,
+    MIN_BY(D.huid, D.created) AS huid_first,
+
+    DateTime::Format("%Y-%m-%d")(AddTimezone(MIN(D.created), "Europe/Moscow")) AS activation_date_d,
+
+    MIN_BY(D.original_type, D.created) AS original_type,
+    COUNT(distinct D.original_type) AS original_type_count,
+
+    MIN_BY(D.type, D.created) AS type,
+
+    COUNT(distinct D.type) AS type_count,
+    AGGREGATE_LIST_DISTINCT(D.type) AS type_list,
+
+    MIN_BY(D.external_name, D.created) AS external_name,
+
+    MIN_BY(D.id, D.created) AS device_id_first,
+    AGGREGATE_LIST_DISTINCT(D.id) AS device_id_list,
+    COUNT(distinct D.id) AS device_id_count,
+
+    MIN_BY(D.user_id, D.created) AS puid_first,
+    AGGREGATE_LIST_DISTINCT(D.user_id) AS puid_list,
+    COUNT(distinct D.user_id) AS puid_count,
+
+    COUNT(distinct D.household_id) AS household_id_count,
+
+    COUNT(*) AS records_count,
+FROM $devices_table_decoded AS D
+GROUP BY external_id, skill_id
+;
+
+-- weeks when device was active, in list format
+$retention_weeks =
+SELECT
+    external_id, skill_id,
+    SOME(activation_date) AS activation_date,
+    AGGREGATE_LIST_DISTINCT(week) AS active_weeks,
+FROM $daily_events
+WHERE week <= $max_active_weeks
+GROUP BY external_id, skill_id
+;
+
+$device_retn_output =
+SELECT
+    df.*,
+    rw.active_weeks AS active_weeks,
+    rw.activation_date AS activation_date,
+FROM $device_features AS df
+JOIN $retention_weeks AS rw
+ON df.external_id == rw.external_id AND df.skill_id == rw.skill_id
+;
+
+INSERT INTO $device_retn_output_table WITH TRUNCATE
+SELECT * FROM $device_retn_output;
+
+-- ==================== RETENTION CUBE ==============================
+$date_format = DateTime::Format("%Y-%m-%d");
+
+$weekly_events =
+SELECT
+    external_id, skill_id, week,
+    SOME(activation_date) AS activation_date
+FROM $daily_events
+GROUP BY external_id, skill_id, week
+;
+
+$device_retn_cube =
+SELECT
+    df.*,
+    we.week AS week,
+    we.activation_date AS activation_date,
+    $date_format(DateTime::StartOfWeek(cast (we.activation_date AS Date))) AS cohort_week,
+    $date_format(DateTime::StartOfMonth(cast (we.activation_date AS Date))) AS cohort_month,
+FROM $device_features AS df
+JOIN $weekly_events AS we
+ON df.external_id == we.external_id AND df.skill_id == we.skill_id
+;
+
+$device_retn_output_cube = $device_retn_output_table || "_cube";
+
+INSERT INTO $device_retn_output_cube WITH TRUNCATE
+SELECT * FROM $device_retn_cube ORDER BY activation_date
+;
+
+-- output for diagnostics ---------
+SELECT * FROM $device_retn_output INTO RESULT `sample_retn` LIMIT 100;
+SELECT * FROM $device_retn_cube   INTO RESULT `sample_cube` LIMIT 100;

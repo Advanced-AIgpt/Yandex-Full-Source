@@ -1,0 +1,81 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(90) AS String)};
+
+$fairy_tale_slot = ($analytics_info) -> {RETURN Yson::ConvertToString(ListFilter(Yson::ConvertToList($analytics_info.analytics_info.Vins.semantic_frame.slots), 
+($x) -> (Yson::ConvertToString($x.name) = 'fairy_tale'))[0].typed_value.`string`)};
+
+$answer = ($analytics_info) -> {RETURN Yson::SerializePretty(Yson::ParseJson(Yson::ConvertToString(ListFilter(Yson::ConvertToList($analytics_info.analytics_info.Vins.semantic_frame.slots), 
+($x) -> (Yson::ConvertToString($x.name) = 'answer'))[0].typed_value.`string`)))};
+$title = ($answer) -> {RETURN Yson::ConvertToString($answer.title)};
+$uri = ($answer) -> {RETURN Yson::ConvertToString($answer.uri)};
+$type = ($answer) -> {RETURN Yson::ConvertToString($answer.type)};
+
+--сказочные данные 
+$fairy_tale_data = 
+(
+    SELECT app, req_id, fielddate, query, reply, 
+    $fairy_tale_slot(analytics_info) AS search_text,
+    $title($answer(analytics_info)) AS title, 
+    $uri($answer(analytics_info)) AS uri, 
+    $type($answer(analytics_info)) AS type, 
+    FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $date_filter) AS t
+    WHERE generic_scenario = 'music_fairy_tale'
+    AND puid IS NOT NULL 
+);
+
+--Ищем запросы, на которые Алиса говорит что сказки нет и отвечает плейлистом 
+$without_reply = 
+(
+    SELECT search_text, MAX_BY(query, amount) AS query, SUM(amount) AS amount
+    FROM
+    (
+        SELECT search_text, query, COUNT(*) AS amount
+        FROM $fairy_tale_data
+        WHERE reply IN ('Включаю сказки.', 
+        'Оу оу, такой сказки нет. Но есть кое-что получше. Сказка-сюрприз!', 
+        'Ой, такой сказки нет. Включу вам сказку, которую сама слушаю перед сном.', 
+        'Простите, такой сказки у меня нет. Но я нашла для вас кое-что волшебное.', 
+        'Простите, такой сказки нет. Включу вам свою любимую.', 
+        'Простите, такой сказки у меня пока нет. Держите сказку-сюрприз.', 
+        'Извините, но такой сказки у меня нет. Послушайте мою любимую.')
+        AND title = 'Плейлист сказок для Алисы'
+        AND search_text != 'null'
+        AND search_text NOT LIKE '%album/%' 
+        AND search_text NOT LIKE '%playlist/%'
+        AND search_text NOT LIKE '%track/%'
+        GROUP BY search_text, query
+    )
+    GROUP BY search_text
+);
+
+--Проверяем что сейчас Алиса все еще не умеет на них отвечать 
+$last_date = (SELECT MAX(fielddate) FROM $fairy_tale_data);
+
+INSERT INTO `//home/voice/nadezhda17/common/fairy_tales/input/data` WITH TRUNCATE
+SELECT search_text, query, amount, 'https://music.yandex.ru/search?text=сказку ' || search_text AS link
+FROM 
+(
+    SELECT w.search_text AS search_text, w.amount AS amount, w.query AS query,
+    COUNT_IF(title != 'Плейлист сказок для Алисы')*1.0/COUNT(*) AS good_share
+    FROM $fairy_tale_data AS f 
+    INNER JOIN $without_reply AS w ON w.search_text = f.search_text
+    WHERE f.fielddate = $last_date
+    AND w.amount > 10
+    GROUP BY w.search_text, w.query, w.amount
+) AS t 
+LEFT ONLY JOIN `//home/voice/nadezhda17/common/fairy_tales/output` AS o ON o.search_text = t.search_text
+WHERE good_share < 0.2
+AND amount > 100
+ORDER BY amount DESC
+LIMIT 100
+;
+
+INSERT INTO `//home/voice/nadezhda17/common/fairy_tales/content_problems/input` WITH TRUNCATE 
+SELECT amount, query, search_text
+FROM  `//home/voice/nadezhda17/common/fairy_tales/output`
+WHERE result = 'content'
+;

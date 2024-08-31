@@ -1,0 +1,198 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(7) AS String)};
+
+$ms_to_datetime = ($ms) -> {RETURN DateTime::FromMilliseconds(CAST($ms AS Uint64))};
+
+$quasar_data = 
+(
+    SELECT fielddate, first_day, 
+    MAX(server_time_ms) AS server_time_ms, 
+    app, device, device_id, puid,
+    $ms_to_datetime(MAX(server_time_ms)) AS server_ts, 
+    MAX_BY(location, server_time_ms) AS location
+    FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $date_filter)
+    WHERE app IN ('quasar', 'small_smart_speakers')
+    AND LEN(device_id) > 1
+    AND LEN(puid) > 1
+    GROUP BY fielddate, first_day, app, device, device_id, puid
+);
+
+$matched = 
+(
+    SELECT t.*, IF(Geo::RoundRegionByLocation(quasar_lat, quasar_lon, 'city').id = 
+    Geo::RoundRegionByLocation(searchapp_lat, searchapp_lon, 'city').id, 1, 0) AS same_city,
+    Geo::RoundRegionByLocation(quasar_lat, quasar_lon, 'city').name AS quasar_city,
+    Geo::RoundRegionByLocation(searchapp_lat, searchapp_lon, 'city').name AS searchapp_city,
+    Geo::CalculatePointsDifference(searchapp_lat, searchapp_lon, quasar_lat, quasar_lon) AS distance
+    FROM
+    (
+        SELECT q.fielddate AS quasar_fielddate, q.first_day AS first_day,
+        q.app AS app, q.device AS device, q.device_id AS quasar_device_id, q.puid AS puid,
+        q.server_ts AS server_ts, 
+        q.server_time_ms AS server_time_ms,
+        Yson::ConvertToDouble(SOME(q.location).lat) AS quasar_lat, 
+        Yson::ConvertToDouble(SOME(q.location).lon) AS quasar_lon, 
+        MAX_BY(s.device_id, s.fielddate) AS searchapp_device_id, 
+        MAX_BY(s.event_ts, s.fielddate) AS searchapp_event_ts, 
+        MAX(s.fielddate) AS searchapp_fielddate,
+        MAX_BY(s.lat, s.fielddate) AS searchapp_lat, 
+        MAX_BY(s.lon, s.fielddate) AS searchapp_lon, 
+        MAX_BY(s.location_precision, s.fielddate) AS searchapp_location_precision, 
+        MAX_BY(s.location_source, s.fielddate) AS searchapp_location_source, 
+        MAX_BY(s.location_ts, s.fielddate) AS searchapp_location_ts, 
+        FROM $quasar_data AS q 
+        INNER JOIN `//home/voice/nadezhda17/common/speakers_location/searchapp_quasar_setup` AS s ON s.puid = q.puid 
+        AND s.quasar_device_id = q.device_id
+        --последний перед запросом пилик 
+        WHERE q.fielddate >= s.fielddate
+        GROUP BY q.fielddate, q.first_day, q.app, q.device, q.device_id, q.puid, q.server_ts, q.server_time_ms
+    ) AS t
+);
+
+$matched = 
+(
+    SELECT m.* , 
+    IF(d.puid IS NOT NULL AND searchapp_lat IS NOT NULL, 1, same_city) AS same_city2
+    FROM $matched AS m 
+    LEFT OUTER JOIN 
+    (
+        SELECT DISTINCT puid 
+        FROM 
+        (
+            SELECT puid, fielddate
+            FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data`
+            GROUP BY puid, fielddate HAVING COUNT(DISTINCT device_id) > 1
+        )
+    ) AS d ON d.puid = m.puid
+);
+
+$correct_share = 
+(
+    SELECT quasar_fielddate AS fielddate, SUM(same_city2)*1.0/COUNT(*) AS correct_share
+    FROM $matched
+    WHERE searchapp_lat IS NOT NULL
+    GROUP BY quasar_fielddate
+);
+
+$matched_share = 
+(
+    SELECT q.fielddate AS fielddate, COUNT_IF(m.searchapp_location_source IS NOT NULL)*1.0/COUNT(*) AS matched_share
+    FROM $quasar_data AS q 
+    LEFT OUTER JOIN $matched AS m ON m.quasar_fielddate = q.fielddate AND m.quasar_device_id = q.device_id AND m.puid = q.puid
+    where (q.device_id NOT LIKE '%test%' AND q.device_id NOT LIKE '%sandbox%' AND q.device_id NOT LIKE '%wav%')
+    GROUP BY q.fielddate
+);
+
+$plot = 
+(
+    SELECT c.fielddate AS fielddate, correct_share, matched_share
+    FROM $correct_share AS c 
+    INNER JOIN $matched_share AS m ON c.fielddate = m.fielddate
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/speakers_location/plot` WITH TRUNCATE 
+SELECT *
+FROM $plot
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/speakers_location/plot` AS t 
+LEFT ONLY JOIN $plot AS p ON t.fielddate = p.fielddate
+;
+
+$correct_share_gps = 
+(
+    SELECT quasar_fielddate AS fielddate, SUM(same_city2)*1.0/COUNT(*) AS correct_share, COUNT(*) AS total_amount
+    FROM $matched
+    WHERE searchapp_lat IS NOT NULL
+    AND searchapp_location_source = 'GPS'
+    AND searchapp_event_ts - searchapp_location_ts <= DateTime::IntervalFromMinutes(5)
+    GROUP BY quasar_fielddate
+);
+
+$plot_gps = 
+(
+    SELECT c.fielddate AS fielddate, correct_share, 1 AS matched_share, total_amount
+    FROM $correct_share_gps AS c
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/speakers_location/plot_gps` WITH TRUNCATE 
+SELECT *
+FROM $plot_gps
+UNION ALL 
+SELECT *
+FROM  `//home/voice/nadezhda17/common/speakers_location/plot_gps` AS t 
+LEFT ONLY JOIN $plot_gps AS p ON t.fielddate = p.fielddate
+;
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/matched` WITH TRUNCATE 
+SELECT *
+FROM $matched
+UNION ALL 
+SELECT *
+FROM  `//home/voice/nadezhda17/common/speakers_location/matched` AS t 
+LEFT ONLY JOIN $matched AS p ON t.quasar_fielddate = p.quasar_fielddate 
+AND t.quasar_device_id = p.quasar_device_id
+;
+
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/gps_problems` WITH TRUNCATE 
+SELECT *
+FROM $matched
+WHERE searchapp_location_source = 'GPS'
+AND same_city2 = 0
+AND searchapp_event_ts - searchapp_location_ts <= DateTime::IntervalFromMinutes(5)
+UNION ALL
+SELECT g.*
+FROM  `//home/voice/nadezhda17/common/speakers_location/gps_problems` AS g 
+WHERE NOT $date_filter(quasar_fielddate)
+;
+
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/lost` WITH TRUNCATE 
+SELECT DISTINCT q.puid as puid, q.first_day AS first_day, q.device_id AS device_id
+FROM $quasar_data AS q 
+LEFT ONLY JOIN $matched AS m ON m.quasar_fielddate = q.fielddate AND m.quasar_device_id = q.device_id AND m.puid = q.puid
+where (q.device_id NOT LIKE '%test%' AND q.device_id NOT LIKE '%sandbox%' AND q.device_id NOT LIKE '%wav%')
+;
+
+
+$quasar_geo = 
+(
+    SELECT fielddate, app, device, device_id, puid,
+    Geo::RoundRegionByLocation(lat, lon, 'city').id AS geoId, 
+    Geo::RoundRegionByLocation(lat, lon, 'city').name AS city,
+    lat, lon 
+    FROM 
+    (
+        SELECT fielddate, app, device, device_id, puid,
+        Yson::ConvertToDouble(location.lat) AS lat, 
+        Yson::ConvertToDouble(location.lon) AS lon, 
+        FROM    
+        (
+            SELECT fielddate,
+            app, device, device_id, puid,
+            MAX_BY(location, server_time_ms) AS location
+            FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $date_filter)
+            WHERE app IN ('quasar', 'small_smart_speakers')
+            AND LEN(device_id) > 1
+            AND LEN(puid) > 1
+            GROUP BY fielddate, first_day, app, device, device_id, puid
+        )
+    )
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/speakers_location/quasar_geo` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT *
+    FROM $quasar_geo
+    UNION ALL 
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/speakers_location/quasar_geo`
+    WHERE NOT $date_filter(fielddate)
+)
+ORDER BY device_id, fielddate;

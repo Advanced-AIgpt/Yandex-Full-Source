@@ -1,0 +1,91 @@
+PRAGMA yt.InferSchema = '1000';
+PRAGMA SimpleColumns;
+
+$RESULT_MARKS_MAP = {
+    'good': 1.0,
+    'part': 0.5,
+    'bad': 0.0,
+    'fraud': -0.75,
+    NULL: -1.0,
+};
+
+$FRAUD_MARKS_MAP = {
+    True: 1.0,
+    False: 0.0,
+    NULL: -1.0,
+};
+
+$FRAUD_MAP = {
+    'good': False,
+    'part': False,
+    'bad': False,
+    'fraud': True,
+    'ill_url': False,
+    NULL: NULL,
+};
+
+$toloka_results = (
+    SELECT
+        Yson::ConvertToString(inputValues.input[0].req_id) AS req_id,
+        Yson::ConvertToString(outputValues.result) AS result,
+        Unwrap($FRAUD_MAP[Yson::ConvertToString(outputValues.result)]) as fraud,
+        Yson::ConvertToString(
+            ListLast(
+                Yson::ConvertToList(inputValues.input)
+            ).query
+        )  AS query
+    FROM {{input2}}
+    WITH SCHEMA Struct<inputValues:Yson, outputValues:Yson>
+);
+
+
+INSERT INTO {{output1}}
+SELECT
+    IF (
+        pulsar_results.query == pulsar_results.query_eosp,
+
+        -- в случае EOSP и оценки из кеша и из толоки — выбираем наибольший ответ (припру короткий EOSP из Толоки)
+        IF (
+            ($RESULT_MARKS_MAP[toloka_results.result] ?? -1.0) >= ($RESULT_MARKS_MAP[pulsar_results.result] ?? -1.0),
+            toloka_results.result,
+            pulsar_results.result
+        ),
+
+        -- для обычного запроса берём результат из пульсара (если был reuse) или из Толоки
+        IF (pulsar_results.result IS NOT NULL, pulsar_results.result, toloka_results.result)
+    ) as result,
+
+    IF (
+        pulsar_results.query == pulsar_results.query_eosp,
+
+        -- в случае EOSP и оценки из кеша и из толоки — выбираем наибольший ответ (припру короткий EOSP из Толоки)
+        IF (
+            ($FRAUD_MARKS_MAP[toloka_results.fraud] ?? -1.0) >= ($FRAUD_MARKS_MAP[pulsar_results.fraud] ?? -1.0),
+            toloka_results.fraud,
+            pulsar_results.fraud
+        ),
+
+        -- для обычного запроса берём результат из пульсара (если был reuse) или из Толоки
+        IF (pulsar_results.fraud IS NOT NULL, pulsar_results.fraud, toloka_results.fraud)
+    ) as fraud,
+
+    IF (
+        pulsar_results.query == pulsar_results.query_eosp,
+
+        -- в случае EOSP и оценки из кеша и из толоки — выбираем соответствующий query (припру короткий EOSP из Толоки)
+        IF (
+            ($RESULT_MARKS_MAP[toloka_results.result] ?? -1.0) >= ($RESULT_MARKS_MAP[pulsar_results.result] ?? -1.0),
+            toloka_results.result,
+            pulsar_results.result
+        ),
+        -- для обычного запроса оставляем query как и был
+        pulsar_results.query
+    ) as query,
+
+    IF (toloka_results.query IS NOT NULL AND toloka_results.query == pulsar_results.query_eosp, toloka_results.result, NULL) as result_eosp,
+    IF (toloka_results.query IS NOT NULL AND toloka_results.query == pulsar_results.query_eosp, toloka_results.fraud, NULL) as fraud_eosp,
+
+    pulsar_results.* WITHOUT pulsar_results.result, pulsar_results.fraud, pulsar_results.query
+FROM {{concat_input1}} AS pulsar_results
+-- допустимы дубликаты в toloka_results; они будут сгруппированы по req_id далее в "ue2e YT metrics calculator"
+LEFT JOIN $toloka_results AS toloka_results USING (req_id)

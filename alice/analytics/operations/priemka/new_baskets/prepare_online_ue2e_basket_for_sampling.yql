@@ -1,0 +1,38 @@
+Use hahn;
+
+$end_date = {{param.end_date->quote()}};
+$format = DateTime::Format("%Y-%m-%d");
+$parse = DateTime::Parse("%Y-%m-%d");
+
+$day_interval = 8;
+$interval = DateTime::IntervalFromDays($day_interval);
+$start_date = $format(DateTime::MakeDate($parse($end_date)) - $interval);
+
+-- предподготовленные корзины свежего среза. Строятся в проекте: https://hitman.yandex-team.ru/projects/metrics_dialog/ue2e_online_metric 
+$all_requests = (
+    SELECT *
+    FROM RANGE('//home/voice/dialog/toloka/online_metrics/quasar_ue2e/online_baskets', $start_date, $end_date)
+);
+
+$sessions_with_iot_requests = (
+    SELECT DISTINCT session_id
+    FROM $all_requests
+    WHERE toloka_intent == "action.iot_do" and (session_sequence == 1 or ListLength(String::SplitToList(session_id, '__')) == 1)
+);
+
+$not_iot_requests = (
+    SELECT *
+    FROM $all_requests
+    WHERE session_id not in $sessions_with_iot_requests
+);
+
+-- для дальнейшего формирования корзины
+INSERT INTO {{output1}}
+SELECT *
+FROM $not_iot_requests;
+
+-- для семплирования запросов
+INSERT INTO {{output2}}
+SELECT input.text as annotation_query, input.asr_text as query, input.*
+FROM $not_iot_requests as input
+WHERE session_sequence == 1 or ListLength(String::SplitToList(session_id, '__')) == 1;

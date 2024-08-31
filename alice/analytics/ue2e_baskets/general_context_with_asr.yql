@@ -1,0 +1,36 @@
+Use hahn;
+PRAGMA yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+
+$with_asr = "//home/voice/jdkondratenko/VA-1984/context_data/general_with_asr";
+$output= "//home/voice/jdkondratenko/VA-1984/context_data/general_with_asr_all_request_ids";
+
+$get_obj = ($item) -> { 
+   $obj = Yson::Serialize($item);
+   return $obj;
+};
+
+
+$parsed = (
+    SELECT
+        ListEnumerate(YQL::OrderedMap(Yson::ConvertToList(Yson::SerializePretty(Yson::From(session))), $get_obj)) as session, 
+        a.* WITHOUT a.session
+    FROM $with_asr AS a
+);
+
+$queries = (
+    SELECT
+        request_id,
+        session_id, -- айди сессии (разбиты по получасовым неактивностям)
+        Yson::ConvertToString(Yson::Parse(one.1)["request_id"]) as context_request_id,
+        Yson::ConvertToString(Yson::Parse(one.1)["request_id"]) as context_uuid,
+        one.0 as sessions_sequence, -- номер запроса в рамках сессии
+    FROM $parsed
+         FLATTEN BY session as one
+);
+
+INSERT INTO $output WITH TRUNCATE 
+SELECT *
+FROM $queries;

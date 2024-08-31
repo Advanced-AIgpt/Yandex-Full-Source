@@ -1,0 +1,39 @@
+PRAGMA yt.InferSchema = '50';
+
+$python_script = "arc:" || {{param[python_path]}};
+PRAGMA File("script.py", $python_script);
+$script = FileContent("script.py");
+
+$get_asr = Python::get_asr(Callable<(String?, String?, Bool?)->String>, $script);
+
+$get_voice = ($arg) -> {
+    RETURN AsTagged(
+        String::ReplaceAll($arg, "getfile", "getaudio") || "?norm=1",
+        "audiourl"
+    );
+};
+
+$remove_spaces = Re2::Replace("\\s\\s+");
+$remove_spaces2 = Re2::Replace("^\\s+|\\s+$");
+$normalize = ($text) -> {RETURN $remove_spaces2($remove_spaces(String::ReplaceAll(String::ToLower($text), "ё", "e"), " "), "")};
+
+$result = (SELECT
+    $get_voice(WeakField(basket.voice_url, String)) AS voice_url,
+    $normalize(basket.asr_text ?? $get_asr(uniproxy_results.VinsResponse, uniproxy_results.AsrResponses, True)) AS asr_text,
+    IF(basket.asr_text IS NULL, IF(uniproxy_results.RequestId IS NULL, "UNIPROXY_ERROR", IF(uniproxy_results.VinsResponse IS NULL, "EMPTY_VINS_RESPONSE", NULL)), NULL) AS result,
+    uniproxy_results.SetraceUrl AS setrace_url,
+    $normalize(basket.text) AS text,
+    --$normalize(text) == $normalize($get_asr(uniproxy_results.VinsResponse, uniproxy_results.AsrResponses, True)) AS asr_is_good,
+    basket.* WITHOUT basket.voice_url, basket.voice_binary, basket.text, basket.asr_text
+FROM {{input2}} AS basket
+LEFT JOIN {{input1 ?? "(SELECT mds_key AS SessionId, Nothing(String?) AS text, Nothing(String?) AS VinsResponse, Nothing(String?) AS AsrResponses, Nothing(String?) AS  RequestId, Nothing(String?) AS SetraceUrl FROM {{input2}})"}} AS uniproxy_results 
+ON basket.mds_key == uniproxy_results.SessionId
+);
+
+INSERT INTO {{output1}}
+SELECT 
+    status,
+    summary,
+    priority,
+    res.* 
+FROM $result AS res LEFT JOIN ANY {{input3}} AS tickets ON res.ticket == tickets.key;

@@ -1,0 +1,53 @@
+Use hahn;
+pragma DqEngine = "auto";
+PRAGMA yt.Pool = "voice";
+
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/sampled_data/";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/sampled_data/";
+
+-- сколько запросов нужно насемплировать
+$to_sample_total = 48000;
+$IS_NEW = 0.3; -- хотим форсировать 30% новичков
+
+DEFINE ACTION $do_sample($app_type, $basket_type) AS
+    
+    $seed = CAST(CurrentUtcTimestamp($app_type || $basket_type || "with_asr") as Uint64);
+    $seed_empty = CAST(CurrentUtcTimestamp($app_type || $basket_type || "empty_asr") as Uint64);
+    $input_table_new = $common_dir || $app_type || "_data_new";
+    $input_table_old = $common_dir || $app_type || "_data_old";
+    $input_table_empty = $common_dir || $app_type || "_empty_data";
+    $output_table = IF($basket_type == "kpi", $restricted_dir, $common_dir) || $app_type || "_" || $basket_type || "_" || "with_asr";
+    $output_table_empty = IF($basket_type == "kpi", $restricted_dir, $common_dir) || $app_type || "_" || $basket_type || "_" || "empty_asr";   
+
+    $rows_new = (SELECT COUNT(*) FROM $input_table_new);
+    $rows_old = (SELECT COUNT(*) FROM $input_table_old);
+    $rows_num_empty = (SELECT COUNT(*) FROM $input_table_empty);
+    $rows_total = $rows_new + $rows_old + $rows_num_empty;
+    $SAMPLE_NUM = Math::Round($to_sample_total * ($rows_new + $rows_old) / CAST($rows_total as Double));
+    $EMPTY_ASR_SAMPLE_NUM = $to_sample_total - $SAMPLE_NUM;
+
+    $sample_percent_new = $SAMPLE_NUM * $IS_NEW * 100.0 / $rows_new;
+    $sample_percent_old = $SAMPLE_NUM * (1 - $IS_NEW) * 100.0 / $rows_old;
+    $sample_percent_empty = $EMPTY_ASR_SAMPLE_NUM * 100.0 / $rows_num_empty;
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT request_id, input_type, mds_key, fielddate, query, is_empty_asr, is_new, intent, app, session_id, session_sequence, generic_scenario, `uuid`
+    FROM $input_table_new
+    TABLESAMPLE BERNOULLI($sample_percent_new) REPEATABLE($seed)
+    UNION ALL
+    SELECT request_id, input_type, mds_key, fielddate, query, is_empty_asr, is_new, intent, app, session_id, session_sequence, generic_scenario, `uuid`
+    FROM $input_table_old
+    TABLESAMPLE BERNOULLI($sample_percent_old) REPEATABLE($seed);
+
+    INSERT INTO $output_table_empty WITH TRUNCATE 
+    SELECT request_id, mds_key, input_type, fielddate, is_empty_asr, app, 'uu/' || `uuid` as `uuid`
+    FROM $input_table_empty
+    TABLESAMPLE BERNOULLI($sample_percent_empty) REPEATABLE($seed_empty);
+
+END DEFINE;
+
+
+DO $do_sample("quasar", "accept");
+DO $do_sample("quasar", "kpi");
+DO $do_sample("quasar", "dev");
+

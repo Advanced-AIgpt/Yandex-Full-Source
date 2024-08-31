@@ -1,0 +1,68 @@
+Use hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA yt.Pool = "voice";
+
+$joined_data = "//home/voice/irinfox/ue2e_baskets/joined_data_2022_07_07"; -- test table, should be replaced as vars
+$sampled_dir = "//home/voice/irinfox/ue2e_baskets/sampled_data";
+$APP_TYPE = "quasar"; -- для какой поверхности семплируем, должно передаваться тоже
+$SAMPLE_NUM = 5000; -- объём, который хотим насемплить, и это передаваться
+$sample_type = "random"; -- это тоже вроде в итоге передавать будем
+$output_table = $sampled_dir || "/" || $APP_TYPE || "_" || $sample_type || "_" || CAST($SAMPLE_NUM as String); -- если будем конкатить, то необязательно так табличку называть
+
+$script_app = @@
+
+def is_correct_app_by_type(basket_common):
+    import basket_common
+
+    def check_app(app, app_type):
+        return app in basket_common.get_apps_by_type(app_type)
+
+    return check_app
+@@;
+PRAGMA File('basket_common.py', 'arc://alice/analytics/utils/yt/basket_common.py?rev=9264986');
+$udf_is_correct_app_by_type = Python2::is_correct_app_by_type(Callable<(String)->Callable<(String?, String)->Bool>>, $script_app);
+$is_correct_app_by_type = $udf_is_correct_app_by_type(FilePath("basket_common.py"));
+
+-- немножко неочевидных условий для фильтрации, чтоб жизнь красивой не казалась
+$external_skill_activation_intents = AsList(
+    "external_skill\tactivate", "personal_assistant\tscenarios\texternal_skill\tactivate_only",
+    "personal_assistant\tscenarios\texternal_skill"
+);
+
+-- не берём в ue2e корзину запросы навыков из соображений приватности. Оставляем только запросы на активацию навыков
+$externall_skills = (
+    SELECT DISTINCT request_id
+    FROM $joined_data
+    WHERE generic_scenario == "dialogovo" and intent not in $external_skill_activation_intents
+);
+
+-- текстовые запросы или голосовые со ссылками
+$is_good_type = ($mds_key, $input_type) -> {
+    RETURN $input_type in ("text", "click")  or ($input_type == "voice" and $mds_key is not null);
+};
+
+$filtered_table = (
+    SELECT *
+    FROM $joined_data
+    WHERE
+        request_id not in $externall_skills
+        and $is_correct_app_by_type(app, $APP_TYPE)
+        and $is_good_type(asr.data.mds_key, input_type)
+);
+
+$rows_total = (SELECT COUNT(*) FROM $filtered_table);
+$sample_percent = $SAMPLE_NUM * 100.0 / $rows_total;
+
+
+-- ваще не обязательно тут подполя выбирать мб, но раньше так было, т.к. так удобнее потом с совсем маленькой табличкой работать
+INSERT INTO $output_table WITH TRUNCATE
+SELECT
+    request_id, input_type,
+    query, `uuid`,
+    app, fielddate, is_new,
+    asr.data.mds_key as mds_key, is_empty_asr,
+    session_id, session_sequence,
+    intent, generic_scenario,
+    $sample_type as sample_type
+FROM $filtered_table
+TABLESAMPLE BERNOULLI($sample_percent);

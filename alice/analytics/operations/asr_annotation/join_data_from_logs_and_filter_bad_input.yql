@@ -1,0 +1,99 @@
+USE hahn; 
+PRAGMA yt.InferSchema;
+PRAGMA yt.UseSkiff="0";
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+
+
+
+$log_folder = IF($is_spotter, "home/voice-speechbase/uniproxy/spotter", "home/voice-speechbase/uniproxy/logs_unified_qloud");
+
+$get_spotter_length = ($extra) -> {
+    RETURN MIN_OF(Yson::ConvertToInt64($extra.requestSoundBeforeTriggerMs), Yson::ConvertToInt64($extra.actualSoundBeforeTriggerMs)) + 
+           MIN_OF(Yson::ConvertToInt64($extra.requestSoundAfterTriggerMs), Yson::ConvertToInt64($extra.actualSoundAfterTriggerMs))
+};
+
+$get_url_param = ($extra) -> {
+    RETURN IF($extra IS NULL OR NOT $cut_spotter_sound, "", 
+        IF(Yson::ConvertToInt64($extra.actualSoundAfterTriggerMs) IS NULL, "",
+            "?duration=" || CAST($get_spotter_length($extra) AS String)
+        )
+    )
+};
+
+
+$get_asr_hyps= ($responses) -> {
+    RETURN IF(
+        $add_asr_hyps, 
+        ListMap(
+            Yson::ConvertToList($responses), 
+            ($x)->{RETURN String::JoinFromList(ListMap(Yson::ConvertToList($x[0]), ($y) -> {RETURN COALESCE(Yson::ConvertToString($y[0]), Yson::ConvertToString($y[1]))}), " ")}
+        ),
+        ListCreate(String)
+    )
+};
+
+
+$joined = (
+    SELECT 
+        a.mds_key AS mds_key, 
+        a.audio AS audio,
+        log.do_not_use_user_logs AS do_not_use_user_logs, 
+        WeakField(log.extra, Yson) AS extra,
+        log.mds_key IS NOT NULL AS present_in_logs,
+        log.`uuid` AS `uuid`,
+        IF(
+            a.worker_hints IS NOT NULL, 
+            Yson::ConvertToStringList(a.worker_hints),
+            $get_asr_hyps(WeakField(log.responses, Yson))
+        ) AS worker_hints
+    FROM {{input1}} WITH SCHEMA Struct<mds_key:String, audio:String?, worker_hints:Yson?> AS a 
+    LEFT JOIN ANY RANGE($log_folder, $start_date, $end_date) AS log 
+    USING(mds_key)
+);
+
+$joined = (
+    SELECT 
+        present_in_logs AND (do_not_use_user_logs IS NULL OR NOT do_not_use_user_logs) AS is_good, 
+        j.* 
+    FROM $joined AS j
+);
+
+$bad = (
+    SELECT * FROM $joined 
+    WHERE NOT is_good
+);
+
+SELECT
+    Ensure(
+        present_in_logs, 
+        present_in_logs OR $on_bad_records != "fail", 
+        "Some of your data have not been found in logs in given range. Please check first_log_date, last_log_date parametrs"
+    ), 
+    Ensure(
+        do_not_use_user_logs,
+        (do_not_use_user_logs IS NULL OR NOT do_not_use_user_logs) OR $on_bad_records == "skip", 
+        "Some of given keys have do_not_use_user_logs set to true in log. Please resample or filter your data"
+    ),
+    mds_key
+FROM $bad;
+
+SELECT Ensure(false, $on_bad_records != "fail", "Unknown failure reason, please contact author") FROM $bad;
+
+$filtered = (
+    SELECT * FROM $joined WHERE is_good OR $on_bad_records == "force"
+);
+
+
+
+INSERT INTO {{output1}} WITH TRUNCATE 
+SELECT
+    mds_key, 
+    audio ?? ("https://speechbase-yt.voicetech.yandex.net/getaudio/" || mds_key || $get_url_param(extra)) AS audio,
+    `uuid`,
+    worker_hints
+FROM $filtered;
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT * FROM $bad
+

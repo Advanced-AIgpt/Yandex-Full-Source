@@ -1,0 +1,63 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(7) AS String)};
+$get_duration = ($music) -> {RETURN CAST(ListSum(ListMap($music, ($x) -> ($x.duration))) AS Uint64)*1.0/(60 * 1000000)};
+$threshold = 70;
+
+$devices = 
+(
+    SELECT fielddate, SUM(devices) AS devices
+    FROM `//home/marketing-data/andrewha/Station/regular_reports/app_vers_daily` 
+    WHERE $date_filter(fielddate)
+    AND app_vers = '_total_'
+    AND devprod = '_total_'
+    AND device_type IN ('yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexstation', 'yandexstation_2', 'linkplay_a98', 'lightcomm', 'elari_a98', 'yandexmodule', 
+    'prestigio_smart_mate', 'Station', 'jbl_link_portable', 'jbl_link_music')
+    GROUP BY fielddate
+);
+
+$music_reco_tlt = 
+(
+    SELECT p.fielddate AS fielddate, music_answer_type, devices,
+    duration, duration/devices AS duration_per_device,
+    reco_duration, reco_duration/devices AS reco_per_device,
+    req_amount, finished_track_share, finished_track_amount
+    FROM 
+    (
+        SELECT fielddate, 
+        music_answer_type??'total' AS music_answer_type,
+        COUNT(req_id) AS req_amount, 
+        SUM(duration) AS duration, 
+        SUM(reco_duration) AS reco_duration,
+        SUM(finished_track_amount)* 1.0/(SUM(finished_track_amount) + SUM(skiped_track_amount)) AS finished_track_share,
+        AVG(finished_track_amount) AS finished_track_amount
+        FROM
+        (
+            SELECT fielddate, req_id,
+            String::ToLower(music_answer_type)??'music_result' AS music_answer_type, 
+            $get_duration(music) AS duration,
+            $get_duration(ListSkip(music, 1)) AS reco_duration,
+            ListLength(ListFilter(music, ($x) -> ($x.percent_played >= $threshold))) AS finished_track_amount,
+            ListLength(ListFilter(music, ($x) -> ($x.percent_played < $threshold))) AS skiped_track_amount,
+            FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data` 
+            WHERE generic_scenario = 'music'
+            AND music_answer_type IS NOT NULL
+            AND $date_filter(fielddate)
+        )
+        GROUP BY GROUPING SETS (
+        (fielddate, music_answer_type),
+        (fielddate)
+        )
+    ) AS p 
+    INNER JOIN $devices AS m ON m.fielddate = p.fielddate
+    WHERE p.duration IS NOT NULL
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/music/music_reco_tlt` WITH TRUNCATE
+SELECT *
+FROM $music_reco_tlt
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/music/music_reco_tlt`
+WHERE NOT $date_filter(fielddate);

@@ -1,0 +1,113 @@
+/*
+IoT fails (v.3)
+https://st.yandex-team.ru/CMANALYTICS-725
+Report: Adhoc/andrewha/quasar/smart_home_fails_by_provider_3/hourly
+Replacement of https://sandbox.yandex-team.ru/scheduler/20588/view
+
+use arnold;
+*/
+
+PRAGMA yson.DisableStrict;
+PRAGMA SimpleColumns;
+PRAGMA GroupByCubeLimit='64';
+PRAGMA GroupByLimit='64';
+
+$yesterday = AddTimezone(CurrentUtcDateTime() - Interval("P1D"), "Europe/Moscow");
+
+$format = DateTime::Format("%Y-%m-%d %H:00:00");
+$format_log = DateTime::Format("%Y-%m-%dT%H:00:00");
+
+$T = (
+SELECT 
+    Unwrap(fielddate) as fielddate, 
+    Unwrap(skill_name || " (" || skill_id ||")") as provider, 
+    Unwrap(fail_metric.0) as fail_type,
+    fail_metric.1 as fails,
+    device_id,
+    IF(fail_metric.1>0, device_id, null) as failed_device_id,
+    Unwrap(IF(device_type=='', '-', device_type??"-")) as device_type,
+    CASE
+        WHEN skill_id=="T" AND device_type IN ('thermostat.ac','media_device.tv') THEN 'Yandex Services AG'
+        ELSE Unwrap(IF(manufacturer=='', '-', manufacturer??"-"))
+    END as manufacturer,
+    CASE
+        WHEN skill_id=="T" AND device_type IN ('thermostat.ac','media_device.tv') THEN 'YNDX-0006'
+        ELSE Unwrap(IF(model=='', '-', model??"-"))
+    END as model,
+    actions_sent as actions
+FROM
+(
+    SELECT 
+        fielddate, 
+        skill_id,
+        skill_name,
+        Yson::LookupString(device, 'device_id') as device_id,
+        String::Substring(Yson::LookupString(device,'device_type'),14) as device_type,
+        Yson::LookupString(device, 'manufacturer') as manufacturer,
+        Yson::LookupString(device, 'model') as model,
+        Yson::LookupInt64(device, 'actions_sent') as actions_sent,
+        AsDict(
+            ('DEVICE_UNREACHABLE', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'DEVICE_UNREACHABLE') ?? 0),
+            ('INVALID_VALUE', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'INVALID_VALUE') ?? 0),
+            ('UNKNOWN_ERROR', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'UNKNOWN_ERROR') ?? 0),
+            ('NOT_SUPPORTED_IN_CURRENT_MODE', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'NOT_SUPPORTED_IN_CURRENT_MODE') ?? 0),
+            ('INTERNAL_ERROR', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'INTERNAL_ERROR') ?? 0),
+            ('DEVICE_NOT_FOUND', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'DEVICE_NOT_FOUND') ?? 0),
+            ('DEVICE_BUSY', Yson::LookupInt64(Yson::Lookup(device, 'actions_failed'),'DEVICE_BUSY') ?? 0)
+        ) as fail_metrics
+    FROM
+    (
+        SELECT B.*, 
+            CASE B.skill_id
+                WHEN 'T' THEN 'Yandex'
+                WHEN '909af191-576d-4fda-95b8-cd0cf2d6dbbb' THEN 'DIGMA SmartLife'
+                WHEN 'RC' THEN 'RC'
+                ELSE Skills.name
+            END AS skill_name 
+        FROM
+        (
+            SELECT
+                $format(DateTime::MakeDatetime(DateTime::ParseIso8601(iso_eventtime))) as fielddate,
+                Yson::ConvertToString(`_rest`['result_actions']['skill_id']) as skill_id,
+                Yson::ConvertToList(`_rest`['result_actions']['devices']) as devices
+            FROM RANGE(`//home/logfeller/logs/vsdev-bulbasaur-production-logs/stream/5min`, $format_log($yesterday)) as LOGS
+            WHERE msg like "%ProviderResultActionsStat%"
+            AND $format(DateTime::MakeDatetime(DateTime::ParseIso8601(iso_eventtime))) >= $format($yesterday)  
+        ) as B
+        LEFT JOIN `//home/iot/andrewha/skills_trusted` as Skills
+        ON (Skills.id == B.skill_id)
+        WHERE NOT Skills.hideInStore OR (skill_id IN ('T', 'RC', '909af191-576d-4fda-95b8-cd0cf2d6dbbb'))
+    )
+    FLATTEN LIST BY devices as device
+)
+FLATTEN DICT BY fail_metrics AS fail_metric
+);
+
+UPSERT INTO stat.`Adhoc/andrewha/quasar/smart_home_fails_by_provider_3/hourly` ERASE BY (fielddate)
+select 
+    fielddate, 
+    provider??'_total_' as provider, 
+    fail_type, 
+    device_type??'_total_' as device_type,
+    manufacturer??'_total_' as manufacturer,
+    model??'_total_' as model,
+    COUNT(DISTINCT device_id) as devices, 
+    COUNT(DISTINCT failed_device_id) as failed_devices, 
+    SUM(actions) as actions,
+    SUM(fails) as fails
+from $T
+group by fielddate, fail_type, CUBE(provider, device_type, manufacturer, model)
+UNION ALL
+select 
+    fielddate, 
+    provider??'_total_' as provider, 
+    '_total_' as fail_type, 
+    device_type??'_total_' as device_type,
+    manufacturer??'_total_' as manufacturer,
+    model??'_total_' as model,
+    COUNT(DISTINCT device_id) as devices, 
+    COUNT(DISTINCT failed_device_id) as failed_devices, 
+    SUM(actions)/7 as actions, -- 7 type of fails!
+    SUM(fails) as fails
+from $T
+group by fielddate, CUBE(provider, device_type, manufacturer, model);

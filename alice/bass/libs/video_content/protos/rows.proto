@@ -1,0 +1,145 @@
+package NVideoContent.NProtos;
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TSeasonDescriptor {
+    optional string SerialId = 1;
+    optional string Id = 2;
+    optional uint32 EpisodesCount = 3;
+    repeated string EpisodeIds = 4;
+    repeated string EpisodeItems = 5;
+    optional uint32 Index = 6;
+    optional uint64 ProviderNumber = 7;
+    optional bool Soon = 8;
+
+    optional uint64 DownloadedAtUS = 9;
+    optional uint64 UpdateAtUS = 10;
+};
+
+message TSerialDescriptor {
+    optional string Id = 1;
+    repeated TSeasonDescriptor Seasons = 2;
+    optional uint32 TotalEpisodesCount = 3;
+    optional uint32 MinAge = 4;
+};
+
+message TYtKinopoiskFilmGenresRow {
+    optional uint64 FilmId = 1 [(NYT.column_name) = "film_id"];
+    optional string GenreRus = 2 [(NYT.column_name) = "genre_rus"];
+    optional string CountriesRus = 3 [(NYT.column_name) = "countries_rus"];
+};
+
+message TYtKinopoiskReleaseDatesRow {
+    optional string RussianReleaseDate = 1 [(NYT.column_name) = "r_release"];
+    optional string Type = 2 [(NYT.column_name) = "type"];
+    optional uint64 FilmId = 3 [(NYT.column_name) = "id_film"];
+    optional string WorldReleaseDate = 4 [(NYT.column_name) = "w_release"];
+    optional string ViewStatus = 5 [(NYT.column_name) = "view_status"];
+};
+
+// WARNING: Following messages are used as schemas for YDB tables.  If
+// you need to change them, note that you need to update code and data
+// simultaneously. Please, don't touch these protos without real need.
+message TVideoKeyRow {
+    required string ProviderName = 1;
+    optional string ProviderItemId = 2;
+    optional string HumanReadableId = 3;
+    optional string Type = 4;
+};
+
+message TVideoItemRowV5YDb {
+    required uint64 Id = 1;
+
+    required string ProviderName = 2;
+    optional string ProviderItemId = 3;
+    optional string HumanReadableId = 4;
+    optional string KinopoiskId = 5;
+
+    optional string Type = 6;
+    required string Content = 7;
+
+    // This field is set when we get to the video item via web search
+    // but failed to download it.
+    optional bool IsVoid = 8;
+    optional uint64 UpdateAtUS = 9;
+};
+
+message TVideoItemRowV5YT {
+    required string ProviderName = 1;
+    optional string ProviderItemId = 2;
+    optional string HumanReadableId = 3;
+
+    optional string Type = 4;
+    required string Content = 5;
+
+    // This field is set when we get to the video item via web search
+    // but failed to download it.
+    optional bool IsVoid = 6;
+
+    optional string KinopoiskId = 7;
+    optional uint64 UpdateAtUS = 8;
+};
+
+message TProviderUniqueVideoItemRow {
+    required string ProviderName = 1;
+    optional string ProviderItemId = 2;
+    optional string HumanReadableId = 3;
+
+    optional string Type = 4;
+    required string Content = 5;
+    optional string KinopoiskId = 6;
+    optional string ParentTvShowId = 7;
+};
+
+message TProviderItemIdIndexRow {
+    required string ProviderName = 1;
+    required string ProviderItemId = 2;
+    optional string Type = 3;
+    required uint64 Id = 4;
+};
+
+message THumanReadableIdIndexRow {
+    required string ProviderName = 1;
+    required string HumanReadableId = 2;
+    optional string Type = 3;
+    required uint64 Id = 4;
+};
+
+message TKinopoiskIdIndexRow {
+    required string ProviderName = 1;
+    required string KinopoiskId = 2;
+    optional string Type = 3;
+    required uint64 Id = 4;
+};
+
+message TSeasonDescriptorRow {
+    required string ProviderName = 1;
+    required string SerialId = 2;
+    required uint64 ProviderNumber = 3;
+    required bytes Season = 4;
+    optional bool Soon = 5;
+
+    optional uint64 DownloadedAtUS = 6;
+    optional uint64 UpdateAtUS = 7;
+};
+
+message TEpisodeDescriptorRow {
+    required string ProviderItemId = 1;
+    required uint64 SeasonNumber = 2;
+    required uint64 EpisodeNumber = 3;
+};
+
+message TSerialDescriptorRow {
+    required string ProviderName = 1;
+    required string SerialId = 2;
+    required bytes Serial = 3;
+};
+
+message TYDBKinopoiskSVODRowV2 {
+    required string KinopoiskId = 1;
+    optional double KinopoiskRating = 2;
+    optional string Genres = 3;
+    optional string Countries = 4;
+    optional string ContentType = 5;
+    optional string ReleaseDate = 6;
+};

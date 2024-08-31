@@ -1,0 +1,95 @@
+pragma SimpleColumns;
+pragma yson.DisableStrict;
+pragma yt.TmpFolder = "home/voice/tmp";
+pragma File("usage_fields.py", "arc://alice/analytics/operations/dialog/sessions/usage_fields.py?rev=8351394");
+
+$prepared = "home/alice/dialog/prepared_logs_expboxes";
+$prepared_robots = "home/alice/dialog/robot-prepared_logs_expboxes";
+$wonder = "home/alice/wonder/logs";
+$wonder_robots = "home/alice/wonder/robot-logs";
+pragma File("mappings.py", "arc://quality/ab_testing/cofe/projects/alice/mappings.py?rev=8351394");
+$norm_id = ($id) -> {return String::RemoveAll(String::RemoveAll(String::AsciiToLower($id), "-"), "uu/")};
+$day_before = ($date) -> {return cast(cast($date as Date) - DateTime::IntervalFromDays(1) AS String)};
+$day_after = ($date) -> {return cast(cast($date as Date) + DateTime::IntervalFromDays(1) AS String)};
+$add_dates = ($dates) -> {return listmap(listuniq(listflatmap($dates, ($x) -> {return aslist($x, $day_before($x), $day_after($x))})), ($x) -> {return unwrap($x)})};
+$datetime_parse = DateTime::Parse("%Y%m%dT%H%M%S");
+$dates_to_paths = ($list, $prefix) -> {return listmap($list, ($x) -> {return $prefix || "/" || $x})};
+$helpers =  @@
+import re
+def get_app(app):
+    return APP_LIST.get(app) or app
+@@;
+$app_list = Re2::Capture("(APP_LIST = {[^\{]*})");
+$scripts = unwrap($app_list(FileContent("usage_fields.py"))._0 || $helpers);
+$get_app = Python2::get_app(Callable<(String?)->String?>, $scripts);
+$get_text = ($y) -> (Re2::Replace("[^а-яa-z ]+"u)(Unicode::ToLower(ListHead(Yson::ConvertTo($y, List<Utf8>))), ""u));
+$known_keys = select distinct mds_key from concat({{input2}}, {{input3}});
+
+$items = select aggregate_list(Yson::Serialize(Yson::From(TableRow()))) from {{input1}};
+
+define subquery $get_table($path, $dates) AS
+     select Path from folder($path) where Type = "table" and Path in $dates_to_paths($dates, $path);
+end define;
+
+define subquery $get_all_tables($human_path, $robot_path, $dates) as
+    select
+        aggregate_list(Path)
+    from (
+        select Path from $get_table($human_path, $dates)
+        union all
+        select Path from $get_table($robot_path, $dates)
+    );
+end define;
+
+define action $process($item) as
+
+$tab_name = Yson::ConvertToString($item.ticket) || ", " || Yson::ConvertToString($item.name);
+$dates = Yson::ConvertToStringList($item.dates);
+$prepared_paths = select * from $get_all_tables($prepared, $prepared_robots, $dates);
+$wonder_paths = select * from $get_all_tables($wonder, $wonder_robots, $dates);
+
+evaluate if listlength($prepared_paths) > 0 and listlength($wonder_paths) > 0 do begin
+
+$req_ids = (
+    select `uuid`, req_id, query, reply, intent, app
+    from each($prepared_paths)
+    where 
+    (
+        $norm_id(device_id) in listmap(Yson::ConvertToStringList($item.device_ids), $norm_id)
+        or $norm_id(device_id) in listmap(Yson::ConvertToStringList($item.uuids), $norm_id)
+        or $norm_id(`uuid`) in listmap(Yson::ConvertToStringList($item.uuids), $norm_id)
+        or $norm_id(req_id) in listmap(Yson::ConvertToStringList($item.req_ids), $norm_id)
+    )
+);
+
+$uuids = select distinct $norm_id(`uuid`) from $req_ids;
+
+select
+    AsTagged("https://speechbase.voicetech.yandex-team.ru/getaudio/" || mds_key || "?norm=1" , "audiourl") AS audio,
+    date_completed,
+    text,
+    app ?? $get_app(AppId) as app,
+    mds_key,
+    Yson::ConvertToString($item.ticket) as ticket,
+    AsTagged("https://st.yandex-team.ru/" || Yson::ConvertToString($item.ticket) , "url") AS url,
+    query,
+    reply,
+    intent
+from (
+    select * 
+    from (
+        select _megamind_request_id as vins_request_id, String::ReplaceAll(asr.voice_by_uniproxy.mds, "http://storage-int.mds.yandex.net:80/get-speechbase/", "") as mds_key, cast(DateTime::MakeDatetime($datetime_parse(speechkit_request.application.client_time)) as string) as date_completed, speechkit_request.application.app_id as AppId,  asr.data.recognition.normalized as text
+        from each($wonder_paths) 
+        where (speechkit_request is not null) and (asr.voice_by_uniproxy.mds is not null) and (not spotter.false_activation) and ($norm_id(_uuid) in $uuids or $norm_id(_uuid) in listmap(Yson::ConvertToStringList($item.uuids), $norm_id)) and (String::ReplaceAll(asr.voice_by_uniproxy.mds, "http://storage-int.mds.yandex.net:80/get-speechbase/", "") not in $known_keys)
+        ) as wonder
+    left join any $req_ids as req_ids 
+    on $norm_id(req_ids.req_id) == $norm_id(wonder.vins_request_id)
+    )
+order by date_completed
+into result $tab_name;
+
+end do;
+
+end define;
+
+evaluate for $item in $items do $process($item);

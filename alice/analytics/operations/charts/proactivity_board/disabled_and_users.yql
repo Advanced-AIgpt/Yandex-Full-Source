@@ -1,0 +1,40 @@
+use hahn;
+pragma yt.InferSchema = '1';
+PRAGMA yson.DisableStrict;
+
+
+$days_ago = ($date, $days) -> {
+    return DateTime::Format("%Y-%m-%d")(cast($date as date) - DateTime::IntervalFromDays($days))
+};
+
+$date_end = {{param.date_end}};
+$date_start = $days_ago($date_end, 30);
+
+$expboxes = "//home/alice/dialog/prepared_logs_expboxes";
+$disabled_and_users_stats = {{param.disabled_and_users_stats}};
+
+$expboxes = select
+    `puid`, fielddate,
+    coalesce(Yson::ConvertToBool(analytics_info.modifiers_info.proactivity.disabled_in_app), false) as disabled_in_app,
+    coalesce(Yson::ConvertToBool(analytics_info.modifiers_info.proactivity.appended), false) as appended,
+    app ?? "unknown" as app
+from range($expboxes, $date_start, $date_end)
+where app in ["quasar", "small_smart_speakers"]
+;
+
+
+insert into $disabled_and_users_stats with truncate
+select
+	$date_end as fielddate,
+	app ?? "_total_" as app,
+    count(distinct if (fielddate >= $days_ago($date_end, 6), puid, null)) as puids_week,
+    count(distinct if (fielddate >= $days_ago($date_end, 6) and disabled_in_app == True, puid, null)) as puids_disabled_week,
+    count(distinct if (appended, puid, null)) as puids_with_postroll_month,
+    count(distinct puid) as puids_month
+from $expboxes
+group by grouping sets ((), app)
+union all
+select *
+from $disabled_and_users_stats
+where fielddate != $date_end
+;

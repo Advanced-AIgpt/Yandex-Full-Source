@@ -1,0 +1,72 @@
+USE hahn;
+PRAGMA SimpleColumns;
+PRAGMA AllowDotInAlias;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = "100";
+PRAGMA yt.DefaultMaxJobFails = "1";
+
+$toloka_tasks = (
+    SELECT
+        ListReverse(Yson::ConvertToList(session))[0] as action0,
+        ListReverse(Yson::ConvertToList(session))[1] as state0,
+        ListReverse(Yson::ConvertToList(session))[2] as action1,
+        ListReverse(Yson::ConvertToList(session))[3] as state1,
+        ListReverse(Yson::ConvertToList(session))[4] as action2,
+        ListReverse(Yson::ConvertToList(session))[5] as state2,
+        ListReverse(Yson::ConvertToList(session))[6] as action3,
+        ListReverse(Yson::ConvertToList(session))[7] as state3,
+        ListReverse(Yson::ConvertToList(session))[8] as action4,
+        ListReverse(Yson::ConvertToList(session))[9] as state4,
+        ListReverse(Yson::ConvertToList(session))[10] as action5,
+        ListReverse(Yson::ConvertToList(session))[11] as state5,
+        ListReverse(Yson::ConvertToList(session))[12] as action6,
+        ListReverse(Yson::ConvertToList(session))[13] as state6,
+        ListReverse(Yson::ConvertToList(session))[14] as action7,
+        ListReverse(Yson::ConvertToList(session))[15] as state7,
+        ListReverse(Yson::ConvertToList(session))[16] as action8,
+        ListReverse(Yson::ConvertToList(session))[17] as state8,
+        ListReverse(Yson::ConvertToList(session))[18] as action9,
+        ListReverse(Yson::ConvertToList(session))[19] as state9,
+        ListReverse(Yson::ConvertToList(session))[20] as action10,
+        ListReverse(Yson::ConvertToList(session))[21] as state10,
+        answer_standard,
+        app,
+        generic_scenario,
+        hashsum,
+        intent,
+        req_id,
+        session,
+        session_id,
+        setrace_url,
+        text,
+        asr_text,
+        voice_url,
+        `result`,
+        fraud
+    FROM {{input1}}
+);
+
+$toloka_tasks_with_references = (
+    SELECT
+        l.*,
+        r.`result` as references_result,
+        IF(Yson::ConvertToString(l.action0.query) IS NULL, True, False) as sidespeech,
+        IF(l.`result` in ['EMPTY_SIDESPEECH_RESPONSE', 'EMPTY_VINS_RESPONSE'], true, false) as is_empty_answer,
+    FROM $toloka_tasks as l
+    INNER JOIN {{input2}} as r
+    USING (req_id)
+    WHERE r.`result` != 'UNIPROXY_ERROR'
+);
+
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT *
+FROM $toloka_tasks_with_references
+WHERE (fraud OR result != 'good') AND NOT sidespeech;
+;
+
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT *
+FROM $toloka_tasks_with_references
+WHERE sidespeech and not is_empty_answer or is_empty_answer and not sidespeech;

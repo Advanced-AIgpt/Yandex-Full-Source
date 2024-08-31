@@ -1,0 +1,137 @@
+USE hahn;
+PRAGMA yt.Pool = 'voice';
+
+$device_map = ($counter_device) -> (
+    CASE WHEN $counter_device = 'yandex.station' THEN 'yandexstation'
+    WHEN $counter_device = 'yandex.station_2' THEN 'yandexstation_2'
+    WHEN $counter_device = 'yandex.station.mini' THEN 'yandexmini'
+    WHEN $counter_device = 'yandex.station.mini_2' THEN 'yandexmini_2'
+    WHEN $counter_device = 'yandex.station.mini_2_no_clock' THEN 'yandexmini_2'
+    WHEN $counter_device = 'yandex.station.micro' THEN 'yandexmicro'
+    WHEN $counter_device = 'yandex.station.midi' THEN 'yandexmidi'
+    ELSE $counter_device
+    END
+);
+
+$sessions_data = 
+(
+    SELECT EventDate, puid, device, OSName, app, start_ts,
+    bleId, $device_map(device) AS quasar_device,
+    IF(ap_success + ble_success + sonic_success > 0, 1, 0) AS success
+    FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric_with_js_api`
+    WHERE device IN ('yandex.station', 'yandex.station_2', 'yandex.station.mini', 'yandex.station.mini_2',
+    'yandex.station.mini_2_no_clock',  'yandex.station.micro', 'yandex.station.midi')
+);
+
+
+--Часть 1, самая надежная: проклеиваем при помощи bleId
+
+$bt_data = 
+(
+    SELECT String::ToLower(bt_mac) AS bt_mac, device_id 
+    FROM `//home/quasar-dev/manufacturing/yandexmini_2/burned_device`
+    UNION ALL 
+    SELECT String::ToLower(bt_mac) AS bt_mac, device_id 
+    FROM `//home/quasar-dev/manufacturing/yandexmicro/burned_device`
+    UNION ALL 
+    SELECT String::ToLower(bt_mac) AS bt_mac, device_id 
+    FROM `//home/quasar-dev/manufacturing/yandexmidi/burned_device`
+    UNION ALL 
+    SELECT String::ToLower(bt_mac) AS bt_mac, device_id 
+    FROM `//home/quasar-dev/manufacturing/yandexstation_2/burned_device`
+);
+
+$matched_part1 = 
+(
+    SELECT t.*, b.device_id AS device_id, a.init_date AS init_date
+    FROM $sessions_data AS t 
+    INNER JOIN $bt_data AS b ON String::ReplaceAll(String::ToLower(t.bleId), ':', '') = b.bt_mac
+    LEFT JOIN `//home/voice/nadezhda17/common/plus_metrics/all_devices` AS a ON a.device_id = b.device_id
+);
+
+
+--Часть 2, проклеиваем глядя на успешные подключения (на puid была единственная колонка того же типа в день успешного подключения). Не 100% надёжно.
+
+$cut_subcription = ($device_type) -> (String::ReplaceAll($device_type, '_subscription', ''));
+
+$device_mapping2 = 
+(
+    SELECT puid, $cut_subcription(device_type) AS device, fielddate, MAX_BY(device_id, activation_date) AS device_id, 
+    MAX(activation_date) AS init_date
+    FROM `//home/alice/cubes/retention/stations/last`
+    WHERE fielddate >= '2022-06-24'
+    AND $cut_subcription(device_type) IN ('yandexstation', 'yandexstation_2', 'yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexmidi')
+    GROUP BY puid, device_type, fielddate HAVING COUNT(DISTINCT device_id) = 1
+);
+
+$matched_part2 = 
+(
+    SELECT s.*, device_id, init_date
+    FROM $sessions_data AS s 
+    INNER JOIN $device_mapping2 AS p ON s.puid = p.puid AND s.EventDate = p.fielddate AND s.quasar_device = p.device
+    WHERE s.success = 1
+);
+
+
+--Часть 3, проклеиваем глядя на устройства на аккаунте за всё время, на текущий момент у пользователя единственный девайс этого типа. Не 100% надежно.
+
+$device_mapping3 = 
+(
+    SELECT puid, device, MAX(device_id) AS device_id, MAX(init_date) AS init_date
+    FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices`
+    WHERE device IN ('yandexstation', 'yandexstation_2', 'yandexmini', 'yandexmini_2', 'yandexmicro', 'yandexmidi')
+    GROUP BY puid, device HAVING COUNT(DISTINCT device_id) = 1
+);
+
+$matched_part3 = 
+(
+    SELECT s.*, device_id, init_date
+    FROM $sessions_data AS s 
+    INNER JOIN $device_mapping3 AS p ON p.puid = s.puid AND s.quasar_device = p.device
+);
+
+--Сводим всё воедино
+$matched = 
+(
+    SELECT s.*, 
+    (m1.device_id??m2.device_id)??m3.device_id AS device_id, 
+    (m1.init_date??m2.init_date)??m3.init_date AS init_date
+    FROM $sessions_data AS s 
+    LEFT JOIN $matched_part1 AS m1 ON m1.EventDate = s.EventDate AND m1.start_ts = s.start_ts
+    AND m1.puid = s.puid AND m1.app = s.app AND m1.OSName = s.OSName AND m1.device = s.device
+    LEFT JOIN $matched_part2 AS m2 ON m2.EventDate = s.EventDate AND m2.start_ts = s.start_ts
+    AND m2.puid = s.puid AND m2.app = s.app AND m2.OSName = s.OSName AND m2.device = s.device
+    LEFT JOIN $matched_part3 AS m3 ON m3.EventDate = s.EventDate AND m3.start_ts = s.start_ts
+    AND m3.puid = s.puid AND m3.app = s.app AND m3.OSName = s.OSName AND m3.device = s.device
+);
+
+$first_setup = 
+(
+    SELECT device, device_id, init_date,
+    MIN(start_ts) AS start_ts, 
+    MIN_BY(EventDate, start_ts) AS EventDate, 
+    MIN_BY(puid, start_ts) AS puid, 
+    MIN_BY(app, start_ts) AS app, 
+    MIN_BY(OSName, start_ts) AS OSName
+    FROM $matched 
+    WHERE init_date >= '2022-06-24'
+    GROUP BY device, device_id, init_date
+);
+
+
+INSERT INTO `//home/voice/nadezhda17/common/device_connection/session_for_metric_with_js_api_with_device_id` WITH TRUNCATE 
+SELECT s.*, 
+m.device_id AS device_id, m.init_date AS init_date, 
+CASE WHEN f.device_id IS NOT NULL THEN 'first_setup'
+WHEN m.device_id IS NOT NULL THEN 'not_first_setup'
+ELSE 'unknown' END AS first_setup
+FROM `//home/voice/nadezhda17/common/device_connection/session_for_metric_with_js_api` AS s 
+LEFT JOIN $matched AS m ON m.EventDate = s.EventDate AND m.start_ts = s.start_ts
+AND m.puid = s.puid AND m.app = s.app AND m.OSName = s.OSName AND m.device = s.device
+LEFT JOIN $first_setup AS f ON f.EventDate = s.EventDate AND f.start_ts = s.start_ts
+AND f.puid = s.puid AND f.app = s.app AND f.OSName = s.OSName AND f.device = s.device 
+AND m.device_id = f.device_id
+WHERE s.device IN ('yandex.station', 'yandex.station_2', 'yandex.station.mini', 'yandex.station.mini_2',
+    'yandex.station.mini_2_no_clock',  'yandex.station.micro', 'yandex.station.midi')
+;
+

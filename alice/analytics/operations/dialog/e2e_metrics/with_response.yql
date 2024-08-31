@@ -1,0 +1,126 @@
+PRAGMA SimpleColumns;
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$get_location = ($location, $additional_options, $app_preset, $generic_scenario, $exact_location) -> {
+    $lat = Yson::ConvertToDouble($location["lat"]);
+    $lon = Yson::ConvertToDouble($location["lon"]);
+    $location_by_coordinates = IF($lat IS NOT NULL AND $lon IS NOT NULL, Geo::RoundRegionByLocation($lat, $lon, "town").name || ", " || Geo::RoundRegionByLocation($lat, $lon, "region").name, NULL);
+    $region_id = CAST(Yson::ConvertToInt64($additional_options["bass_options"]["region_id"]) AS Int32);
+    $location_by_region_id = IF($region_id IS NOT NULL, Geo::RoundRegionById($region_id, "town").name || ", " || Geo::RoundRegionById($region_id, "region").name, NULL);
+    $client_ip = Yson::ConvertToString($additional_options["bass_options"]["client_ip"]);
+    $location_by_client_ip = IF($client_ip IS NOT NULL, Geo::RoundRegionByIp($client_ip, "town").name || ", " || Geo::RoundRegionByIp($client_ip, "region").name, NULL);
+    RETURN CASE
+	WHEN ($app_preset IN ("navigator", "auto") OR $generic_scenario IN ("find_poi", "route")) AND $exact_location IS NOT NULL AND $exact_location != "" THEN $exact_location
+        WHEN $location_by_coordinates IS NOT NULL THEN $location_by_coordinates
+        WHEN $location_by_region_id IS NOT NULL THEN $location_by_region_id
+        ELSE $location_by_client_ip
+    END;
+};
+
+$arcadia_intents_path = "arc://alice/analytics/utils/yt/extract_intent.py?hash=" || {{param.arc_commit->quote() ?? "8a05684edd21c5bb0ae57aa0f5d5dda106002654"->quote()}};
+PRAGMA File("arcadia_intents_path.py", $arcadia_intents_path);
+$script = FileContent("arcadia_intents_path.py");
+$get_mm_scenario = Python::get_mm_scenario(Callable<(String?,Bool?)->String?>, $script);
+$get_product_scenario = Python::get_product_scenario_name(Callable<(String?,Bool?)->String?>, $script);
+$get_intent = Python::get_intent(Callable<(String?,Bool?)->String?>, $script);
+
+$arcadia_asr_path = "arc://alice/analytics/utils/yt/extract_asr.py?hash=" || {{param.arc_commit->quote() ?? "8a05684edd21c5bb0ae57aa0f5d5dda106002654"->quote()}};
+PRAGMA File("arcadia_asr_path.py", $arcadia_asr_path);
+$script = FileContent("arcadia_asr_path.py");
+$get_asr = Python::get_asr(Callable<(String?, String?)->String>, $script);
+
+$parse = DateTime::Parse("%Y%m%dT%H%M%S");
+$get_ts = ($ClientTime) -> {
+    RETURN CAST(DateTime::ToSeconds(DateTime::MakeDatetime($parse($ClientTime))) AS Int64);
+};
+$get_prev_ts = ($ClientTime) -> {
+    RETURN CAST(DateTime::ToSeconds(DateTime::MakeDatetime($parse(Yson::ConvertToString($ClientTime)))) AS Int64);
+};
+
+$arcadia_mapping_path = "arc://alice/analytics/operations/dialog/sessions/intent_scenario_mapping.py?hash=" || {{param.arc_commit->quote() ?? "90a45a722d66df8de406d20cd471296752eadc65"->quote()}};
+PRAGMA File("intent_to_scenario_map.py", $arcadia_mapping_path);
+$script = FileContent("intent_to_scenario_map.py");
+$generalize_vins_intent = Python2::get_generic_scenario(ParseType("(String?, String?, String?)->String"), $script);
+
+$basket = (
+    SELECT *
+    FROM {{input2}}
+    WHERE ListLength(String::SplitToList(session_id, '__')) == 1 OR session_sequence == 1
+);
+
+DEFINE SUBQUERY $join_with_uniproxy_output() AS
+    SELECT
+        IF(LENGTH(basket.session_id) > 36, SUBSTRING(basket.session_id, NULL, 36), "") AS prev_reqid,
+        basket.text AS text,
+        $get_intent(uniproxy_results.VinsResponse, False) ?? "EMPTY" AS intent,
+        $get_mm_scenario(uniproxy_results.VinsResponse, False) AS mm_scenario,
+        $get_product_scenario(uniproxy_results.VinsResponse, False) AS product_scenario,
+        uniproxy_results.VinsResponse AS vins_response,
+        $get_ts(ClientTime) AS ts,
+        Timezone AS tz,
+        basket.request_id AS request_id,
+        basket.session_id AS session_id,
+        basket.device_state AS device_state,
+        basket.toloka_intent AS toloka_intent,
+        basket.app_preset AS app,
+        $get_location(WeakField(basket.location, Yson), WeakField(basket.additional_options, Yson), WeakField(basket.app_preset, String), $generalize_vins_intent($get_intent(uniproxy_results.VinsResponse, False) ?? basket.vins_intent ?? "EMPTY", $get_mm_scenario(uniproxy_results.VinsResponse, False), $get_product_scenario(uniproxy_results.VinsResponse, False)), WeakField(basket.exact_location, String)) AS location,
+        WeakField(basket.additional_options, Yson) AS additional_options,
+        WeakField(basket.toloka_extra_state, Yson) AS toloka_extra_state,
+        $get_asr(uniproxy_results.VinsResponse, uniproxy_results.AsrResponses) AS asr_text,
+        String::ReplaceAll(WeakField(basket.voice_url, String), "getfile", "getaudio") || "?norm=1" AS voice_url,
+        IF(uniproxy_results.RequestId IS NULL, "UNIPROXY_ERROR", IF(uniproxy_results.VinsResponse IS NULL, "EMPTY_VINS_RESPONSE", NULL)) AS result,
+        WeakField(basket.has_ivi_in_state_or_query, Bool) AS has_ivi_in_state_or_query,
+        uniproxy_results.SetraceUrl AS setrace_url,
+        WeakField(basket.basket, String) AS basket
+    FROM $basket AS basket
+    LEFT JOIN {{input1}} AS uniproxy_results ON basket.request_id == uniproxy_results.RequestId
+END DEFINE;
+
+DEFINE ACTION $join_with_vins_output() AS
+    INSERT INTO @joined_tables WITH TRUNCATE
+    SELECT
+        uniproxy_output.*,
+        vins_output.FetchedResult AS prev_response,
+        $get_prev_ts(ClientTime) AS prev_ts,
+        Yson::ConvertToString(Timezone) as prev_tz
+    FROM $join_with_uniproxy_output() AS uniproxy_output
+    LEFT JOIN {{input3}} AS vins_output
+    ON uniproxy_output.prev_reqid == vins_output.id;
+END DEFINE;
+
+DEFINE ACTION $join_without_vins_output() AS
+    INSERT INTO @joined_tables WITH TRUNCATE
+    SELECT uniproxy_output.*, null AS prev_response, null AS prev_ts, null AS prev_tz
+    FROM $join_with_uniproxy_output() AS uniproxy_output;
+END DEFINE;
+
+DEFINE SUBQUERY $get_row_count() AS
+    $path_parts = String::SplitToList({{input3->table_quote()}}, '/');
+    $replace = Re2::Replace("^//");
+    $folder = String::JoinFromList(ListTake($path_parts, ListLength($path_parts)-1), '/');
+    SELECT Yson::LookupInt64(Attributes, "row_count") AS row_count FROM FOLDER($folder, "row_count") WHERE Path == $replace({{input3->table_quote()}}, '');
+END DEFINE;
+
+$rows = SELECT row_count FROM $get_row_count();
+
+EVALUATE IF $rows > 0
+    DO $join_with_vins_output()
+ELSE
+    DO $join_without_vins_output();
+COMMIT;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    joined_tables.*,
+    $generalize_vins_intent(joined_tables.intent ?? "EMPTY", joined_tables.mm_scenario, joined_tables.product_scenario) AS generic_scenario,
+    basket.text AS prev_text,
+    basket.device_state AS prev_device_state,
+    WeakField(basket.additional_options, Yson) AS prev_additional_options,
+    $get_intent(joined_tables.prev_response, True) ?? basket.vins_intent ?? "EMPTY" AS prev_intent,
+    $generalize_vins_intent($get_intent(joined_tables.prev_response, True) ?? basket.vins_intent ?? "EMPTY", $get_mm_scenario(joined_tables.prev_response, True), $get_product_scenario(joined_tables.prev_response, True)) AS prev_generic_scenario,
+    $get_location(WeakField(basket.location, Yson), WeakField(basket.additional_options, Yson), WeakField(basket.app_preset, String), $generalize_vins_intent($get_intent(joined_tables.prev_response, True) ?? basket.vins_intent ?? "EMPTY", $get_mm_scenario(joined_tables.prev_response, True), $get_product_scenario(joined_tables.prev_response, True)), WeakField(basket.exact_location, String)) AS prev_location
+FROM @joined_tables AS joined_tables
+LEFT JOIN {{input2}} AS basket
+ON joined_tables.prev_reqid == basket.request_id;

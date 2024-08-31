@@ -1,0 +1,148 @@
+USE hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+--1) Обновляем информацию о треках
+
+--Фильтры на даты
+$three_days_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+$two_days_ago = ($date) -> {RETURN $date = CAST(CurrentUtcDate() - DateTime::IntervalFromDays(2) AS String)};
+
+$artists = 
+(
+    SELECT t.track_id AS track_id, String::JoinFromList(AGGREGATE_LIST_DISTINCT(a.name), ';') AS artists
+    FROM
+    (
+        SELECT track_id, artist_id
+        FROM
+        (
+            SELECT track_id, IF(ListLength(Yson::ConvertToInt64List(main_artist)) > 0, 
+            Yson::ConvertToInt64List(main_artist), Yson::ConvertToInt64List(artist_performer)) AS artists
+            FROM FILTER(`//home/music-data/music-metadata-v2/tracks`, $two_days_ago)
+        )
+        FLATTEN LIST BY artists AS artist_id
+    ) AS t
+    INNER JOIN FILTER(`//home/music-data/music-metadata-v2/artists`, $two_days_ago) AS a ON a.artist_id = t.artist_id
+    GROUP BY t.track_id
+);
+
+$tracks = 
+(
+    SELECT t.track_id AS track_id, title, a.artists AS artists,
+    Yson::ConvertToStringList(genres) AS genres,
+    CAST(duration * 1000 AS Interval) AS duration, 
+    explicit, is_russian
+    FROM FILTER(`//home/music-data/music-metadata-v2/tracks`, $two_days_ago) AS t 
+    LEFT OUTER JOIN $artists AS a ON a.track_id = t.track_id
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/tracks` WITH TRUNCATE
+SELECT * 
+FROM $tracks
+ORDER BY track_id
+;
+
+COMMIT;
+
+--2) Собираем хардбиты 
+
+$track_info = 
+(
+    SELECT CAST(track_id AS String) AS track_id, 
+    String::JoinFromList(ListSort(genres), ';') AS genres, title
+    FROM `//home/voice/nadezhda17/common/tracks`
+);
+
+$s_to_datetime = ($s) -> {RETURN DateTime::FromSeconds(CAST($s AS Uint32))};
+
+$null_sec = CAST(0 AS Uint32);
+
+--длительность между хардбитами для пользователей
+$heartbeats_diff = 
+(
+    SELECT h.dt AS dt, h.device_id AS device_id, 
+    h.req_id AS req_id, h.`uuid` AS `uuid`, h.track_id AS track_id, 
+    t.genres AS genres, t.title AS title, 
+    h.ts as ts, h.percent_played AS percent_played,
+    (send_timestamp - LAG(send_timestamp) OVER w)??$null_sec AS time_diff
+    FROM
+    (
+        SELECT dt, device_id, IF((parent_req_id??'') != '', parent_req_id, req_id) AS req_id, 
+        `uuid`, track_id, send_timestamp, percent_played,
+        $s_to_datetime(send_timestamp) AS ts
+        FROM FILTER(`//home/alice/dialog/heartbeats`, $three_days_ago)
+        WHERE event_name IN ('progressHeartbeatMusic', 'startAudio', 'playAudio', 'endAudio', 'audioClientPlayRequest', 
+        'audioClientPlayRequestFulfill', 'audioClientHeartbeat')
+    ) AS h 
+    LEFT OUTER JOIN $track_info AS t ON t.track_id = h.track_id
+    WINDOW w AS (PARTITION BY h.dt, h.device_id, h.req_id, h.`uuid` ORDER BY ts)
+);
+
+$heartbeats = 
+(
+    SELECT MIN(dt) AS dt, MAX(device_id) AS device_id, req_id, MAX(`uuid`) AS `uuid`, 
+    ListSort(AGGREGATE_LIST(AsStruct(track_id as track_id, 
+    genres AS genres, title AS title, duration AS duration,
+    ts AS ts, percent_played AS percent_played)),
+    ($x) -> ($x.ts)) AS music
+    FROM 
+    (
+        SELECT dt, device_id, req_id, `uuid`, 
+        track_id, genres, title,
+        DateTime::IntervalFromSeconds(CAST(SUM(time_diff) AS Int32)) AS duration, 
+        MIN(ts) AS ts, 
+        MAX(percent_played) AS percent_played
+        FROM $heartbeats_diff
+        WHERE time_diff <= 32
+        GROUP BY dt, device_id, req_id, `uuid`, track_id, genres, title
+    )
+    GROUP BY req_id
+);
+
+
+--3) Собираем сессии
+
+$ms_to_datetime = ($ms) -> {RETURN DateTime::FromMilliseconds(CAST($ms AS Uint64))};
+$intent_formatted = ($intent) -> {RETURN String::JoinFromList(String::SplitToList($intent, '\t'), '.')};
+
+$sessions_data = 
+(
+    SELECT req_id, 
+    MAX(child) AS child,
+    MAX(ts) AS ts, 
+    MAX_BY(device_id, ts) AS device_id,
+    MAX_BY(`uuid`, ts) AS `uuid`,
+    MAX_BY(puid, ts) AS puid,
+    MAX_BY(fielddate, ts) AS fielddate,
+    MAX_BY(query, ts) AS query,
+    MAX_BY(reply, ts) AS reply,
+    MAX_BY(music_answer_type, ts) AS music_answer_type,
+    MAX_BY(generic_scenario, ts) AS generic_scenario,
+    MAX_BY(intent, ts) AS intent,
+    FROM
+    (
+        SELECT device_id, `uuid`, req_id, puid,
+        IF(child_confidence > 0.8, True, False) AS child,
+        fielddate, $ms_to_datetime(server_time_ms) AS ts, 
+        query, reply, music_answer_type, generic_scenario, 
+        $intent_formatted(intent) AS intent
+        FROM FILTER(`//home/alice/dialog/prepared_logs_expboxes`, $three_days_ago) 
+        WHERE app IN ('quasar', 'small_smart_speakers')
+    )
+    GROUP BY req_id
+);
+
+--4) Сводим все воедино
+
+INSERT INTO `//home/voice/nadezhda17/common/sessions_heartbeats_data` WITH TRUNCATE
+SELECT *
+FROM
+(
+    SELECT s.*, h.music AS music
+    FROM $sessions_data AS s 
+    LEFT OUTER JOIN $heartbeats AS h ON h.req_id = s.req_id
+    UNION ALL
+    SELECT *
+    FROM `//home/voice/nadezhda17/common/sessions_heartbeats_data`
+    WHERE NOT $three_days_ago(fielddate)
+)
+ORDER BY fielddate, device_id;

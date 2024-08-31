@@ -1,0 +1,98 @@
+Use hahn;
+
+$input = "//home/voice/jdkondratenko/VA-1984/context_data/vins_logs_sample_with_context_all";
+$with_asr  = "//home/voice/jdkondratenko/VA-1984/context_data/general_with_asr";
+$empty_asr  = "//home/voice/jdkondratenko/VA-1984/context_data/general_empty_asr";
+$output = "//home/voice/jdkondratenko/VA-1984/context_data/vins_logs_sample_with_context_all_tasks";
+
+$basket_data = (
+(SELECT query as text, request_id FROM $with_asr)
+UNION ALL
+(SELECT "" as text, request_id FROM $empty_asr)
+);
+
+
+$get_message = Python2::get_message(Callable<(Yson?, String?)->Json>,
+@@
+import cyson
+import json, random, re
+def random_part(i):
+    return ''.join(map(lambda x: random.choice("0123456789abcdef"), range(i)))
+    
+def generate_id():
+    return ''.join([''.join(['f']*8), '-', ''.join(['f']*4), '-', ''.join(['f']*4), '-',
+                    random_part(4), '-', random_part(12)])
+                    
+def stringify_keys(d):
+    """Convert a dict's keys to strings if they are not."""
+    for key in d.keys():
+
+        # check inner dict
+        if isinstance(d[key], dict):
+            value = stringify_keys(d[key])
+        else:
+            value = d[key]
+
+        # convert nonstring to string if needed
+        if not isinstance(key, str):
+            try:
+                d[str(key)] = value
+            except Exception:
+                try:
+                    d[repr(key)] = value
+                except Exception:
+                    raise
+
+            # delete old key
+            del d[key]
+    return d
+                    
+                    
+def get_message(response, text):
+    vins_response = ""
+    message = ""
+    if response:
+        try:
+            message = response
+            if "response" in message:
+                vins_response = message
+                message = message["response"]
+            elif "directive" in message and "payload" in message["directive"] and "response" in message["directive"]["payload"]:
+                vins_response = message["directive"]["payload"]
+                message = message["directive"]["payload"]["response"]
+        except TypeError:
+            return ""
+    else:
+        return ""
+        
+    text = text.decode("utf-8")
+    key = generate_id()
+    
+    message = stringify_keys(message)
+    
+    dialog = [
+        { "message": {"text": text},
+          "type": "user"},
+        { "message": message,
+          "type": "assistant"}
+    ]
+    
+        
+    dict_to_dump = {
+        "task": {
+            "dialog": dialog,
+            "key": key
+        }
+    }
+   
+    return json.dumps(dict_to_dump)
+
+get_message._yql_convert_yson = (cyson.loads, cyson.dumps)    
+@@
+);
+
+INSERT INTO $output WITH TRUNCATE
+SELECT a.request_id, $get_message(a.response, IF(b.text IS NOT NULL, b.text, a.utterance_text)) as message
+FROM $input as a
+LEFT JOIN $basket_data as b
+USING(request_id);

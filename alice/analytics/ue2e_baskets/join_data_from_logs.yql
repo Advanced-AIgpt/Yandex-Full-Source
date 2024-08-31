@@ -1,0 +1,152 @@
+Use hahn;
+pragma yt.Pool = "voice";
+pragma yson.DisableStrict = "1";
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$logs_unified_qloud = "//home/voice-speechbase/uniproxy/logs_unified_qloud";
+$vins_logs_dialogs = "//home/voice/vins/logs/dialogs";
+$prepared_logs_expboxes = "//home/alice/dialog/prepared_logs_expboxes";
+$logfeller = "//home/logfeller/logs/alice-production-uniproxy/1d";
+
+$date_start = "2019-07-30";
+$date_end = "2020-01-29";
+$exp_date_start = "2019-12-11";
+$eou_wait_exp_param = 1.5;
+
+$output_dir = "//home/voice/irinfox/VA-1190/";
+$logfeller_out = $output_dir || "intermediate_data/logfeller_exp_data_" || $exp_date_start || "_" || $date_end;
+-- $voice_log_out = $output_dir || "intermediate_data/voice_logs_" || $date_start || "_" || $date_end;
+$voice_logs_no_exp_out = $output_dir || "intermediate_data/voice_logs_without_exp_" || $date_start || "_" || $date_end;
+-- $vins_logs_out = $output_dir || "intermediate_data/vins_logs_" || $date_start || "_" || $date_end;
+-- $expboxes_logs_out = $output_dir || "intermediate_data/expboxes_logs_" || $date_start || "_" || $date_end;
+$joined_logs_out = $output_dir || "joined_data_"  || $date_start || "_" || $date_end;
+
+-- для облегчения доставаемых данных из голосовых логов
+$app_id_whitelist = AsList(
+    "ru.yandex.searchplugin", "ru.yandex.mobile", "ru.yandex.mobile.search", "ru.yandex.mobile.search.ipad", "com.yandex.browser",
+    "YaBro", "winsearchbar","com.yandex.launcher", "ru.yandex.quasar.services", "aliced", "ru.yandex.quasar.app",
+    "ru.yandex.yandexnavi", "ru.yandex.mobile.navigator", "yandex.auto", "ru.yandex.autolauncher", "yandex.auto.old"
+);
+
+$quasar_apps = AsList("quasar", "small_smart_speakers");
+-- yandex_phone - это launcher https://a.yandex-team.ru/arc/trunk/arcadia/alice/analytics/operations/dialog/sessions/usage_fields.py?rev=6266023#L54-55 
+-- (в пресетах есть только лончер: https://paste.yandex-team.ru/788031)
+$general_apps = AsList("search_app_prod", "browser_prod", "stroka", "launcher", "yandex_phone", "yabro_prod");
+$navi_apps = AsList("navigator", "auto");
+$input_types = AsList("voice", "text", "click");
+
+$patch_script = @@
+import cyson
+
+def patch_vins(vins_request, ignore_keys):
+    for ignore_key in ignore_keys:
+        if '.' in ignore_key:
+            ignore_parts = ignore_key.split('.')
+            cur_dict = vins_request or {}
+            for ignore_part in ignore_parts[:-1]:
+                cur_dict = cur_dict.get(ignore_part, {}) or {}
+            cur_dict.pop(ignore_parts[-1], None)
+    return vins_request
+
+patch_vins._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_vins_request = Python2::patch_vins(ParseType("(Yson?, List<String>)->Yson"), $patch_script);
+$ignore_options = AsList(
+                         "additional_options.bass_options.cookies", "additional_options.expflags", "additional_options.expboxes",
+                         "additional_options.oauth_token", "additional_options.bass_url"
+);
+
+-- данные эксперимента с дослушиванием
+$json_value = Re2::Capture("SESSIONLOG: (.*)");
+
+$logfeller_exp_data = (
+    SELECT 
+        logfeller_log_date, Yson::ConvertToString(message.Event.event.header.messageId) as event_message_id
+    FROM
+        (
+            SELECT 
+                TableName() as logfeller_log_date, Yson::Serialize(Yson::ParseJson($json_value(message)._1)) as message
+            FROM RANGE($logfeller, MAX_OF($exp_date_start, $date_start), $date_end)
+            WHERE message like 'SESSIONLOG%wait_after_first_eou%'
+        )
+    WHERE Yson::ConvertToDouble(message.Event.event.payload.wait_after_first_eou) = $eou_wait_exp_param
+);
+
+-- данные из логов голоса (юнипрокси)
+$voice_logs = (
+    SELECT 
+        requestId as voice_request_id, mds_key, vins_app_id, vins_request_id, `uuid` as voice_uuid, TableName() as voice_fielddate,
+        IF(normalized_responses is null or ListLength(ListFilter(Yson::ConvertToStringList(normalized_responses), ($x) -> { RETURN String::Strip($x) != "" ; })) == 0, True, False) as is_empty_asr
+    FROM RANGE($logs_unified_qloud, $date_start, $date_end)
+    WHERE 
+        mds_key is not null -- записи с asr
+        and vins_app_id in $app_id_whitelist -- записи со станции 
+        and vins_request_id is not null -- таких очень мало, и без этого поля всё равно нельзя поджойниться с /vins/logs/dialogs
+        and (do_not_use_user_logs is null or not do_not_use_user_logs) -- не приватные данные
+        and not (String::StartsWith(`uuid`, 'ffffffffffffffff') or String::StartsWith(`uuid`, 'deadbeef') or String::StartsWith(`uuid`, 'dddddddddddddddd')) -- не берём uuid прокачки
+);
+
+$voice_logs_without_exp = (
+    SELECT 
+        voice_request_id, SOME(mds_key) as mds_key, SOME(vins_app_id) as vins_app_id, SOME(vins_request_id) as vins_request_id, SOME(voice_uuid) as voice_uuid, 
+        SOME(voice_fielddate) as voice_fielddate, SOME(is_empty_asr) as is_empty_asr 
+    FROM (SELECT *
+    FROM $voice_logs as voice
+    LEFT ONLY JOIN $logfeller_exp_data as log
+    ON voice.voice_request_id == log.event_message_id)
+    GROUP BY voice_request_id
+);
+
+-- логи винса, перестраховываюсь и беру почти полный request
+$vins_logs_data = (
+    SELECT 
+        Yson::LookupString(request, "request_id") as request_id, client_tz, TableName() as vins_fielddate, device_id,
+        analytics_info, $patch_vins_request(request, $ignore_options) as vins_full_request, Yson::Lookup(response, "meta") as meta,
+        Yson::SerializePretty(Yson::Lookup(response, "directives")) as directives
+    FROM RANGE($vins_logs_dialogs, $date_start, $date_end)
+    WHERE
+        not (String::StartsWith(`uuid`, 'uu/ffffffffffffffff') or String::StartsWith(`uuid`, 'uu/deadbeef') or String::StartsWith(`uuid`, 'uu/dddddddddddddddd')) -- не берём uuid прокачки
+        and lang == "ru-RU"
+);
+
+-- наши обработанные логи винса после сформированных сессий
+$expboxes_data = (
+    SELECT 
+        IF(app == "yandex_phone", "launcher", app) as app, is_new, query, input_type, session_sequence, session_id, reply, generic_scenario,
+        intent, fielddate, req_id, skill_id, do_not_use_user_logs, `uuid`,
+        Yson::SerializePretty(Yson::Lookup(other, "callback")) as callback
+    FROM RANGE($prepared_logs_expboxes, $date_start, $date_end)
+    WHERE 
+        (do_not_use_user_logs is null or not do_not_use_user_logs) and app in ListExtend($quasar_apps, $general_apps, $navi_apps)
+        and input_type in $input_types and query is not null and String::Strip(query) != ""
+);
+
+-- делаем left join, т.к. из винса берём ещё текстовые и кликовые запросы, которые идут мимо логов голоса
+$joined_logs = (
+    SELECT *
+    FROM $vins_logs_data as vins
+    JOIN $expboxes_data as expboxes
+    ON vins.request_id == expboxes.req_id
+    LEFT JOIN $voice_logs_without_exp as voice
+    ON voice.vins_request_id == vins.request_id
+    WHERE voice.is_empty_asr is null or voice.is_empty_asr == False
+);
+
+INSERT INTO $logfeller_out WITH TRUNCATE 
+SELECT * FROM $logfeller_exp_data;
+
+INSERT INTO $voice_logs_no_exp_out WITH TRUNCATE 
+SELECT * FROM $voice_logs_without_exp;
+
+-- дубли req_id - это перезапросы клиента, такое есть, но его примерно 0.15%
+INSERT INTO $joined_logs_out WITH TRUNCATE
+SELECT 
+    request_id, SOME(skill_id) as skill_id, SOME(input_type) as input_type, SOME(mds_key) as mds_key, SOME(reply) as reply, SOME(directives) as directives,
+    SOME(fielddate) as fielddate, SOME(query) as query, SOME(`uuid`) as `uuid`, SOME(analytics_info) as analytics_info, SOME(is_empty_asr) as is_empty_asr,
+    SOME(callback) as callback, SOME(is_new) as is_new, SOME(intent) as intent, SOME(client_tz) as client_tz, SOME(app) as app, SOME(voice_request_id) as voice_request_id,
+    SOME(vins_full_request) as vins_full_request, SOME(session_id) as session_id, SOME(session_sequence) as session_sequence, SOME(do_not_use_user_logs) as do_not_use_user_logs, 
+    SOME(generic_scenario) as generic_scenario, SOME(device_id) as device_id, SOME(meta) as meta
+FROM $joined_logs
+GROUP BY request_id;
+

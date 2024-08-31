@@ -1,0 +1,382 @@
+service: bass
+title: Bass
+
+ci:
+  secret: sec-01f49zjh1zjbhe7745sqe3v8qb
+  runtime:
+    sandbox-owner: VINS
+  releases:
+    release-videobass:
+      title: VideoBass RELEASE
+      flow: videobass-release-flow
+      hotfix-flows:
+        - videobass-hotfix-flow
+      auto: false
+      start-version: 100
+      branches:
+        pattern: releases/videobass/stable-${version}
+        auto-create: true
+        forbid-trunk-releases: false
+      stages:
+        - id: build
+          title: Build
+        - id: testing
+          title: Release to testing
+        - id: stable
+          title: Release to stable
+          rollback: true
+  flows:
+    videobass-release-flow:
+      title: VideoBass Release flow
+      jobs:
+        build-resource:
+          title: Build Bass
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            compress_package_archive: false
+            packages: alice/bass/packages/bass_package.json
+            raw_package: false
+            result_single_file: true
+            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+            publish_package: false
+            aapi_fallback: true
+            use_aapi_fuse: true
+        create-release-ticket:
+          title: Create ticket in VIDEOBASSREL
+          task: common/tracker/create_issue
+          stage: testing
+          needs: build-resource
+          input:
+            config:
+              secret:
+                key: st.token
+            rules:
+              on_duplicate: UPDATE
+            template:
+              type: Task
+              summary: Релиз VideoBass ${context.version_info.major}
+              assignee: ${context.flow_triggered_by}
+              queue: VIDEOBASSREL
+              fixVersion: videobass ${context.version_info.major}
+              tags:
+                - videobass
+                - release_number_${context.version_info.major}
+        release-to-testing:
+          title: Deploy to testing
+          task: common/nanny/update_service
+          stage: testing
+          needs: create-release-ticket
+          input:
+            config:
+              release_title: Videobass-${context.version_info.full} to testing
+              service_id: protocol-video-scenario-rc
+              patches:
+                - sandbox:
+                    resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                    resource:
+                      local_path: package.tar.gz
+        update-ticket-testing:
+          title: Comment ticket with "Deployed to testing"
+          task: common/tracker/update_issue
+          needs: release-to-testing
+          input:
+            config:
+              secret:
+                key: st.token
+            update_template:
+              comment: |
+                Сервис выложен на ((https://nanny.yandex-team.ru/ui/#/services/catalog/protocol-video-scenario-rc тестинг))
+        run-alice-evo-tests:
+          title: Run Alice Evo Integration Tests
+          task: projects/alice/alice_evo_integration_tests_wrapper
+          stage: testing
+          needs:
+          - release-to-testing
+          input:
+            test_filters: video
+            megamind_url: http://vins.hamster.alice.yandex.net/speechkit/app/pa/?srcrwr=Video:rc.video-scenario.alice.yandex.net:80&srcrwr=VideoCommand:rc.video-scenario.alice.yandex.net:80&srcrwr=VideoTrailer:rc.video-scenario.alice.yandex.net:80&srcrwr=VIDEO_PROXY:rc.video-scenario.alice.yandex.net:80
+            launch_type: videobass
+            repeat_failed_test: true
+            run_call_owner_subtask: true
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+          needs-type: all
+        run-alice-ue2e-tests:
+          title: Run Alice VideoBass UE2E
+          task: projects/alice/alice_evo_ue2e
+          stage: testing
+          needs:
+          - release-to-testing
+          input:
+            megamind_url: http://vins.hamster.alice.yandex.net/speechkit/app/pa/?srcrwr=Video:rc.video-scenario.alice.yandex.net:80&srcrwr=VideoCommand:rc.video-scenario.alice.yandex.net:80&srcrwr=VideoTrailer:rc.video-scenario.alice.yandex.net:80&srcrwr=VIDEO_PROXY:rc.video-scenario.alice.yandex.net:80
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+            force_start: true
+          needs-type: all
+        confirm-release:
+          title: Wait for confirm
+          task: dummy
+          stage: stable
+          needs-type: any
+          needs:
+            - update-ticket-testing
+            - run-alice-evo-tests
+            - run-alice-ue2e-tests
+          manual:
+            enabled: true
+            prompt: Release to stable?
+        prepare-sas-prestable:
+            task: common/nanny/update_service
+            title: Prepare sas-prestable
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-sas-prestable
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-sas:
+            task: common/nanny/update_service
+            title: Prepare sas
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-sas
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-vla:
+            task: common/nanny/update_service
+            title: Prepare vla
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-vla
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-hamster:
+            task: common/nanny/update_service
+            title: Prepare hamster
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-hamster
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        approve-sas-prestable:
+            task: common/nanny/set_snapshot_state
+            title: Activate location sas-prestable
+            needs: prepare-sas-prestable
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-sas-prestable
+            manual:
+                enabled: true
+                prompt: "Activate location sas-prestable?"
+        approve-sas:
+            task: common/nanny/set_snapshot_state
+            title: Activate location sas
+            needs:
+                - prepare-sas
+                - approve-sas-prestable
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-sas
+            manual:
+                enabled: true
+                prompt: "Activate location sas?"
+        approve-vla:
+            task: common/nanny/set_snapshot_state
+            title: Activate location vla
+            needs:
+                - prepare-vla
+                - approve-sas
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-vla
+        approve-hamster:
+            task: common/nanny/set_snapshot_state
+            title: Activate location hamster
+            needs:
+                - prepare-hamster
+                - approve-vla
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-hamster
+        close-release-ticket:
+          title: Закрытие релизного тикета
+          task: common/tracker/transit_issue
+          needs:
+            - approve-sas-prestable
+            - approve-sas
+            - approve-vla
+            - approve-hamster
+          input:
+            transition:
+              status: closed
+              resolution: fixed
+            update_template:
+              comment: |
+                Релиз завершён: ${context.version_info.full}
+    videobass-hotfix-flow:
+      title: VideoBass Hotfix flow
+      jobs:
+        build-resource:
+          title: Build Bass
+          task: common/arcadia/ya_package_2
+          stage: build
+          input:
+            compress_package_archive: false
+            packages: alice/bass/packages/bass_package.json
+            raw_package: false
+            result_single_file: true
+            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+            publish_package: false
+            aapi_fallback: true
+            use_aapi_fuse: true
+        confirm-release:
+          title: Wait for confirm
+          task: dummy
+          stage: stable
+          needs-type: any
+          needs: build-resource
+          manual:
+            enabled: true
+            prompt: Release to stable?
+        prepare-sas-prestable:
+            task: common/nanny/update_service
+            title: Prepare sas-prestable
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-sas-prestable
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-sas:
+            task: common/nanny/update_service
+            title: Prepare sas
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-sas
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-vla:
+            task: common/nanny/update_service
+            title: Prepare vla
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-vla
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        prepare-hamster:
+            task: common/nanny/update_service
+            title: Prepare hamster
+            needs: confirm-release
+            stage: stable
+            input:
+                config:
+                    service_id: protocol-video-scenario-hamster
+                    target_status: PREPARED
+                    patches:
+                        - sandbox:
+                            resource_type: PROTOCOL_VIDEO_SCENARIO_PACKAGE
+                            resource:
+                                local_path: package.tar.gz
+        approve-sas-prestable:
+            task: common/nanny/set_snapshot_state
+            title: Activate location sas-prestable
+            needs: prepare-sas-prestable
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-sas-prestable
+            manual:
+                enabled: true
+                prompt: "Activate location sas-prestable?"
+        approve-sas:
+            task: common/nanny/set_snapshot_state
+            title: Activate location sas
+            needs:
+                - prepare-sas
+                - approve-sas-prestable
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-sas
+            manual:
+                enabled: true
+                prompt: "Activate location sas?"
+        approve-vla:
+            task: common/nanny/set_snapshot_state
+            title: Activate location vla
+            needs:
+                - prepare-vla
+                - approve-sas
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-vla
+        approve-hamster:
+            task: common/nanny/set_snapshot_state
+            title: Activate location hamster
+            needs:
+                - prepare-hamster
+                - approve-vla
+            stage: stable
+            input:
+                config:
+                    target_status: ACTIVE
+                    snapshot:
+                        service_id: protocol-video-scenario-hamster

@@ -1,0 +1,95 @@
+USE hahn;
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict = 'true';
+
+$fielddate = {{param.date}};
+$tv_last_path = "//home/sda/cubes/tv/watching/last";
+
+$week_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(6))
+};
+$two_weeks_ago = ($date) -> {
+    RETURN DateTime::Format("%Y-%m-%d")(cast($date AS date) - DateTime::IntervalFromDays(14))
+};
+
+$script = @@
+import numpy as np
+import time
+import datetime
+
+DAYS_IN_WEEK = 7
+
+def calc_week(device_id, rows):
+    timestamps = []
+
+    for row in rows:
+        timestamps.append(datetime.datetime.strptime(row.fielddate, "%Y-%m-%d"))
+
+    timestamps.sort()
+
+    dates_return = {date.strftime("%Y-%m-%d") for date in timestamps}
+    for date in timestamps:
+        for daynum in range(1, DAYS_IN_WEEK+1):
+            dates_return.add((date + datetime.timedelta(days=daynum)).strftime("%Y-%m-%d"))
+
+    for day in dates_return:
+        yield {"device_id": device_id, "fielddate": day}
+    @@
+;
+
+$calc_week = Python2::calc_week(
+    Callable<(
+        String?,
+        Stream<Struct<'device_id': String?,'fielddate': String?>>
+    ) ->
+        Stream<Struct<'device_id': String?, 'fielddate':string?>>
+    >,
+    $script
+);
+
+
+$filtered_data = (
+    select fielddate, device_id
+    from $tv_last_paths
+    where platform in ["cvte", "cv", "hikeen", "SmartTV", "gntch"] and fielddate >= $two_weeks_ago($fielddate) and fielddate <= $fielddate
+)
+;
+
+
+$week_stats = (
+    SELECT fielddate, count(distinct device_id) as week_cnt
+    FROM (
+        REDUCE $filtered_data
+        PRESORT fielddate
+        ON device_id
+        USING $calc_week(TableRow())
+    )
+    group by fielddate
+    order by fielddate desc
+)
+;
+
+
+$tv_devices = (
+    SELECT fielddate, "tv" AS app, "_total_" AS cohort, "_total_" AS age_category, "true" AS is_tv_plugged_in, week_cnt AS tv_devices_approximation
+    FROM $week_stats
+    where fielddate >= $week_ago($fielddate) and fielddate <= $fielddate
+);
+
+$tv_no_device = (
+    SELECT * FROM $tv_devices
+    UNION ALL
+    SELECT "_total_" AS is_tv_plugged_in, t.* without is_tv_plugged_in FROM $tv_devices AS t
+    UNION ALL
+    SELECT "_total_" AS app, t.* without app FROM $tv_devices AS t
+    UNION ALL
+    SELECT "_total_" AS is_tv_plugged_in, "_total_" AS app, t.* without is_tv_plugged_in, app FROM $tv_devices AS t
+)
+;
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT t.*, "tv" AS device
+FROM $tv_no_device AS t
+UNION ALL
+SELECT t.*, "_total_" AS device
+FROM $tv_no_device AS t

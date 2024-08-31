@@ -1,0 +1,22 @@
+Use hahn;
+PRAGMA yt.InferSchema = '1000';
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_gc_flags";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_gc_flags";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_gc_flags";
+$locations = "//home/voice/jdkondratenko/VA-2304/quasar_locations_with_context";
+
+
+DEFINE ACTION $patch_gc_context($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT b.exact_location as exact_location, a.*
+    FROM $input_table as a 
+    LEFT JOIN $locations as b 
+    ON a.real_reqid = b.request_id;
+    
+END DEFINE;
+
+DO $patch_gc_context($accept, $accept);
+DO $patch_gc_context($kpi, $kpi);
+DO $patch_gc_context($dev, $dev);

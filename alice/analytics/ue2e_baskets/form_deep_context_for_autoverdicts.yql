@@ -1,0 +1,201 @@
+Use hahn;
+PRAGMA yt.Pool = "voice";
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+$app = "quasar";
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/";
+$output_dir = "//home/voice/jdkondratenko/VA-2304/";
+
+$joined_data = "//home/alice/jdkondratenko/VA-2304/joined_data_eavesdropping_all_2021-02-26_2021-08-29";
+$joined_empty_data = "//home/alice/jdkondratenko/VA-2304/sampled_data_full/quasar_empty_data";
+
+$accept_basket = $output_dir || "stratification/" || $app || "_accept_autoverdict_sample";
+$kpi_basket = $output_dir || "stratification/" || $app || "_kpi_autoverdict_sample";
+$dev_basket = $output_dir || "stratification/" || $app || "_dev_autoverdict_sample";
+
+$accept_with_asr = $common_dir || "sampled_data/" || $app || "_accept_with_asr";
+$kpi_with_asr = $restricted_dir || "sampled_data/" || $app || "_kpi_with_asr";
+$dev_with_asr = $common_dir || "sampled_data/" || $app || "_dev_with_asr";
+
+$context_output_asr = $output_dir  || "context_data/" || $app || "_autoverdict_with_asr";
+$context_output_no_asr = $output_dir  || "context_data/" || $app || "_autoverdict_empty_asr";
+
+$patch_script = @@
+import cyson
+
+def patch_yson_dict(options, ignore_keys, update_dict):
+    for ignore_key in ignore_keys:
+        cur_dict = options or {}
+        if '.' in ignore_key:
+            ignore_parts = ignore_key.split('.')
+            for ignore_part in ignore_parts[:-1]:
+                cur_dict = cur_dict.get(ignore_part, {}) or {}
+            cur_dict.pop(ignore_parts[-1], None)
+        else:
+            cur_dict.pop(ignore_key, None)
+    
+    if update_dict:
+        options.update(update_dict)
+        
+    return options
+
+patch_yson_dict._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+
+$patch_yson_dict = Python2::patch_yson_dict(ParseType("(Yson?, List<String>, Yson?)->Yson"), $patch_script);
+$ignore_options = AsList(
+                        "bass_options.cookies", "bass_options.user_agent", "do_not_use_user_logs", "server_time_ms",
+                        "expflags", "expboxes", "bass_url", "oauth_token", "puid", "yandex_uid"
+);
+
+-- во избежание "влияния" очерёдности, в разметку отправляем вперемешку 
+-- + дальше есть джойны с данными побольше, поэтому логично тут юникнуть то, что можно юникнуть
+$baskets = (
+    SELECT 
+        b.annotation_query as query, b.vins_intent as intent, 
+        b.* WITHOUT b.query, b.annotation_query, b.vins_intent
+    FROM
+    (
+        SELECT SOME(TableRow())
+        FROM CONCAT($accept_basket, $kpi_basket, $dev_basket)
+        GROUP BY request_id
+    ) as b
+    FLATTEN COLUMNS
+);
+
+-- для данных с пустым asr нужно достать все поля, которые были в юнипрокси по этому запросу
+$empty_asr_queries = (
+    SELECT 
+        b.*,
+        CAST(Yson::ConvertToString(vins_full_request.client_time) as Uint32) as client_time, client_tz,
+        "EMPTY" as reply, $patch_yson_dict(Yson::Serialize(Yson::From(AsDict(AsTuple("alarm_state", Yson::Serialize(Yson::From(DeviceState.alarm_state))), AsTuple("alarms_state", Yson::Serialize(Yson::From(DeviceState.alarms_state))), AsTuple("battery", Yson::Serialize(Yson::From(DeviceState.battery))), AsTuple("bluetooth", Yson::Serialize(Yson::From(DeviceState.bluetooth))), AsTuple("device_config", Yson::Serialize(Yson::From(DeviceState.device_config))), AsTuple("installed_apps", Yson::Serialize(Yson::From(DeviceState.installed_apps))), AsTuple("is_tv_plugged_in", Yson::Serialize(Yson::From(DeviceState.is_tv_plugged_in))), AsTuple("last_watched", Yson::Serialize(Yson::From(DeviceState.last_watched))), AsTuple("music", Yson::Serialize(Yson::From(DeviceState.music))), AsTuple("sound_level", Yson::Serialize(Yson::From(DeviceState.sound_level))), AsTuple("sound_muted", Yson::Serialize(Yson::From(DeviceState.sound_muted))), AsTuple("timers", Yson::Serialize(Yson::From(DeviceState.timers)))))), AsList("device_id"), Null) as device_state, ActivationType as activation_type,
+        Yson::Serialize(Yson::From(())) as directives, Yson::Serialize(Yson::From(())) as meta, -- кажется, без разницы, какого типа будут пустые списки
+        Location as location, -- часть поле не нужны для разметки на глубину контекста, но понадобятся для корзины
+        $patch_yson_dict(Yson::Serialize(Yson::From(AsDict(AsTuple("bass_options", Yson::Serialize(Yson::From(AdditionalOptions.bass_options))), AsTuple("supported_features", Yson::Serialize(Yson::From(AdditionalOptions.supported_features))), AsTuple("unsupported_features", Yson::Serialize(Yson::From(AdditionalOptions.unsupported_features)))))), $ignore_options, Yson::Serialize(Yson::From(AsDict(AsTuple("bass_options", AsDict(AsTuple("client_ip", AdditionalOptions.bass_options.client_ip))))))) as additional_options
+    FROM
+    (
+        SELECT * FROM $baskets
+        WHERE is_empty_asr
+    ) as b
+    JOIN $joined_empty_data as j
+    ON b.request_id == j.request_id
+);
+
+-- забыла на предыдущих этапах протащить session_id там, где это можно сделать
+$with_asr_queries = (
+    SELECT b.*, f.session_id as session_id, f.session_sequence as session_sequence
+    FROM (
+        SELECT * FROM $baskets
+        WHERE not is_empty_asr
+    ) as b
+    JOIN (
+        SELECT request_id, SOME(session_id) as session_id, SOME(session_sequence) as session_sequence 
+        FROM CONCAT($accept_with_asr, $kpi_with_asr, $dev_with_asr)
+        GROUP BY request_id
+    ) as f
+    ON b.request_id == f.request_id
+);
+
+-- получим только те uuid, для которых нам в принципе нужен контекст, чтоб возить с собой меньше данных
+$uuid_from_baskets = (
+    SELECT DISTINCT `uuid` FROM $baskets
+);
+
+-- необходимые поля для формирования и контекстов, и корзинки
+$joined_data_parsed = (
+    SELECT 
+        request_id, session_id, session_sequence, `uuid`, intent, generic_scenario, query, mds_key, app, reply,
+        activation_type,
+        Yson::Lookup(vins_full_request, "experiments") as experiments,
+        CAST(Yson::LookupString(vins_full_request, "client_time") as Uint32) as client_time, client_tz,
+        $patch_yson_dict(Yson::Serialize(Yson::Lookup(vins_full_request, "device_state")), AsList("device_id"), Null) as device_state,
+        directives ?? Yson::Serialize(Yson::From(())) as directives, callback, analytics_info,
+        IF(Yson::SerializePretty(Yson::Lookup(analytics_info, "location")) IS NOT NULL, Yson::SerializePretty(Yson::Lookup(analytics_info, "location")), Yson::SerializePretty(Yson::Lookup(vins_full_request, "location"))) as location, -- часть полей не нужны для разметки на глубину контекста, но понадобятся для корзины
+        $patch_yson_dict(Yson::Serialize(Yson::Lookup(vins_full_request, "additional_options")), $ignore_options, Null) as additional_options
+    FROM $joined_data
+    WHERE `uuid` in $uuid_from_baskets
+);
+
+-- для того чтоб потом получить глубокий контекст в рамках сессии и не проверять каждый раз на лаг в 30 минут, 
+-- приджойним session_id предыдущего запроса по uuid и клиентскому времени
+$empty_asr_with_prev_session_id_by_uuid = (
+    SELECT e.*, prev_session_id, prev_request_id, prev_session_sequence
+    FROM (
+        SELECT 
+            request_id, client_time, prev_client_time, 
+            IF(different_session, null, prev_session_id) as prev_session_id, IF(different_session, null, prev_session_sequence) as prev_session_sequence,
+            IF(different_session, null, prev_request_id) as prev_request_id
+        FROM (
+            SELECT 
+                j.request_id as request_id, j.client_time as client_time, LAG(client_time) OVER w as prev_client_time,
+                IF((j.client_time - LAG(client_time) OVER w) > 1800, True, False) as different_session,
+                LAG(session_id) OVER w as prev_session_id, LAG(session_sequence) OVER w as prev_session_sequence, 
+                LAG(request_id) OVER w as prev_request_id
+            FROM (
+                SELECT `uuid`, request_id, mds_key, intent, query, session_id, session_sequence, experiments, client_time
+                FROM $joined_data_parsed
+                UNION ALL
+                SELECT `uuid`, request_id, mds_key, intent, query, client_time 
+                FROM $empty_asr_queries
+            ) as j
+            WINDOW w AS (
+                PARTITION BY `uuid`
+                ORDER BY client_time
+            )
+        )
+    ) as s
+    JOIN $empty_asr_queries as e
+    ON s.request_id == e.request_id
+);
+
+-- теперь можем ещё сильнее облегчить данные и таскать только нужные сессии
+$basket_session_ids = (
+    SELECT DISTINCT session_id
+    FROM (
+        SELECT prev_session_id as session_id
+        FROM $empty_asr_with_prev_session_id_by_uuid
+        WHERE prev_session_id is not null
+        UNION ALL
+        SELECT session_id 
+        FROM $with_asr_queries
+    )
+);
+
+-- скоро можно будет переписать как AGGREGATE_LIST(col) over w, .... WINDOW w AS (ORDER BY x ROWS BETWEEN N PRECEDING AND CURRENT ROW)
+-- пока доступно только в тестинге
+$get_prev_queries = (
+    SELECT 
+        request_id, session_id, 
+        ListFilter(
+            AsList(
+                LAG(TableRow()) OVER w, AsStruct(TableRow() as current_row)
+            ),
+            ($x) -> { RETURN $x is not null; }
+        ) as session
+    FROM $joined_data_parsed
+    WHERE session_id in $basket_session_ids
+    WINDOW w AS (
+        PARTITION BY session_id
+        ORDER BY session_sequence
+    )
+);
+
+INSERT INTO $context_output_asr WITH TRUNCATE 
+SELECT 
+    main_query.request_id as request_id, main_query.session_id as session_id, context_queries.session as session,
+    main_query.* WITHOUT main_query.request_id, main_query.session_id
+FROM $with_asr_queries as main_query
+JOIN $get_prev_queries as context_queries
+ON main_query.request_id == context_queries.request_id;
+
+-- т.к. оцениваемый запрос пустой, то его не было в исходной сессии. Кладём его последним, а самый верхний выкидываем,
+-- если вдруг длина контекста вышла за допустимые 10 (оцениваемый + 10 в глубину)
+-- нужен left join, если для части запросов не смогли собрать сессию
+INSERT INTO $context_output_no_asr WITH TRUNCATE 
+SELECT 
+    main_query.*, IF(ListLength(context_queries.session) > 1, ListSkip(context_queries.session, 1), context_queries.session) as session
+FROM (SELECT prev_request_id, request_id, prev_session_id, Yson::From(TableRow()) as query_data FROM $empty_asr_with_prev_session_id_by_uuid) as main_query
+LEFT JOIN $get_prev_queries as context_queries
+ON main_query.prev_request_id == context_queries.request_id;

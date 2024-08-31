@@ -1,0 +1,70 @@
+-- ВЫЧИСЛЯЕМ таймспент шоу
+
+$date_start = {{param.date_start}};
+$date_end = {{param.date_end}};
+
+$tlt_path = $show_charts_folder || "/tlt";
+
+$morning_show_launch = (
+    SELECT fielddate, req_id, puid, app,
+    $get_show_info_from_analytics_info(analytics_info) AS show_info
+    FROM RANGE(`//home/alice/dialog/prepared_logs_expboxes`, $date_start, $date_end)
+    WHERE app IN $show_apps
+    AND generic_scenario IN $show_scenarios
+    AND (parent_req_id == req_id OR (parent_req_id ?? "") == "")
+    AND input_type == "voice"
+)
+;
+
+$morning_show_with_timespent_on_req_id = (
+    SELECT *
+    FROM (
+        SELECT show_info.show_type AS show_type, show_info.settings AS settings, t.* without show_info
+        FROM $morning_show_launch AS t
+    ) AS l
+    inner join (
+        SELECT req_id, 1.0*sum(tlt_tvt ?? 0)/1000 + 1.0*sum(tts ?? 0)/1000 AS timespent_s
+        FROM range(`//home/alice/precomputes/timespent/precompute_timespent`, $date_start, $date_end)
+        WHERE scenario IN $show_scenarios and app IN $show_apps
+            GROUP BY if ((parent_req_id ?? "") == "", req_id, parent_req_id) AS req_id
+    ) AS r on l.req_id == r.req_id
+)
+;
+
+$timespent_basic =
+(
+    SELECT fielddate, app ?? "Total" AS app, show_type ?? "Total" AS show_type, settings ?? "Total" AS settings,
+    COUNT(DISTINCT puid) AS users, COUNT(DISTINCT req_id) AS queries,
+    SUM(timespent_s) AS total_timespent_s, AVG(timespent_s) AS avg_timespent_s, MEDIAN(timespent_s) AS median_timespent_s
+    FROM $morning_show_with_timespent_on_req_id
+    GROUP BY fielddate, CUBE(app, show_type, settings)
+);
+
+$timespent_max_median =
+(
+    SELECT fielddate, app, show_type, settings, MEDIAN(max_daily_timespent_s) AS median_daily_max_timespent_s
+    FROM
+    (
+        SELECT fielddate, app ?? "Total" AS app, show_type ?? "Total" AS show_type, settings ?? "Total" AS settings, puid, MAX(timespent_s) AS max_daily_timespent_s
+        FROM $morning_show_with_timespent_on_req_id
+        GROUP BY fielddate, puid, CUBE(app, show_type, settings)
+    )
+    GROUP BY fielddate, app, show_type, settings
+);
+
+$tlt =
+(
+    SELECT *
+    FROM $timespent_basic AS l
+    INNER JOIN $timespent_max_median AS r ON l.fielddate == r.fielddate AND l.app == r.app
+    AND l.show_type == r.show_type and l.settings == r.settings
+);
+
+INSERT INTO $tlt_path WITH TRUNCATE
+SELECT *
+FROM $tlt
+UNION ALL
+SELECT *
+FROM  $tlt_path AS t
+LEFT ONLY JOIN (SELECT DISTINCT fielddate FROM $tlt) AS n ON n.fielddate = t.fielddate
+;

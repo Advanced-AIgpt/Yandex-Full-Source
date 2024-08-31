@@ -1,0 +1,39 @@
+Use hahn;
+PRAGMA yt.InferSchema = '1000';
+PRAGMA yson.DisableStrict;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_loc";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_loc";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_loc";
+$accept_ready = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_patched";
+$kpi_ready = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_patched";
+$dev_ready = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_patched";
+
+
+DEFINE ACTION $add_iot_config($input_table, $output_table) AS
+
+    $empty_asr_sessions = (
+        SELECT IF(a.analytics_info IS NULL, b.prev_analytics_info, a.analytics_info) as analytics_info, a.* WITHOUT a.analytics_info
+        FROM (SELECT *
+        FROM $input_table 
+        WHERE is_empty_asr AND reversed_session_sequence = 0) as a
+        LEFT JOIN (SELECT session_id, analytics_info as prev_analytics_info
+        FROM $input_table 
+        WHERE reversed_session_sequence = 1) as b
+        USING(session_id)
+    );
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    (SELECT analytics_info.iot_user_info as iot_config, a.* WITHOUT a.analytics_info, a.meta
+    FROM $input_table as a 
+    LEFT ONLY JOIN $empty_asr_sessions as b
+    USING(request_id))
+    UNION ALL
+    (SELECT analytics_info.iot_user_info as iot_config, a.* WITHOUT a.analytics_info, a.meta
+    FROM $empty_asr_sessions as a);
+    
+END DEFINE;
+
+DO $add_iot_config($accept, $accept_ready);
+DO $add_iot_config($kpi, $kpi_ready);
+DO $add_iot_config($dev, $dev_ready);

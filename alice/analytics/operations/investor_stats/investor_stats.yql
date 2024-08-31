@@ -1,0 +1,243 @@
+PRAGMA yt.InferSchema="100";
+PRAGMA SimpleColumns;
+
+$start = {{param.start_date}}; -- 2020-04-01, first day of month
+$end = {{param.end_date}}; -- 2020-06-30, last day of month
+
+$prepared = "//home/alice/dialog/prepared_logs_expboxes";
+$scenarios = "//home/voice/datasets/investor_stats/names";
+$qloud = "home/logfeller/logs/qloud-runtime-log/1d";
+--$metrika = "//logs/appmetrica-yandex-events/1d";
+$searchapp = "//logs/superapp-metrika-mobile-log/1d";
+$navi = "//logs/navi-metrika-mobile-log/1d";
+$mbro = "//logs/browser-metrika-mobile-log/1d";
+$dbro = "//home/logfeller/logs/export-access-log/1d";
+--appmetrika enums: https://a.yandex-team.ru/arc/trunk/arcadia/logfeller/configs/parsers/metrika-mobile-log-enums.json
+--migration hints: https://wiki.yandex-team.ru/jandexmetrika/appmetrica-separate-topics/tskv-protoseq-mapping/#otlichijavformate
+
+$ui = Re2::Capture(".*ui=[{]?([a-zA-Z0-9-]+)[}]?&.*");
+$parse = DateTime::Parse("%Y-%m-%d");
+$format = DateTime::Format("%Y-%m");
+$quarter = ($x) -> {return cast(DateTime::GetYear(DateTime::MakeTimestamp($parse($x))) as string) || "-q" || cast((DateTime::GetMonth(DateTime::MakeTimestamp($parse($x))) - 1)/3 + 1 as string)};
+$not_search_scenarios = aslist("alarm", "reminder", "timer", "todo", "general_conversation", "external_skill_gc", "dialogovo", "stop", "sound_commands", "player_commands", "video_commands");
+
+$apps = ($x) -> {
+    return case 
+    when $x like '%browser%' then "Mobile Browser"
+    when $x like '%yabro%' or $x like '%stroka%' or $x like '%launcher%' then "Desktop"
+    when $x like '%navigator%' then "Navigator"
+    when $x like '%search_app%' then "Search App"
+    when $x like '%quasar%' or $x like '%small_smart_speakers%' then "Station"
+    else "Other" 
+    end};
+
+insert into @raw_res with truncate
+select 
+    `uuid`,
+    req_id,
+    intent like "%serp%" as is_serp,
+    if(generic_scenario in (select scenario from $scenarios), generic_scenario, "other") as scenario,
+    generic_scenario not in $not_search_scenarios as is_search_scenario,
+    if(input_type == "voice", "voice", "other") as input_type,
+    $apps(app) as app,
+    TableName() as dt,
+    $format(DateTime::MakeTimestamp($parse(TableName()))) as month,
+    $quarter(TableName()) as quarter
+from range($prepared, $start, $end)
+where input_type != "tech";
+commit;
+
+$themes =
+select 
+    t2.name as scenario,
+    t1.* without t1.scenario 
+from
+    (select q, month, app, scenario, count_if(input_type == "voice") as cnt
+    from @raw_res
+    group by quarter as q, app, month, scenario) as t1 
+join $scenarios as t2 using(scenario);
+
+-- Распределение тем
+-- https://datalens.yandex-team.ru/royswliye3jom-alicestats?tab=Mv
+insert into `//home/voice/datasets/investor_stats/total6`
+    (select * from $themes as t)
+union all
+    (select "total" as month, "total" as q, app, scenario, sum(cnt) as cnt 
+    from $themes 
+    group by app, scenario);
+
+$dau_mau =
+select *
+from
+    (select month, avg(dau) as avg_dau
+    from 
+        (select month, dt, count(distinct `uuid`) as dau
+        from @raw_res 
+        group by month, dt)
+    group by month) as t1 
+join 
+    (select month, count(distinct `uuid`) as mau 
+    from @raw_res group by month) as t2 
+using (month);
+
+$total_queries =
+select 
+    month,
+    avg(voice_queries) as voice_queries_per_user,
+    avg(all_queries) as queries_per_user
+from 
+    (select `uuid`, month, count_if(input_type == "voice") as voice_queries, count(*) as all_queries
+    from @raw_res 
+    group by `uuid`, month)
+group by month;
+
+-- Голосовых запросов в Алису на пользователя
+-- https://datalens.yandex-team.ru/preview/dakt357hffyk8
+insert into `//home/voice/datasets/investor_stats/total2`
+select 
+    month,
+    app,
+    avg(voice_queries) as voice_queries_per_user
+from 
+    (select `uuid`, month, app, count_if(input_type == "voice") as voice_queries 
+    from @raw_res 
+    group by `uuid`, month, app)
+group by month, app;
+
+-- Общее по Алисе
+-- https://datalens.yandex-team.ru/preview/jgq00vp7j86ge-investors3-tablica
+insert into `//home/voice/datasets/investor_stats/total3`
+select * from $total_queries as t1 
+join $dau_mau as t2 using(month);
+
+$app_aus = select month, app, count(distinct `uuid`) as alice_cnt from @raw_res group by month, app;
+
+$searchapp_au =    
+select
+    'Search App' as app,
+    month,
+    CountDistinctEstimate(DeviceIDHash) as cnt
+from range($searchapp, $start, $end)
+where SessionType is null --"SESSION_FOREGROUND"
+group by $format(DateTime::MakeTimestamp($parse(TableName()))) as month;
+
+$navi_au =    
+select
+    'Navigator' as app,
+    month,
+    CountDistinctEstimate(DeviceIDHash) as cnt
+from range($navi, $start, $end)
+where SessionType is null --"SESSION_FOREGROUND"
+group by $format(DateTime::MakeTimestamp($parse(TableName()))) as month;
+
+$mbro_au =    
+select
+    'Mobile Browser' as app,
+    month,
+    CountDistinctEstimate(DeviceIDHash) as cnt
+from range($mbro, $start, $end)
+where SessionType is null --"SESSION_FOREGROUND"
+group by $format(DateTime::MakeTimestamp($parse(TableName()))) as month;
+
+$dbro_au = 
+select
+    "Desktop" as app,
+    month, 
+    countdistinctestimate($ui(request)._1) as cnt
+from range($dbro, $start, $end)
+where (request LIKE '%yasoft=yabrowser%' and request LIKE '%stat=dayuse%')
+group by $format(DateTime::MakeTimestamp($parse(TableName()))) as month;
+
+$client_aus = 
+select * from $searchapp_au
+union all select * from $navi_au
+union all select * from $mbro_au
+union all select * from $dbro_au;
+
+-- Доля пользователей Алисы
+-- https://datalens.yandex-team.ru/preview/96o486oqqxk04-investors1-svodnaya-tablica
+insert into `//home/voice/datasets/investor_stats/total1`
+select 
+    month,
+    app,
+    100.0*cast(alice_cnt as double)/cnt as alice_share
+from (select * from $app_aus as t1 
+    join $client_aus as t2
+    using (month, app));
+
+$cnts_serp =
+select
+    month,
+    app,
+    cast(count_if(not is_serp and is_search_scenario) as double) as cnt_not_serp,
+    cast(count_if(is_search_scenario and input_type == "voice") as double) as cnt_total
+from @raw_res 
+where app in ("Desktop", "Search App") 
+group by month, app
+union all
+select
+    month,
+    "Mobile" as app,
+    cast(count_if(not is_serp and is_search_scenario) as double) as cnt_not_serp,
+    cast(count_if(is_search_scenario and input_type == "voice") as double) as cnt_total
+from @raw_res 
+where app in ("Mobile Browser", "Search App") 
+group by month;
+
+$cnts_micro =
+select
+    month,
+    app,
+    cast(count(*) as double) as cnt_micro
+from range($qloud, $start, $end)
+where 
+    qloud_project = 'voice-ext' 
+    and qloud_application = 'websocketproxy' 
+    and qloud_environment = 'stable' 
+    and (message like 'yandex-voiceproxy-http: 5e7c4b34-f4ff-49c1-a683-44439c124cc8.%' or message like 'yandex-voiceproxy-http: f2469bd8-50d8-4ed8-a773-865a81eb9352.%')
+    and (message regexp('ru') or message regexp('RU'))
+group by 
+    $format(DateTime::MakeTimestamp($parse(TableName()))) as month,
+    if(message like '%desktop%', "Desktop", "Mobile") as app;
+
+$other_res = 
+select 
+    month, 
+    app,
+    (cnt_micro ?? 0.0) + cnt_total as voice_searches,
+    (cnt_not_serp) as searches,
+    0.0 as voice_searches_share
+from 
+    (select * from $cnts_serp as t1 left join $cnts_micro as t2 using (month, app));
+
+$navi_res = 
+select 
+    "Navigator" as app,
+    month, 
+    count_if(EventValue like '%input":"voice%') as voice_searches, 
+    count(*) as searches,
+    100.0*count_if(EventValue like '%input":"voice%')/cast(count(*) as double) as voice_searches_share
+from range($navi, $start, $end)
+where 
+    EventType == 4 --'EVENT_CLIENT' 
+    and EventName = 'map.get-search-results' 
+    and SessionType is null --"SESSION_FOREGROUND"
+group by $format(DateTime::MakeTimestamp($parse(TableName()))) as month;
+
+$maps_res = 
+select
+    "Maps on Mobile" as app,
+    month, 
+    0.0 as voice_searches,
+    0.0 as searches,
+    0.0 as voice_searches_share
+from $navi_res;
+
+-- Доля голосовых запросов (доля "поисковых" голосовых запросов от всех "поисковых")
+-- https://datalens.yandex-team.ru/preview/b8qb6kacxzx86-investors4-tablica
+insert into `//home/voice/datasets/investor_stats/total4`
+select * from $other_res
+union all
+select * from $navi_res
+union all
+select * from $maps_res;

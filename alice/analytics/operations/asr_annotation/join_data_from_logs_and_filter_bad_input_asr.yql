@@ -1,0 +1,89 @@
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+PRAGMA yson.DisableStrict;
+
+$wonder_folder = "home/alice/wonder/logs";
+$len_prefix = length("http://storage-int.mds.yandex.net:80/get-speechbase/");
+$fixed_prefix = "https://speechbase.voicetech.yandex-team.ru/getaudio/";
+$fixed_postfix = "?storage-type=s3&s3-bucket=voicelogs";
+
+$target_mds = select mds_key from {{input1}};
+
+$wonder_portion = (
+    select
+        log.privacy.do_not_use_user_logs AS do_not_use_user_logs,
+        if($use_asr_key, log.asr.data.mds_key, Substring(log.asr.voice_by_uniproxy.mds, $len_prefix)) as mds_key,
+        log._uuid AS `uuid`,
+        if($add_asr_hyps, [log.asr.data.recognition.normalized ?? ''], ListCreate(String)) as worker_hints,
+    from RANGE($wonder_folder, $start_date, $end_date) AS log
+    where if($use_asr_key, log.asr.data.mds_key, Substring(log.asr.voice_by_uniproxy.mds, $len_prefix)) in $target_mds
+);
+
+$wonder_portion = (
+    select
+        min(portion.do_not_use_user_logs) as do_not_use_user_logs,
+        portion.mds_key as mds_key,
+        some(portion.`uuid`) as `uuid`,
+        max(portion.worker_hints) as worker_hints,
+    from
+        $wonder_portion AS portion
+    group by
+        portion.mds_key
+);
+
+$joined = (
+    SELECT
+        a.mds_key AS mds_key,
+        a.audio AS audio,
+        WeakField(log.extra, Yson) AS extra,
+        log.do_not_use_user_logs AS do_not_use_user_logs,
+        (log.`uuid` IS NOT NULL) AND (log.do_not_use_user_logs IS NULL OR NOT log.do_not_use_user_logs) AS is_good,
+        log.`uuid` IS NOT NULL AS present_in_logs,
+        log.`uuid` AS `uuid`,
+        IF(
+            a.worker_hints IS NOT NULL,
+            a.worker_hints,
+            log.worker_hints
+        ) AS worker_hints
+    FROM {{input1}} WITH SCHEMA Struct<mds_key:String, audio:String?, worker_hints:List<String>?> AS a
+    LEFT JOIN $wonder_portion AS log
+    on log.mds_key == a.mds_key
+);
+
+$bad = (
+    SELECT * FROM $joined
+    WHERE NOT is_good
+);
+
+SELECT
+    Ensure(
+        present_in_logs,
+        present_in_logs OR $on_bad_records != "fail",
+        "Some of your data have not been found in logs in given range. Please check first_log_date, last_log_date parametrs"
+    ),
+    Ensure(
+        do_not_use_user_logs,
+        (do_not_use_user_logs IS NULL OR NOT do_not_use_user_logs) OR $on_bad_records == "skip",
+        "Some of given keys have do_not_use_user_logs set to true in log. Please resample or filter your data"
+    ),
+    mds_key
+FROM $bad;
+
+SELECT Ensure(false, $on_bad_records != "fail", "Unknown failure reason, please contact author") FROM $bad;
+
+$filtered = (
+    SELECT * FROM $joined WHERE is_good OR $on_bad_records == "force"
+);
+
+INSERT INTO {{output1}} WITH TRUNCATE
+SELECT
+    mds_key,
+    audio ?? if($use_asr_key,
+                $fixed_prefix || mds_key || $fixed_postfix,
+                $fixed_prefix || mds_key) as audio,
+    `uuid`,
+    worker_hints
+FROM $filtered;
+
+INSERT INTO {{output2}} WITH TRUNCATE
+SELECT * FROM $bad

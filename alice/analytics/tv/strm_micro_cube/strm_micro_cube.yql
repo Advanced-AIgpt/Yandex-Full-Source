@@ -1,0 +1,758 @@
+pragma AnsiInForEmptyOrNullableItemsCollections;
+pragma yt.DefaultMaxJobFails = "1";
+pragma yson.DisableStrict;
+pragma yt.publishedcompressioncodec = 'zstd_8';
+pragma yt.MinPublishedAvgChunkSize = '8G';
+pragma yt.PublishedErasureCodec = 'lrc_12_2_2';
+
+pragma library("common.sql", "arc://analytics/videolog/strm-stats/strm_cube_2/cube_v2/common.sql?rev=8767620");
+import common symbols $JsTracerPlayerEvents, $getHash, $wrapYandexuid, $parseUA, $getExtension, $isKal, $isDhd, $undefWrapper;
+
+pragma library("quality_report_avglog_common.sql", "arc://analytics/videolog/strm-stats/strm_cube_2/stability/quality_report_avglog/quality_report_avglog_common.sql?rev=8576763");
+import quality_report_avglog_common symbols $parsePlayerState, $getPlayerStateFromData;
+
+pragma file("microsessions_reducer.py", "arc://analytics/videolog/strm-stats/strm_cube_2/cube_v2/microsessions_reducer.py?rev=8767588");
+
+pragma file(
+    "content_ids_mapping.tsv",
+    'https://proxy.sandbox.yandex-team.ru/last/VH_TO_UGC_BLOGGERS_MAPPING?attrs={"released":"stable"}&salt=1593700687.52'
+);
+
+$date = {{param.date}}; -- $date = "2021-10-31";
+
+$gogol_table = "//logs/strm-gogol-log/1d/" || $date;
+$output_table = "//home/smarttv/logs/strm_micro_cube/1d/" || $date;
+$iron_branch_table = "//home/videolog/strm_meta/iron_branch/concat";
+$tvsessions_table = "//home/smarttv/logs/tvandroid_sessions/1d/" || $date;
+
+$getYsonData = Python::get_yson_data(
+    Callable<(String?, UInt64, String?)->Struct<'add_info':Yson?>>, @@
+import json
+from yt import yson
+
+def get_yson_data(event, ts_client, data):
+    try:
+        data = json.loads(data)
+    except ValueError:
+        return {"add_info": None}
+    if event in (b"player_event", b"error"):
+        add_info = {"timestamp_client": ts_client}
+        add_info["error_details"] = {}
+        try:
+            error_category = data["data"]["category"]
+        except:
+            error_category = "DEFAULT"
+        add_info["error_details"]["error_category"] = error_category
+        try:
+            add_info["error_details"]["connection"] = data["data"]["connectionQuality"]
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            reason = data["labels"]["reason"]
+            add_info["error_details"]["reason"] = reason
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            add_info["error_details"]["stalledId"] = data["data"]["stalledId"]
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            add_info["error_details"]["isMuted"] = data["data"]["isMuted"]
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            add_info["error_details"][
+                "stalledDuration"
+            ] = float(data["data"]["stalledDuration"])
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            add_info["error_details"]["reason"] = data["data"]["reason"]
+            add_info["error_details"]["step"] = data["data"]["step"]
+            add_info["error_details"]["videoPosition"] = data["data"]["videoPosition"]
+        except (KeyError, ValueError, TypeError, AttributeError):
+            pass
+        if data.get("eventName") == "SetVideoTrack":
+            try:
+                add_info["error_details"]["video_track"] = data["data"]
+            except (KeyError, ValueError, TypeError, AttributeError):
+                pass
+    else:
+        add_info = None
+    if add_info:
+        add_info = yson.dumps(add_info)
+    return {"add_info": add_info}
+@@
+);
+
+$re_yandexuid = Re2::Capture("yandexuid=([0-9]+)");
+$re_hash = Re2::Capture("hash=([0-9a-f]{32})[^0-9a-f]");
+
+$wrapBadValue = ($x) -> (IF(
+    $x in ("_$invalid_label_value$_", ""),
+    NULL,
+    $x
+));
+
+$getRefFrom = ($labels_from, $Data) -> {
+    $stream_url = (
+        Yson::ConvertToString(Yson::YPath($Data, "/data/streamUrl"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/playerState/controller/stream/url"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/currentStream/url"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/source/streams/0/url"))
+    );
+    $ref_from = (
+        $wrapBadValue($labels_from)
+        ?? $wrapBadValue(Yson::ConvertToString(Yson::YPath($Data, "/labels/from")))
+        ?? $wrapBadValue(Yson::ConvertToString(Yson::YPath($Data, "/data/additionalParams/from")))
+        ?? $wrapBadValue(Yson::ConvertToString(Yson::YPath($Data, "/data/source/additionalParams/from")))
+        ?? Url::GetCGIParam(
+            $stream_url, "from"
+        )
+        ?? Url::GetCGIParam(Yson::ConvertToString(Yson::YPath($Data, "/location")), "from")
+    );
+    $ref_from = IF(
+        $ref_from LIKE "%",
+        Url::Decode($ref_from),
+        $ref_from
+    );
+    return $ref_from
+};
+
+$getRefFromBlock = ($Data) -> {
+    $stream_url = (
+            Yson::ConvertToString(Yson::YPath($Data, "/data/streamUrl"))
+            ?? Yson::ConvertToString(Yson::YPath($Data, "/data/playerState/controller/stream/url"))
+            ?? Yson::ConvertToString(Yson::YPath($Data, "/data/currentStream/url"))
+            ?? Yson::ConvertToString(Yson::YPath($Data, "/data/source/streams/0/url"))
+    );
+    RETURN Yson::ConvertToString(
+        Yson::YPath($Data, "/additionalParameters/from_block")
+    ) ?? Url::GetCGIParam(
+        $stream_url, "from_block"
+    ) ?? Url::GetCGIParam(
+        Yson::ConvertToString(Yson::YPath($Data, "/referrer")), "from_block"
+    ) ?? Url::GetCGIParam(
+        Yson::ConvertToString(Yson::YPath($Data, "/topReferrer")), "from_block"
+    )
+};
+
+$getUserId = ($YuHash, $VSID) -> {
+    RETURN CASE
+    WHEN $YuHash IS NOT NULL THEN $YuHash
+    WHEN $VSID IS NOT NULL THEN "vsid_" || $VSID
+    ELSE NULL
+    END
+};
+
+$checkUUID = ($UUID) -> {
+    RETURN IF(
+        LENGTH($UUID) == 32 AND SUBSTRING($UUID, 0, 1) == "4",
+        $UUID,
+        NULL
+    )
+};
+
+$extractKpVcid = ($url) -> {
+    $split = String::SplitToList($url, "/");
+    $section = $split[5];
+    RETURN String::SplitToList($section, "-")[1]
+};
+
+$getVideoContentId = ($Data) -> {
+    $stream_url = (
+        Yson::ConvertToString(Yson::YPath($Data, "/data/streamUrl"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/playerState/controller/stream/url"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/currentStream/url"))
+        ?? Yson::ConvertToString((Yson::YPath($Data, "/data/source/streams/0/url"))
+        )
+    );
+    $adConfig = (
+        Yson::YPath($Data, "/data/playerState/ad/adConfig")
+        ?? Yson::YPath($Data, "/data/params/adConfig")
+        ?? Yson::YPath($Data, "/data/source/adConfig")
+        ?? Yson::YPath($Data, "/data/playerState/controller/sourceParams/adConfig")
+    );
+    $videoInfo = Yson::YPath($Data, "/data/source/videoInfo");
+    RETURN
+        Yson::LookupString($Data, "videoContentId")
+        ?? Yson::LookupString($adConfig, "videoContentId")
+        ?? Url::GetCGIParam($stream_url, "video_content_id")
+        ?? Url::GetCGIParam($stream_url, "video-content-id")
+        ?? Yson::LookupString($videoInfo, "videoContentId")
+        ?? Yson::LookupString($videoInfo, "video_content_id")
+        ?? Yson::LookupString($videoInfo, "video-content-id")
+        ?? $checkUUID(Url::GetCGIParam($stream_url, "uuid"))
+        ?? $checkUUID($extractKpVcid($stream_url))
+};
+
+$getStalledReason = ($Data) -> {
+    $reason = Yson::ConvertToString(
+        Yson::YPath($Data, "/labels/reason")
+    );
+    RETURN AsStruct(
+        IF(
+            $reason IS NULL, "Stalled", "Stalled_" || $reason
+        ) as error_id,
+        false as fatal
+    )
+};
+
+$getFatalInfo = ($EventName, $EventType, $Data) -> {
+    $Fatal = $EventType == "fatal" or Yson::ConvertToBool(Yson::YPath($Data, "/data/isFatal"));
+    RETURN AsStruct(
+        IF(
+            $Fatal == true, $EventName || "_fatal", $EventName
+        ) as error_id,
+        $Fatal as fatal
+    )
+};
+
+$getErrorInfo = ($EventName, $EventType, $Data) -> {
+    RETURN CASE
+    WHEN $EventName == "Stalled" THEN $getStalledReason($Data)
+    ELSE $getFatalInfo($EventName, $EventType, $Data)
+    END
+};
+
+$getVsid = ($VSID, $Data, $Service) -> {
+    $Data = Yson::ParseJson($Data);
+    $stream_url = (
+        Yson::ConvertToString(Yson::YPath($Data, "/data/streamUrl"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/playerState/controller/stream/url"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/currentStream/url"))
+        ?? Yson::ConvertToString(Yson::YPath($Data, "/data/source/streams/0/url"))
+    );
+    $vsid = CASE
+    WHEN $Service != "ott-smart" OR $VSID IS NOT NULL THEN $VSID
+    WHEN $VSID IS NULL THEN Url::GetCGIParam($stream_url, "vsid")
+    ELSE NULL
+    END;
+    RETURN IF($vsid == "", NULL, $vsid)
+};
+
+$getMute = ($Data) -> {
+    RETURN Yson::ConvertToBool(Yson::YPath(Yson::ParseJson($Data), "/data/isMuted"))
+};
+
+$extractViewType = ($Data) -> {
+    RETURN String::AsciiToLower(
+        Yson::ConvertToString(Yson::YPath($Data, "/data/videoType"))
+    )
+};
+
+$parseVersion = ($version) -> {
+    $lastnumber = ListReverse(String::SplitToList($version, "-"))[0];
+    RETURN IF(
+        $lastnumber is not null,
+        cast($lastnumber as Int64),
+        null
+    )
+};
+
+$isBad = ($service, $version) -> (
+    $service == "StreamPlayer"
+    and $parseVersion($version) is not null
+    and $parseVersion($version) < 2258
+);
+
+$isFatal = ($eventName, $eventType, $data) -> (
+    $eventType == "fatal" or $getErrorInfo($eventName, $eventType, Yson::ParseJson($data)).fatal
+);
+
+$get_utm_qs = Python::get_utm_qs(
+    Callable<(String?)->Yson?>, @@
+from yt import yson
+
+def get_utm_qs(params):
+    try:
+        params = yson.loads(params)
+    except:
+        return
+    result = {}
+    for q in (
+        "utm_term",
+        "utm_content",
+        "yclid",
+        "gclid",
+    ):
+        if q in params:
+            result[q] = params[q]
+    if result:
+        return yson.dumps(result)
+@@
+);
+
+$getEvent = ($eventName, $eventType, $data) -> {
+    $fatal = $isFatal($eventName, $eventType, $data);
+    return case
+    when $fatal then "error"
+    else $JsTracerPlayerEvents[$eventName]
+    end
+};
+
+$getString = ($data, $path) -> (
+    Yson::ConvertToString(Yson::YPath(
+        Yson::ParseJson($data), $path
+    ))
+);
+
+$getZenParam = ($data, $param) -> {
+    $parsed = Yson::ParseJson($data);
+    $additionalParameters = Yson::YPath($parsed, "/additionalParameters/" || $param);
+    $additionalParams = Yson::YPath($parsed, "/data/source/additionalParams/" || $param);
+    return Yson::ConvertToString($additionalParameters ?? $additionalParams)
+};
+
+$ref_from_wl = ("tvandroid", "module2");
+$event_wl = ("CreatePlayer", "Start", "SetSource", "LoadSource");
+
+define subquery $gogol_map($source) as
+SELECT
+    "js_tracer" as source,
+    $getEvent(eventName, eventType, data) as event,
+    IF(
+        $getEvent(eventName, eventType, data) in ("error", "player_event"),
+        eventName,
+        NULL
+    ) as error_id_raw,
+    IF(
+        eventName in $event_wl,
+        $isKal(streamUrl)
+    ) as is_kal,
+    IF(
+        eventName in $event_wl,
+        $getExtension(streamUrl)
+    ) as extension,
+    IF(
+        eventName in $event_wl,
+        $isDhd(streamUrl)
+    ) as is_dhd,
+    IF(
+        $getEvent(eventName, eventType, data) in ("error", "player_event", "heartbeat"),
+        $getErrorInfo(eventName, eventType, Yson::ParseJson(`data`)).error_id,
+        NULL
+    ) as error_id,
+    $isFatal(eventName, eventType, data) as fatal,
+    IF(
+        eventName == "PlayerAlive",
+        Yson::YPathDouble(Yson::ParseJson(data), "/currentTime")
+    ) as time_on_seekbar,
+    xRealIp as ip,
+    $getVsid(vsid, `data`, service) as vsid,
+    clientTimestamp as timestamp_client,
+    Geo::RegionByIp(xRealIp).id as region,
+    Geo::RoundRegionByIp(xRealIp, "country").short_en_name as country,
+    Geo::GetAsset(xRealIp) as a_station,
+    Geo::GetIspNameByIp(xRealIp) as provider,
+    userAgent as user_agent,
+    IF(
+        eventName in ("4SecWatched", "10SecWatched", "20SecWatched", "30SecHeartbeat") and $getMute(`data`) is not null,
+        not $getMute(`data`),
+        NULL
+    ) as non_muted,
+    IF(
+        eventName == "PlayerAlive",
+        $parsePlayerState($getPlayerStateFromData(data)),
+        NULL
+    ) as parsed_player_state,
+    $extractViewType(Yson::ParseJson(`data`)) as video_type,
+    $parseUA(userAgent).browser_name as browser_name,
+    IF(service == "AdSDKJS", null, service) as gogol_service,
+    $parseUA(userAgent).os_family as os_family,
+    $parseUA(userAgent).browser_version as browser_version,
+    $parseUA(userAgent).device_type as device_type,
+    length(`data`) as bytes_sent,
+    cast(serverTimestamp / 1000.0 as Int64) as `timestamp`,
+    (
+        Yson::ConvertToString(Yson::YPath(Yson::ParseJson(`data`), "/device/id"))
+        ?? Yson::YPathString(Yson::ParseJson(data), "/data/source/additionalParams/device_id")
+    ) as device_id,
+    Yson::YPathString(Yson::ParseJson(data), "/device/uuid") as device_uuid,
+    Yson::ConvertToString(Yson::YPath(Yson::ParseJson(`data`), "/puid")) as puid,
+    $getYsonData(
+        $getEvent(eventName, eventType, data),
+        unwrap(clientTimestamp),
+        `data`
+    ).add_info as add_info,
+    IF(
+        $getRefFrom(labels_from, Yson::ParseJson(`data`)) in $ref_from_wl,
+        Yson::SerializeJson(Yson::YPath(Yson::ParseJson(data), "/additionalParameters/tvandroid")),
+        null
+    ) as tvandroid_data,
+    $wrapYandexuid(yandexuid ?? $re_yandexuid(`data`)._1) as yandexuid,
+    $re_hash(`data`)._1 ?? IF(yandexuid IS NULL or yandexuid == "", NULL, $getHash(yandexuid)) as yu_hash,
+    $getRefFrom(labels_from, Yson::ParseJson(`data`)) as ref_from,
+    $getRefFromBlock(Yson::ParseJson(`data`)) as ref_from_block,
+    $getZenParam(data, "stream_block") as stream_block,
+    $getZenParam(data, "strongest_id") as strongest_id,
+    $getZenParam(data, "rid") as rid,
+    $getZenParam(data, "ppi") as ppi,
+    cast($getZenParam(data, "item_id") as Int64) as item_id,
+    $getUserId($re_hash(`data`)._1 ?? $getHash(yandexuid), vsid) as user_id,
+    $getVideoContentId(Yson::ParseJson(`data`)) as video_content_id,
+    `version` as player_version,
+    $get_utm_qs(
+        ToBytes(Yson::Serialize(Yson::YPath(Yson::ParseJson(data), IF(
+            eventName == "CreatePlayer",
+            "/data/source/additionalParams",
+            "/data/additionalParams"
+        ))))
+    ) as utm_data,
+    IF(
+        $undefWrapper(yandexuid) is not null,
+        xYandexICookie
+    ) as xYandexICookie,
+    $getString(
+        data, "/data/source/context/monetizationModel"
+    ) ?? $getString(
+        data, "/data/videoData/drmConfig/requestParams/monetizationModel"
+    ) as redir_licence,
+    IF(labels_from in $ref_from_wl, $undefWrapper(Yson::YPathString(Yson::ParseJson(data),"/additionalParameters/test_buckets"))) ?? $undefWrapper(testIds) ?? $undefWrapper(Yson::YPathString(Yson::ParseJson(data),"/testIds")) as testIds
+FROM $source()
+WHERE (DictContains($JsTracerPlayerEvents, eventName) or eventType == "fatal")
+AND $getVsid(vsid, `data`, service) IS NOT NULL
+AND clientTimestamp IS NOT NULL
+AND serverTimestamp IS NOT NULL;
+end define;
+
+
+define subquery $gogol_preselect() as
+select
+    IF(
+        eventName == "Error" and errorId is not null,
+        errorId,
+        eventName
+    ) as eventName,
+    t.* without t.eventName
+from $gogol_table with columns Struct<yandexuid:String?,vsid:String?,errorId:String?> as t
+where not $isBad(service, `version`) and service = "AndroidPlayer" and labels_from in $ref_from_wl;
+end define;
+
+$preprocessed =  select * from $gogol_map($gogol_preselect);
+
+$player_alive_state_type = Struct<
+    'capHeight':Int64?,
+    'capWidth':Int64?,
+    'height':Int64?,
+    'is_ad':Bool,
+    'isVisible':Bool?,
+    'isMuted':Bool?,
+    'maxHeight':Int64?,
+    'maxWidth':Int64?,
+    'stalledCount':Int64?,
+    'stalledTime':Double?,
+    'state':String?,
+    'timestamp':Uint64?,
+    'watchedTime':Double?,
+    'width':Int64?
+>?;
+
+$microsessions_reducer = Python::microsessions_reducer(
+    Callable<(String?, Stream<Struct<
+        'a_station':String?,
+        'add_info':Yson?,
+        'bidreqid':String?,
+        'browser':String?,
+        'browser_name':String?,
+        'browser_version':String?,
+        'bytes_sent':UInt64?,
+        'category_id':String?,
+        'channel_id':String?,
+        'channel_old':String?,
+        'country':String?,
+        'device_type':String?,
+        'device_id':String?,
+        'device_uuid':String?,
+        'error_id':String?,
+        'error_id_raw':String?,
+        'extension':String?,
+        'event':String?,
+        'fielddate':String?,
+        'gogol_service':String?,
+        'icookie':String?,
+        'imp_id':String?,
+        'is_kal':String?,
+        'is_dhd':Bool?,
+        'ip':String?,
+        'non_muted': Bool?,
+        'os_family':String?,
+        'page_id':String?,
+        'parsed_player_state':$player_alive_state_type,
+        'player_version':String?,
+        'puid':String?,
+        'provider':String?,
+        'redir_licence':String?,
+        'ref_from':String?,
+        'ref_from_block':String?,
+        'region':Int64?,
+        'reqid':String?,
+        'request_ts':Int64?,
+        'resolution':String?,
+        'source':String,
+        'stream_block':String?,
+        'testIds':String?,
+        'timestamp':Int64?,
+        'time_on_seekbar':Double?,
+        'tvandroid_data':Json?,
+        'user_agent':String?,
+        'user_id':String?,
+        'utm_data':Yson?,
+        'video_content_id':String?,
+        'view_type':String?,
+        'view_type_player':String?,
+        'vsid':String?,
+        'yandexuid':String?,
+        'yu_hash':String?,
+        'strongest_id': String?,
+        'item_id': Int64?,
+        'rid': String?,
+        'ppi': String?,
+    >>) -> Stream<Struct<
+        'ad_events':Yson?,
+        'ad_tracking_events':Yson?,
+        'add_info':Yson?,
+        'avglogs':Double?,
+        'browser_name':String?,
+        'browser_version':String?,
+        'bytes_sent':UInt64?,
+        'category_id':String?,
+        'channel_id':String?,
+        'channel_old':String?,
+        'chunks_types':String?,
+        'country':String?,
+        'device_type':String?,
+        'device_id':String?,
+        'device_uuid':String?,
+        'errors':Yson?,
+        'gogol_service':String?,
+        'gogol_test_buckets':String?,
+        'heartbeats':Yson?,
+        'hits_block_good':Int64?,
+        'hits_good':Int64?,
+        'icookie':String?,
+        'ip':String?,
+        'is_kal':String?,
+        'is_dhd':String?,
+        'os_family':String?,
+        'page_id':String?,
+        'partner_price':Int64?,
+        'player_alive_data':Yson?,
+        'player_events':Yson?,
+        'player_version':String?,
+        'playlists_types':String?,
+        'price':Int64?,
+        'provider':String?,
+        'puid':String?,
+        'ref_from':String?,
+        'ref_from_block':String?,
+        'region':Int64?,
+        'reqid':String?,
+        'shows_block_good':Int64?,
+        'shows_good':Int64?,
+        'sources_aggr':String,
+        'stream_block':String?,
+        'tcpinfo_total_retrans':Int64?,
+        'timestamp':Int64?,
+        'times_on_seekbar':List<Int64>?,
+        'user_agent':String?,
+        'user_id':String?,
+        'video_content_id':String?,
+        'view_time':Int64?,
+        'view_time_non_muted':Int64?,
+        'view_time_player_alive':Double?,
+        'view_time_player_alive_non_muted':Double?,
+        'view_time_player_alive_visible_non_muted':Double?,
+        'vsid':String?,
+        'winhits_block_good':Int64?,
+        'winhits_good':Int64?,
+        'yandexuid':String?,
+        'yu_hash':String?,
+        'zen_data':Yson?,
+>>>, FileContent("microsessions_reducer.py"));
+
+--@[preprocessed]
+
+pragma yt.DataSizePerJob = "2G";
+
+$sessions_reduce_input = (
+    select
+        `timestamp`,
+        a_station,
+        add_info,
+        browser_name,
+        browser_version,
+        bytes_sent,
+        country,
+        device_type,
+        device_id,
+        device_uuid,
+        error_id,
+        error_id_raw,
+        event,
+        extension,
+        gogol_service,
+        is_kal,
+        is_dhd,
+        ip,
+        non_muted,
+        os_family,
+        parsed_player_state,
+        player_version,
+        provider,
+        puid,
+        redir_licence,
+        ref_from,
+        ref_from_block,
+        region,
+        source,
+        stream_block,
+        testIds,
+        time_on_seekbar,
+        tvandroid_data,
+        user_agent,
+        user_id,
+        utm_data,
+        video_content_id,
+        vsid,
+        video_type as view_type_player,
+        yandexuid,
+        yu_hash,
+        xYandexICookie as icookie,
+        strongest_id,
+        item_id,
+        rid,
+        ppi
+    from $preprocessed
+    where vsid != ""
+);
+
+pragma yt.DataSizePerJob = "512M";
+
+$sessions_pre = (
+    reduce $sessions_reduce_input
+    PRESORT `timestamp`, video_content_id, parsed_player_state.`timestamp`
+    ON vsid
+    using $microsessions_reducer(TableRow())
+);
+
+pragma yt.DataSizePerJob = "1G";
+
+$getChainData = ($chain, $ugc_owner_id) -> {
+    $chain = Yson::ConvertToList($chain);
+    $reversed = ListReverse($chain);
+    RETURN AsStruct(
+        Yson::LookupUint64($reversed[0], "ContentTypeID") as ContentTypeID,
+        Yson::LookupUint64($reversed[1], "ContentTypeID") as ParentTypeID,
+        IF(
+            $ugc_owner_id is not null,
+            CAST($ugc_owner_id as String),
+            Yson::LookupString($reversed[1], "UUID")
+        ) as ParentUUID,
+    )
+};
+
+$iron_branch = (
+    select
+        heur_category,
+        license,
+        duration as content_duration,
+        `UUID`,
+        computed_channel as channel,
+        computed_program as program,
+        IF(
+            start_time is not null and finish_time is not null,
+            AsTuple(unwrap(start_time), unwrap(finish_time)),
+            null
+        ) as timetuple,
+        JoinKey,
+        $getChainData(chain, ugc_owner_id).ContentTypeID as ContentTypeID,
+        $getChainData(chain, ugc_owner_id).ParentUUID as ParentUUID,
+        $getChainData(chain, ugc_owner_id).ParentTypeID as ParentTypeID,
+    from $iron_branch_table
+);
+
+$generate_vcid = Python::generate_vcid(@@#py
+import binascii
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+from yql.typing import *
+
+
+def generate_vcid(video_meta_id: Optional[Uint64]) -> Optional[String]:
+    encoded_meta_id = urlsafe_b64encode(video_meta_id.to_bytes(8, "little"))
+    video_url_id = encoded_meta_id.decode().strip("=")
+    video_url_id = f"v{video_url_id}"
+    return video_url_id
+@@);
+
+$parseContentIdsMapping = ($mapping) -> {
+    $mapping = String::SplitToList($mapping, "\n");
+    $mapping = ListFilter($mapping, ($x)->(FIND($x, "\t") is not null));
+    $mapping = ListMap($mapping, ($x)->(AsTuple(
+        unwrap(String::SplitToList($x, "\t")[0]), unwrap($generate_vcid(cast(String::SplitToList($x, "\t")[1] as UInt64)))
+    )));
+    return ToDict($mapping)
+};
+
+$content_ids_mapping = $parseContentIdsMapping(FileContent("content_ids_mapping.tsv"));
+
+$video_content_id_null = select * from $sessions_pre where video_content_id is null;
+$video_content_id_non_null = (
+    select
+        IF(
+            DictContains($content_ids_mapping, video_content_id),
+            unwrap($content_ids_mapping[video_content_id]),
+            video_content_id
+        ) as video_content_id_,
+        s.*
+    from $sessions_pre as s where video_content_id is not null and length(video_content_id) <= 1000
+);
+
+insert into @video_content_id_non_null
+select * from $video_content_id_non_null
+order by video_content_id_;
+commit;
+
+$joined_with_iron_branch = (
+    SELECT
+        `UUID`,
+        heur_category,
+        license,
+        content_duration,
+        channel,
+        timetuple,
+        program,
+        ContentTypeID,
+        ParentUUID,
+        ParentTypeID,
+        s.* without s.video_content_id_
+    from @video_content_id_non_null as s
+    left join any $iron_branch as i on (s.video_content_id_ == i.JoinKey)
+);
+
+$after_iron_branch = (select * from $joined_with_iron_branch union all select * from $video_content_id_null);
+
+$getViewType = ($is_kal, $timetuple, $timestamp) -> {
+    $sp = String::SplitToList($is_kal, ",");
+    $kal = "kal" in $sp or "live" in $sp or "both" in $sp;
+    RETURN CASE
+    WHEN $kal AND $timetuple IS NULL THEN "live"
+    WHEN $kal AND ($timetuple.0 <= $timestamp) AND ($timestamp <= $timetuple.1) THEN "live"
+    WHEN $kal THEN "dvr"
+    ELSE "vod"
+    END
+};
+
+$sessions = (
+    select
+        $date as fielddate,
+        $getViewType(is_kal, timetuple, `timestamp`) as view_type,
+        s.gogol_test_buckets as test_buckets,
+        s.* without s.gogol_test_buckets
+    from $after_iron_branch as s
+);
+
+INSERT INTO $output_table WITH TRUNCATE
+SELECT
+    *
+FROM $sessions AS s;

@@ -1,0 +1,29 @@
+PRAGMA yt.InferSchema;
+
+PRAGMA File("intent_to_scenario_map.py", "arc://alice/analytics/operations/dialog/sessions/intent_scenario_mapping.py?rev=6535702");
+
+$script = FileContent("intent_to_scenario_map.py");
+$generalize_intent = Python2::get_generic_scenario(ParseType("(String?, String?)->String"), $script);
+
+$all = (
+    SELECT $generalize_intent(intent, "") as intent, result
+    from {{input1}}
+);
+
+$stats=(
+    SELECT
+        intent,
+        count_if(result=='good') as good,
+        count_if(result=='part') as part,
+        count(*) as total
+    from $all
+    GROUP BY intent
+);
+
+$stats_total=(
+    SELECT
+        count_if(result=='good') as good,
+        count_if(result=='part') as part,
+        count(*) as total
+    from $all
+);

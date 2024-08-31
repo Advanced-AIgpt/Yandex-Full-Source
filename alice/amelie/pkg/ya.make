@@ -1,0 +1,19 @@
+OWNER(
+    g:amelie
+    alkapov
+)
+
+RECURSE(
+    bass
+    extension
+    iot
+    logging
+    mongo
+    passport
+    ratelimiter
+    re
+    staff
+    telegram
+    tvm
+    util
+)

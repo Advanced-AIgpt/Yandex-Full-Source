@@ -1,0 +1,46 @@
+{% nlgimport "alice/bass/common_nlg/video/browser_video_gallery_ar.nlg" %}
+
+{% macro time_left(data) %}
+    {% if data.hours % 10 == 1 and data.hours % 100 != 11 %}
+        بقيَ
+    {% elif data.hours > 0 %}
+        بقيَ
+    {% elif data.minutes % 10 == 1 and data.minutes != 11 %}
+        بقيَ
+    {% else %}
+        بقيَ
+    {% endif %}
+
+    {% if data.hours == 0 and data.minutes == 0 %}
+        أقل من دقيقة
+    {% endif %}
+
+    {% if data.hours > 0 %}
+        {{ data.hours }}
+        {{ 'час' | pluralize(data.hours, 'nom') }}
+    {% endif %}
+
+    {% if data.minutes > 0 %}
+        {{ data.minutes }}
+        {{ 'минут' | pluralize(data.minutes, 'nom') }}
+    {% endif %}
+
+    .
+
+{% endmacro %}
+
+{% phrase render_result %}
+    {% if 'has_credits' in context.attentions %}
+        حتى التترات النهائية {{ time_left(context.attentions.get('has_credits')) }}
+    {% elif 'cartoon' in context.attentions %}
+        حتى نهاية الرسوم المتحركة {{ time_left(context.attentions.get('cartoon')) }}
+    {% elif 'tv_show_episode' in context.attentions %}
+        حتى نهاية المسلسل {{ time_left(context.attentions.get('tv_show_episode')) }}
+    {% elif 'movie' in context.attentions %}
+        حتى نهاية الفيلم {{ time_left(context.attentions.get('movie')) }}
+    {% elif 'video' in context.attentions %}
+        حتى نهاية الفيديو {{ time_left(context.attentions.get('video')) }}
+    {% elif 'unknown_type' in context.attentions %}
+        حتى النهاية {{ time_left(context.attentions.get('unknown_type')) }}
+    {% endif %}
+{% endphrase %}

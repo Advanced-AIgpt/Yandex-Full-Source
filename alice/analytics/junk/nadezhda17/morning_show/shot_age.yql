@@ -1,0 +1,55 @@
+USE hahn;
+PRAGMA yt.InferSchema;
+
+$shot_info = 
+(
+    SELECT shotId, shotType, textTS AS text_creation_ts
+    FROM RANGE(`//home/music/alicedj/shots_preparation/offline_alice_shots/results`)
+    UNION ALL
+    SELECT shotId, shotType, textTS AS text_creation_ts
+    FROM `//home/music/alicedj/shots_preparation/shots_full`
+);
+
+$three_days_ago = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(3) AS String)};
+
+$speech_info = 
+(
+    SELECT req_id, track_id, 
+    MIN(unixtime) AS speech_ts,
+    MIN_BY(text_ts, unixtime) AS text_ts,
+    MAX(fielddate) AS fielddate
+    FROM 
+    (
+        SELECT TableName() AS fielddate, s.*
+        FROM FILTER(`//logs/music-quasar-plays-log/1d`, $three_days_ago) AS s
+    )
+    WHERE track_type = 'shot'
+    GROUP BY req_id, track_id
+);
+
+$shot_age = 
+(
+    SELECT fielddate, shotType, 
+    COUNT(track_id) AS shot_amount,
+    SUM(IF(age IS NULL, 1, 0)) AS shot_without_age,
+    SUM(IF(age IS NOT NULL, 1, 0)) AS shot_with_age,
+    AVG(age) AS average_age,
+    MEDIAN(age) AS median_age
+    FROM
+    (
+        SELECT fielddate, track_id, shotType, 
+        CAST(speech_ts - (text_ts??text_creation_ts) AS Int32)??0 AS age
+        FROM $speech_info AS sp
+        INNER JOIN $shot_info AS sh ON CAST(sh.shotId AS String) = sp.track_id
+    )
+    GROUP BY fielddate, shotType
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/morning_show/shot_age` WITH TRUNCATE
+SELECT *
+FROM $shot_age
+UNION ALL
+SELECT s.*
+FROM  `//home/voice/nadezhda17/common/morning_show/shot_age` AS s 
+LEFT ONLY JOIN $shot_age as n ON n.fielddate = s.fielddate AND n.shotType = s.shotType
+;

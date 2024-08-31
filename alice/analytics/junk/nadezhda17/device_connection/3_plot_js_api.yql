@@ -1,0 +1,28 @@
+INSERT INTO `<append=%false>//home/voice/nadezhda17/common/device_connection/js_api_method_status`
+SELECT app, OSName, fielddate, 
+method ||':'|| status AS method_status, 
+COUNT(*) AS event_amount, COUNT(DISTINCT AccountID) AS user_amount
+FROM 
+(
+    SELECT AccountID, toString(toDate(ts)) AS fielddate,
+    IF(APIKey IN (3970000, 3944830), 'UD', 'PP') AS app, 
+    CASE WHEN OperatingSystem = 1 THEN 'Android'
+    WHEN OperatingSystem = 2 THEN 'iOS' 
+    ELSE NULL 
+    END AS OSName, 
+    method, info,
+    CASE 
+    WHEN JSONExtractString(info, 'error')!= '' THEN JSONExtractString(info, 'error')
+    WHEN method = 'start_discovery' AND 
+    JSONExtractString(JSONExtractArrayRaw(coalesce(info, ''))[1], 'type')!= '' THEN 'ok'
+    WHEN method = 'start_discovery' AND JSONExtractString(info, 'message')!= '' THEN JSONExtractString(info, 'message')
+    WHEN method = 'get_ble_device_wifi_list' AND 
+    length(JSONExtractArrayRaw(coalesce(info, ''), 'list')) > 0 THEN 'ok'
+    WHEN method = 'get_ble_device_wifi_list' AND 
+    length(JSONExtractArrayRaw(coalesce(info, ''), 'list')) = 0 THEN 'Empty wifi list'
+    WHEN method = 'provide_config' AND JSONExtractString(info, 'status')!= '' THEN JSONExtractString(info, 'status')
+    ELSE 'cant parse' 
+    END AS status
+    FROM `//home/voice/nadezhda17/common/device_connection/js_api`
+)
+GROUP BY  app, OSName, fielddate, method, status HAVING COUNT(*) >= 200;

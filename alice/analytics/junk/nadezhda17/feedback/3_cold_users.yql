@@ -1,0 +1,94 @@
+USE hahn;
+PRAGMA yt.ForceInferSchema = "1000";
+PRAGMA yt.Pool = 'voice';
+PRAGMA yson.DisableStrict;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+
+$last_date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(2) AS String)};
+
+$all_likes = 
+(
+    SELECT DISTINCT puid, event, trackId, fielddate, ts
+    FROM 
+    (
+        SELECT CAST(ichwillUid AS String) AS puid,
+        IF(eventType IN (0, 10), 'like', 'dislike') AS event,
+        Yson::ConvertToInt64(itemId.id) AS trackId, 
+        CAST(CAST(DateTime::FromMilliseconds(CAST(`timestamp` AS Uint64)) AS Date) AS String) AS fielddate,
+        DateTime::FromMilliseconds(CAST(`timestamp` AS Uint64)) AS ts, 
+        FROM FILTER(`//home/music/ichwill/events`, $last_date_filter) AS l 
+        INNER JOIN (SELECT DISTINCT puid FROM `//home/voice/nadezhda17/common/feedback/active_devices`) AS a 
+        ON a.puid = CAST(l.ichwillUid AS String)
+        WHERE eventType IN (0, 1, 10)
+        AND Yson::ConvertToInt64(itemId.typeId) = 0
+    )
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/feedback/all_likes` WITH TRUNCATE 
+SELECT * FROM $all_likes;
+
+COMMIT;
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(7) AS String)};
+$date_diff = ($max_date, $min_date) -> {RETURN DateTime::ToDays(CAST($max_date AS Date) - CAST($min_date AS Date))};
+
+$active_plus_puid = 
+(
+    SELECT DISTINCT a.puid AS puid, a.fielddate AS fielddate, i.first_date as first_date,
+    $date_diff(a.fielddate, i.first_date) AS age
+    FROM `//home/voice/nadezhda17/common/feedback/active_devices` AS a 
+    INNER JOIN 
+    (
+        SELECT puid, MIN(init_date) AS first_date
+        FROM `//home/voice/nadezhda17/common/plus_metrics/all_devices`
+        WHERE puid IS NOT NULL
+        GROUP BY puid
+    ) AS i ON i.puid = a.puid
+    WHERE a.plus
+    AND fielddate >= first_date
+    AND $date_filter(fielddate)
+);
+
+$matched = 
+(
+    SELECT a.puid AS puid, a.age AS age,
+    a.fielddate AS fielddate, a.first_date AS first_date,
+    COUNT_IF(event = 'like') AS likes, COUNT_IF(event = 'dislike') AS dislikes
+    FROM $active_plus_puid AS a 
+    INNER JOIN `//home/voice/nadezhda17/common/feedback/all_likes` AS f ON f.puid = a.puid
+    WHERE a.fielddate >= f.fielddate
+    GROUP BY a.puid, a.age, a.fielddate, a.first_date
+    UNION ALL 
+    SELECT a.puid AS puid, a.age AS age,
+    a.fielddate AS fielddate, a.first_date AS first_date,
+    0 AS likes, 0 AS dislikes
+    FROM $active_plus_puid AS a 
+    LEFT ONLY JOIN  `//home/voice/nadezhda17/common/feedback/all_likes` AS f ON f.puid = a.puid
+);
+
+INSERT INTO  `//home/voice/nadezhda17/common/feedback/matched_likes` WITH TRUNCATE 
+SELECT *
+FROM 
+(
+    SELECT puid, age, fielddate, first_date, likes, dislikes
+    FROM $matched
+    UNION ALL 
+    SELECT puid, age, fielddate, first_date, likes, dislikes
+    FROM  `//home/voice/nadezhda17/common/feedback/matched_likes` AS m 
+    LEFT ONLY JOIN $matched AS a ON a.puid = m.puid AND a.fielddate = m.fielddate
+)
+ORDER BY puid, fielddate;
+
+COMMIT;
+
+INSERT INTO `//home/voice/nadezhda17/common/feedback/cold_by_init_date` WITH TRUNCATE 
+SELECT first_date AS init_date, COUNT_IF(likes <= 3)*1.0/COUNT(*) AS cold_user_percent, COUNT(*) AS new_users_amount
+FROM `//home/voice/nadezhda17/common/feedback/matched_likes`
+WHERE age = 7
+GROUP BY first_date;
+
+INSERT INTO `//home/voice/nadezhda17/common/feedback/cold_dau` WITH TRUNCATE 
+SELECT fielddate, COUNT_IF(likes <= 3)*1.0/COUNT(*) AS cold_user_percent, COUNT(*) AS active_users_amount 
+FROM `//home/voice/nadezhda17/common/feedback/matched_likes`
+GROUP BY fielddate;

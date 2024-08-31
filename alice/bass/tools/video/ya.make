@@ -1,0 +1,9 @@
+RECURSE(
+    content_downloader
+    content_uploader
+    content_verifier
+    has_good_result
+    kinopoisk_svod_downloader
+    quick_updater
+    show_or_gallery
+)

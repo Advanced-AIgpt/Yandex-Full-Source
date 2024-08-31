@@ -1,0 +1,33 @@
+pragma yt.InferSchema = '99';
+
+$join_strings = ($s1, $s2) -> { RETURN $s1 || "/" || $s2 };
+
+-- Flatten list values to rows
+$contexts_with_target = (
+    select
+        _message_id as target_message_id,
+        ListExtend(AsList(_message_id), context_message_ids) as context_message_ids_with_target
+    from $context_mappings_path
+);
+$flatten_contexts = select * from $contexts_with_target flatten by (context_message_ids_with_target);
+
+-- Join logs data and write result table
+insert into $result_path with truncate
+select
+    log.*,
+    context.target_message_id as _target_message_id
+from $flatten_contexts as context
+join $parsed_logs as log
+on context.context_message_ids_with_target = log._message_id
+order by _target_message_id, client_time;
+commit;
+
+-- Drop temporary tables, if necessary
+evaluate if $drop_auxiliary_tables do begin
+    $tables_to_drop = AsList("parsed_wonderlogs", "selected_wonderlogs", "context_mappings", "sessions",
+    "message_ids_for_requests_and_contexts", "requests");
+    evaluate for $table in $tables_to_drop do begin
+        $table_path = $join_strings($result_dir_path, $table);
+        drop table $table_path;
+    end do;
+end do;

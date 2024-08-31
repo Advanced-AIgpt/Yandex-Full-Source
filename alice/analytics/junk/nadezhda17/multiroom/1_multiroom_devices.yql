@@ -1,0 +1,90 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA RegexUseRe2='true';
+
+$date_filter = ($date) -> {RETURN $date >= CAST(CurrentUtcDate() - DateTime::IntervalFromDays(5) AS String)
+AND $date != 'latest'};
+
+--информация об устройствах пользователя на каждый день
+$devices = 
+(
+    SELECT d.fielddate AS fielddate,
+    Yson::ConvertToString(Yson::ParseJson(custom_data).device_id) AS device_id, 
+    Yson::ConvertToString(Yson::ParseJson(custom_data).platform) AS device, 
+    d.name AS device_name, 
+    d.household_id AS household_id, h.name AS household,
+    group_id, group_name,
+    room_id, r.name AS room,
+    CAST(d.user_id AS String) AS puid
+    FROM 
+    (
+        SELECT t.* , ListReverse(String::SplitToList(TablePath(), '/'))[1] AS fielddate
+        FROM FILTER(`//home/iot/backup/v2/bulbasaur-ydb`, $date_filter, `Devices`) AS t
+        WHERE NOT archived
+    ) AS d
+    LEFT OUTER JOIN 
+    (
+        SELECT t.* , ListReverse(String::SplitToList(TablePath(), '/'))[1] AS fielddate
+        FROM  FILTER(`//home/iot/backup/v2/bulbasaur-ydb`, $date_filter, `Households`) AS t
+        WHERE NOT archived
+    ) AS h 
+    ON h.id = d.household_id AND h.user_id = d.user_id AND h.fielddate = d.fielddate
+    LEFT OUTER JOIN 
+    (
+        SELECT t.* , ListReverse(String::SplitToList(TablePath(), '/'))[1] AS fielddate
+        FROM FILTER(`//home/iot/backup/v2/bulbasaur-ydb`, $date_filter, `Rooms`) AS t
+        WHERE NOT archived
+    ) AS r 
+    ON r.id = d.room_id AND r.user_id = d.user_id AND r.fielddate = d.fielddate
+    LEFT OUTER JOIN 
+    (
+        SELECT device_id, dg.group_id AS group_id, group_name, 
+        dg.user_id AS user_id, dg.fielddate AS fielddate
+        FROM 
+        (
+            SELECT device_id, group_id, user_id AS user_id, 
+            ListReverse(String::SplitToList(TablePath(), '/'))[1] AS fielddate
+            FROM FILTER(`//home/iot/backup/v2/bulbasaur-ydb`, $date_filter, `DeviceGroups`)
+        ) AS dg 
+        INNER JOIN 
+        (
+            SELECT id AS group_id, name AS group_name, user_id, 
+            ListReverse(String::SplitToList(TablePath(), '/'))[1] AS fielddate
+            FROM FILTER(`//home/iot/backup/v2/bulbasaur-ydb`, $date_filter, `Groups`)
+            WHERE NOT archived
+        ) AS g ON g.group_id = dg.group_id AND g.user_id = dg.user_id AND g.fielddate = dg.fielddate
+    ) AS g ON g.device_id = d.id AND g.user_id = d.user_id AND g.fielddate = d.fielddate
+    WHERE NOT d.archived 
+    AND String::StartsWith(original_type, 'devices.types.smart_speaker')
+);
+
+$multiroom_device = ($device) -> {RETURN $device REGEXP 'yandex|jbl_link'};
+
+--потенциальные пользователи мультирума
+$multiroom_users = 
+(
+    SELECT fielddate, puid
+    FROM $devices 
+    WHERE $multiroom_device(device)
+    GROUP BY fielddate, puid HAVING COUNT(DISTINCT device_id) > 1
+);
+
+--и их устройства
+$multiroom_devices = 
+(
+    SELECT d.*
+    FROM $devices AS d 
+    INNER JOIN $multiroom_users AS m ON m.puid = d.puid AND m.fielddate = d.fielddate
+    WHERE $multiroom_device(device)
+);
+
+INSERT INTO `//home/voice/nadezhda17/common/multiroom/multiroom_devices` WITH TRUNCATE 
+SELECT * 
+FROM $multiroom_devices
+UNION ALL 
+SELECT *
+FROM `//home/voice/nadezhda17/common/multiroom/multiroom_devices` AS mu 
+LEFT ONLY JOIN $multiroom_devices AS t ON t.fielddate = mu.fielddate 
+AND t.puid = mu.puid AND t.device_id = mu.device_id;
+
+

@@ -1,0 +1,59 @@
+$start_date = {{param.start_date->quote()}};
+$end_date = {{param.end_date->quote()}};
+
+$all_requests = (
+    SELECT *
+    FROM RANGE('//home/voice/dialog/toloka/online_metrics/iot_e2e/results', $start_date, $end_date)
+);
+
+$total = SELECT COUNT(*) FROM $all_requests;
+
+$sample_requests = (
+    SELECT *
+    FROM $all_requests
+    TABLESAMPLE BERNOULLI({{param.sample_size}} / CAST($total AS Double) * 100)
+);
+
+$sample_reqids_not_unique = (
+    SELECT req_id, session_id, False AS is_prev_request FROM $sample_requests
+    UNION ALL
+    SELECT prev_req_id AS req_id, session_id, True AS is_prev_request FROM $sample_requests WHERE prev_req_id IS NOT NULL
+);
+
+$sample_reqids = (
+    SELECT req_id, SOME(session_id) AS session_id, SOME(is_prev_request) AS is_prev_request
+    FROM $sample_reqids_not_unique
+    GROUP BY req_id
+);
+
+$main_reqids = (
+    SELECT *
+    FROM $sample_reqids AS sample_reqids
+    WHERE NOT is_prev_request
+);
+
+$script = @@
+import cyson
+def get_config(response):
+    if response.get('meta'):
+        for meta in response['meta']:
+            if meta['type'] == 'smart_home_meta' and 'smart_home_info' in meta['payload']:
+                return meta['payload']['smart_home_info']
+get_config._yql_convert_yson = (cyson.loads, cyson.dumps)
+@@;
+$get_config = Python2::get_config(ParseType("(Yson?)->Yson"), $script);
+
+$main_configs = (
+    SELECT main_reqids.session_id AS session_id, SOME($get_config(vins.response)) AS config
+    FROM RANGE('//home/voice/vins/logs/dialogs', $start_date, $end_date) AS vins
+    JOIN ANY $main_reqids AS main_reqids ON vins.request_id == main_reqids.req_id
+    GROUP BY main_reqids.session_id
+);
+
+$all_configs = (
+    SELECT sample_reqids.req_id AS req_id, main_configs.config AS config
+    FROM $sample_reqids AS sample_reqids
+    JOIN $main_configs AS main_configs USING (session_id)
+);
+
+INSERT INTO {{output1}} SELECT * FROM $all_configs;

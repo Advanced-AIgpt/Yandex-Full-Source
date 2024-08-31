@@ -1,0 +1,146 @@
+USE hahn;
+PRAGMA yson.DisableStrict;
+PRAGMA yt.DefaultMaxJobFails = '1';
+
+PRAGMA TablePathPrefix = '//home/voice/dialog/misc/cohorts/portion';
+
+INSERT INTO `mark_session_with_device_id` WITH TRUNCATE
+SELECT s.*,
+ud.device_id AS device_id,
+init_cohort_alt,
+age,
+age_cohort_for_normalizing,
+age_cohort_for_series,
+FROM `mark_session` AS s
+JOIN `//home/voice/dialog/misc/uuid_to_device_init_date` AS ud
+ON ud.`uuid` = s.user
+JOIN `active_device_id_add_cohorts` AS d
+ON d.fielddate = s.fielddate AND d.device_id = ud.device_id;
+COMMIT;
+
+
+INSERT INTO `stats_by_device` WITH TRUNCATE
+SELECT fielddate, app, device_id, scenario,
+SOME(age_cohort_for_normalizing) AS age_cohort_for_normalizing,
+SOME(age_cohort_for_series) AS age_cohort_for_series,
+SOME(init_cohort_alt) AS init_cohort_alt,
+COUNT(DISTINCT user) AS users,
+COUNT_IF(input_type != 'tech') AS queries,
+COUNT_IF(is_session) AS sessions,
+FROM `mark_session_with_device_id`
+GROUP BY fielddate, app, device_id, scenario;
+COMMIT;
+
+INSERT INTO `sessions_normalized_by_device` WITH TRUNCATE
+SELECT s.*,
+average_spu,
+1.0 * s.sessions/ average_spu AS sessions_normalized,
+FROM `stats_by_device` AS s
+LEFT JOIN `//home/voice/dialog/misc/cohorts/spu_for_normalizing/2019-10-01-2020-03-30` AS a
+USING(app, age_cohort_for_normalizing);
+COMMIT;
+
+INSERT INTO `sessions_normalized_by_init_cohort` WITH TRUNCATE
+SELECT
+fielddate,
+app,
+scenario??'_total_' AS scenario,
+init_cohort_alt??'_total_' AS init_cohort_alt,
+SUM(users) AS users,
+COUNT(DISTINCT device_id) AS devices_with_queries,
+SUM(queries) AS queries,
+SUM(sessions) AS sessions,
+SUM(sessions_normalized) AS sessions_normalized,
+FROM (SELECT * FROM `sessions_normalized_by_device` WHERE init_cohort_alt IS NOT NULL)
+GROUP BY GROUPING SETS (
+    (fielddate, app, scenario, init_cohort_alt),
+    (fielddate, app, init_cohort_alt),
+    (fielddate, app, scenario),
+    (fielddate, app)
+);
+COMMIT;
+
+INSERT INTO `sessions_normalized_by_age_cohort_for_series` WITH TRUNCATE
+SELECT
+fielddate,
+app,
+scenario??'_total_' AS scenario,
+age_cohort_for_series??'_total_' AS age_cohort_for_series,
+SUM(users) AS users,
+COUNT(DISTINCT device_id) AS devices_with_queries,
+SUM(queries) AS queries,
+SUM(sessions) AS sessions,
+SUM(sessions_normalized) AS sessions_normalized,
+FROM (SELECT * FROM `sessions_normalized_by_device` WHERE age_cohort_for_series IS NOT NULL)
+GROUP BY GROUPING SETS (
+    (fielddate, app, scenario, age_cohort_for_series),
+    (fielddate, app, age_cohort_for_series),
+    (fielddate, app, scenario),
+    (fielddate, app)
+);
+COMMIT;
+
+INSERT INTO `stats_age` WITH TRUNCATE
+SELECT *
+FROM `active_device_age_stats` AS a
+LEFT JOIN `sessions_normalized_by_age_cohort_for_series` AS s
+USING(app, fielddate, age_cohort_for_series)
+;
+COMMIT;
+
+INSERT INTO `spu_by_age_cohort` WITH TRUNCATE
+SELECT app, fielddate, scenario, age_cohort_for_series,
+users,
+devices_with_queries, devices_active,
+sessions,
+sessions_normalized,
+queries,
+1.0 * sessions / devices_active AS spu,
+1.0 * sessions_normalized / devices_active AS spu_normalized,
+1.0 * devices_with_queries / devices_active AS dau_per_active,
+FROM `stats_age`;
+COMMIT;
+
+INSERT INTO `stats` WITH TRUNCATE
+SELECT *
+FROM `app_cohort_active_stats` AS a
+LEFT JOIN `sessions_normalized_by_init_cohort` AS s
+USING(app, init_cohort_alt, fielddate)
+;
+COMMIT;
+
+INSERT INTO `spu_by_init_cohort` WITH TRUNCATE
+SELECT app, fielddate, scenario, init_cohort_alt,
+users,
+devices_with_queries, devices_active, devices_init,
+sessions,
+queries,
+sessions_normalized,
+1.0 * sessions_normalized / devices_active AS spu_normalized,
+1.0 * sessions / devices_active AS spu,
+1.0 * devices_with_queries / devices_active AS dau_per_active,
+1.0 * devices_with_queries / devices_init AS dau_per_init,
+1.0 * devices_active / devices_init AS devices_active_per_init,
+FROM `stats`;
+COMMIT;
+
+UPSERT INTO stat.`///Adhoc/ilnur/voice/spu_by_device_cohort/daily`
+SELECT Unwrap(app) AS app, Unwrap(fielddate) AS fielddate, Unwrap(scenario) AS scenario, Unwrap(init_cohort_alt) AS device_cohort_alt,
+Math::Round(spu_normalized, -3) AS spu_normalized,
+Math::Round(spu, -3) AS spu,
+Math::Round(dau_per_active, -3) AS dau_per_active,
+Math::Round(dau_per_init, -3) AS dau_per_init,
+Math::Round(devices_active_per_init, -3) AS devices_active_per_init,
+sessions, devices_init, devices_active, devices_with_queries, users, queries, sessions_normalized
+FROM `spu_by_init_cohort`
+WHERE app IS NOT NULL AND fielddate IS NOT NULL AND scenario??'' != '' AND init_cohort_alt IS NOT NULL;
+
+UPSERT INTO stat.`///Adhoc/ilnur/voice/spu_by_age_cohort/daily`
+SELECT Unwrap(app) AS app, Unwrap(fielddate) AS fielddate, Unwrap(scenario) AS scenario, Unwrap(age_cohort_for_series) AS age_cohort,
+Math::Round(spu, -3) AS spu,
+Math::Round(spu_normalized, -3) AS spu_normalized,
+Math::Round(dau_per_active, -3) AS dau_per_active,
+sessions, devices_active, devices_with_queries, users, queries,
+sessions_normalized
+FROM `spu_by_age_cohort`
+WHERE app IS NOT NULL AND fielddate IS NOT NULL AND scenario??'' != '' AND age_cohort_for_series IS NOT NULL;

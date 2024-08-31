@@ -1,0 +1,66 @@
+/*
+Quasar app versions hourly
+Report: Adhoc/andrewha/quasar/app_vers/hourly
+Replacement of https://sandbox.yandex-team.ru/scheduler/16294/view
+
+use hahn;
+*/
+
+PRAGMA yson.DisableStrict;
+
+$yesterday = AddTimezone(CurrentUtcDateTime() - Interval("P1D"), "Europe/Moscow");
+
+$format = DateTime::Format("%Y-%m-%d %H:00:00");
+$format_log = DateTime::Format("%Y-%m-%dT%H:00:00");
+
+$reportEnvironmentValueByKey = ($keys, $values, $keyValue) -> {
+    $idx = ListIndexOf($keys, $keyValue);
+    RETURN CAST($values[$idx] as Utf8);
+};
+
+$T = (
+SELECT
+    Unwrap(fielddate, "") as fielddate,
+    Unwrap(device_type ?? "-", "") as device_type,
+    Unwrap(IF(devprod IS NULL OR devprod=="", "-", devprod), "") as devprod,
+    Unwrap(app_vers, "") as app_vers,
+    device_id
+FROM
+(
+select    
+    fielddate,
+    device_type,
+    MAX_BY(
+            $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "quasmodrom_group") ?? $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "buildType"), 
+            CAST(ReceiveTimestamp as UInt32)
+        ) ?? "-" as devprod,
+    MAX_BY(AppVersionName, CAST(ReceiveTimestamp as UInt32)) ?? "-" as app_vers,
+    device_id
+from RANGE(`//logs/appmetrica-yandex-events/30min`, $format_log($yesterday))
+where
+    APIKey = 999537
+    AND $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp as UInt32)), "Europe/Moscow")) >= $format($yesterday)
+group by 
+    $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_id") ?? DeviceID as device_id,
+    CASE
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == 'desktop' THEN Model
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") != '' THEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type")
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='Station' THEN 'yandexstation' 
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='YandexModule-00002' THEN 'yandexmodule'
+        WHEN $reportEnvironmentValueByKey(ReportEnvironment_Keys, ReportEnvironment_Values, "device_type") == '' AND Model=='KidPhone3G' THEN 'elariwatch'
+        ELSE Model
+    END as device_type,
+    $format(AddTimezone(DateTime::FromSeconds(CAST(ReceiveTimestamp as UInt32)), "Europe/Moscow")) as fielddate
+)
+);
+
+UPSERT INTO stat.`Adhoc/andrewha/quasar/app_vers/hourly` ERASE BY (fielddate, device_type, devprod, app_vers)
+SELECT
+    fielddate, 
+    device_type??'_total_' as device_type, 
+    devprod??'_total_' as devprod, 
+    app_vers??'_total_' as app_vers, 
+    COUNT(DISTINCT device_id) as devices
+FROM $T 
+GROUP BY 
+    fielddate, CUBE(device_type, devprod, app_vers)

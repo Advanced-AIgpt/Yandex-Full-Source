@@ -1,0 +1,120 @@
+Use hahn;
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+PRAGMA DisableSimpleColumns;
+
+$restricted_dir = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/sampled_data/";
+$common_dir = "//home/alice/jdkondratenko/VA-2304/sampled_data/";
+
+DEFINE ACTION $check_intersection($app_type, $suffix) as
+
+    $accept = $common_dir || $app_type || "_dev_" || $suffix;
+    $kpi = $restricted_dir || $app_type || "_kpi_" || $suffix;
+
+    -- по построению могут пересекаться, но не полностью совпадать
+    SELECT 
+        COUNT_IF(a.request_id is not null and k.request_id is not null) as intersection, -- если оба оказались не пусты, значит, было пересечение
+        COUNT_IF(a.request_id is not null) as accept_length,
+        COUNT_IF(k.request_id is not null) as kpi_length,
+        COUNT_IF(a.request_id is not null and k.request_id is not null) * 100.0 / COUNT_IF(a.request_id is not null) as intersect_acc_percent,
+        COUNT_IF(a.request_id is not null and k.request_id is not null) * 100.0 / COUNT_IF(k.request_id is not null) as intersect_kpi_percent
+    FROM $accept as a
+    FULL JOIN $kpi as k
+    On a.request_id == k.request_id
+    INTO RESULT $app_type;
+    
+     SELECT 
+        COUNT_IF(a.`uuid` is not null and k.`uuid` is not null) as intersection, -- если оба оказались не пусты, значит, было пересечение
+        COUNT(DISTINCT a.`uuid`) as acccept_distinct_uuid,
+        COUNT(DISTINCT k.`uuid`) as kpi_distinct_uuid,
+        COUNT_IF(a.`uuid` is not null and k.`uuid` is not null) * 100.0 / COUNT_IF(a.`uuid` is not null) as intersect_acc_percent,
+        COUNT_IF(a.`uuid` is not null and k.`uuid` is not null) * 100.0 / COUNT_IF(k.`uuid` is not null) as intersect_kpi_percent
+    FROM $accept as a
+    FULL JOIN $kpi as k
+    On a.`uuid` == k.`uuid`
+    INTO RESULT `uuid intersect`;
+    
+    -- sanity check: не должны были насемплировать из одной даты
+    SELECT fielddate, COUNT(*) as cnt
+    FROM $accept as a
+    GROUP BY fielddate
+    ORDER BY fielddate ASC
+    INTO RESULT `accept fielddate`;
+    
+    SELECT fielddate, COUNT(*) as cnt
+    FROM $kpi as a
+    GROUP BY fielddate
+    ORDER BY fielddate ASC
+    INTO RESULT `kpi fielddate`;
+    
+    -- sanity check: не должны были насемплировать из одного пользователя
+    SELECT `uuid`, COUNT(*) as cnt
+    FROM $accept as a
+    GROUP BY `uuid`
+    ORDER BY cnt DESC
+    INTO RESULT `accept uuid`;
+    
+    SELECT `uuid`, COUNT(*) as cnt
+    FROM $kpi as a
+    GROUP BY `uuid`
+    ORDER BY cnt DESC
+    INTO RESULT `kpi uuid`;
+
+    -- sanity check: не должны были насемплировать одного интента
+    SELECT intent, COUNT(*) as cnt
+    FROM $accept as a
+    GROUP BY intent
+    ORDER BY cnt DESC
+    INTO RESULT `accept intent`;
+    
+    SELECT intent, COUNT(*) as cnt
+    FROM $kpi as a
+    GROUP BY intent
+    ORDER BY cnt DESC
+    INTO RESULT `kpi intent`;
+    
+    -- we expect quasar to have only voice queries and general to have voice and text queries
+    SELECT input_type, COUNT(*) as cnt
+    FROM $accept as a
+    GROUP BY input_type
+    INTO RESULT `accept by query type`;
+    
+    SELECT input_type, COUNT(*) as cnt
+    FROM $kpi as a
+    GROUP BY input_type
+    INTO RESULT `kpi by query type`;
+    
+    -- we expect 2 app types in quasar and 5 in general
+    SELECT app, COUNT(*) as cnt
+    FROM $accept as a
+    GROUP BY app
+    INTO RESULT `accept by app type`;
+    
+    SELECT app, COUNT(*) as cnt
+    FROM $kpi as a
+    GROUP BY app
+    INTO RESULT `kpi by app type`;
+    
+    -- all voice queries should be with urls, there should be 30% of queries from new users
+    SELECT 
+        COUNT(*) as all_queries,
+        COUNT_IF(input_type == "voice") as voice_queries,
+        COUNT_IF(input_type == "voice" and mds_key is not null) as voice_q_with_voice_url,
+        COUNT_IF(is_new == "1 week") * 1.0 / COUNT(*) as queries_from_new_users,
+        COUNT_IF(is_new != "1 week") * 1.0 / COUNT(*) as queries_from_old_users,
+        COUNT_IF(String::StartsWith(`uuid`, 'uu/ffffffffffffffff') or String::StartsWith(`uuid`, 'uu/deadbeef') or String::StartsWith(request_id, 'uu/ffffffffffffffff')) as oldbasket_requests
+    FROM $accept as a
+    INTO RESULT `accept queries stats`;
+    
+    SELECT 
+        COUNT(*) as all_queries,
+        COUNT_IF(input_type == "voice") as voice_queries,
+        COUNT_IF(input_type == "voice" and mds_key is not null) as voice_q_with_voice_url,
+        COUNT_IF(is_new == "1 week") * 1.0 / COUNT(*) as queries_from_new_users,
+        COUNT_IF(is_new != "1 week") * 1.0 / COUNT(*) as queries_from_old_users,
+        COUNT_IF(String::StartsWith(`uuid`, 'uu/ffffffffffffffff') or String::StartsWith(`uuid`, 'uu/deadbeef') or String::StartsWith(request_id, 'uu/ffffffffffffffff')) as oldbasket_requests
+    FROM $kpi as a
+    INTO RESULT `kpi voice queries`;
+
+END DEFINE;
+
+DO $check_intersection("quasar", "with_asr");

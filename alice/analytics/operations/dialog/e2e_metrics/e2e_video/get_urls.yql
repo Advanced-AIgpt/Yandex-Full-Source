@@ -1,0 +1,154 @@
+PRAGMA yson.DisableStrict;
+PRAGMA yt.InferSchema = '1000';
+
+$input = (
+    SELECT
+        Yson::ConvertToList(Yson::Parse(items)) AS items, text
+    FROM
+        {{input1}}
+);
+
+$index = (
+    SELECT 
+        GroupingUrl,
+        omniData.RootUuid as root_uuid,
+        omniData.VhUuid as video_uuid
+    FROM 
+        arnold.`//home/videoindex/vhs/docbase/dynamic/direct_index`
+);
+
+$urls = (
+    SELECT
+        text,
+        Yson::ConvertToString(item.video) AS url,
+        Yson::ConvertToString(item.video_uuid) AS video_uuid,
+        Yson::ConvertToString(item.provider_name) AS provider_name
+    FROM
+        $input
+    FLATTEN BY
+        items AS item
+    WHERE
+        item IS NOT NULL
+);
+
+$not_kp = (
+    SELECT
+        text,
+        url AS actual_url,
+        provider_name,
+        NULL AS player,
+        video_uuid
+    FROM
+        $urls
+    WHERE
+        url not like "%kinopoisk%"
+);
+
+$kp = (
+    SELECT
+        *
+    FROM
+        $urls
+    WHERE
+        url like "%kinopoisk%"
+);
+
+$item_uuids = (
+    SELECT 
+        urls.text AS text,
+        "https://" || index.GroupingUrl AS actual_url,
+    "<iframe src=\"" || "https://" || index.GroupingUrl || "?autoplay=0&amp;from=toloka_video\" frameborder=\"0\" scrolling=\"no\" allowfullscreen=\"1\" allow=\"autoplay; fullscreen; accelerometer; gyroscope; picture-in-picture; encrypted-media\" aria-label=\"Video\"></iframe>" AS player,
+        urls.provider_name as provider_name,
+        urls.video_uuid as video_uuid
+    FROM
+        $kp as urls JOIN $index as index
+    ON
+        urls.video_uuid = index.video_uuid
+);
+
+$series_all = (
+    SELECT 
+        GroupingUrl,
+        title,
+        omniData.RootUuid as root_uuid,
+        omniData.VhUuid as video_uuid
+    FROM
+        arnold.`//home/videoindex/vhs/docbase/dynamic/direct_index`
+    WHERE
+        omniData.RootUuid IN (
+            SELECT t2.root_uuid as root_uuid
+            FROM $kp as t1 JOIN $index as t2
+            ON t2.root_uuid = t1.video_uuid
+            )
+);
+
+$first_series = (
+    SELECT
+        root_uuid,
+        min(title) as title
+    from
+        $series_all
+    GROUP BY
+        root_uuid
+);
+
+$series = (
+    SELECT
+        *
+    FROM
+        $series_all as t1 JOIN $first_series as t2
+    ON
+        t1.title = t2.title AND t1.root_uuid = t2.root_uuid
+);
+
+$root_uuids = (
+    SELECT 
+        urls.text AS text,
+        "https://" || index.GroupingUrl AS actual_url,
+    "<iframe src=\"" || "https://" || index.GroupingUrl || "?autoplay=0&amp;from=yavideo\" frameborder=\"0\" scrolling=\"no\" allowfullscreen=\"1\" allow=\"autoplay; fullscreen; accelerometer; gyroscope; picture-in-picture; encrypted-media\" aria-label=\"Video\"></iframe>" AS player,
+        urls.provider_name as provider_name,
+        urls.video_uuid as video_uuid
+    FROM
+        $kp as urls JOIN $series as index
+    ON
+        index.root_uuid = urls.video_uuid
+);
+$lost = (
+    SELECT 
+        kp.text AS text,
+        "https://frontend.vh.yandex.ru/player/" || kp.video_uuid AS actual_url,
+        "<iframe src=\"" || "https://frontend.vh.yandex.ru/player/" || kp.video_uuid || "?autoplay=0&amp;from=yavideo\" frameborder=\"0\" scrolling=\"no\" allowfullscreen=\"1\" allow=\"autoplay; fullscreen; accelerometer; gyroscope; picture-in-picture; encrypted-media\" aria-label=\"Video\"></iframe>" AS player,
+        kp.provider_name as provider_name,
+        kp.video_uuid as video_uuid
+    FROM
+        $kp as kp LEFT ONLY JOIN (
+            SELECT video_uuid
+            FROM $item_uuids
+            UNION ALL
+            SELECT video_uuid
+            FROM $root_uuids) as final
+    ON
+        kp.video_uuid = final.video_uuid
+);
+
+INSERT INTO
+    {{output1}} WITH TRUNCATE
+SELECT
+    *
+FROM
+    $not_kp
+UNION ALL
+SELECT
+    *
+FROM
+    $item_uuids
+UNION ALL
+SELECT
+    *
+FROM
+    $root_uuids
+UNION ALL
+SELECT
+    *
+FROM
+    $lost;

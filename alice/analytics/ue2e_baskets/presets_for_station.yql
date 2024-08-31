@@ -1,0 +1,23 @@
+Use hahn;
+
+$accept = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_pauses";
+$kpi = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_pauses";
+$dev = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_pauses";
+$accept_with_presets= "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_accept_not_patched_with_presets";
+$kpi_with_presets = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_kpi_not_patched_with_presets";
+$dev_with_presets = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/basket/quasar_dev_not_patched_with_presets";
+$device = "//home/alice/toloka/kpi/new_ue2e_baskets/VA-2304/for_presets";
+
+DEFINE ACTION $fix_presets($input_table, $output_table) AS
+
+    INSERT INTO $output_table WITH TRUNCATE 
+    SELECT IF(b.device = "Yandex Station_2", "yandexmax", IF(b.device = "Yandex yandexmini", "yandexmini", a.app_preset)) as app_preset, a.* WITHOUT a.app_preset
+    FROM $input_table as a
+    LEFT JOIN $device as b
+    USING(real_reqid);
+
+END DEFINE;
+
+DO $fix_presets($accept, $accept_with_presets);
+DO $fix_presets($kpi, $kpi_with_presets);
+DO $fix_presets($dev, $dev_with_presets);

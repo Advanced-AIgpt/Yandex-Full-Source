@@ -1,0 +1,241 @@
+USE hahn; 
+PRAGMA yt.InferSchema;
+PRAGMA SimpleColumns;
+PRAGMA yt.Pool = "voice";
+PRAGMA yson.DisableStrict; 
+pragma yt.MaxRowWeight = "16M";
+pragma File("features", "arc://alice/analytics/retention/music_features.txt?rev=8162584");
+pragma File("scripts.py", "arc://alice/analytics/retention/music_utils.py?rev=8162584");
+
+$start = "2020-07-01";
+$end = "2021-05-01";
+$dst = "//home/voice/nstbezz/music/pool_v6";
+
+$main = "//home/alice/cofe/main/export_log/daily/main";
+$music = "//home/alice/cofe/music/export_log/daily/main";
+$music_actions = "//home/alice/cofe/music_actions/export_log/daily/main";
+$prepared = "//home/alice/dialog/prepared_logs_expboxes";
+$dst_grouped = $dst || "/grouped_v2";
+$augmented = $dst || "/augmented";
+$cd_grouped = $dst_grouped || "/cd";
+$lagged_grouped = $dst_grouped || "/lagged";
+$train_grouped = $dst_grouped || "/train";
+$test_grouped = $dst_grouped || "/test";
+
+$format = DateTime::Format("%Y-%m-%d");
+$parse = DateTime::Parse("%Y-%m-%d");
+$str = ($x) -> {return cast($x as string)};
+$week = ($x) -> {return $format(DateTime::StartOfWeek(DateTime::MakeTimestamp($parse($x))))};
+$min_cohort = ($cohorts) -> {return $format(listmin(listflatmap($cohorts, ($x) -> {return DateTime::MakeTimestamp($parse($x))})))};
+$norm_dict = ($dict, $denom) -> {return todict(listmap(dictitems($dict), ($x) -> {return astuple($x.0, $x.1*1.0/$denom)}))};
+$days_total = ($dt, $cohort) -> {return DateTime::ToDays(DateTime::MakeTimestamp($parse($dt)) - DateTime::MakeTimestamp($parse($cohort)))};
+$days_group = ($days) -> {return case 
+    when $days <=7 then '<1week' 
+    when $days > 7 and $days <= 14 then '1-2weeks'
+    when $days > 14 and $days <= 28 then '2-4weeks'
+    when $days > 28 and $days <= 56 then '4-8weeks'
+    else '>8weeks' end};
+$age_group = ($avg, $max, $std) -> {return case
+    when $avg > 0.6 and $max > 0.8 then 'child'
+    when $avg < 0.3 and (Math::IsNaN($std) or (not Math::IsNaN($std) and $std < 0.3)) then 'adult'
+    else 'family' end};
+$plus_group = ($has_plus) -> {return if($has_plus == 1, 'plus', 'noplus')};
+
+$is_test = ($x) -> {return DateTime::MakeTimestamp($parse($x)) >= DateTime::MakeTimestamp($parse("2021-03-04"))};
+$is_ok = ($x) -> {return DateTime::MakeTimestamp($parse($x)) >= DateTime::MakeTimestamp($parse("2021-01-15"))
+    and DateTime::MakeTimestamp($parse($x)) <= DateTime::MakeTimestamp($parse("2021-04-04"))};
+$features = listmap(String::SplitToList(FileContent("features"), "\n"), ($x) -> {return String::Strip($x)});
+$avg_features = {"uuid.childness.total.sum$"};
+$feature_groups = aslist("abs_per_user", "abs_sum", "diff_per_user", "diff_sum");
+
+$scripts = FileContent("scripts.py");
+$process = Python2::process(Callable<(Dict<String, Double>)->Dict<String, Double>>, $scripts);
+$create_zero_dict = Python2::create_zero_dict(Callable<(List<String?>)->Dict<String, Double>>, $scripts);
+$sum_dicts = Python2::sum_dicts(Callable<(List<Dict<String, Double>?>)->Dict<String, Double>>, $scripts);
+$diff_dicts = Python2::diff_dicts(Callable<(Dict<String, Double>?, Dict<String, Double>?)->Dict<String, Double?>?>, $scripts);
+$dicts_to_string = Python2::dicts_to_string(Callable<(List<Dict<String, Double?>?>, List<String?>)->String?>, $scripts);
+$create_feature_names = Python2::create_feature_names(Callable<(List<String?>, List<String?>)->List<String?>>, $scripts);
+
+$processed_features = DictKeys($process($create_zero_dict($features)));
+
+$cols = aslist(
+    astuple("GroupId", "group_id"),
+    astuple("Label", "label"),
+    astuple("Timestamp", "ts"),
+    astuple("Auxiliary", "dt"),
+    astuple("Auxiliary", "cohort")
+);
+
+$cd = 
+select cast(key as string) as key, value
+from (
+    select cols.0 as key, (cols.1).0 || "\t" || (cols.1).1 as value 
+    from (select ListEnumerate($cols) as cols)
+    flatten list by cols
+    union all
+    select features.0 + listlength($cols) as key, "Num" || "\t" || features.1 as value 
+    from (select ListEnumerate($create_feature_names($feature_groups, $processed_features)) as features)
+    flatten list by features
+);
+
+$apps = select distinct puid, app from range($prepared, $start, $end) where app in ('quasar', 'small_smart_speakers') and puid is not null;
+
+
+$puid_info = 
+select puid, aggregate_list_distinct(`uuid`) as uuids, aggregate_list_distinct(device_id) as dids,
+aggregate_list_distinct(cohort) as cohorts
+from range($prepared, $start, $end)
+where app in ('quasar', 'small_smart_speakers') and puid is not null
+group by puid;
+
+$puid_uuid_mapping = 
+select puid, uuids as `uuid`, $min_cohort(cohorts) as cohort
+from (select * from $puid_info where listlength(dids) == 1)
+flatten list by uuids;
+
+$joined = 
+select puid, cohort, dt, feature, if(feature in $avg_features, avg(value), sum(value)) as value
+from (
+    select `uuid`, feature, $format(DateTime::FromSeconds(cast(ts as uint32))) AS dt, value
+    from (
+        select * from range($main, $start, $end)
+        union all
+        select * from range($music, $start, $end))
+    where feature in $features
+    ) as t1
+join $puid_uuid_mapping as t2 using(`uuid`)
+group by t2.puid as puid, t1.feature as feature, t1.dt as dt, t2.cohort as cohort
+union all
+select t1.puid as puid, t2.cohort as cohort, $format(DateTime::FromSeconds(cast(t1.ts as uint32))) AS dt, t1.feature as feature, t1.value as value
+from range($music_actions, $start, $end) as t1 join (select distinct puid, cohort from $puid_uuid_mapping) as t2 using(puid)
+where t1.feature in $features;
+
+$grouped = 
+select puid, cohort, dt, ToDict(listzip(aggregate_list(feature), aggregate_list(value))) as features_dict
+from $joined
+group by puid, cohort, dt;
+
+$data = select puid, cohort, dt, $process(features_dict) as features_dict from $grouped;
+
+insert into $augmented with truncate
+select 
+    if(features_dict is null, $create_zero_dict($processed_features), features_dict) as features_dict,
+    t.* without features_dict
+from (
+    select * from (
+        select puid, cohort, dt
+        from (
+            select * from
+                (select distinct puid, cohort from $data) as t1
+                cross join
+                (select distinct dt from $data) as t2
+            where DateTime::MakeTimestamp($parse(cohort)) <= DateTime::MakeTimestamp($parse(dt)))
+    ) as t11 left join $data as t22 using(puid, cohort, dt)) as t;
+commit;
+
+
+$puid_groups = 
+select
+    dt, $days_group($days_total(dt, cohort)) as days_group, puid,
+    $age_group(
+        avg(features_dict["uuid.childness.total.sum$"]) over w,
+        max(features_dict["uuid.childness.total.sum$"]) over w,
+        stddev(features_dict["uuid.childness.total.sum$"]) over w) as age_group,
+    $plus_group(max(if(features_dict["uuid.has_plus.total.count$"] > 0, 1, 0)) over w) as plus_group
+from $augmented as t
+where features_dict["uuid.childness.total.sum$"] != 0.0
+window
+    w as (
+        partition by puid
+        order by DateTime::MakeTimestamp($parse(dt))
+        rows between 7 preceding and current row
+    );
+
+$age_groups = 
+select t1.puid as puid, t1.age_group as age_group, t2.app as device_group
+from (
+    select puid, max_by(age_group, cnt) as age_group
+    from (
+        select
+            puid, age_group, count(*) as cnt
+        from $puid_groups
+        group by puid, age_group)
+    group by puid
+)  as t1
+join $apps as t2 using(puid);
+
+$augmented_prepared =
+select * 
+from $augmented as t11
+join (
+    select t1.dt as dt, t1.puid as puid, t1.plus_group || "_" || t2.device_group || "_" || t1.days_group || "_" || t2.age_group as group_id
+    from $puid_groups as t1 join $age_groups as t2 using(puid)
+    ) as t22
+using(dt, puid);
+
+$augmented_grouped =
+select 
+    group_id,
+    dt,
+    $sum_dicts(aggregate_list(features_dict)) as sum_features_dict,
+    $norm_dict($sum_dicts(aggregate_list(features_dict)), count(*)) as norm_features_dict
+from $augmented_prepared as t
+group by group_id, dt;
+
+insert into $lagged_grouped with truncate
+select 
+    DateTime::MakeTimestamp($parse(dt)) as ts,
+    lead(norm_features_dict, 28) over f4 as future_per_user_features_dict_4,
+    lead(sum_features_dict, 28) over f4 as future_sum_features_dict_4,
+    aslist(
+        norm_features_dict,
+        sum_features_dict,
+        $diff_dicts(norm_features_dict, lag(norm_features_dict, 7) over w2),
+        $diff_dicts(sum_features_dict, lag(sum_features_dict, 7) over w2)
+    ) as features_dict_list,
+    t.* without norm_features_dict, sum_features_dict
+from $augmented_grouped as t
+window
+    w2 as (
+        partition by group_id
+        order by DateTime::MakeTimestamp($parse(dt))
+        rows between 7 preceding and current row
+    ),
+    f4 as (
+        partition by group_id
+        order by DateTime::MakeTimestamp($parse(dt))
+        rows between current row and 28 following
+    );
+commit;
+
+$pool_grouped =
+select
+    tt.*,
+    group_id as key, 
+    String::JoinFromList(
+        aslist(
+            'label',
+            $str(DateTime::ToSeconds(DateTime::MakeDatetime(ts))), dt, 'cohort',
+           features_string
+        ), "\t"
+    ) as value
+from (
+    select t.*, $dicts_to_string(features_dict_list, $processed_features) as features_string, $is_test(dt) as is_test
+    from $lagged_grouped as t
+    where $is_ok(dt)
+) as tt;
+
+insert into $train_grouped with truncate
+select key, value
+from $pool_grouped
+where is_test == False
+order by key;
+
+insert into $test_grouped with truncate
+select key, value
+from $pool_grouped
+where is_test == True
+order by key;
+
+insert into $cd_grouped with truncate
+select key, value from $cd;

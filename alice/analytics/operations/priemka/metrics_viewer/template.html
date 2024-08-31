@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>ue2e metrics viewer $instance_name $instance_description $instance_started $instance_author</title>
+    <link rel="shortcut icon" type="image/x-icon" href="data:image/x-icon;,"><!-- Suppress browser request for favicon.ico -->
+    <style media="only screen">
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        html {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 0;
+            overflow: auto;
+        }
+
+        body {
+            padding: 1rem;
+            overflow: auto;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        pre {
+            margin-top: 0;
+            padding-top: 0;
+            line-height: 1.25em;
+        }
+
+        .experiment_header {
+            font-size: 12px;
+        }
+
+        .filter_container,
+        .filter_container .filter_text_item {
+            font-size: 10px;
+            line-height: 16px;
+            font-family: monospace;
+        }
+
+        .filter_container .filter_title {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .filter_container .filter_label {
+            display: inline-block;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .filter_container .filter_item {
+            vertical-align: middle;
+        }
+
+        .filter_baskets .filter_item {
+            vertical-align: sub;
+        }
+
+        .filter_container .filter_text_item {
+            padding: 2px 5px;
+            height: 10px;
+            margin: 2px;
+            width: 200px;
+            vertical-align: middle;
+        }
+
+        .filter_label,
+        .filter_item {
+            cursor: pointer;
+        }
+
+        .main_grid {
+            flex-grow: 1;
+            height: 100%;
+        }
+
+        /* enable basic browser text selection in grid cells */
+        .ag-root .ag-cell-focus {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .color_gray {
+            background-color: #f2f2f2;
+            opacity: 0.8;
+        }
+
+        .cell_is_significant_003 {
+            background-color: #FEE898;
+        }
+
+        .cell_is_significant_001 {
+            background-color: #FED64B;
+        }
+
+        .cell_is_significant_003.cell_is_good.cell_is_significant_metrics_group {
+            background-color: #abcfb7;
+        }
+
+        .cell_is_significant_001.cell_is_good.cell_is_significant_metrics_group {
+            background-color: #6bac82;
+        }
+
+        .cell_is_significant_003.cell_is_bad.cell_is_significant_metrics_group {
+            background-color: #f39dab;
+        }
+
+        .cell_is_significant_001.cell_is_bad.cell_is_significant_metrics_group {
+            background-color: #ea546c;
+        }
+        .cell_is_significant_low_quality {
+            background-color: #925b20 !important;
+        }
+        .cell_is_significant_bad_prod_quality {
+            background-color: #828282 !important;
+        }
+        .cell_is_significant_error {
+            background-color: #e80000 !important;
+        }
+        .cell_has_low_reused_marks_ratio {
+            background-color: #2d92ff !important;
+        }
+
+
+        .custom-tooltip {
+            position: absolute;
+            width: 400px;
+            min-height: 80px;
+            border: 1px solid cornflowerblue;
+            overflow: hidden;
+            transition: opacity 1s;
+            background-color: #fcfdfe;
+
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .custom-tooltip.ag-tooltip-hiding {
+            opacity: 0;
+        }
+
+        .metric__question {
+            display: inline-block;
+            border-radius: 12px;
+            background-color: #f0f0f0;
+            color: #a8a8a8;
+            border: 1px solid #a8a8a8;
+            padding: 0 5px;
+            line-height: 16px;
+            margin-left: 3px;
+        }
+        .metric__question:hover {
+            background-color: #ffffd9;
+            cursor: help;
+        }
+
+        .legend {
+            position: relative;
+            float: right;
+        }
+        .legend__title {
+            display: inline-block;
+            font-weight: bold;
+        }
+        .legend__title:hover {
+            cursor: pointer;
+        }
+        .legend__container {
+            display: none;
+            position: absolute;
+            right: 10px;
+            top: 15px;
+            z-index: 200;
+
+            width: 600px;
+            padding: 10px;
+            border: 1px solid cornflowerblue;
+            background-color: #fff;
+        }
+        .legend__title:hover + .legend__container {
+            cursor: pointer;
+            display: inline-block;
+        }
+        .legend__container:hover {
+            /*cursor: pointer;*/
+            display: inline-block;
+        }
+        .legend__list {
+            margin: 0;
+            padding: 0;
+        }
+        .legend__list li {
+            list-style: none;
+            margin-top: 10px;
+            /* ??? центрирование текста */
+            /*vertical-align: middle;*/
+        }
+        .legend__box {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<pre class="$SHOW_METADATA experiment_header">
+<b>ue2e metrics viewer</b> $instance_name, $instance_description, nirvana <a href="https://nirvana.yandex-team.ru/process/$instance_id" target="_blank">graph</a>, <a href="https://st.yandex-team.ru/$param_startrek_ticket" target="_blank">$param_startrek_ticket</a>
+started $instance_started by <a href="https://staff.yandex-team.ru/$instance_author" target="_blank">$instance_author@</a> with <a href="https://abc.yandex-team.ru/services/$param_abc_id" target="_blank">abc $param_abc_id</a> and priority $param_priority
+
+PROD:  url: $param_prod_url
+       uniproxy_url: $param_prod_uniproxy_url
+       experiments: $param_prod_experiments
+
+TEST:  url: $param_test_url
+       uniproxy_url: $param_test_uniproxy_url
+       experiments: $param_test_experiments
+</pre>
+
+<form class="filter" onSubmit="return false;">
+    <div class="filter_baskets filter_container" title="Список корзинок">
+        <span class="filter_title">Baskets:</span>
+        <label class="filter_basket_label filter_label"><input class="filter_basket_checkbox filter_item" type="checkbox" checked="checked" name="filter_all_baskets" value="">all</label>|
+    </div>
+    <div class="filter_text filter_container">
+        <div class="legend">
+            <div class="legend__title">Color Legend<span class="metric__question">?</span></div>
+            <div class="legend__container">
+                <b>Легенда цветов метрик в таблице</b>
+                <ul class="legend__list">
+                    <li>Чтобы увидеть только "важные", "прокрашенные" метрики — нажмите слева галочку "only significant"</li>
+                    <li><span class="legend__box cell_is_significant_error"></span> - <b>ошибка прокачки</b> из групп метрик error, download_error_*. Сетрейсы можно достать, включив галочку у группы метрик download_error_details. Чаще всего помогает заново прокачать — перезапустить граф нирваны с изменённым cache_sync. <a href="https://wiki.yandex-team.ru/alice/analytics/ue2e/priemka/#errorssetraces" target="_blank">Подробнее</a></li>
+                    <li><span class="legend__box cell_is_significant_001 cell_is_bad cell_is_significant_metrics_group"></span> <span class="legend__box cell_is_significant_003 cell_is_bad cell_is_significant_metrics_group"></span> - стат.значимое <b>ухудшение метрики качества</b> с p-value 0.01/0.03, подлежит дальнейшему разбору ухудшений запросов в пульсаре по ссылке pulsar short. <a href="https://wiki.yandex-team.ru/alice/analytics/ue2e/priemka/#ocenkarezultatov" target="_blank">Подробнее про отсмотр результатов в пульсаре</a> </li>
+                    <li><span class="legend__box cell_is_significant_001"></span> <span class="legend__box cell_is_significant_003"></span> - стат.значимое изменение информационной метрики с p-value 0.01/0.03. Не требует обязательного разбора в пульсаре</li>
+                    <li><span class="legend__box cell_is_significant_001 cell_is_good cell_is_significant_metrics_group"></span> <span class="legend__box cell_is_significant_003 cell_is_good cell_is_significant_metrics_group"></span> - стат.значимое <b>улучшение</b> метрики качества. Поздравляем, вы, вероятно, молодец!</li>
+                    <li><span class="legend__box cell_is_significant_low_quality"></span> - в кастомной корзинке (input_basket), качество в тестовой выборке < 0.7, недостаточно для выкатки шортката/сценария</li>
+                    <li><span class="legend__box cell_is_significant_bad_prod_quality"></span> - качество в ветке PROD очень маленькое. Чаще всего встречается с ответами Алисы вида "Прошу прощения, что-то сломалось.". Для каждой корзинки свои минимальные пороги качества — μ&nbsp;-&nbsp;3σ. При разборе в пульсаре — обратите внимание в первую очередь на срезы музыки и фактов</li>
+                    <li><span class="legend__box cell_has_low_reused_marks_ratio"></span> - в тестовой ветке сильно поменялись ответы Алисы, и толочные оценки не нашлись в кеше (низкая оценённость). Такой прокрас в 99% случаев говорит, что что-то пошло не так. Стоит посмотреть на ответы Алисы <a href="https://wiki.yandex-team.ru/alice/analytics/ue2e/priemka/#ocenkarezultatov" target="_blank">в пульсаре</a> на той же корзинке и integral метрике, и если будут видны явные ошибки — то лучше остановить ue2e граф, чтобы не размечать ошибки в Толоке и не тратить деньги. При разборе, в первую очередь стоит посмотреть на изменения классификации сценариев, или наличие большого числа ошибок</li>
+                </ul>
+            </div>
+        </div>
+        <label class="filter_significant filter_label" title="Включите галочку, чтобы показывать только прокрашенные метрики">
+            <span class="filter_title">Metrics:</span><input class="filter_item" type="checkbox"
+                                                             name="filter_is_significant">only significant
+        </label>
+        <label class="filter_text_label filter_label" title="Фильтр по названию метрики">
+            <span class="filter_title">Search:</span><input class="filter_item filter_text_item" type="text"
+                                                            name="filter_text_value"
+                                                            placeholder="metic name..."/>
+        </label>
+        <span class="filter_groups" title="Галочки включения/выключения групп метрик">
+            <span class="filter_title">Groups:</span>
+            <label class="filter_group_label filter_label"><input class="filter_group_checkbox filter_item" type="checkbox" checked="checked" name="filter_all_groups" value="">all</label>|
+        </span>
+
+    </div>
+</form>
+
+<div class="main_grid ag-theme-balham"></div>
+
+<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<script type="text/javascript">(function () {
+    function numberFormat(digits, addition) {
+        digits || (digits = 4);
+        addition || (addition = '');
+        return function (data) {
+            if (typeof(data.value) === 'undefined' || data.value === null) {
+                return '';
+            }
+            var shownValue = Number.isInteger(data.value)
+                ? data.value
+                : data.value.toFixed(digits);
+            return '<span title="' + data.value + '">' + String(shownValue) + addition + '</span>';
+        }
+    }
+
+    function replace_newlines(s) {
+        return ('' + s).replace(/[\r\n]+/g, '<br/><br/>');
+    }
+
+    class CustomTooltip {
+        init(params) {
+            const eGui = (this.eGui = document.createElement('div'));
+            const data = params.api.getDisplayedRowAtIndex(params.rowIndex).data;
+            if (!data.metric_description) {
+                return;
+            }
+            eGui.classList.add('custom-tooltip');
+            eGui.innerHTML = replace_newlines(data.metric_description);
+        }
+
+        getGui() {
+            return this.eGui;
+        }
+    }
+
+    function titleFormat(data) {
+        result = '<span class="metric__name">' + data.value + '</span>';
+        if (data.data.metric_description) {
+            result += '<span class="metric__question">?</span>';
+        }
+        return result;
+    }
+
+    function linkFormat(data) {
+        if (data.value) {
+            // ссылка на пульсар
+            if (data.data.pulsar_link_short || data.data.pulsar_link_eosp) {
+                let result = 'pulsar:';
+                if (data.data.pulsar_link_short) {
+                    result += ' <a href="' + data.data.pulsar_link_short + '" target="_blank" title="базовые колонки в таблице сравнения">short</a>,';
+                }
+                if (data.data.pulsar_link_eosp) {
+                    result += ' <a href="' + data.data.pulsar_link_eosp + '" target="_blank" title="колонки про разметку пауз в таблице сравнения">eosp</a>,';
+                }
+                result += ' <a href="' + data.value + '" target="_blank" title="расширенный набор колонок">full</a>';
+                return result
+            } else {
+                return '<a href="' + data.value + '" target="_blank">pulsar</a>'
+            }
+        } else if (data.data.additional_info) {
+            let result = ''
+            let has_prod_setraces = false;
+            if (data.data.additional_info.prod && data.data.additional_info.prod.setrace_urls && data.data.additional_info.prod.setrace_urls.length) {
+                has_prod_setraces += 1;
+                result += 'prod setraces: '
+                data.data.additional_info.prod.setrace_urls.forEach(function(item, i) {
+                    result += '<a href="' + item + '" target="_blank">' + (i + 1) + '</a> '
+                })
+            }
+            if (data.data.additional_info.test && data.data.additional_info.test.setrace_urls && data.data.additional_info.test.setrace_urls.length) {
+                if (has_prod_setraces) {
+                    result += '<br/>'
+                }
+                result += 'test setraces: '
+                data.data.additional_info.test.setrace_urls.forEach(function(item, i) {
+                    result += '<a href="' + item + '" target="_blank">' + (i + 1) + '</a> '
+                })
+            }
+            return result
+        } else if (data.data.link || data.data.links) {
+            // в случае, если в link — сразу ссылка
+            if (typeof data.data.link === 'string') {
+                return '<a href="' + data.data.link + '" target="_blank">' + 'link' + '</a> ';
+            }
+
+            // в link/links передаётся массив ссылок
+            let links = [];
+            if (Object.prototype.toString.call(data.data.link) === '[object Array]') {
+                links = data.data.link;
+            }
+            if (Object.prototype.toString.call(data.data.links) === '[object Array]') {
+                links = data.data.links;
+            }
+
+            let result = 'links: ';
+            links.forEach(function(item, i) {
+                result += '<a href="' + item + '" target="_blank">' + (i + 1) + '</a> ';
+            })
+            return result;
+        }
+        return ''
+    }
+
+    function prodQualityValue(data) {
+        if (data.value != null) {
+            return numberFormat(5)(data)
+        } else if (data.data.metric_value != null) {
+            data.value = data.data.metric_value;
+            return numberFormat(5)(data)
+        }
+        return ''
+    }
+
+    var significant_metric_groups = $SIGNIFICANT_METRIC_GROUPS;
+    var significant_metric_names = $SIGNIFICANT_METRIC_NAMES;
+    var ragCellClassRules = {
+        'cell_is_significant_003': function (params) {
+            return params.data.significant_state === 'level_003' || params.data.significant_state === 'level_005';
+        },
+        'cell_is_significant_001': function (params) {
+            return params.data.significant_state === 'level_001';
+        },
+        'cell_is_significant_metrics_group': function (params) {
+            return (significant_metric_groups.indexOf(params.data.metrics_group) >= 0
+                || significant_metric_names.indexOf(params.data.metric_name) >= 0);
+        },
+        'cell_is_good': function (params) {
+            return params.data.is_worse === false
+        },
+        'cell_is_bad': function (params) {
+            return params.data.is_worse === true
+        },
+        'cell_is_significant_error': function (params) {
+            return params.data.significant_state === 'error';
+        },
+        'cell_is_significant_low_quality': function (params) {
+            return params.data.significant_state === 'low_quality';
+        },
+        'cell_has_low_reused_marks_ratio': function (params) {
+            return params.data.significant_state === 'low_reused_marks_ratio';
+        },
+        'cell_is_significant_bad_prod_quality': function (params) {
+            return params.data.significant_state === 'bad_prod_quality';
+        },
+    };
+
+    function fuzzySearch(haystack, needle) {
+        // https://stackoverflow.com/a/15252131
+        haystack = haystack.toLowerCase();
+        needle = needle.toLowerCase().replace(/ /g, '');
+        var i = 0, n = -1, l;
+        for (; l = needle[i++];) if (!~(n = haystack.indexOf(l, n + 1))) return false;
+        return true;
+    }
+
+    function getFilters() {
+        var result = {
+            'groups': [],
+            'baskets': [],
+            'filter_text': '',
+            'only_significant': false,
+        }
+        var formData = new FormData(document.querySelector('.filter'));
+        for (var pair of formData.entries()) {
+            if (pair[0] === 'filter_group_items[]') {
+                result['groups'].push(pair[1]);
+            }
+            if (pair[0] === 'filter_basket_items[]') {
+                result['baskets'].push(pair[1]);
+            }
+            if (pair[0] === 'filter_text_value') {
+                result['filter_text'] = pair[1];
+            }
+            if (pair[0] === 'filter_is_significant' && pair[1] === 'on') {
+                result['only_significant'] = true;
+            }
+        }
+        return result;
+    }
+
+    function filterRow(row) {
+        if (row.data.basket && filters['baskets'].indexOf(row.data.basket) === -1) {
+            return false;
+        }
+        if (filters['groups'].indexOf(row.data.metrics_group) === -1) {
+            return false;
+        }
+        if (filters['filter_text'] !== '' && !fuzzySearch(row.data.metric_name, filters['filter_text'])) {
+            return false;
+        }
+        if (filters['only_significant'] === true && !row.data.significant_state) {
+            return false;
+        }
+        return true;
+    }
+
+    function initBaskets() {
+        var baskets_list = $BASKETS_LIST;
+        var filter_baskets = document.querySelector('.filter_baskets');
+
+        if (baskets_list.length) {
+            baskets_list.forEach(function (item) {
+                filter_baskets.insertAdjacentHTML('beforeEnd', '<label class="filter_basket_label filter_label"><input class="filter_basket_checkbox filter_item" type="checkbox" checked="checked" name="filter_basket_items[]" value="' + item + '">' + item + '</label>')
+            });
+        } else {
+            filter_baskets.style.display = 'none';
+        }
+    }
+
+    function initMetricsGroups() {
+        var metrics_groups_list = $METRICS_GROUPS_LIST;
+        if (metrics_groups_list.length) {
+            var filter_groups = document.querySelector('.filter_groups');
+            metrics_groups_list.forEach(function (item) {
+                var is_checked = item.visible ? ' checked="checked"' : ' '
+                filter_groups.insertAdjacentHTML('beforeEnd', '<label class="filter_group_label filter_label"><input class="filter_group_checkbox filter_item" type="checkbox" ' + is_checked + ' name="filter_group_items[]" value="' + item.name + '">' + item.name + '</label>')
+            });
+        } else {
+            metrics_groups_list.style.display = 'none';
+        }
+    }
+
+    // global params
+    var filters = null;
+    var isExternalFilterPresent = false;
+    var gridOptions = {
+        columnDefs: [
+            {field: 'idx', headerName: '#', maxWidth: 50,},
+            {field: 'metrics_group', headerName: 'group', maxWidth: 200,},
+            {field: 'basket', headerName: 'basket', maxWidth: 250,},
+            {field: 'metric_name', headerName: 'metric', cellRenderer: titleFormat, minWidth: 400, tooltipField: 'metric_name', flex: 1},
+            {field: 'prod_quality', headerName: 'PROD', cellRenderer: prodQualityValue, width: 90, maxWidth: 100, },
+            {field: 'test_quality', headerName: 'TEST', cellRenderer: numberFormat(5), width: 90, maxWidth: 100, cellClassRules: ragCellClassRules, cellClass: 'color_gray' },
+            {field: 'diff', headerName: 'Δ', cellRenderer: numberFormat(5), width: 90, maxWidth: 100, cellClassRules: ragCellClassRules, cellClass: 'color_gray' },
+            {field: 'diff_percent', headerName: 'Δ, %', cellRenderer: numberFormat(2, '%'), width: 90, maxWidth: 100, cellClassRules: ragCellClassRules, cellClass: 'color_gray' },
+            {field: 'pvalue', headerName: 'p-val', cellRenderer: numberFormat(2), width: 70, maxWidth: 90, cellClassRules: ragCellClassRules, cellClass: 'color_gray' },
+            {field: 'pulsar_link', headerName: 'link', cellRenderer: linkFormat, width: 70, maxWidth: 300, autoHeight: true,},
+        ],
+        defaultColDef: {
+            flex: 1,
+            minWidth: 70,
+            filter: true,
+            sortable: true,
+            resizable: true,
+            tooltipComponent: 'customTooltip',
+        },
+        enableRangeSelection: true,
+        isExternalFilterPresent: function () {
+            return isExternalFilterPresent;
+        },
+        doesExternalFilterPass: filterRow,
+
+        tooltipShowDelay: 0,
+        components: {
+            customTooltip: CustomTooltip,
+        },
+
+        // animateRows: true,
+        rowData: $SOURCE_DATA
+    };
+
+    function updateFilters() {
+        isExternalFilterPresent = true;
+        filters = getFilters();
+        console.info('updateFilters', filters)
+        gridOptions.api.onFilterChanged();
+    }
+
+    function initGrid() {
+        // init grid
+        new agGrid.Grid(document.querySelector('.main_grid'), gridOptions);
+        updateFilters();
+
+        // on form change event listeners
+        document.querySelector('.filter_text_item').addEventListener('input', function (event) {
+            updateFilters();
+        });
+        document.body.addEventListener('change', function (event) {
+            if (event.target.classList.contains('filter_text_item')) {
+                return;
+            }
+
+            if (event.target.classList.contains('filter_item')) {
+
+                if (event.target.name === 'filter_all_groups') {
+                    // клик по чекбоксу all groups
+                    document.querySelectorAll('.filter_group_checkbox').forEach(function(item) {
+                        if (item.name !== 'filter_all_groups') {
+                            item.checked = event.target.checked;
+                        }
+                    });
+                }
+
+                if (event.target.name === 'filter_all_baskets') {
+                    // клик по чекбоксу all baskets
+                    document.querySelectorAll('.filter_basket_checkbox').forEach(function(item) {
+                        if (item.name !== 'filter_all_baskets') {
+                            item.checked = event.target.checked;
+                        }
+                    });
+                }
+
+                updateFilters();
+            }
+        });
+    }
+
+    function initFavicon() {
+        var newLink = document.createElement('link');
+        newLink.rel = 'shortcut icon';
+        newLink.href = '$FAVICON';
+        document.getElementsByTagName('head')[0].appendChild(newLink);
+    }
+
+    // setup the grid after the page has finished loading
+    document.addEventListener('DOMContentLoaded', function () {
+        initMetricsGroups();
+        initBaskets();
+        initGrid();
+        initFavicon();
+    });
+})();</script>
+</body>
+</html>
