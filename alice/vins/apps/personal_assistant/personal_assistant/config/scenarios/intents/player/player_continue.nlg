@@ -1,0 +1,26 @@
+{% nlgimport "player/player__common.nlg" %}
+{% from "video/video__common.nlg" import attentions_general with context %}
+{% from "player/player__common.nlg" import alicesdk_player_response with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention('video_play_is_off_on_device') %}
+    Чтобы смотреть видео, подключите экран.
+  {% elif is_active_attention('video_play_not_supported_on_device') %}
+    Я не научилась проигрывать видео на этом устройстве, но это будет возможно, если купить Яндекс Модуль.
+  {% elif is_active_attention('video_tv_payment_without_push') %}
+    Упс, так я пока не умею, сделайте это, пожалуйста, при помощи пульта.
+  {% elif is_active_attention('no_video_to_continue') %}
+    {% chooseline %}
+      Вы ничего не смотрели.
+      Но вы ничего не смотрели.
+      Запущенных фильмов нет.
+      Вы пока ничего не запустили.
+    {% endchooseline %}
+  {% else %}
+    {% if has_alicesdk_player() %}
+      {{ alicesdk_player_response('Продолжаю воспроизведение') }}
+    {% else %}
+      {{ attentions_general(form, context, 'say nothing') }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

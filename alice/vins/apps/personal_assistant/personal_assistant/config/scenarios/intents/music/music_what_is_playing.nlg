@@ -1,0 +1,104 @@
+{% nlgimport "music/music__common.nlg" %}
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/music.nlg" %}
+
+{% from "music/music__common.nlg" import render_music_answer, render_simple_music_answer, do_not_know %}
+{% from "music/nonmusic_common.nlg" import render_fairytale_answer, render_poem_answer, render_audiobook_answer, render_podcast_answer with context %}
+{% from "radio/radio__common.nlg" import render_radio_title %}
+
+{% macro render_i_m_listening() %}
+  {% chooseline %}
+    Дайте-ка прислушаться...
+    Минуточку...
+    Сейчас узнаем
+    Внимательно слушаю...
+    Тихо, сейчас узнаем
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+{% set i_m_listening = render_i_m_listening() %}
+{% set bluetooth_is_playing = form.answer|get_item('is_bluetooth_playing') %}
+{% set radio = form.answer|get_item('radio') %}
+{% set radio_title = radio|get_item('radioTitle') %}
+  {% if bluetooth_is_playing %}
+    Прошу прощения, но я не знаю, потому что воспроизвожу аудиоконтент по bluetooth.
+  {% elif radio_title %}
+    Сейчас играет {{ render_radio_title(radio_title) }}
+  {% elif form.answer %}
+    {% set voice_answer %}
+      {% if not is_smart_speaker() %}
+        {% set answer = render_simple_music_answer(form.answer) %}
+        {% chooseitem %}
+          Думаю, что это {{ answer }}
+        {% or %}
+          Возможно, это {{ answer }}
+        {% or %}
+          {{ answer }}, скорее всего.
+        {% endchooseitem %}
+      {% else %}
+        {% set genre = form.answer|get_item('album')|get_item('genre') %}
+        {% set subtype = form.answer|get_item('subtype') %}
+        {% set music_answer = render_music_answer(form.answer, 'nom', False, True) %}
+
+        {% if genre == 'fairytales' %}
+          {{ render_fairytale_answer(req_info, form.answer, True) }} .
+        {% elif genre == 'poemsforchildren' %}
+          {{ render_poem_answer(form.answer, True) }} .
+        {% elif subtype == 'audiobook' %}
+          {{ render_audiobook_answer(form.answer, True) }}
+        {% elif subtype == 'podcast' or subtype == 'podcast-episode' %}
+          {{ render_podcast_answer(form.answer, True) }}
+        {% else %}
+          {% chooseitem %}
+            Это {{ music_answer }}
+          {% or %}
+            Сейчас играет {{ music_answer }}
+          {% endchooseitem %}
+        {% endif %}
+      {% endif %}
+    {% endset %}
+
+    {% tx %}
+      {{ voice_answer }}
+    {% etx %}
+
+    {% vc %}
+      {{ voice_answer | tts_domain('music') }}
+    {% evc %}
+
+  {% elif is_active_attention('music_recognize_ugc_answer') %}
+      Что-то очень знакомое, но на Яндекс.Музыке не нашла.
+  {% else %}
+    {% if req_info.utterance.input_source == req_info.utterance.MUSIC_INPUT_SOURCE %}
+      {% chooseline %}
+        {{ do_not_know() }}
+      {% endchooseline %}
+    {% else %}
+      {% text %}
+        {{ i_m_listening }}
+      {% endtext %}
+      {% if is_smart_speaker() %}
+        {% voice %}
+          {{ i_m_listening }}
+        {% endvoice %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__music__recognise_again %}
+  Распознай ещё раз
+{% endphrase %}
+
+{% phrase render_suggest_utterance__music__recognise_again %}
+  Что это играет?
+{% endphrase %}
+
+{% phrase render_suggest_caption__play_this_music %}
+  Включить
+{% endphrase %}
+
+{% phrase render_suggest_utterance__play_this_music %}
+  Включи ее
+{% endphrase %}

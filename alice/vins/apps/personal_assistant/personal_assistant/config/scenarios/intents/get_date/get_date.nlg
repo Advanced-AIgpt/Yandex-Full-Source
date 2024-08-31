@@ -1,0 +1,220 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% set tz = parse_tz(form.resolved_date['timezone']
+  if form.resolved_date and 'timezone' in form.resolved_date else 'UTC') %}
+
+{% macro render_result_date(dt, with_year=False) %}
+  {% voice %}
+    {{ '#nom' }}
+  {% endvoice %}
+  {{ dt.day }}
+  {{ dt | human_month('ru', 'gen') }}
+  {% if with_year %}
+    {% voice %}
+      {{ '#nom' }}
+    {% endvoice %}
+    {{ dt.year }}
+    года
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_weekday(dt) %}
+  {{ dt | format_weekday('ru') }}
+{% endmacro %}
+
+{% macro render_result(dt, redundant_answer=False, render_copula=False, with_year=False) %}
+  {% set weekday_target = form.query_target != 'date' %}
+  {% set weekday_needed = not form.calendar_date or not 'weekday' in form.calendar_date or form.check_date and
+    'weekday' in form.check_date and form.calendar_date['weekday'] != form.check_date['weekday'] %}
+
+  {% if redundant_answer or weekday_target and weekday_needed %}
+    {% set weekday = render_result_weekday(dt) %}
+    {% if render_copula %}
+      {{ agreed_copula(dt, weekday) }}
+    {% endif %}
+    {{ weekday }}
+
+    {% set date_target = form.query_target != 'day_of_week' %}
+    {% set date_needed = not form.calendar_date or form.calendar_date is relative_datetime_raw or
+      'weekday' in form.calendar_date or
+      form.check_date and 'days' in form.check_date and form.calendar_date['days'] != form.check_date['days'] %}
+
+    {% if redundant_answer or date_target and date_needed %}
+      , {{ render_result_date(dt, with_year) }}
+    {% endif %}
+  {% else %}
+    {% if render_copula %}
+      {{ agreed_copula(dt, None) }}
+    {% endif %}
+    {{ render_result_date(dt, with_year) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro agreed_copula(dt, weekday) %}
+  {% if form.calendar_date is relative_datetime_raw %}
+    {% set tense=form.calendar_date | choose_tense %}
+  {% else %}
+    {% set tense=dt | choose_tense(consider_time=False, tz=tz) %}
+  {% endif %}
+
+  {% if tense == 1 %}
+    будет
+  {% elif tense == -1 %}
+    {% if not weekday or weekday.strip() == 'воскресенье'%}
+      было
+    {% elif weekday.strip()[-1] == 'а' %}
+      была
+    {% else %}
+      был
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_full(dt, redundant_answer=False, capitalize=True, with_year=False) %}
+  {% if form.calendar_date and (form.calendar_date is relative_datetime_raw or
+    'weekday' in form.calendar_date or form.query_target == 'day_of_week' or redundant_answer) %}
+    {% set voice_and_text = form.calendar_date | render_datetime_raw %}
+    {% if capitalize %}
+      {% voice %}
+        {{ voice_and_text | attr('voice') | capitalize_first }}
+      {% endvoice %}
+      {% text %}
+        {{ voice_and_text | attr('text') | capitalize_first }}
+      {% endtext %}
+    {% else %}
+      {% voice %}
+        {{ voice_and_text | attr('voice') }}
+      {% endvoice %}
+      {% text %}
+        {{ voice_and_text | attr('text') }}
+      {% endtext %}
+    {% endif %}
+    {% if form.resolved_where and form.calendar_date is relative_datetime_raw or redundant_answer %}
+      {{ form.resolved_where | city_prepcase }}
+    {% endif %}
+    {{ render_result(dt, redundant_answer, True, with_year) }}
+  {% else %}
+    {% if capitalize %}
+      {{ render_result(dt, with_year=with_year) | capitalize_first }}
+    {% else %}
+      {{ render_result(dt, with_year=with_year) }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro confirmation(dt) %}
+  {% if 'weekday' in form.check_date and 'weekday' in form.calendar_date or
+    'days' in form.check_date and not form.calendar_date.days_relative and 'days' in form.calendar_date %}
+    {% chooseline %}
+      Забавный
+      Смешной
+      Странный
+    {% endchooseline %}
+    вопрос.
+  {% endif %}
+
+  {% if 'years' in form.check_date and form.check_date['years'] != form.resolved_date['year'] or
+    'months' in form.check_date and form.check_date['months'] != form.resolved_date['month'] or
+    'days' in form.check_date and form.check_date['days'] != form.resolved_date['day'] or
+    'weekday' in form.check_date and form.check_date['weekday'] != form.resolved_date['wday'] %}
+    Нет, {{ render_full(dt, False, False) }}
+  {% else %}
+    Да, {{ render_result(dt, True, False) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro too_complex() %}
+  {% chooseline %}
+    Что-то я запуталась. Спросите по-другому, пожалуйста.
+    Я не поняла. Спросите по-другому, пожалуйста.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% set dt = create_date_safe(year=form.resolved_date['year'], month=form.resolved_date['month'], day=form.resolved_date['day']) %}
+
+  {% set calendar_dt = form.calendar_date | safe_render_datetime_raw %}
+  {% if not calendar_dt %}
+    {{ too_complex() }}
+  {% elif not form.check_date and not form.query_target %}
+    {% set dt = tz.localize(dt) %}
+    {{ render_full(dt, redundant_answer=False, capitalize=True, with_year=True) }}
+  {% else %}
+    {% if not dt %}
+      Я бы не хотела говорить про эти времена.
+    {% else %}
+      {% set dt = tz.localize(dt) %}
+
+      {% if form.check_date %}
+        {{ confirmation(dt) }}
+      {% elif intent_name.endswith('ellipsis') %}
+        # prefer short answers during the dialog
+        {% chooseitem 0.7 %}
+          {{ render_result(dt) | capitalize_first }}
+        {% or 0.3 %}
+          {{ render_full(dt) }}
+        {% endchooseitem %}
+      {% else %}
+        # prefer long answers at the start of the dialog
+        {% chooseitem 0.7 %}
+          {{ render_full(dt) }}
+        {% or 0.3 %}
+          {{ render_result(dt) | capitalize_first }}
+        {% endchooseitem %}
+      {% endif %}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+# suggests
+
+{% macro render_relative_suggest(type, tense) %}
+  {% if context[type].data is relative_datetime_raw %}
+    {% set tense = context[type].data | choose_tense %}
+  {% else %}
+    {% set tense = 1 %}
+  {% endif %}
+
+  {% if type == 'get_date__day_query' %}
+    Какой день недели
+    {% if tense < 0 %}
+      был
+    {% endif %}
+  {% else %}
+    Какое число
+    {% if tense < 0 %}
+      было
+    {% endif %}
+  {% endif %}
+  {% if tense > 0 %}
+    будет
+  {% endif %}
+  {{ context[type].data | render_datetime_raw | attr('text') }}
+  ?
+{% endmacro %}
+
+{% phrase render_suggest_caption__get_date__day_query %}
+  {{ render_relative_suggest('get_date__day_query') }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_date__day_query %}
+  {{ render_relative_suggest('get_date__day_query') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_date__date_query %}
+  {{ render_relative_suggest('get_date__date_query') }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_date__date_query %}
+  {{ render_relative_suggest('get_date__date_query') }}
+{% endphrase %}
+
+# errors
+
+{% phrase render_error__invalidparam %}
+  {{ too_complex() }}
+{% endphrase %}
+
+{% phrase render_error__notimezone %}
+  Не могу понять, в какой таймзоне вы находитесь.
+{% endphrase %}

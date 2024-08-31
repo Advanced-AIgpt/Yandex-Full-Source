@@ -1,0 +1,58 @@
+---
+include:
+  - extensions/common.yaml
+  - extensions/yt_token.yaml
+  - extensions/s3_testing.yaml
+  - extensions/mongodb_testing.yaml
+  - extensions/pa_resources.yaml
+
+component:
+  environmentVariables:
+    VINS_SENTRY_DSN: ""
+    VINS_DISABLE_SENTRY: 1
+
+  secrets:
+    -
+      objectId: secret.teamcity-authorization-tokens
+      target: '/authorizationTokens.txt'
+      used: "true"
+    -
+      objectId: secret.oauth-with-yandex-plus-qa-use-only
+      target: 'YA_PLUS_TOKEN'
+      used: "true"
+
+  network: VINS_INT_TEST_NETS
+  image:
+    repo: registry.yandex.net/vins/teamcity
+    tag: ~
+  size: c1_hyper
+  tcpPort: 9090
+  diskSize: 100
+
+  componentFeatures:
+    -
+      id: HOST_SKYNET
+
+  stopAction:
+    type: signal
+    timeoutMs: 20000
+    signal: SIGHUP
+    httpPort: 0
+
+  statusHookChecks:
+    -
+      type: tcp
+      port: 9090
+      timeout: 1000
+      path: ''
+
+  instanceGroups:
+    -
+      backup: false
+      location: ALL
+      units: 10
+      weight: 1
+
+  activateRecipe:
+    updateLimit: "5"
+    updateWindow: "5"

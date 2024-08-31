@@ -1,0 +1,135 @@
+labels:
+  feedback_addon: '.*Скажите, пожалуйста, смог ли я ответить на ваш вопрос\?'
+  questions_invitation: '.*Если есть другие вопросы, напишите их\.'
+  operator_redirect: '.*OPERATOR_REDIRECT.*'
+
+test_feedback_positive:
+  dialog:
+    Как сделать заказ:
+      vins_form:
+        name: crm_bot.scenarios.order_how_to
+      text: '{feedback_addon}'
+      suggests:
+        - type: feedback_yes
+          caption: 'Да, помог'
+        - type: feedback_no
+          caption: 'Нет, не помог'
+    Да:
+      vins_form:
+        name: crm_bot.scenarios.feedback_positive
+        slots:
+          confirmation:
+            value: 'yes'
+      suggests:
+        - type: one
+          caption: '1'
+        - type: two
+          caption: '2'
+          data:
+            nobr: true
+        - type: three
+          caption: '3'
+          data:
+            nobr: true
+        - type: four
+          caption: '4'
+          data:
+            nobr: true
+        - type: five
+          caption: '5'
+          data:
+            nobr: true
+    '5':
+      text: '{questions_invitation}'
+      vins_form:
+        name: crm_bot.scenarios.feedback_positive__continuation
+        slots:
+          score:
+            value: 5
+
+test_feedback_negative_bad_classifier:
+  dialog:
+    Как сделать заказ:
+      text: '{feedback_addon}'
+      vins_form:
+        name: crm_bot.scenarios.order_how_to
+      suggests:
+        - type: feedback_yes
+          caption: 'Да, помог'
+        - type: feedback_no
+          caption: 'Нет, не помог'
+    Нет:
+      vins_form:
+        name: crm_bot.scenarios.feedback_negative
+        slots:
+          confirmation:
+            value: no
+      suggests:
+        - type: bad_classifier
+          caption: '{}Ты неправильно понял мой вопрос'
+        - type: bad_content
+          caption: '{}Ты правильно понял вопрос, но ответ был неполным'
+        - type: call_human_already
+          caption: '{}Просто переведи меня на оператора'
+    Ты неправильно понял мой вопрос:
+      vins_form:
+        name: crm_bot.scenarios.feedback_negative_bad_classifier
+      text: '{operator_redirect}'
+
+test_feedback_negative_bad_content:
+  dialog:
+    Как сделать заказ:
+      text: '{feedback_addon}'
+      vins_form:
+        name: crm_bot.scenarios.order_how_to
+      suggests:
+        - type: feedback_yes
+          caption: 'Да, помог'
+        - type: feedback_no
+          caption: 'Нет, не помог'
+    Нет:
+      vins_form:
+        name: crm_bot.scenarios.feedback_negative
+        slots:
+          confirmation:
+            value: no
+      suggests:
+        - type: bad_classifier
+          caption: '{}Ты неправильно понял мой вопрос'
+        - type: bad_content
+          caption: '{}Ты правильно понял вопрос, но ответ был неполным'
+        - type: call_human_already
+          caption: '{}Просто переведи меня на оператора'
+    Ты правильно понял вопрос, но ответ был неполным:
+      vins_form:
+        name: crm_bot.scenarios.feedback_negative_bad_content
+      text: '{operator_redirect}'
+
+test_feedback_negative_call_human:
+  dialog:
+    Как сделать заказ:
+      text: '{feedback_addon}'
+      vins_form:
+        name: crm_bot.scenarios.order_how_to
+      suggests:
+        - type: feedback_yes
+          caption: 'Да, помог'
+        - type: feedback_no
+          caption: 'Нет, не помог'
+    Нет:
+      vins_form:
+        name: crm_bot.scenarios.feedback_negative
+        slots:
+          confirmation:
+            value: no
+      suggests:
+        - type: bad_classifier
+          caption: '{}Ты неправильно понял мой вопрос'
+        - type: bad_content
+          caption: '{}Ты правильно понял вопрос, но ответ был неполным'
+        - type: call_human_already
+          caption: '{}Просто переведи меня на оператора'
+    Просто переведи меня на оператора:
+      vins_form:
+        name: crm_bot.scenarios.operator_redirect
+      text: '{operator_redirect}'

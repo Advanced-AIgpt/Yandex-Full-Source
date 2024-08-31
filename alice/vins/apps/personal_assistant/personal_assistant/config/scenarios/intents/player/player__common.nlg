@@ -1,0 +1,68 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% from "common/macros.nlg" import inability %}
+{% from "radio/radio__common.nlg" import render_radio_title %}
+
+{% macro render_supported_only_on_music() %}
+  {% text %} Пока я умею такое только в Яндекс.Музыке. {% endtext %}
+  {% voice %} Пока я умею такое только в Яндекс Музыке. {% endvoice %}
+{% endmacro %}
+
+{% macro render_not_supported_on_radio(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+  {% chooseitem %}
+    Не выйдет, извините. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Ничего не получится, увы. Это же прямой эфир на {{ rendered_radio_title }}.
+  {% or %}
+    Не могу. Это же прямой эфир.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro alicesdk_player_response(text) %}
+  {{ text | only_text }}
+{% endmacro %}
+
+{% macro do_authorized(text) %}
+  {% if is_active_attention('unauthorized') %}
+    {{ 'Вы не авторизовались.' }}
+  {% else %}
+    {% if has_alicesdk_player() %}
+      {{ alicesdk_player_response(text) }}
+    {% else %}
+      {{ text }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__authorize %}
+  Авторизоваться
+{% endphrase %}
+
+{% phrase render_suggest_uri__authorize %}
+  {{ context.authorize.data.uri }}
+{% endphrase %}
+
+{% set supported_only_on_music_commands = ["player_dislike", "player_like", "player_shuffle"] %}
+
+{% phrase render_error__playererror %}
+{% set code = context.error.data|get_item('code') %}
+{% set command = context.error.data|get_item('command') %}
+{% set radio = context.error.data|get_item('radio') %}
+  {% if (code == 'radio_unsupported' or code == 'bluetooth_unsupported') and command in supported_only_on_music_commands %}
+    {{ render_supported_only_on_music() }}
+  {% elif code == 'radio_unsupported' %}
+    {{ render_not_supported_on_radio(radio|get_item('radioTitle')) }}
+  {% elif code == 'bluetooth_unsupported' %}
+    {{ inability() }}
+  {% else %}
+    Произошло что-то непонятное, но вполне музыкальное. У программных ошибок своя печальная музыка.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+  {{ inability() }}
+{% endphrase %}
+
+{% phrase render_result %}
+{% endphrase %}

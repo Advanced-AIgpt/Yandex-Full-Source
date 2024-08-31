@@ -1,0 +1,450 @@
+{% macro render_instance(ent_instance) -%}
+  {{ context.onto_synth.random_nlu_phrase(ent_instance) }}
+{%- endmacro %}
+
+{% macro polite() %}
+  {% maybe %}
+    {% chooseline %}
+      пожалуйста
+      плиз
+      если не трудно
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro request() -%}
+  {% chooseline %}
+    узнайте
+    узнай
+    скажите
+    скажи
+    подскажите
+    подскажи
+    расскажите
+    расскажи
+    узнайте
+    узнай
+    скажите
+    скажи
+    расскажите
+    расскажи
+    интересно
+  {% endchooseline %}
+  {{ polite() }}
+{% endmacro %}
+
+{% macro exchange_rate() %}
+  {% set rate -%}
+    {% chooseline -%}
+      курс
+      курсы
+      наличный курс
+      наличные курсы
+      обменный курс
+      обменные курсы
+      курс обмена
+      курсы обмена
+      конверсия
+      цена
+    {%- endchooseline %}
+  {%- endset %}
+  {% set currency -%}
+    '{{ render_instance(form.type_from) | inflect('gen') }}'(type_from)
+  {%- endset %}
+  {{ [rate] | shuffle([], [currency]) | join }}
+{% endmacro %}
+
+{% macro when() %}
+  {% maybe %}
+    на
+  {% endmaybe %}
+  '{{ form.when }}'(when)
+{% endmacro %}
+
+{% macro where() %}
+  'в {{ form.where | inflect('abl') }}'(where)
+{% endmacro %}
+
+{% macro source() %}
+  {% if context.onto[form.source].is_derived_from('conv_source_exchange') -%}
+    на
+  {% else %}
+    в
+  {% endif %}
+  '{{ render_instance(form.source) | inflect('abl') }}'(source)
+{% endmacro %}
+
+{% macro render_sum(amount, currency_name, case, amount_base=None, mark_sum_as=None, mark_currency_as=None) %}
+  {% set sub_currency = context.onto[currency_name].sub_currency %}
+  {% set sum = amount if amount else amount_base %}
+
+  {{ sum | inflect_amount_of_money(
+    render_instance(currency_name),
+    render_instance(sub_currency) if sub_currency else None,
+    case,
+    2,
+    mark_sum_as,
+    mark_currency_as
+  ) }}
+{% endmacro %}
+
+{% macro query1() %}
+  # пример: сколько мне надо взять 'сумов узбекских'(type_to) чтобы
+  # стало '2'(amount_from) 'лея молдавских'(type_from) подскажи плиз
+
+  {% set request = request() %}
+  {% set body %}
+    сколько
+    {% maybe %}
+      мне
+    {% endmaybe %}
+    {% chooseline %}
+      нужно
+      надо
+      потребуется
+    {% endchooseline %}
+    {% maybe %}
+      {% chooseline %}
+        поменять
+        обменять
+        взять
+      {% endchooseline %}
+    {% endmaybe %}
+    '{{ render_instance(form.type_to) | inflect('gen','pl') }}'(type_to)
+    {% chooseitem %}
+      чтобы
+      {% chooseitem %}
+        {% maybe %}
+          я смог
+        {% endmaybe %}
+        {% chooseline %}
+          получить
+          купить
+        {% endchooseline %}
+        {{ render_sum(form.amount_from, form.type_from, 'acc', None, 'amount_from', 'type_from') }}
+      {% or %}
+        {% maybe %}
+          у меня
+        {% endmaybe %}
+        {% chooseline %}
+          было
+          стало
+        {% endchooseline %}
+      {% endchooseitem %}
+      {{ render_sum(form.amount_from, form.type_from, 'nom', None, 'amount_from', 'type_from') }}
+    {% or %}
+      для
+      {% chooseline %}
+        покупки
+        получения
+      {% endchooseline %}
+      {{ render_sum(form.amount_from, form.type_from, 'gen', None, 'amount_from', 'type_from') }}
+    {% endchooseitem %}
+  {% endset %}
+
+  {{ [body] | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query2() %}
+  # пример: обменный курс 'хорватского куна'(type_from) 'сан-франциско'(where)
+
+  {% set request = request() %}
+  {% set rate_nom %}
+    {{ exchange_rate() }}
+  {% endset %}
+  {% set when = when() %}
+  {% set loc %}
+    {% chooseitem %}
+      '{{ form.where }}'(where)
+    {% or %}
+      {{ where() }}
+    {% endchooseitem %}
+  {% endset %}
+  {% set source %}
+    {% chooseitem %}
+      {{ source() }}
+    {% or %}
+      '{{ render_instance(form.source) }}'(source)
+    {% endchooseitem %}
+  {% endset %}
+
+  {{ [rate_nom] | shuffle([when, loc, source]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query3() %}
+  # пример: курс 'USD'(type_from) на 'мексиканские песо'(type_to) 'пенза'(where) подскажите пожалуйста
+  # '12 января'(when) 'армянский драм'(type_from) на 'египетские фунты'(type_to)
+
+  {% set request = request() %}
+  {% set rate_to_rate %}
+    {% chooseitem %}
+      '{{ render_instance(form.type_from) }}'(type_from)
+    {% or %}
+      {{ exchange_rate() }}
+    {% endchooseitem %}
+    {% chooseitem %}
+      к '{{ render_instance(form.type_to) | inflect('dat') }}'(type_to)
+    {% or %}
+      на '{{ render_instance(form.type_to) | inflect('acc','pl') }}'(type_to)
+    {% endchooseitem %}
+  {% endset %}
+  {% set when = when() %}
+  {% set loc -%}
+    {% chooseitem %}
+      по курсу '{{ render_instance(form.source) | inflect('gen') }}'(source)
+    {% or %}
+      {{ source() }}
+    {% or %}
+      {{ where() }}
+    {% endchooseitem %}
+  {%- endset %}
+
+  {{ [rate_to_rate] | shuffle([loc, when]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query4() %}
+  # 50 долларов это сколько получится рублей
+
+  {% set request = request() %}
+  {% set loc -%}
+    {% chooseitem %}
+      по курсу '{{ render_instance(form.source) | inflect('gen') }}'(source)
+    {% or %}
+      {{ source() }}
+    {% or %}
+      {{ where() }}
+    {% endchooseitem %}
+  {%- endset %}
+
+  {% set body %}
+    {{ render_sum(form.amount_from, form.type_from, 'nom', None, 'amount_from', 'type_from') }}
+    {% chooseline %}
+      сколько получится
+      сколько будет
+      это сколько
+      это сколько получится
+      это сколько будет
+    {% endchooseline %}
+    '{{ render_instance(form.type_to) | inflect('gen','pl') }}'(type_to)
+  {% endset %}
+
+  {{ [body] | shuffle([loc]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query5() %}
+  # по курсу 'московской межбанковской'(source) это сколько '1000000'(amount_from)
+  # 'долларов гонконгских'(type_from) в 'форинтах'(type_to)
+
+  {% set request = request() %}
+  {% set how_much -%}
+    {% chooseline %}
+      сколько
+      это сколько
+    {% endchooseline %}
+  {%- endset %}
+  {% set loc -%}
+    {% chooseitem %}
+      по курсу '{{ render_instance(form.source) | inflect('gen') }}'(source)
+    {% or %}
+      {{ source() }}
+    {% or %}
+      {{ where() }}
+    {% endchooseitem %}
+  {%- endset %}
+
+  {% set body %}
+    {{ render_sum(form.amount_from, form.type_from, 'acc', None, 'amount_from', 'type_from') }}
+    в '{{ render_instance(form.type_to) | inflect('abl','pl') }}'(type_to)
+  {% endset %}
+
+  {{ [body] | shuffle([loc]) | shuffle([how_much]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query6() %}
+  # подскажите на '21.09.2017'(when) по курсу 'банка Украины'(source) сколько стоит 'молдавский лей'(type_from)
+
+  {% set request = request() %}
+  {% set body -%}
+    сколько
+    {% maybe %}
+      '{{ render_instance(form.type_to) | inflect('pl','gen') }}'(type_to)
+    {% endmaybe %}
+    {% chooseitem %}
+      стоит '{{ render_instance(form.type_from) }}'(type_from)
+    {% or %}
+      '{{ render_instance(form.type_from) }}'(type_from) стоит
+    {% endchooseitem %}
+  {%- endset %}
+  {% set when = when() %}
+  {% set loc -%}
+    {% chooseitem %}
+      по курсу '{{ render_instance(form.source) | inflect('gen') }}'(source)
+    {% or %}
+      {{ source() }}
+    {% or %}
+      {{ where() }}
+    {% endchooseitem %}
+  {%- endset %}
+
+  {{ [body] | shuffle([loc,when]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query7() %}
+  # пример: переведи если не трудно 'ринггиты'(type_from) в 'индийские рупии'(type_to) по курсу 'Турецкого центрального банка'(source)
+
+  {% set request %}
+    {% chooseline %}
+      переведи
+      перевести
+      конвертни
+      переведите
+    {% endchooseline %}
+    {{ polite() }}
+  {% endset %}
+  {% set rate_to_rate %}
+    '{{ render_instance(form.type_from) | inflect('acc','pl') }}'(type_from)
+    в '{{ render_instance(form.type_to) | inflect('acc','pl') }}'(type_to)
+  {% endset %}
+  {% set loc -%}
+    по курсу '{{ render_instance(form.source) | inflect('gen') }}'(source)
+  {%- endset %}
+
+  {{ [rate_to_rate] | shuffle([loc]) | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query8() %}
+  # нужно приобрести '2'(amount_from) 'гривны'(type_from) сколько выйдет в 'долларах сингапурских'(type_to)
+
+  {% set request = request() %}
+  {% set body %}
+    {% maybe %}
+      мне
+    {% endmaybe %}
+    {% chooseline %}
+      нужно
+      надо
+    {% endchooseline %}
+    {% chooseline %}
+      купить
+      продать
+      приобрести
+      получить
+    {% endchooseline %}
+    {{ render_sum(form.amount_from, form.type_from, 'acc', None, 'amount_from', 'type_from') }}
+
+    {% set target_currency %}
+      {% chooseitem %}
+        в '{{ render_instance(form.type_to) | inflect('abl','pl') }}'(type_to)
+      {% or %}
+        на '{{ render_instance(form.type_to) | inflect('acc','pl') }}'(type_to)
+      {% or %}
+        '{{ render_instance(form.type_to) | inflect('gen','pl') }}'(type_to)
+      {% endchooseitem %}
+    {% endset %}
+    {% set how_much %}
+      {% set verb %}
+        {% chooseline %}
+          получится
+          станет
+          выйдет
+          будет
+        {% endchooseline %}
+      {% endset %}
+      {{ ['сколько'] | shuffle([verb,'это']) | join }}
+    {% endset %}
+    {{ [target_currency] | shuffle([], [how_much]) | join }}
+  {% endset %}
+
+  {{ [body] | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query9() %}
+  # пример: какой обменный курс 'японской иены'(type_from) на 'вчера'(when)
+
+  {% set request = request() %}
+  {% set question %}
+    какой
+    {% set when = when() %}
+    {% set rate = exchange_rate() %}
+    {% set loc -%}
+      {% chooseitem %}
+        {{ source() }}
+      {% or %}
+        {{ where() }}
+      {% endchooseitem %}
+    {% endset %}
+    {{ [rate] | shuffle([when,loc]) | join }}
+  {% endset %}
+
+  {{ [question] | shuffle([request]) | join }}
+{% endmacro %}
+
+{% macro query10() %}
+  # пример: сколько мне надо взять 'сумов узбекских'(type_to) чтобы
+  # стало '2'(amount_from) 'лея молдавских'(type_from) подскажи плиз
+
+  {% set request = request() %}
+  {% set body %}
+    сколько
+    {% chooseitem %}
+      я получу
+    {% or %}
+      {% maybe %}
+        у меня
+      {% endmaybe %}
+      {% chooseline %}
+        станет
+        будет
+        получится
+      {% endchooseline %}
+    {% endchooseitem %}
+    '{{ render_instance(form.type_to) | inflect('gen','pl') }}'(type_to)
+    {% chooseitem %}
+      если
+      {% maybe %}
+        я
+      {% endmaybe %}
+      продам
+      {{ render_sum(form.amount_from, form.type_from, 'acc', None, 'amount_from', 'type_from') }}
+    {% or %}
+      после продажи
+      {{ render_sum(form.amount_from, form.type_from, 'gen', None, 'amount_from', 'type_from') }}
+    {% endchooseitem %}
+  {% endset %}
+
+  {{ [body] | shuffle([request]) | join }}
+{% endmacro %}
+
+{% phrase render_query %}
+  {% maybe 0.2 %}
+    {% chooseline %}
+      привет
+      добрый вечер
+      доброе утро
+      добрый день
+      хай
+      здарова
+    {% endchooseline %}
+  {% endmaybe %}
+  {% chooseitem %}
+    {{ query1() }}
+  {% or %}
+    {{ query2() }}
+  {% or %}
+    {{ query3() }}
+  {% or %}
+    {{ query4() }}
+  {% or %}
+    {{ query5() }}
+  {% or %}
+    {{ query6() }}
+  {% or %}
+    {{ query7() }}
+  {% or %}
+    {{ query8() }}
+  {% or %}
+    {{ query9() }}
+  {% or %}
+    {{ query10() }}
+  {% endchooseitem %}
+{% endphrase %}

@@ -1,0 +1,759 @@
+{% from "json_macro.jinja" import json_list, json_enumerate_list %}
+{% from "cards/common.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color with context %}
+
+{% from "get_weather/get_weather__common.nlg" import temp, min_max_temp %}
+{% from "common/macros.nlg" import day_part_title %}
+
+{% macro city() -%}
+  {{ form.forecast_location | city_prepcase if form.forecast_location else '' }}
+{% endmacro %}
+
+{% macro render_day_card(title) -%}
+{% set data = context.data %}
+{
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs"
+          },
+          {
+            "title": "{{ title }}",
+            "type": "div-universal-block"
+          },
+          {
+            "rows": [
+              {
+                "cells": [
+                  {
+                    "text": "{{ temp(data|get_item('current.temp') or data|get_item('day.temp.avg')) }}°",
+                    "text_style": "numbers_l",
+                    "horizontal_alignment": "left"
+                  },
+                  {
+                    "image": {
+                      "image_url": "{{ data|get_item('current.icon') or data|get_item('day.icon') }}",
+                      "ratio": 1,
+                      "type": "div-image-element"
+                    },
+                    "image_size": "xxl",
+                    "horizontal_alignment": "left"
+                  }
+                ],
+                "type": "row_element"
+              }
+            ],
+            "columns": [
+              {
+              },
+              {
+                 "left_padding" : "zero"
+              }
+            ],
+            "type": "div-table-block"
+          },
+          {
+            "text": "{{ data|get_item('current.condition.title') or data|get_item('day.condition.title')}}",
+            "type": "div-universal-block"
+          },
+          {
+            "type": "div-separator-block",
+            "size": "xxs"
+          },
+          {% if data|get_item('day.parts') %}
+          {
+            "has_delimiter": 1,
+            "type": "div-separator-block",
+            "size": "xxs"
+          },
+          {
+            "type": "div-separator-block",
+            "size": "s"
+          },
+          {
+            "rows": [
+              {
+                "cells":
+                  {% call(item) json_list(data|get_item('day.parts')) %}
+                    {
+                      "text": "{{ day_part_title(item|get_item('type')) | capitalize_first }}",
+                      "text_style": "text_s"
+                    }
+                  {% endcall %},
+                "type": "row_element"
+              },
+              {
+                "cells":
+                  {% call(item) json_list(data|get_item('day.parts')) %}
+                    {
+                      "image": {
+                        "image_url": "{{ item|get_item('icon') }}",
+                        "ratio": 1,
+                        "type": "div-image-element"
+                      },
+                      "image_position": "right",
+                      "image_size": "xs",
+                      "text": "{{ temp(item|get_item('temp.avg')) }}"
+                    }
+                  {% endcall %},
+                "type": "row_element"
+              }
+            ],
+            "columns": [
+              {
+                "right_padding": "xxl"
+              },
+              {
+                "right_padding": "xxl"
+              },
+              {
+                "weight": 0
+              }
+            ],
+            "type": "div-table-block"
+          },
+          {% endif %}
+          {
+            "type": "div-separator-block",
+            "size": "s"
+          }
+        ],
+        "action": {
+            "url": "{{ form.weather_forecast.uri }}",
+            "log_id": "whole_card"
+        }
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+}
+{%- endmacro %}
+
+{% macro temp_text(grad) %}
+  {% if grad > 0 %}
+    +{{ grad }}°
+  {% else %}
+    {{ grad }}°
+  {% endif %}
+{% endmacro %}
+
+{% macro render_title_1day(data)%}
+  {% set day_rel = data|get_item('day.date')|parse_dt|human_day_rel(data|get_item('day.tz')) %}
+  {% if day_rel == "сегодня" %}
+    {% if form.day_part is none %}
+      {{ day_rel }}
+      днём
+    {% endif %}
+  {% else %}
+    {% if form.day_part is none %}
+      {{ day_rel }}
+      днём
+    {% elif form.day_part == "night" %}
+      {% if day_rel != "завтра" %}
+        {{ day_rel }}
+      {% endif %}
+    {% else %}
+      {{ day_rel }}
+    {% endif %}
+  {% endif %}
+
+  {% if form.day_part == "morning" %}
+    утром
+  {% elif form.day_part == "day" %}
+    днём
+  {% elif form.day_part == "evening" %}
+    вечером
+  {% elif form.day_part == "night" %}
+    ночью
+  {% endif %}
+  {{ city() }}
+{% endmacro %}
+
+
+{% macro render_hour(temperature, item_number, icon_url, local_time, uri)%}
+  {
+    "type": "div-container-block",
+    "height": {
+      "value": 64,
+      "type": "numeric"
+    },
+    "width": {
+      "value": 58,
+      "type": "numeric"
+    },
+    "children": [
+      {
+        "type": "div-table-block",
+        "rows": [
+          {
+            "cells": [
+              {
+                "vertical_alignment": "center",
+                "text_style": "text_s",
+                "horizontal_alignment": "center",
+                "text": "{{ font_color('#ffffff', local_time) }}"
+              }
+            ],
+            "top_padding": "zero",
+            "bottom_padding": "xxs",
+            "type": "row_element"
+          },
+          {
+            "cells": [
+              {
+                "image": {
+                  "type": "div-image-element",
+                  "ratio": 1,
+                  "image_url": "{{ icon_url }}"
+                },
+                "horizontal_alignment": "center",
+                "image_size": "l"
+              }
+            ],
+            "top_padding": "zero",
+            "bottom_padding": "xxs",
+            "type": "row_element"
+          },
+          {
+            "cells": [
+              {
+                "vertical_alignment": "center",
+                "text_style": "text_s",
+                "horizontal_alignment": "center",
+                "text": "{{ font_color('#ffffff', temp_text(temperature)) }}"
+              }
+            ],
+            "top_padding": "zero",
+            "bottom_padding": "xxs",
+            "type": "row_element"
+          }
+        ],
+        "columns": [
+          {
+            "left_padding": "zero",
+            "right_padding": "zero"
+          }
+        ]
+      }
+    ],
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(uri, 'whole_card', item_number, 'open_weather_turbo') }}",
+      "log_id": "whole_card"
+    }
+  }
+{%- endmacro %}
+
+{% macro render_day_card_v2(data, title) -%}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs"
+          },
+          {
+            "title": "{{ font_color('#ffffff', title| capitalize_first) }}",
+            "type": "div-universal-block"
+          },
+          {% if data|get_item('day.temp') %}
+            {% set weather_text = 'Ощущается как ' + temp_text(data.day.condition.feels_like) + ', ' + data.day.condition.title %}
+            {
+              "type": "div-table-block",
+              "rows": [
+                {
+                  "cells": [
+                    {
+                      "text": "{{ font_color('#ffffff', temp_text(data|get_item('day.temp.avg'))) }}",
+                      "text_style": "numbers_l",
+                      "horizontal_alignment": "left"
+                    },
+                    {
+                      "image": {
+                        "image_url": "{{ data.day.icon }}",
+                        "ratio": 1,
+                        "type": "div-image-element"
+                      },
+                      "image_size": "xxl",
+                      "horizontal_alignment": "left",
+                      "bottom_padding": "zero"
+                    }
+                  ],
+                  "type": "row_element"
+                }
+              ],
+              "columns": [
+                {
+                  "left_padding" : "zero",
+                  "right_padding" : "zero"
+                },
+                {
+                   "left_padding" : "zero"
+                }
+              ],
+              "type": "div-table-block"
+            },
+            {
+              "text": "{{ font_color('#ffffff', weather_text) }}",
+              "type": "div-universal-block"
+            },
+          {% endif %}
+          {% if data|get_item('day.temp') and (data|get_item('day.hours') or data|get_item('day.parts'))%}
+            {
+              "has_delimiter": 1,
+              "type": "div-separator-block",
+              "delimiter_color": "{{ '#33ffffff' }}",
+              "size": "xxs"
+            },
+            {
+              "type": "div-separator-block",
+              "size": "m"
+            },
+          {% endif %}
+          {% if data|get_item('day.hours') %}
+            {
+              "type": "div-gallery-block",
+              "padding_between_items": {
+                "value": 1,
+                "unit": "dp",
+                "type": "numeric"
+              },
+              "items": [
+                {% for hour in data.day.hours %}
+                  {% if loop.index0 %}
+                   ,
+                  {% endif %}
+                  {{ render_hour(hour|get_item('temperature'), loop.index, hour|get_item('icon'), hour|get_item('local_day_time'), form.weather_forecast.uri) }}
+                {% endfor %}
+              ]
+            },
+          {% endif %}
+          {% if data|get_item('day.parts') %}
+            {
+              "rows": [
+                {
+                  "cells":
+                    {% call(item) json_list(data|get_item('day.parts')) %}
+                      {
+                        "text": "{{ font_color('#ffffff', day_part_title(item|get_item('type')) | capitalize_first) }}",
+                        "text_style": "text_s"
+                      }
+                    {% endcall %},
+                  "type": "row_element"
+                },
+                {
+                  "cells":
+                    {% call(item) json_list(data|get_item('day.parts')) %}
+                      {
+                        "image": {
+                          "image_url": "{{ item|get_item('icon') }}",
+                          "ratio": 1,
+                          "type": "div-image-element"
+                        },
+                        "image_position": "right",
+                        "image_size": "xs",
+                        "text": "{{ font_color('#ffffff',temp_text(item|get_item('temp.avg')))}}"
+                      }
+                    {% endcall %},
+                  "type": "row_element"
+                }
+              ],
+              "columns": [
+                {
+                  "left_padding": "zero",
+                  "right_padding": "xl"
+                },
+                {
+                  "left_padding": "zero",
+                  "right_padding": "xl"
+                },
+                {
+                  "left_padding": "zero",
+                  "right_padding": "xl"
+                },
+                {
+                  "left_padding": "zero",
+                  "weight": 0
+                }
+              ],
+              "type": "div-table-block"
+            },
+          {% endif %}
+          {
+            "type": "div-separator-block",
+            "size": "s"
+          }
+        ],
+        "action": {
+            "url": "{{ form.weather_forecast.uri }}",
+            "log_id": "whole_card"
+        }
+      }
+    ],
+    "background": [
+      {{ render_background(data.day.background) }}
+    ]
+  }
+{%- endmacro %}
+
+
+{% macro render_background(colorname) %}
+  {% if colorname == "clear_day" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#408fd7' }}",
+      "end_color": "{{ '#52add3' }}"
+    }
+  {% elif colorname == "cloudy_day" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#4667a1' }}",
+      "end_color": "{{ '#4da7b9' }}"
+    }
+  {% elif colorname == "overcast_light_prec_day" or colorname == "overcast_day" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#7687ae' }}",
+      "end_color": "{{ '#92a5bb' }}"
+    }
+  {% elif colorname == "overcast_prec_day" or colorname == "prec_day" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#314951' }}",
+      "end_color": "{{ '#7a8ca0' }}"
+    }
+  {% elif colorname == "clear_night" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#04284F' }}",
+      "end_color": "{{ '#33587F' }}"
+    }
+  {% elif colorname == "cloudy_night" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#273142' }}",
+      "end_color": "{{ '#5C7E9C' }}"
+    }
+  {% elif colorname == "overcast_light_prec_night" or colorname == "overcast_night" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#2C353F' }}",
+      "end_color": "{{ '#78787F' }}"
+    }
+  {% elif colorname == "overcast_prec_night" or colorname == "prec_night" %}
+    {
+      "type": "div-gradient-background",
+      "start_color": "{{ '#0A2B3F' }}",
+      "end_color": "{{ '#566668' }}"
+    }
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_list_card(title, days, action_url) -%}
+{
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "size": "xs",
+            "type": "div-separator-block"
+          },
+          {
+            "title": "{{ title }}",
+            "type": "div-universal-block"
+          },
+          {
+            "size": "xxs",
+            "type": "div-separator-block"
+          },
+          {
+            "rows":
+                {% call(day) json_list(days) %}
+                  {% with date = day|get_item('date')|parse_dt %}
+                  {
+                    "cells": [
+                      {
+                        "text": "{{ date|format_weekday('ru')|capitalize }}, {{ date|human_date(day|get_item('tz')) }}",
+                        "horizontal_alignment": "left",
+                        "vertical_alignment": "center"
+                      },
+                      {
+                        "text": "{{ temp(day|get_item('temp.max')) }}",
+                        "text_style": "text_m",
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "right"
+                      },
+                      {
+                        "text": "<font color=\"{{ '#CCCCCC' }}\">{{ temp(day|get_item('temp.min')) }}<\/font>",
+                        "text_style": "text_m",
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "right"
+                      },
+                      {
+                        "image": {
+                          "image_url": "{{ day|get_item('icon') }}",
+                          "image_size": "m",
+                          "type": "div-image-element"
+                        },
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "center"
+                      }
+                    ],
+                    "type": "row_element"
+                  }
+                  {% endwith %}
+                {% endcall %},
+            "columns": [
+              {
+                "weight": 1
+              },
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              },
+              {
+                "left_padding": "xxs",
+                "right_padding": "xxs"
+              },
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              }
+            ],
+            "type": "div-table-block"
+          },
+          {
+            "type": "div-separator-block"
+          }
+        ],
+        "action": {
+          "url": "{{ open_uri_action(action_url, 'whole_card', 'weather_whole_card') }}",
+          "log_id": "whole_card"
+        }
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+}
+{%- endmacro %}
+
+{% macro render_list_card_v2(title, days, action_url) -%}
+{
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "size": "xs",
+            "type": "div-separator-block"
+          },
+          {
+            "title": "{{ title }}",
+            "type": "div-universal-block"
+          },
+          {
+            "size": "xxs",
+            "type": "div-separator-block"
+          },
+          {
+            "rows":
+                {% call(item_number, day) json_enumerate_list(days) %}
+                  {% with date = day|get_item('date')|parse_dt %}
+                  {
+                    "top_padding": "xs",
+                    "bottom_padding": "xs",
+                    "cells": [
+                      {
+                        "text": "{% if day.is_red %}{{ font_color('#ec4840',  date|format_weekday('ru')|capitalize) }}{% else %}{{ date|format_weekday('ru')|capitalize }}{% endif %}{{ font_color('#808080', ', ' + date|human_date(day|get_item('tz'))) }}",
+                        "horizontal_alignment": "left",
+                        "vertical_alignment": "center",
+                        "action": {
+                          "url": "{{ open_uri_action_for_item_in_list(day|get_item('uri'), 'day_in_list', item_number, 'open_weather_day') }}",
+                          "log_id": "day_in_list"
+                        }
+                      },
+                      {
+                        "text": "{{ temp_text(day|get_item('temp.max')) }}",
+                        "text_style": "text_m",
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "right",
+                        "action": {
+                          "url": "{{ open_uri_action_for_item_in_list(day|get_item('uri'), 'day_in_list', item_number, 'open_weather_day') }}",
+                          "log_id": "day_in_list"
+                        }
+                      },
+                      {
+                        "text": "<font color=\"{{ '#808080' }}\">{{ temp_text(day|get_item('temp.min')) }}<\/font>",
+                        "text_style": "text_m",
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "right",
+                        "action": {
+                          "url": "{{ open_uri_action_for_item_in_list(day|get_item('uri'), 'day_in_list', item_number, 'open_weather_day') }}",
+                          "log_id": "day_in_list"
+                        }
+                      },
+                      {
+                        "image": {
+                          "image_url": "{{ day|get_item('icon') }}",
+                          "image_size": "m",
+                          "type": "div-image-element"
+                        },
+                        "vertical_alignment": "center",
+                        "horizontal_alignment": "center",
+                        "action": {
+                          "url": "{{ open_uri_action_for_item_in_list(day|get_item('uri'), 'day_in_list', item_number, 'open_weather_day') }}",
+                          "log_id": "day_in_list"
+                        }
+                      }
+                    ],
+                    "type": "row_element"
+                  }
+                  {% endwith %}
+                {% endcall %},
+            "columns": [
+              {
+                "left_padding": "zero",
+                "weight": 1
+              },
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              },
+              {
+                "left_padding": "xxs",
+                "right_padding": "xxs"
+              },
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              }
+            ],
+            "type": "div-table-block"
+          },
+          {
+            "size": "s",
+            "delimiter_color": "{{ '#0a000000' }}",
+            "weight": 1,
+            "type": "div-separator-block",
+            "has_delimiter": 1
+          },
+          {
+            "type": "div-footer-block",
+            "text_style": "button",
+            "text": "{{ font_color('#6839cf', 'СМОТРЕТЬ ПРОГНОЗ НА МЕСЯЦ') }}",
+            "action": {
+              "url": "{{ open_uri_action(action_url, 'card_bottom', 'open_weather_turbo') }}",
+              "log_id": "card_bottom"
+            }
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+}
+{%- endmacro %}
+
+{% card weather__curday %}
+  {% set title -%}
+    Сейчас {{ city() }}
+  {%- endset %}
+  {{ render_day_card(title) }}
+{% endcard %}
+
+{% card weather__1day %}
+  {% set data = context.data %}
+  {% set title -%}
+    {{ data|get_item('day.date')|parse_dt|human_day_rel(data|get_item('day.tz'))|capitalize }}
+
+    {% if form.day_part == "morning" %}
+      утром
+    {% elif form.day_part == "day" %}
+      днем
+    {% elif form.day_part == "evening" %}
+      вечером
+    {% elif form.day_part == "night" %}
+      ночью
+    {% endif %}
+    {{ city() }}
+  {% endset %}
+
+  {{ render_day_card(title) }}
+{% endcard %}
+
+{% card weather__1day_v2 %}
+  {% set data = context.data %}
+  {% set title -%}
+    {{ render_title_1day(data) }}
+  {%- endset  %}
+  {{ render_day_card_v2(data, title) }}
+{% endcard %}
+
+{% card weather__curday_v2 %}
+  {% set title -%}
+    Сейчас {{ city() }}
+  {%- endset %}
+
+  {% set data = context.data %}
+
+  {{ render_day_card_v2(data, title) }}
+{% endcard %}
+
+
+{% card weather__days_list %}
+  {% set data = context.data %}
+  {% set title -%}
+    Погода
+    {% if form.when|get_item('start.weekend') and form.when|get_item('end.weekend') %}
+    на выходные
+    {% elif form.when|get_item('start.days_relative')
+        and form.when|get_item('end.days_relative')
+        and form.when|get_item('start.days') == 0 %}
+    на {{ data|get_item('days')|count }} {{ 'день'|pluralize(data|get_item('days')|count) }}
+    {% elif form.when|get_item('start.weeks_relative')
+        and form.when|get_item('end.weeks_relative')
+        and form.when|get_item('start.weeks') == 0
+        and form.when|get_item('end.weeks') == 1 %}
+    на неделю
+    {% endif %}
+    {{ city() }}
+  {% endset %}
+  {{ render_list_card(title, data|get_item('days'), form.weather_forecast|get_item('uri')) }}
+{% endcard %}
+
+{% card weather__days_list_v2 %}
+  {% set data = context.data %}
+  {% set title -%}
+    Погода
+    {{ city() }}
+    {% if form.when|get_item('start.weekend') and form.when|get_item('end.weekend') %}
+    на выходные
+    {% elif form.when|get_item('start.days_relative')
+        and form.when|get_item('end.days_relative')
+        and form.when|get_item('start.days') == 0 %}
+    на {{ data|get_item('days')|count }} {{ 'день'|pluralize(data|get_item('days')|count) }}
+    {% elif form.when|get_item('start.weeks_relative')
+        and form.when|get_item('end.weeks_relative')
+        and form.when|get_item('start.weeks') == 0
+        and form.when|get_item('end.weeks') == 1 %}
+    на неделю
+    {% endif %}
+  {% endset %}
+  {{ render_list_card_v2(title, data|get_item('days'), form.weather_forecast|get_item('uri')) }}
+{% endcard %}

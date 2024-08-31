@@ -1,0 +1,37 @@
+{% nlgimport "cards/taxi_status.nlg" %}
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import order_status with context %}
+{% from "common/macros.nlg" import inability %}
+
+{% phrase taxi_status_map_text %}
+  {% if is_active_attention("taxi_order_already_exist") %}
+    {% chooseline %}
+      Вы уже заказали машину.
+      Вы уже заказали такси.
+      Такси уже заказано.
+    {% endchooseline %}
+  {% endif %}
+  {{ order_status(form) }}
+  {% if is_active_attention("first_order") %}
+    Чтобы получить информацию о водителе, спросите: «Алиса, кто меня везёт?»
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if not form.map_url %}
+    {% if is_active_attention("taxi_order_already_exist") %}
+      {% chooseline %}
+        Вы уже заказали машину.
+        Вы уже заказали такси.
+        Такси уже заказано.
+      {% endchooseline %}
+    {% endif %}
+    {{ order_status(form) }}
+    {% if is_active_attention("first_order") %}
+      {% tx %}Чтобы узнать о перевозчике больше, спросите: «Алиса, кто меня везёт?»{% etx %}
+      {% vc %}Чтобы узнать о перев+ощике больше, спросите: «Алиса, кт+о меня везёт?»{% evc %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

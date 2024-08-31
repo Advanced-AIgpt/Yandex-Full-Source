@@ -1,0 +1,304 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "search/search__ask.nlg" %}
+{% nlgimport "search/search__common.nlg" %}
+{% nlgimport "cards/search_factoid_div_cards.nlg" %}
+{% nlgimport "cards/images_search_gallery_div1.nlg" %}
+{% nlgimport "cards/serp_gallery.nlg" %}
+{% nlgimport "cards/relevant_skills.nlg" %}
+{% from "common.nlg" import showing_search_results_not_supported, opening_sites_or_apps_not_supported, nothing_found %}
+{% from "search/search__common.nlg" import get_search_info, render_factoid_or_object, render_serp_invitation_message,
+                                           render_search_images_invitation_message %}
+
+{% set info = namespace() %}
+{% do get_search_info(form, info, req_info.experiments['enable_factoid_child_answer'] != None) %}
+
+{% macro render_navigator_warning() %}
+  Могу поискать это в Яндексе или на карте.
+{% endmacro %}
+
+{% macro render_auto_warning() %}
+  Извините, пока не умею.
+{% endmacro %}
+
+{% macro render_web_search_push() %}
+  {% chooseline %}
+    Отправила ответ вам на телефон.
+    Сейчас вам придет пуш-сообщение с результатами поиска.
+    Ждите пуш-сообщение с результатами поиска от приложения Яндекс.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_uri %}
+  {% if not is_smart_speaker() and not is_navigator() and not is_auto() and not is_elari_watch() %}
+    {% if info.afisha_url %}
+      {{ info.afisha_url }}
+    {% elif info.kinopoisk_url %}
+      {{ info.kinopoisk_url }}
+    {% elif info.translate_url %}
+      {{ info.translate_url }}
+    {% elif info.music_url %}
+      {{ info.music_url }}
+    {% elif info.market_url %}
+      {{ info.market_url }}
+    {% elif info.rasp_url %}
+      {{ info.rasp_url }}
+    {% elif info.avia_url %}
+      {{ info.avia_url }}
+    {% elif info.tv_url %}
+      {{ info.tv_url }}
+    {% elif info.auto_url %}
+      {{ info.auto_url }}
+    {% elif info.realty_url %}
+      {{ info.realty_url }}
+    {% elif info.nav_url %}
+      {{ info.nav_url }}
+    {% elif info.serp_search_url and not info.factoid_text and not info.calculator and not info.pre_rendered_card and not is_active_attention('skills_discovery') %}
+      {{ info.serp_search_url }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if info.pre_rendered_card %}
+    {% text %} {{ info.pre_rendered_card['text'] }} {% endtext %}
+    {% voice %} {{ info.pre_rendered_card['tts'] or info.pre_rendered_card['text'] }} {% endvoice %}
+  {% elif info.afisha_url %}
+    {% chooseline %}
+      Давайте сразу на Афише посмотрим, чтобы время не терять.
+      Предлагаю сразу пойти на Афишу.
+      Давайте с этим сразу на Афишу.
+    {% endchooseline %}
+  {% elif info.kinopoisk_url %}
+    {% chooseline %}
+      Кажется, вопрос про кино. Давайте сразу в Кинопоиск.
+      Я сразу иду на Кинопоиск, когда у меня вопрос про кино.
+      Можем сразу на Кинопоиск пойти. Там оценки и рецензии.
+    {% endchooseline %}
+  {% elif info.translate_url %}
+    {% chooseline %}
+      Я думаю, для перевода нет ничего лучше {%vc%}Яндекс Переводчика{%evc%}{%tx%}Яндекс.Переводчика{%etx%}.
+      Лет ми спик фром май харт: пойдёмте в {%vc%}Яндекс Переводчик{%evc%}{%tx%}Яндекс.Переводчик{%etx%}. Там переводить проще.
+    {% endchooseline %}
+  {% elif info.music_url %}
+    {% chooseline %}
+      Если хотите послушать музыку, пойдемте сразу в {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%}, там удобно.
+      Веселее всего слушать музыку на {%vc%}Яндекс Музыке{%evc%}{%tx%}Яндекс.Музыке{%etx%}, пойдёмте туда.
+      За музыкой нужно только в {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%} ходить.
+      Можем сразу на {%vc%}Яндекс Музыку{%evc%}{%tx%}Яндекс.Музыку{%etx%} пойти.
+    {% endchooseline %}
+  {% elif info.market_url %}
+    {% chooseline %}
+      Давайте сэкономим пару секунд и сразу поищем на Маркете. Вот такой план.
+      Быстрее всего товары можно найти и купить на Маркете. Там и отзывы есть.
+    {% endchooseline %}
+  {% elif info.rasp_url %}
+    {% chooseline %}
+      Я думаю, расписание транспорта удобнее всего смотреть на {%vc%}Яндекс Расписаниях{%evc%}{%tx%}Яндекс.Расписаниях{%etx%}. Открываю.
+      Нужно расписание транспорта? У Яндекса есть сервис специально для этого. Давайте посмотрим там.
+      Электрички и автобусы — это сервис {%vc%}Яндекс Расписания{%evc%}{%tx%}Яндекс.Расписания{%etx%}. Не говоря уже о поездах. Давайте там посмотрим.
+    {% endchooseline %}
+  {% elif info.avia_url %}
+    {% chooseline %}
+      Ключ поверни и полетели. У Яндекса есть специальный поиск билетов. Давайте там поищем.
+      Давайте на {%vc%}Яндекс Авиабилетах{%evc%}{%tx%}Яндекс.Авиабилетах{%etx%} это поищем, там можно любые билеты найти. Открываю.
+      Давайте на {%vc%}Яндекс Авиабилетах{%evc%}{%tx%}Яндекс.Авиабилетах{%etx%} это поищем, там можно дешёвые билеты найти. Открываю.
+    {% endchooseline %}
+  {% elif info.tv_url %}
+    {% chooseline %}
+      Предлагаю ничего не искать, а сразу пойти на сервис Телепрограмма.
+    {% endchooseline %}
+  {% elif info.auto_url %}
+    {% chooseline %}
+      Я думаю, если хотите купить или продать автомобиль, нет ничего лучше {%vc%}Авто ру{%evc%}{%tx%}Auto.Ru{%etx%}. Пойдемте прямо туда.
+    {% endchooseline %}
+  {% elif info.realty_url %}
+    {% chooseline %}
+      Если вас интересует недвижимость, можем сразу пойти на специальный сервис Яндекса, мне кажется, там удобнее.
+    {% endchooseline %}
+  {% elif info.calculator %}
+    {% if info.calculator == 'inf' %}
+      Бесконечность.
+    {% elif info.calculator == '-inf' %}
+      Минус бесконечность.
+    {% else %}
+      {% voice %}
+        {% if 'e' in info.calculator %}
+          Вот ответ
+        {% else %}
+          {{ info.calculator | try_round_float }}
+        {% endif %}
+      {% endvoice %}
+      {% text %}
+        {{ info.calculator }}
+      {% endtext %}
+    {% endif %}
+  {% elif info.nav_url %}
+    {% if is_smart_speaker() or is_elari_watch() %}
+      {{ opening_sites_or_apps_not_supported() }}
+    {% elif is_navigator() %}
+      {{ render_navigator_warning() }}
+    {% elif is_auto() %}
+      {{ render_auto_warning() }}
+    {% else %}
+      Открываю.
+    {% endif %}
+  {% elif info.factoid_text or info.factoid_tts %}
+    {{ render_factoid_or_object(info.factoid_text, info.factoid_hostname, info.factoid_tts, info.factoid_voice_info, info.factoid_child_search, info.factoid_related_query, is_smart_speaker() or is_auto() or is_elari_watch()) }}
+  {% elif is_active_attention('skills_discovery') %}
+    # Do nothing in this case, text_card + div_card have already done the job
+  {% else %}
+    {% if is_active_attention("search__nothing_found") %}
+      {{ nothing_found() }}
+    {% else %}
+      {% if is_smart_speaker() and is_active_attention("search__push_sent") %}
+        {{ render_web_search_push() }}
+      {% elif is_smart_speaker() or is_elari_watch() %}
+        {{ showing_search_results_not_supported() }}
+      {% elif is_navigator() %}
+        {{ render_navigator_warning() }}
+      {% elif is_auto() %}
+        {{ render_auto_warning() }}
+      {% elif is_active_attention("search_images") %}
+        {{ render_search_images_invitation_message() }}
+      {% else %}
+        {{ render_serp_invitation_message() }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase search__skills_discovery %}
+  Хорошо. Вот кто может вам помочь:
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__serp %}
+  Поискать в Яндексе
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__serp %}
+  {{ info.serp_search_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__factoid_src %}
+  Открыть источник
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__factoid_src %}
+  {% if info.factoid_url %}
+    {{ info.factoid_url }}
+  {% elif info.object_url %}
+    {{ info.object_url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__nav %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__nav %}
+  {{ info.nav_url or info.factoid_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__phone_call %}
+  Позвонить
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__phone_call %}
+  {{ info.factoid_phone_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__afisha %}
+  Открыть Афишу
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__afisha %}
+  {{ info.afisha_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__kinopoisk %}
+  Открыть Кинопоиск
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__kinopoisk %}
+  {{ info.kinopoisk_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__translate %}
+  Открыть Переводчик
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__translate %}
+  {{ info.translate_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__music %}
+  Открыть Яндекс.Музыку
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__music %}
+  {{ info.music_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__musicplayer %}
+  Открыть Яндекс.Музыку
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__musicplayer %}
+  {{ context.search__musicplayer.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__market %}
+  Открыть Маркет
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__market %}
+  {{ info.market_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__rasp %}
+  Открыть Яндекс.Расписания
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__rasp %}
+  {{ info.rasp_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__avia %}
+  Открыть Яндекс.Авиабилеты
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__avia %}
+  {{ info.avia_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__tv %}
+  Открыть Телепрограмму
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__tv %}
+  {{ info.tv_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__auto %}
+  Открыть Auto.Ru
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__auto %}
+  {{ info.auto_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__realty %}
+  Открыть Яндекс.Недвижимость
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__realty %}
+  {{ info.realty_url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__search__show_on_map %}
+  Искать на карте
+{% endphrase %}
+
+{% phrase render_suggest_uri__search__show_on_map %}
+  {{ info.map_search_url }}
+{% endphrase %}

@@ -1,0 +1,39 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "todo/todo__common.nlg" import todo_unsupported_device with context %}
+{% nlgimport "todo/todo__common.nlg" %}
+
+{% phrase ask__what %}
+  {% chooseline %}
+    Что добавить в список дел?
+    Что записать?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention('incomplete_datetime') %}
+    Назовите полную дату для задачи.
+  {% elif form.answer.type == 'ok' %}
+    Добавила в список дел
+    {% if form.date %}
+      {% text %}
+        {{ form.date | render_date_with_on_preposition | attr('text')}}
+      {% endtext %}
+      {% voice %}
+        {{ form.date | render_date_with_on_preposition | attr('voice')}}
+      {% endvoice %}
+    {% endif %}
+    "{{ form.what }}".
+  {% elif form.answer.type == 'authorization' %}
+    Для этого вам нужно авторизоваться. Затем повторите, что нужно сделать.
+  {% elif form.answer.type == 'cancel' %}
+    {% if form.answer.is_set == 'yes' %}
+      Хорошо, отменила.
+    {% elif form.answer.is_set == 'no' %}
+      Чтобы что-то отменить надо что-то создать.
+    {% elif form.answer.is_set == 'ellipsis' %}
+      Хорошо, отменила.
+    {% endif %}
+  {% else %}
+    {{ todo_unsupported_device() }}
+  {% endif %}
+{% endphrase %}

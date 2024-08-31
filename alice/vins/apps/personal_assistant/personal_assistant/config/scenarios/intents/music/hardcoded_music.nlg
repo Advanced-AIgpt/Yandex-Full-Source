@@ -1,0 +1,158 @@
+{% from "music/music__common.nlg" import ya_plus, render_ya_plus_required, render_authorization_required %}
+{% from "music/nonmusic_common.nlg" import render_podcast_answer, render_podcast_restricted_by_content_settings with context %}
+{% nlgimport "cards/music.nlg" %}
+
+{% macro render_sound_answer(answer, type, id) %}
+  Включаю
+  {% if not type and not id %}
+    звуки природы.
+  {% elif type == 'playlist' %}
+    {{ answer.title }}.
+  {% elif type == 'album' %}
+    {% if id == '5293930' %}
+      звуки города.
+    {% elif id == '2627925' %}
+      звук дождя.
+    {% elif id == '4954482' %}
+      белый шум.
+    {% else %}
+      {{ answer.title }}.
+    {% endif %}
+  {% else %}
+    {{ answer.title }}.
+  {% endif %}
+{% endmacro %}
+
+{% macro what_to_play() %}
+  {% if form.raw_form.name == 'personal_assistant.scenarios.music_podcast' %}
+    подкасты
+  {% elif form.raw_form.name == 'personal_assistant.scenarios.music_ambient_sound' %}
+    звуки природы
+  {% else %}
+    музыку
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if form.raw_form.name == 'personal_assistant.scenarios.music_podcast' %}
+    {% if is_active_attention('music_play_not_supported_on_device') %}
+      {% chooseline %}
+        Простите, но я не могу включить подкаст здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+        Упс, подкасты на телик пока не залила. Но могу с радостью включить их в приложении или через колонку, если попросите.
+      {% endchooseline %}
+    {% elif is_active_attention('unknown_music_item') %}
+      Я не нашла такого подкаста. Послушайте мой собственный.
+    {% else %}
+      {% if is_active_attention('is_general_playlist') and is_active_attention('yamusic_audiobranding') and randuniform(0, 1) < get_attention('yamusic_audiobranding').data %}
+        {% chooseitem %}
+          {% text %}
+            Вот один из подкастов Яндекс.Музыки.
+          {% endtext %}
+          {% voice %}
+            Вот один из подкастов Яндекс Музыки.
+          {% endvoice %}
+        {% or %}
+          {% text %}
+            На Яндекс.Музыке много подкастов, как насчет этого?
+          {% endtext %}
+          {% voice %}
+            На Яндекс Музыке много подкастов, как насчет этого?
+          {% endvoice %}
+        {% endchooseitem %}
+      {% else %}
+        {{ render_podcast_answer(form.answer) }}
+        .
+      {% endif %}
+    {% endif %}
+  {% elif form.raw_form.name == 'personal_assistant.scenarios.music_ambient_sound' %}
+    {% if is_active_attention('music_play_not_supported_on_device') %}
+      {% chooseline %}
+        Простите, но я не могу включить звуки природы здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+        Упс, звуки природы на телик пока не залила. Но могу с радостью включить их в приложении или через колонку, если попросите.
+      {% endchooseline %}
+    {% elif is_active_attention('unknown_nature_sound') or is_active_attention('unknown_music_item') %}
+      Извините, но такого звука у меня нет.
+    {% else %}
+      {% if form.ambient_sound %}
+        {% set sound = form.ambient_sound.split('/') %}
+        {{ render_sound_answer(form.answer, sound[0], sound[1]) }}
+      {% else %}
+        {{ render_sound_answer(form.answer, None, None) }}
+      {% endif %}
+    {% endif %}
+  {% else %}
+    Включаю
+    {% if form.answer.title %}
+      {{ form.answer.title }}
+    {% elif form.answer.name %}
+      {{ form.answer.name }}
+    {% endif %}
+    .
+  {% endif %}
+{% endphrase %}
+
+# errors
+
+{% phrase render_error__unauthorized %}
+{% set content = what_to_play().strip() %}
+  {% if context.error.data.code == 'music_authorization_problem' %}
+    О, кажется, у вас проблемы с авторизацией на Яндекс Музыке.
+  {% elif context.error.data.code == 'unauthorized_general' %}
+    {{ render_authorization_required(content) }}
+  {% elif context.error.data.code == 'payment-required' %}
+    {% if is_active_attention('plus_push') %}
+      Чтобы слушать {{ content }}, вам нужна подписка {{ ya_plus() }}.
+      Ссылка для покупки придёт на ваш смартфон — я уже её отправила.
+    {% else %}
+      {{ render_ya_plus_required(content) }}
+    {% endif %}
+  {% elif context.error.data.code == 'promo_available' and req_info.experiments['alter_music_promo_nlg'] != None %}
+    Чтобы слушать {{ content }}, вам нужно оформить подписку {{ ya_plus() }}. Откройте приложение Яндекса для активации промо-периода. Отправила ссылку на телефон.
+  {% elif context.error.data.code == 'promo_available' %}
+    Чтобы слушать {{ content }}, вам нужно оформить подписку {{ ya_plus() }}. Сейчас вам доступен промо-период. Вы можете активировать его в приложении Яндекс.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__musicerror %}
+  {% if context.error.data.code == 'music_restricted_by_child_content_settings' %}
+    {% if form.raw_form.name == 'personal_assistant.scenarios.music_podcast' %}
+      {{ render_podcast_restricted_by_content_settings() }}
+    {% else %}
+      Лучше послушай эту музыку вместе с родителями.
+    {% endif %}
+  {% endif %}
+  {% if context.error.data.code == 'unknown_ambient_sound' %}
+    Извините, не могу найти такой звук.
+  {% endif %}
+  {% if context.error.data.code == 'unknown_music_item' %}
+    Извините, не могу найти
+    {% if form.raw_form.name == 'personal_assistant.scenarios.music_podcast' %}
+      такой подкаст
+    {% elif form.raw_form.name == 'personal_assistant.scenarios.music_ambient_sound' %}
+      такой звук
+    {% else %}
+      такую музыку
+    {% endif %}
+    .
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+  Я не могу включить {{ what_to_play() }} на этом устройстве.
+{% endphrase %}
+
+{% phrase render_suggest_caption__hardcoded_music__open_uri %}
+  Слушать на Яндекс.Музыке
+{% endphrase %}
+
+{% phrase render_suggest_uri__hardcoded_music__open_uri %}
+  {{ form.answer.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__ambient_sound__open_uri %}
+  Слушать на Яндекс.Музыке
+{% endphrase %}
+
+{% phrase render_suggest_uri__ambient_sound__open_uri %}
+  {{ form.answer.uri }}
+{% endphrase %}

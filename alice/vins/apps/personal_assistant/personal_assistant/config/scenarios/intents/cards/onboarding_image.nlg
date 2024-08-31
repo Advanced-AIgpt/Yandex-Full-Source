@@ -1,0 +1,114 @@
+{% from "cards/common.nlg" import start_image_recognizer_action with context %}
+{% from "json_macro.jinja" import json_enumerate_items %}
+
+{% macro render_onboarding_image_item(item_text, item_number, icon_url) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ icon_url }}",
+          "ratio": 1.5
+        }
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ item_text }}",
+        "title_style": "text_m",
+        "title_max_lines": 2
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 144,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 160,
+      "type": "numeric"
+    },
+    "alignment_horizontal": "center",
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ start_image_recognizer_action(item_number) }}",
+      "log_id": "onboarding_image"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% set onboarding_image_cases_data = [
+  dict(
+    text='Распознать объект',
+    name='object'
+  ),
+  dict(
+    text='Найти товар',
+    name='goods'
+  ),
+  dict(
+    text='Распознать и перевести текст',
+    name='text'
+  ),
+  dict(
+    text='Узнать знаменитость',
+    name='celebrity'
+  ),
+  dict(
+    text='Найти похожие изображения',
+    name='similar'
+  ),
+  dict(
+    text='Узнать породу животного',
+    name='animal'
+  ),
+  dict(
+    text='Определить вид растения',
+    name='plant'
+  ),
+  dict(
+    text='Распознать QR-код',
+    name='qr_code'
+  ),
+  dict(
+    text='Определить модель авто',
+    name='auto'
+  ),
+] %}
+
+{% card onboarding_image %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(onboarding_image_cases_data) %}
+                {% set icon_url = context.data.get(item.name).icon_url %}
+                {{ render_onboarding_image_item(item.text, item_number, icon_url) }}
+              {% endcall %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}

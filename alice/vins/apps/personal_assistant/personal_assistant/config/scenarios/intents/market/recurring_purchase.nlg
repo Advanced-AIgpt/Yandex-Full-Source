@@ -1,0 +1,505 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "market/common.nlg" %}
+{% nlgimport "market/suggests/cancel.nlg" %}
+{% nlgimport "market/suggests/start_choice_again.nlg" %}
+{% nlgimport "market/suggests/authorization.nlg" %}
+{% nlgimport "market/suggests/suggests.nlg" %}
+{% from "market/common.nlg" import
+  attempts_reminder, currency_sign, debug_run, delivery_name, pretty_date, pretty_phone, render_gallery, render_gallery_more, render_offer, 
+  render_model, checkout_attempts_reminder, pretty_date, render_big_number, render_beru,
+  render_cancel, render_price, render_market %}
+
+{% if not is_telegram() %}
+  {% nlgimport "cards/market/beru_order.nlg" %}
+  {% nlgimport "cards/market/gallery.nlg" %}
+  {% nlgimport "cards/market/product_details.nlg" %}
+  {% nlgimport "cards/market/beru_product_details.nlg" %}
+  {% nlgimport "cards/market/order_details.nlg" %}
+{% endif %}
+
+{% macro order_number(index) -%}
+{% set table = ["нулевой", "первый", "второй", "третий", "четвёртый", "пятый", "шестой", "седьмой", "восьмой", "девятый", "десятый", "одиннадцатый", "двенадцатый"] %}
+{% set table_len = 12 %}
+{% if 0 <= index and index <= table_len %}
+{% text %}{{ index }}{% endtext %}{% voice %}{{ table[index] }}{% endvoice %}
+{% else %}
+{{ index }}
+{% endif %}
+{%- endmacro -%}
+
+
+{% macro render_offer_price(prices, currency) -%}
+  {%- if prices.value -%}
+    {{- prices.value }} {{ currency_sign(currency) -}}
+  {%- else -%}
+    от {{ prices.min }} {{ currency_sign(currency) -}}
+  {%- endif -%}
+{%- endmacro -%}
+
+
+{% macro render_address(details) -%}
+  {%- if details.get("outlet_name") -%}
+    {{- details.outlet_name -}}.
+  {% endif -%}
+  {{- details.address -}}
+{%- endmacro %}
+
+
+{% macro render_delivery_interval(delivery_interval, req_info) %}
+  {% if delivery_interval.fromDate
+         and delivery_interval.toDate
+         and delivery_interval.fromDate != delivery_interval.toDate %}
+    {{ pretty_date(delivery_interval.fromDate, req_info, dayfirst=True) }}
+    -
+    {{ pretty_date(delivery_interval.toDate, req_info, dayfirst=True) }}
+  {% else %}
+    {{ pretty_date(delivery_interval.fromDate, req_info, dayfirst=True) }}
+    {% if delivery_interval.fromTime and delivery_interval.toTime %}
+      с {{ delivery_interval.fromTime }} до {{ delivery_interval.toTime }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase recurring_purchase__garbage %}
+  {% chooseline %}
+    Извините, я вас не поняла. Давайте как-нибудь по-другому.
+    Это не похоже на параметры товара.
+  {% endchooseline %}
+  {{ attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_activation %}
+  К сожалению, на данном устройстве я пока не умею покупать товары.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__login %}
+  {% if is_ios() or is_searchapp_android() %}
+    {# ПП #}
+    Чтобы продолжить шопинг, вам необходимо авторизоваться. Затем просто повторите ваш запрос.
+  {% else %}
+    {# не ПП (бразуер/лаунчер/etc) #}
+    {% chooseline %}
+      Чтобы продолжить покупки, войдите в свой аккаунт на Яндексе.
+      Чтобы продолжить шопинг, вам нужно войти в свой аккаунт на Яндексе.
+      Чтобы продолжить шопинг, пожалуйста, авторизуйтесь в Яндексе.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_email %}
+  {% if is_ios() or is_searchapp_android() %}
+    {# ПП #}
+    Чтобы продолжить шопинг, вам необходимо авторизоваться. Затем просто повторите ваш запрос.
+  {% else %}
+    {# не ПП (бразуер/лаунчер/etc) #}
+    {% chooseline %}
+      Чтобы продолжить покупки, войдите в свой аккаунт на Яндексе.
+      Чтобы продолжить шопинг, вам нужно войти в свой аккаунт на Яндексе.
+      Чтобы продолжить шопинг, пожалуйста, авторизуйтесь в Яндексе.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__still_no_login %}
+    {% if is_ios() or is_searchapp_android() %}
+      {# ПП #}
+      {% chooseline %}
+        К сожалению, вы все еще не залогинены. Войдите в свой аккаунт в приложении Яндекс.
+        К сожалению, вы все еще не залогинены. Пожалуйста, авторизуйтесь в приложении Яндекс.
+        К сожалению, вы все еще не залогинены. Вам нужно войти в свой аккаунт в приложении Яндекс.
+      {% endchooseline %}
+    {% else %}
+      {# не ПП (бразуер/лаунчер/etc) #}
+      {% chooseline %}
+        К сожалению, вы все еще не залогинены. Войдите в свой аккаунт на Яндексе.
+        К сожалению, вы все еще не залогинены. Пожалуйста, авторизуйтесь в Яндексе.
+        К сожалению, вы все еще не залогинены. Вам нужно войти в свой аккаунт на Яндексе.
+      {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__exit %}
+  {% chooseline %}
+    Хорошо, вернемся к покупкам в другой раз.
+    Хорошо, вернемся к покупкам немного позже.
+    Как скажете. Если вы захотите продолжить шоппинг - скажите мне об этом.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_items_number %}
+  Сколько единиц данного товара будем заказывать?
+{% endphrase %}
+
+
+{% phrase recurring_purchase__invalid_items_number %}
+  Извините, я вас не поняла. Сколько единиц будем заказывать?
+{% endphrase %}
+
+
+{% phrase recurring_purchase__not_enough_items %}
+  К сожалению, у нас осталось только
+  {{ context.data.available_items_number }} {{ "штука" | pluralize(context.data.available_items_number) }}.
+  Сколько закажем?
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_phone %}
+  {% chooseline %}
+    Супер! Можно оформлять заказ. Назовите свой телефонный номер.
+    Есть! Двигаемся к финалу. Теперь мне нужен номер вашего телефона.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__invalid_phone %}
+  Извините, не разобрала. Назовите телефон ещё раз или введите его с клавиатуры.
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_address %}
+  {% chooseline %}
+    Теперь назовите адрес — город, улицу, номер и корпус дома.
+    Теперь мне нужен адрес доставки — город, улица, номер и корпус дома.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__invalid_address %}
+  К сожалению, что-то пошло не так. Назовите адрес доставки — город, улицу, номер и корпус дома.
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_delivery_options %}
+  {% chooseline %}
+    Выберите удобный день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите подходящее время доставки. Вот разные варианты — вам нужно только назвать номер.
+  {% endchooseline %}
+  \n
+  {% text %}
+    {% for deliveryOption in form.state.deliveryOptions %}
+      {{ loop.index }}) {{ render_delivery_interval(deliveryOption.dates, req_info) }}\n
+    {% endfor %}
+  {% endtext %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_delivery_first_option %}
+  Ближайший возможный интервал доставки:\n
+  {{ render_delivery_interval(form.state.deliveryOptions[0].dates, req_info) }}.\n
+  Могу либо оставить его, либо поискать другие варианты. Он подходит вам?
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_delivery_options_screenless %}
+  {% chooseline %}
+    Выберите удобный день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите подходящее время доставки. Вот разные варианты — вам нужно только назвать номер.
+  {% endchooseline %}
+  \n
+    {% for deliveryOption in form.state.deliveryOptions %}
+      {{ order_number(loop.index) }}. {{ render_delivery_interval(deliveryOption.dates, req_info) }}.\n
+    {% endfor %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__empty_delivery_options %}
+  К сожалению, что-то пошло не так. Попробуйте оформить другой заказ.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__out_of_stock %}
+  Сейчас товара нет в наличии. Но у меня есть несколько похожих товаров, которые можно купить на {{ render_market('abl') -}}. Смотрите.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__invalid_index %}
+  Не поняла. Назовите номер подходящего варианта.
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__invalid_confirm %}
+  Извините, не разобрала. Скажите, пожалуйста, «да» или «нет».
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__checkout_confirm %}
+  {% chooseline %}
+    Готово! Если все верно, скажите — «да», и я начну оформлять заказ.
+    Записала! Если все правильно, скажите — «да», и я начну оформлять заказ.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__checkout_wait %}
+  {% if form.state.order.attempt == 0 %}
+    {% chooseline %}
+      Отлично, теперь мне нужно убедиться{%- text -%},{% endtext %} что товар не закончился, и подтвердить заказ. Как вам шопинг со мной?
+      Почти готово. Теперь ещё пару секунд — мне надо подтвердить заказ. Скажите, понравилось ли вам делать покупки вместе со мной?
+    {% endchooseline %}
+  {% elif form.state.order.attempt == 1 %}
+    Заказ в стадии подтверждения. Спросите меня через пару секунд «Как там мой заказ?».
+  {% else %}
+    Ещё не готово. Спросите через пару секунд.
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__checkout_complete %}
+  {% chooseline %}
+    Всё готово. Номер вашего заказа — {{ render_big_number(context.data.order_id) }}. За ним можно следить в личном кабинете на {{ render_market('abl') -}}.
+    Заказ оформлен. Ура! За ним можно следить в личном кабинете на {{ render_market('abl') -}}. Номер заказа — {{ render_big_number(context.data.order_id) }}.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__recurring_purchase__checkout_complete %}
+  Ваш заказ
+{% endphrase %}
+
+{% phrase render_suggest_uri__recurring_purchase__checkout_complete %}
+  {{ context.recurring_purchase__checkout_complete.data }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__manual_checkout %}
+  {% chooseline %}
+    Я пока не научилась изменять заказы. Но вот ссылка, по которой это можно сделать. Либо можем начать выбирать другой товар.
+    Менять заказы я ещё не умею. Держите ссылку на свой заказ — можете изменить его, как вздумается. Либо давайте выберем какой-нибудь другой товар.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__recurring_purchase__manual_checkout %}
+  Оформить заказ на {{ render_market('abl') }}
+{% endphrase %}
+
+{% phrase render_suggest_uri__recurring_purchase__manual_checkout %}
+  {{ context.recurring_purchase__manual_checkout.data }}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__checkout_failed %}
+  {% chooseline %}
+    Что-то пошло не так. Можем выбрать что-нибудь другое.
+    У меня не получилось оформить заказ. Можем поискать что-нибудь ещё.
+    Что-то пошло не так. Давайте поищем что-то ещё.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__model %}
+  Я нашла товар
+  {% if is_telegram() %}
+    \n
+    {{ render_model(form.model) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__results %}
+  Советую приглядеться к этим товарам
+  {% if is_telegram() %}
+    \n
+    {{ render_gallery(form.result.models) }}
+    {{ render_gallery_more(form.result.url) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__nothing_in_order_history %}
+  Не нашла похожих товаров в вашей истории заказов. Зато смотрите{% text %},{% endtext %} что можно купить на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase market__ask_continue %}
+  {# Заменить на
+     {% if context.data and context.data.get("is_first_request") %}
+     когда будем в бассе посылать is_first_request #}
+  {% if context | get_item("is_first_request", True) %}
+    Не нашла похожих товаров в вашей истории заказов. Зато смотрите{% text %},{% endtext %} что можно купить на {{ render_market('abl') -}}.
+  {% else %}
+    {% chooseline %}
+      Смотрите, что нашлось.
+      Вот что я для вас нашла.
+    {% endchooseline %}
+  {% endif %}
+  {% if is_telegram() %}
+    {{ render_gallery(form.result.models) }}
+    {{ render_gallery_more(form.result.url) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__ask_continue %}
+  {% chooseline %}
+    Смотрите, что нашлось в вашей истории заказов.
+    Вот что я для вас нашла в вашей истории заказов.
+  {% endchooseline %}
+  {% if is_telegram() %}
+    {{ render_gallery(form.result.models) }}
+    {{ render_gallery_more(form.result.url) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__product_details %}
+  {% chooseline %}
+    Смотрите.
+    Я бы тоже этот вариант выбрала.
+    Неплохой выбор, мне тоже нравится.
+    Как вам будет угодно.
+    Давайте изучим этот вариант подробнее.
+    Давайте вместе посмотрим.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__product_outdated %}
+  К сожалению, этого товара больше нет на Яндекс Маркете.
+{% endphrase %}
+
+
+{% phrase market__beru_offer_outdated %}
+  К сожалению, этот товар больше нельзя купить на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__beru_no_sku %}
+  Что заказать? Мы же ещё ничего не выбрали!
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__market__yandex_search %}
+  Найти в Яндексе
+{% endphrase %}
+
+{% phrase render_suggest_uri__market__yandex_search %}
+  {{ context.market__yandex_search.data }}
+{% endphrase %}
+
+
+{% phrase error %}
+  {% chooseline %}
+    Выжить в магазине - это успех!
+    Я еще только учусь искать по товарам
+    У меня голова идет кругом от количества товаров, не могу определиться
+    Давайте попробуем поискать еще раз, эта попытка не удалась, извините
+  {% endchooseline %}
+  {% if context.data and context.data.error %}
+    \n{% text %}Ошибка: "{{ context.data.error }}"{% endtext %}
+  {% endif %}
+  {% if context.data and context.data.stack %}
+    \n{% text %}Стек: "{{ context.data.stack }}"{% endtext %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__empty_result %}
+  {% chooseline %}
+    Ничего не нашлось. Повторите{% text %},{% endtext %} пожалуйста.
+    Что-то я ничего не нашла. Попробуйте назвать товар по-другому.
+    Не нашла подходящих вещей. Назовите товар ещё раз.
+    Ничего нет, эх! Попробуйте изменить запрос.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_more %}
+  Я уже показала всё, что нашла. Может быть вы уточните, что именно хотите найти и я попробую поискать получше?
+{% endphrase %}
+
+
+{% phrase market__empty_result %}
+  {% chooseline %}
+    Ничего не нашлось. Повторите{% text %},{% endtext %} пожалуйста.
+    Что-то я ничего не нашла. Попробуйте назвать товар по-другому.
+    Не нашла подходящих вещей. Назовите товар ещё раз.
+    Ничего нет, эх! Попробуйте изменить запрос.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__no_more %}
+  {% chooseline %}
+    Я уже показала всё, что нашла. Может быть вы уточните, что именно хотите найти, и я попробую поискать получше?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_login %}
+  Я не могу поискать по вашей истории заказов, потому что не знаю ваш e-mail. Войдите под другим пользователем.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_such_goods %}
+  К сожалению, не нашла подходящих товаров, которые можно купить на {{ render_market('abl') -}}.
+  Давайте поговорим на другую тему.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__no_such_goods_screenless %}
+  К сожалению, я не нашла данного товара в вашей истории заказов на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__has_no_orders %}
+  Не нашла у вас заказов на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__do_not_checkout %}
+  Тогда у меня не получится оформить вам заказ. Попробуйте это сделать на {{ render_market('abl') }} самостоятельно.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__select_product %}
+  Нашла в вашей истории заказов на {{ render_market('abl') }} следующие товары:
+  \n
+  {% for item in form.result.models %}
+    {{ order_number(loop.index) }}. {{ item.title }} за {{ render_price(item.prices.value, form.currency) }}.\n
+  {% endfor %}
+  \n
+  Назовите номер того товара, который вы хотите заказать.
+{% endphrase %}
+
+
+{% phrase recurring_purchase__sku_offer %}
+  Нашла в вашей истории заказов на {{ render_market('abl') }} товар "{{ context.data.title }}" за {{ render_price(context.data.prices.value, context.data.prices.currency) -}}.
+  Оформляем заказ?
+{% endphrase %}
+
+
+{% phrase recurring_purchase__order_details_and_confirm %}
+    {% set details = context.data %}
+    Вы выбрали {{ details.offer_title }}.
+    Цена: {{ render_price(details.offer_price, details.currency) }}.
+    {% if details.get("items_number", 1) != 1 %}
+      Количество: {{ details["items_number"] }}.
+    {% endif %}
+    {% if details.delivery_price > 0 %}
+        Доставка {{ render_price(details.delivery_price, details.currency) }}.
+    {% else %}
+      Доставка бесплатно.
+    {% endif %}
+    Всего: {{ render_price(details.total_price, details.currency) }}
+    Телефон: {{ pretty_phone(details.phone) }}.
+    {% set delivery_type_name = delivery_name(details.get("delivery_type")) %}
+    {% if delivery_type_name %}
+        Способ доставки: {{ delivery_type_name }}.
+    {% endif %}
+    Адрес: {{ render_address(details) | html_escape }}.
+    Доставка: {{ render_delivery_interval(details.delivery_interval, req_info) }}.
+    Способ оплаты: Наличными при получении заказа.
+  Если все правильно, скажите — «да», и я начну оформлять заказ.
+{% endphrase %}

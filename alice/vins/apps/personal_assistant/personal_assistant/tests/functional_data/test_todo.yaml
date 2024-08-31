@@ -1,0 +1,1684 @@
+labels:
+  ask_what: '(Что добавить в|Что записать).*'
+  ask_todo_number: '.*(Назовите номер задачи, которую хотите удалить.|Задачу с каким номером отменить\\?|Скажите номер дела, пожалуйста.)'
+  no_authorization: '.*вам нужно авторизоваться. Затем повторите, что нужно сделать.'
+  creating_failed: '(Не получилось добавить|.*не получилось|Что-то пошло не так).*'
+  unsupported_device_error: '(.*пока не умею|обещал запрограммировать это).*'
+  show_todo_list: 'Показать список дел'
+  cancel_todo: 'Отменить дело.*'
+  success_todo_cancel: '(Хорошо|Окей), отменила.'
+  error_todo_cancel: 'Извините, у меня не получилось отменить дело.'
+  empty_todo_list: 'У вас пустой список дел.'
+  todo_list_failed: '(Что-то пошло не так|(Что-то|Ой, у меня) не получилось).*'
+  past_time: '(Время.*уже прошло|.*в прошлом).*'
+  elari_watch_not_supported: 'Обязательно помогу с этим, когда научусь. А я научусь!'
+  general_cancel_answer: '(ОК|Хорошо.|Поняла.|Ну, как хотите.|Нормально же общались.|Знаете, у ботов тоже есть чувства.|Хозяин — барин.|\*Алиса покинула чат\*|Ладно-ладно.|Ну и пожалуйста.|Легко.|Ой, всё!|Бе-бе-бе.|Похоже, мне пора.|Окей! Если захочешь поболтать — ты знаешь, где меня найти.|Отключаюсь!|Обнуляюсь!|Пойду посижу в интернете.|Уйду в офлайн.|Всё, пока!|Я уйду, но я всегда рядом.|Фу, как грубо. В следующий раз будем учить хорошие манеры.)'
+
+create_todo_ok_without_date:
+  создай заметку сходить в магазин:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: сходить в магазин
+        date:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'ok'
+      blocks:
+      - type: suggest
+        suggest_type: todo__show_todo_list
+        data:
+          value:
+            url: users/todo/list
+      - type: suggest
+        suggest_type: todo__cancel
+
+    voice: 'Добавила в список дел "сходить в магазин".'
+    text: 'Добавила в список дел "сходить в магазин".'
+    buttons:
+      type: text_with_button
+      title: '{show_todo_list}'
+      payload:
+        uri: users/todo/list
+    suggests:
+    - title: '{cancel_todo}'
+      payload:
+        caption: '{cancel_todo}'
+        utterance: '{cancel_todo}'
+
+create_todo_ok_and_cancel:
+  dialog:
+    создай заметку помыть машину:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+              is_set: 'yes'
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      voice: 'Добавила в список дел "помыть машину".'
+      text: 'Добавила в список дел "помыть машину".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '{cancel_todo}'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__cancel
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+          answer:
+            value:
+              type: 'ok'
+              is_set: 'yes'
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      voice: '{success_todo_cancel}'
+      text: '{success_todo_cancel}'
+
+create_todo_ok_and_double_cancel:
+  experiments: [vins_pause_commands_relevant_again]
+  dialog:
+    создай заметку помыть машину:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+              is_set: 'yes'
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      voice: 'Добавила в список дел "помыть машину".'
+      text: 'Добавила в список дел "помыть машину".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '{cancel_todo}'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__cancel
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+          answer:
+            value:
+              type: 'ok'
+              is_set: 'yes'
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      voice: '{success_todo_cancel}'
+      text: '{success_todo_cancel}'
+    отмена:
+      vins_form:
+        name: personal_assistant.handcrafted.fast_cancel
+      bass:
+        form:
+          answer:
+            value: null
+      text: '{general_cancel_answer}'
+  app_info:
+    ignore:
+    - speaker
+    - irbis
+    - dexp
+
+
+create_todo_ok_and_cancel_error:
+  dialog:
+    создай заметку помыть машину:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      voice: 'Добавила в список дел "помыть машину".'
+      text: 'Добавила в список дел "помыть машину".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '{cancel_todo}'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__cancel
+        slots:
+          what:
+            value: помыть машину
+          date:
+            value: null
+          answer:
+            value:
+              type: 'ok'
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: todoerror
+            msg: null
+          data:
+            code: canceling_failed
+      voice: '{error_todo_cancel}'
+      text: '{error_todo_cancel}'
+
+create_todo_ok_miss_what:
+  dialog:
+    добавь в список моих дел:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+      bass:
+        form:
+          what:
+            optional: false
+      text: '{ask_what}'
+      voice: '{ask_what}'
+
+    сходить в душ 21 марта:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__ellipsis
+        slots:
+          what:
+            value: сходить в душ
+          date:
+            value:
+              months: 3
+              days: 21
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      text: 'Добавила в список дел на 21 марта "сходить в душ".'
+      voice: 'Добавила в список дел на двадцать первое марта "сходить в душ".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '{cancel_todo}'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+
+create_todo_ok_miss_what_no_authorization:
+  dialog:
+    добавь в список моих дел:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'authorization'
+        blocks:
+        - type: suggest
+          suggest_type: todo__authorization
+          data:
+            value:
+              url: link/to/authorization
+
+      text: '{no_authorization}'
+      voice: '{no_authorization}'
+      buttons:
+        type: text_with_button
+        title: Авторизация
+        payload:
+          uri: link/to/authorization
+
+create_todo_ok_with_date:
+  dialog:
+    запиши в список дел купить кошке корм на двадцатое января:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what: купить кошке корм
+          date:
+            value:
+              months: 1
+              days: 20
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      text: 'Добавила в список дел на 20 января "купить кошке корм".'
+      voice: 'Добавила в список дел на двадцатое января "купить кошке корм".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '{cancel_todo}'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+
+create_todo_ok_with_date_2:
+  dialog:
+    запиши дело на завтра выбрать дочке платье:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what: выбрать дочке платье
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+        blocks:
+        - type: suggest
+          suggest_type: todo__show_todo_list
+          data:
+            value:
+              url: users/todo/list
+        - type: suggest
+          suggest_type: todo__cancel
+
+      text: 'Добавила в список дел на завтра "выбрать дочке платье".'
+      voice: 'Добавила в список дел на завтра "выбрать дочке платье".'
+      buttons:
+        type: text_with_button
+        title: '{show_todo_list}'
+        payload:
+          uri: users/todo/list
+      suggests:
+      - title: '11'
+        payload:
+          caption: '{cancel_todo}'
+          utterance: '{cancel_todo}'
+
+create_todo_with_weather_context:
+  dialog:
+    поставь дело на завтра:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: null
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    рассказать про погоду:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__ellipsis
+        slots:
+          what:
+            value: рассказать про погоду
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: "ok"
+      voice: 'Добавила в список дел на сегодня "рассказать про погоду".'
+      text: 'Добавила в список дел на сегодня "рассказать про погоду".'
+
+create_todo_with_weather_context_and_cancel:
+  dialog:
+    поставь дело:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo__cancel
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      text: '{success_todo_cancel}'
+      voice: '{success_todo_cancel}'
+
+create_todo_unsupported_device:
+  dialog:
+    алиса, добавь мне дело:
+      vins_form:
+        name: personal_assistant.scenarios.create_todo
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: todoerror
+            msg: null
+          data:
+            code: unsupported_device
+
+      text: '{unsupported_device_error}'
+      voice: '{unsupported_device_error}'
+  app_info:
+    ignore:
+    - watch
+
+create_todo_unknown_error:
+  алиса, добавь мне дело:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: null
+        date:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: todoerror
+          msg: null
+        data:
+          code: some_unknown_error
+
+    text: 'Прошу прощения, что-то сломалось. Спросите попозже, пожалуйста.'
+    voice: 'Прошу прощения, что-то сломалось. Спросите попозже, пожалуйста.'
+
+create_todo_no_authorization:
+  поставь дело купить сок:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: 'купить сок'
+        date:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'authorization'
+      blocks:
+      - type: suggest
+        suggest_type: todo__authorization
+        data:
+          value:
+            url: link/to/authorization
+
+    text: '{no_authorization}'
+    voice: '{no_authorization}'
+    buttons:
+    - type: text_with_button
+      title: Авторизация
+      payload:
+        uri: link/to/authorization
+
+create_todo_fail_creating:
+  запиши в дела выпить таблетку:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: 'выпить таблетку'
+        date:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: todoerror
+          msg: null
+        data:
+          code: creating_failed
+    voice: '{creating_failed}'
+    text: '{creating_failed}'
+
+create_todo_past_datetime:
+  запиши в дела выпить таблетку на вчера:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: 'выпить таблетку'
+        date:
+          value:
+            days: -1
+            days_relative: true
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: todoerror
+          msg: null
+        data:
+          code: past_datetime
+    voice: '{past_time}'
+    text: '{past_time}'
+
+create_todo_incomplete_datetime:
+  запиши в дела выпить таблетку на 2019 год:
+    vins_form:
+      name: personal_assistant.scenarios.create_todo
+      slots:
+        what:
+          value: 'выпить таблетку'
+        date:
+          value:
+            years: 2019
+    bass:
+      blocks:
+      - type: attention
+        attention_type: incomplete_datetime
+    voice: 'Назовите полную дату для задачи.'
+    text: 'Назовите полную дату для задачи.'
+
+cancel_todo_all:
+  dialog:
+    отмени все дела:
+      vins_form:
+        name: personal_assistant.scenarios.cancel_todo
+        slots:
+          id:
+            value: "all"
+      voice: '{success_todo_cancel}'
+      text: '{success_todo_cancel}'
+  app_info:
+    ignore:
+    - watch
+
+cancel_todo_with_ellipsis_ok:
+  dialog:
+    отмени задачу:
+      vins_form:
+        name: personal_assistant.scenarios.cancel_todo
+        slots:
+          id:
+            value: null
+      bass:
+        form:
+          id:
+            optional: false
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+      voice: '{ask_todo_number}'
+      text: '{ask_todo_number}'
+    один:
+      vins_form:
+        name: personal_assistant.scenarios.cancel_todo__ellipsis
+        slots:
+          id:
+            value: 1
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+      bass:
+        form:
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+      voice: '{success_todo_cancel}'
+      text: '{success_todo_cancel}'
+  app_info:
+    ignore:
+    - watch
+
+cancel_todo_with_ellipsis_wrong:
+  dialog:
+    отмени задачу:
+      vins_form:
+        name: personal_assistant.scenarios.cancel_todo
+        slots:
+          id:
+            value: null
+      bass:
+        form:
+          id:
+            optional: false
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+      voice: '{ask_todo_number}'
+      text: '{ask_todo_number}'
+    три:
+      vins_form:
+        name: personal_assistant.scenarios.cancel_todo__ellipsis
+        slots:
+          id:
+            value: 3
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+      bass:
+        form:
+          id:
+            value: null
+            optional: false
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+        blocks:
+        - type: attention
+          attention_type: invalid_id
+      voice: 'Задачи с таким номером нет в списке. Повторите еще раз, пожалуйста.'
+      text: 'Задачи с таким номером нет в списке. Повторите еще раз, пожалуйста.'
+  app_info:
+    ignore:
+    - watch
+
+list_todo_no_authorization:
+  мой список дел:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+    bass:
+      form:
+        answer:
+          value:
+            type: 'authorization'
+
+    voice: '{no_authorization}'
+    text: '{no_authorization}'
+
+list_todo_with_date_no_authorization:
+  алиса покажи мои дела на завтра:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        offset:
+          value: null
+        date:
+          days_relative: true
+          days: 1
+    bass:
+      form:
+        answer:
+          value:
+            type: 'authorization'
+
+    voice: '{no_authorization}'
+    text: '{no_authorization}'
+
+list_todo_ok_with_date_tav:
+  dialog:
+    покажи мои дела на 20 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          offset:
+            value: null
+          date:
+            value:
+              months: 3
+              days: 20
+      bass:
+        form:
+          date:
+            value:
+              months: 3
+              days: 5
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 0
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+
+      voice: 'Открываю список дел.'
+      text: 'Открываю список дел.'
+
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+
+list_todo_ok_not_empty_list_tav:
+  список моих дел:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'textandvoice'
+            total_todo_count: 2
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+
+    voice: 'Открываю список дел.'
+    text: 'Открываю список дел.'
+    buttons:
+    - name: open_uri
+      title: Список дел
+      payload:
+        uri: users/todo/list
+    directives:
+    - name: open_uri
+      sub_name: reminder_show_list
+      type: client_action
+      payload:
+        uri: users/todo/list
+
+list_ok_not_empty_list_vc:
+  dialog:
+    список моих дел:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          date:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 2
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+
+      voice: "У вас в списке дел две задачи{}.sil<[500]> #gen 19 февраля #gen 2018\
+        \ года.sil<[500]>{}1. попить молоко1{}.sil<[500]>{}2. попить молоко2"
+      text: "У вас в списке дел 2 задачи.\n19 февраля 2018 года:\n1. попить молоко1\n\
+        2. попить молоко2"
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+
+list_ok_not_empty_list_scroll_next_vc:
+  dialog:
+    список моих дел:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          date:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 17
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко3
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+      voice: "У вас в списке дел семнадцать задач{}.sil<[300]> Вот первые три{}.sil<[500]>\
+        \ #gen 19 февраля #gen 2018 года.sil<[500]>{}1. попить молоко1{}.sil<[500]>{}2. попить\
+        \ молоко2{}.sil<[500]>{}3. попить молоко3{}.sil<[500]> Прочитать следующие три?"
+      text: "У вас в списке дел 17 задач.\nВот первые три:\n19 февраля 2018 года:\n\
+        1. попить молоко1\n2. попить молоко2\n3. попить молоко3\nПрочитать следующие\
+        \ три?"
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo__scroll_next
+        slots:
+          date:
+            value: null
+          offset:
+            value: 0
+      bass:
+        form:
+          offset:
+            value: 5
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 17
+              todo:
+              - what: попить молоко6
+                date:
+                  years: 2018
+                  months: 3
+                  days: 4
+              - what: попить молоко7
+                date:
+                  years: 2018
+                  months: 3
+                  days: 4
+              - what: попить молоко8
+                date:
+                  years: 2018
+                  months: 3
+                  days: 5
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+      voice: "#gen 4 марта #gen 2018 года.sil<[500]>{}6. попить молоко6{}.sil<[500]>{}7. попить\
+        \ молоко7{}.sil<[500]> #gen 5 марта #gen 2018 года.sil<[500]>{}8. попить молоко8{}.sil<[500]>\
+        \ Прочитать следующие три?"
+      text: "4 марта 2018 года:\n6. попить молоко6\n7. попить молоко7\n5 марта 2018\
+        \ года:\n8. попить молоко8\nПрочитать следующие три?"
+    давай:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo__scroll_next
+        slots:
+
+          offset:
+            value: 5
+      bass:
+        form:
+          offset:
+            value: 15
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 17
+              todo:
+              - what: попить молоко16
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+              - what: попить молоко17
+                date:
+                  years: 2018
+                  months: 2
+                  days: 19
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+      voice: "#gen 19 февраля #gen 2018 года.sil<[500]>{}16. попить молоко16{}.sil<[500]>{}17. попить\
+        \ молоко17"
+      text: "19 февраля 2018 года:\n16. попить молоко16\n17. попить молоко17"
+    дальше:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo__scroll_next
+      bass:
+        form:
+          answer:
+            value:
+              type: 'voice'
+              is_finish: 'yes'
+      voice: 'Больше задач в списке нет.'
+    еще:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+      bass:
+        form:
+          answer:
+            value:
+              type: 'voice'
+              is_finish: 'yes'
+      voice: 'Интересная мысль, чтобы обсудить её не со мной.'
+      text: 'Интересная мысль, чтобы обсудить её не со мной.'
+  app_info:
+    ignore:
+    - auto
+
+list_ok_one_item_tav:
+  покажи дела:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'textandvoice'
+            total_todo_count: 1
+            todo:
+            - what: искупать сына
+              date:
+                years: 2019
+                months: 3
+                days: 1
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+
+    voice: 'Открываю список дел.'
+    text: 'Открываю список дел.'
+    buttons:
+    - name: open_uri
+      title: Список дел
+      payload:
+        uri: users/todo/list
+    directives:
+    - name: open_uri
+      sub_name: reminder_show_list
+      type: client_action
+      payload:
+        uri: users/todo/list
+
+list_ok_one_item_no_date_tav:
+  покажи дела:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'textandvoice'
+            total_todo_count: 1
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+
+    voice: 'Открываю список дел.'
+    text: 'Открываю список дел.'
+    buttons:
+    - name: open_uri
+      title: Список дел
+      payload:
+        uri: users/todo/list
+    directives:
+    - name: open_uri
+      sub_name: reminder_show_list
+      type: client_action
+      payload:
+        uri: users/todo/list
+
+list_ok_not_empty_no_date_tav1:
+  покажи дела:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: 'textandvoice'
+            total_todo_count: 921
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+
+    voice: 'Открываю список дел.'
+    text: 'Открываю список дел.'
+    buttons:
+    - name: open_uri
+      title: Список дел
+      payload:
+        uri: users/todo/list
+    directives:
+    - name: open_uri
+      sub_name: reminder_show_list
+      type: client_action
+      payload:
+        uri: users/todo/list
+
+list_todo_error_unsupported_device:
+  dialog:
+    открой туду:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          date:
+            value: null
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: todoerror
+            msg: null
+          data:
+            code: unsupported_device
+
+      voice: '{unsupported_device_error}'
+      text: '{unsupported_device_error}'
+  app_info:
+    ignore:
+    - watch
+
+list_todo_list_failed_error:
+  открой мои туду:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: todoerror
+          msg: null
+        data:
+          code: list_failed
+    voice: '{todo_list_failed}'
+    text: '{todo_list_failed}'
+
+list_ok_with_date_empty_try_scroll_vc:
+  dialog:
+    покажи мои дела на 20 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          offset:
+            value: null
+          date:
+            value:
+              months: 3
+              days: 20
+      bass:
+        form:
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 0
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+
+      voice: 'Я не нашла дел на двадцатое марта.'
+      text: 'Я не нашла дел на 20 марта.'
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+    дальше:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+      voice: 'Интересная мысль, чтобы обсудить её не со мной.'
+      text: 'Интересная мысль, чтобы обсудить её не со мной.'
+  app_info:
+    ignore:
+    - auto
+
+list_ok_with_date_empty_list_try_scroll_tav:
+  dialog:
+    покажи мои дела на 20 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          offset:
+            value: null
+          date:
+            value:
+              months: 3
+              days: 20
+      bass:
+        form:
+          answer:
+            value:
+              type: 'textandvoice'
+              total_todo_count: 0
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+
+      voice: 'Открываю список дел.'
+      text: 'Открываю список дел.'
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+    дальше:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+      voice: 'Интересная мысль, чтобы обсудить её не со мной.'
+      text: 'Интересная мысль, чтобы обсудить её не со мной.'
+  app_info:
+    ignore:
+    - auto
+
+list_todo_ok_empty_list_voice_and_text:
+  открой мои заметки на сегодня:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          days_relative: true
+          days: 0
+    bass:
+      form:
+        answer:
+          value:
+            type: 'textandvoice'
+            total_todo_count: 0
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+
+    voice: 'Открываю список дел.'
+    text: 'Открываю список дел.'
+    buttons:
+    - name: open_uri
+      title: Список дел
+      payload:
+        uri: users/todo/list
+    directives:
+    - name: open_uri
+      sub_name: reminder_show_list
+      type: client_action
+      payload:
+        uri: users/todo/list
+
+list_ok_empty_vc:
+  dialog:
+    мои заметки на завтра:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          date:
+            days_relative: true
+            days: 1
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 0
+        blocks:
+        - type: suggest
+          suggest_type: todo__open_uri
+          data:
+            value:
+              url: users/todo/list
+        - type: command
+          command_type: open_uri
+          command_sub_type: reminder_show_list
+          data:
+            uri: users/todo/list
+
+      voice: 'Я не нашла дел на завтра.'
+      text: 'Я не нашла дел на завтра.'
+      buttons:
+      - name: open_uri
+        title: Список дел
+        payload:
+          uri: users/todo/list
+      directives:
+      - name: open_uri
+        sub_name: reminder_show_list
+        type: client_action
+        payload:
+          uri: users/todo/list
+
+list_ok_not_empty_list_scroll_stop_vc:
+  список моих дел:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo
+      slots:
+        date:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        offset:
+          value: 0
+        answer:
+          value:
+            type: 'voice'
+            total_todo_count: 17
+            todo:
+            - what: попить молоко1
+              date:
+                years: 2018
+                months: 2
+                days: 19
+            - what: попить молоко2
+              date:
+                years: 2018
+                months: 2
+                days: 19
+            - what: попить молоко3
+              date:
+                years: 2018
+                months: 2
+                days: 19
+      blocks:
+      - type: suggest
+        suggest_type: todo__open_uri
+        data:
+          value:
+            url: users/todo/list
+      - type: command
+        command_type: open_uri
+        command_sub_type: reminder_show_list
+        data:
+          uri: users/todo/list
+    voice: "У вас в списке дел семнадцать задач.{}.sil<[300]> Вот первые три:{}.sil<[500]>\
+      \ #gen 19 февраля #gen 2018 года.sil<[500]>{}1. попить молоко1{}.sil<[500]>{}2. попить\
+      \ молоко2{}.sil<[500]>{}3. попить молоко3{}.sil<[500]> Прочитать следующие три?"
+    text: "У вас в списке дел 17 задач.\nВот первые три:\n19 февраля 2018 года:\n\
+      1. попить молоко1\n2. попить молоко2\n3. попить молоко3\nПрочитать следующие три?"
+  нет:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo__scroll_stop
+    text: 'Хорошо, не буду.'
+    voice: 'Хорошо, не буду.'
+  еще:
+    vins_form:
+      name: personal_assistant.scenarios.list_todo__scroll_next
+      slots:
+        date:
+          value: null
+        offset:
+          value: 0
+    bass:
+      form:
+        offset:
+          value: 3
+        answer:
+          value:
+            type: 'voice'
+            total_todo_count: 17
+            todo:
+            - what: попить молоко1
+              date:
+                days_relative: true
+                days: 0
+            - what: попить молоко2
+              date:
+                days_relative: true
+                days: 1
+            - what: попить молоко3
+              date:
+                days_relative: true
+                days: 2
+    text: "сегодня:\n4. попить молоко1\nзавтра:\n5. попить молоко2\nпослезавтра:\n6.\
+      \ попить молоко3\nПрочитать следующие три?"
+    voice: 'сегодня.sil<[500]>{}4. попить молоко1{}.sil<[500]> завтра.sil<[500]>{}5. попить
+      молоко2{}.sil<[500]> послезавтра.sil<[500]>{}6. попить молоко3{}.sil<[500]> Прочитать
+      следующие три?'
+
+list_ok_not_empty_list_with_date_vc:
+  dialog:
+    список моих дел на 2 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_todo
+        slots:
+          date:
+            value:
+              months: 3
+              days: 2
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: 'voice'
+              total_todo_count: 8
+              todo:
+              - what: попить молоко1
+                date:
+                  years: 2018
+                  months: 2
+                  days: 3
+              - what: попить молоко2
+                date:
+                  years: 2018
+                  months: 2
+                  days: 3
+              - what: попить молоко3
+                date:
+                  years: 2018
+                  months: 2
+                  days: 3
+      text: "У вас в списке дел 8 задач на 2 марта.\nВот первые три:\n1. попить молоко1\n\
+        2. попить молоко2\n3. попить молоко3\nПрочитать следующие три?"
+      voice: "У вас в списке дел восемь задач на второе марта.{}.sil<[300]> Вот первые\
+        \ три:{}.sil<[500]>{}1. попить молоко1\n.sil<[500]>{}2. попить молоко2\n.sil<[500]>{}3. попить\
+        \ молоко3\n.sil<[500]> Прочитать следующие три?"
+
+test_elari_watch:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    создай заметку купить водку: '{elari_watch_not_supported}'
+
+test_cancel_todo_nlu:
+  отмени все дела на сегодня:
+    vins_form:
+      name: 'personal_assistant.scenarios.cancel_todo'
+      slots:
+        id:
+          value: all
+        cancel_when:
+          value:
+            days: 0
+            days_relative: true
+  удали все дела на завтра:
+    vins_form:
+      name: 'personal_assistant.scenarios.cancel_todo'
+      slots:
+        id:
+          value: all
+        cancel_when:
+          value:
+            days: 1
+            days_relative: true
+  удали все дела на послезавтра:
+    vins_form:
+      name: 'personal_assistant.scenarios.cancel_todo'
+      slots:
+        id:
+          value: all
+        cancel_when:
+          value:
+            days: 2
+            days_relative: true
+
+test_cancel_todo_nlu_no_todos_for_date:
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    удали все дела на послезавтра:
+      vins_form:
+        name: 'personal_assistant.scenarios.cancel_todo'
+        slots:
+          id:
+            value: all
+          cancel_when:
+            value:
+              days: 2
+              days_relative: true
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_todo_for_date
+      voice: 'Я не нашла дел на послезавтра.'
+      text: 'Я не нашла дел на послезавтра.'

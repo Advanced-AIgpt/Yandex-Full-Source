@@ -1,0 +1,203 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/news.nlg" %}
+
+{% from "scenarios/intents/common.nlg" import tts_pause %}
+{% from "scenarios/intents/get_news/get_news__phrases.nlg" import choose_more_news_suggest, get_conclusion_text_for_top, get_conclusion_text_for_personal, get_conclusion_text_default, get_introduction_text_default, get_introduction_text_for_top, get_introduction_text_for_personal, get_news_ended_text, news_rubric_promo_text, no_news_rubric_promo_text, more_news_promo_text_before, more_news_promo_text_after, render_general_preamble %}
+
+{% set ns = namespace(has_promo_before=false, has_promo_after=false, more_news_suggest=None) %}
+
+{% macro replace_vertical_bars(text) %}
+  {{ text.replace('|', ',') }}
+{% endmacro %}
+
+{% macro render_text_or_snippet(article) %}
+  {% text %}{{ article.text }}.{% endtext %}
+
+  {% if req_info.experiments['news_read_only_text_or_snippet'] != None %}
+    {% if article.snippet %}
+      {% voice %}{{ replace_vertical_bars(article.snippet) }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+    {% endif %}
+  {% else %}
+    {% set have_title = not article.get('skip_title', False) %}
+    {% if have_title %}
+      {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+    {% endif %}
+    {% if article.snippet %}
+      {% if have_title %}
+        {{ tts_pause(500) }}
+      {% endif %}
+      {% voice %}{{ replace_vertical_bars(article.snippet) }}{% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_article(article) %}
+  {% text %}{{ article.text }}.{% endtext %}
+  {% voice %}{{ replace_vertical_bars(article.text) }}{% endvoice %}
+{% endmacro %}
+
+{% macro render_station_short_news(news) %}
+  {% for article in news[:-1] %}
+    {{ render_short_article(article) }}\n\n
+    {{ tts_pause(1500) }}
+  {% endfor %}
+  {{ render_short_article(news[-1]) }}
+{% endmacro %}
+
+{% macro render_news(news) %}
+  {% for article in news[:-1] %}
+    {{ render_text_or_snippet(article) }}\n\n
+    {{ tts_pause(1000) }}
+  {% endfor %}
+  {{ render_text_or_snippet(news[-1]) }}
+{% endmacro %}
+
+{% macro render_result_intro() %}
+  {% if not ns.no_promo and (is_smart_speaker() or req_info.experiments['alice_more_news_promo'] != None) %}
+    {% maybe 0.20 %}
+      {% voice %}{{ more_news_promo_text_before() }}{% endvoice %}
+      {% set ns.has_promo_before = true %}
+    {% endmaybe %}
+  {% endif %}
+
+  {% if not ns.has_promo_before %}
+    {% if form.news.smi %}
+      {% voice %}Читаю последние новости с сайта {{ form.news.smi }} {% endvoice %}
+    {% else %}
+      {{ render_alice_introduction() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_alice_introduction() %}
+  {% if req_info.experiments['news_no_voice_switch'] != None %}
+    {{ render_general_preamble(form.resolved_where) }}\n\n
+  {% elif is_active_attention('personal_news') %}
+    {% voice %}{{ get_introduction_text_for_personal() }}{% endvoice %}
+  {% elif is_active_attention('top_news') %}
+    {% voice %}{{ get_introduction_text_for_top() }}{% endvoice %}
+  {% else %}
+    {% voice %}{{ get_introduction_text_default() }}{% endvoice %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_after_promo() %}
+  {% if is_smart_speaker() or req_info.experiments['alice_more_news_promo'] != None %}
+    {% maybe 0.2 %}
+      {{ tts_pause(1000) }}
+      {% voice %}{{ more_news_promo_text_after() }}{% endvoice %}
+      {% set ns.has_promo_after = true %}
+    {% endmaybe %}
+  {% endif %}
+  {% if not ns.has_promo_after and req_info.experiments['alice_station_news_rubric_promo'] != None %}
+    {% maybe 0.2 %}
+      {{ tts_pause(1000) }}
+      {% voice %}{{ news_rubric_promo_text() }}{% endvoice %}
+      {% set ns.has_promo_after = true %}
+    {% endmaybe %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_result_ending(skip_promo) %}
+  {% if not skip_promo %}
+    {{ render_after_promo() }}
+  {% endif %}
+
+  {% if not ns.has_promo_after %}
+    {{ tts_pause(1000) }}
+
+    {% if is_active_attention('personal_news') %}
+      {% voice %}{{ get_conclusion_text_for_personal() }}{% endvoice %}
+    {% elif is_active_attention('top_news') %}
+      {% voice %}{{ get_conclusion_text_for_top() }}{% endvoice %}
+    {% else %}
+      {% voice %}{{ get_conclusion_text_default() }}{% endvoice %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {# Flag used in tests to filter intro and ending prhases #}
+  {% set ns.no_promo = req_info.experiments['alice_news_no_promo'] != None or is_active_attention('news_continuous_request') %}
+
+  {% set voice_has_intro_and_conclusion = req_info.experiments['alice_news_skip_intro_and_ending'] == None %}
+
+  {% if form.news.speaker_speed %}
+	  {% voice %}<speaker speed="{{ form.news.speaker_speed }}">{% endvoice %}
+  {% endif %}
+
+  {% if voice_has_intro_and_conclusion %}
+    {{ render_result_intro() }}
+    {{ tts_pause(1000) }}
+  {% endif %}
+
+  {% if req_info.experiments['alice_station_short_news'] != None %}
+    {{ render_station_short_news(form.news.news) }}
+  {% else %}
+    {{ render_news(form.news.news) }}
+  {% endif %}
+
+  {% if voice_has_intro_and_conclusion %}
+    {{ render_result_ending(ns.no_promo or ns.has_promo_before) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__get_news__details %}
+  {{ form.news.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__details %}
+  Открыть Новости
+{% endphrase %}
+
+{% macro render_more_news_suggest() %}
+  {% if not ns.more_news_suggest %}
+    {% set ns.more_news_suggest = choose_more_news_suggest() %}
+  {% endif %}
+  {{ ns.more_news_suggest }}
+{% endmacro %}
+
+{% phrase render_suggest_caption__get_news__more %}
+  {{ render_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__more %}
+  {{ render_more_news_suggest() }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__rubric %}
+  {{ context.get_news__rubric.data.caption }}
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__get_news__rubric %}
+  {{ context.get_news__rubric.data.utterance }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__get_news__settings%}
+  Настроить новости
+{% endphrase %}
+
+{% phrase render_suggest_utterance__get_news__settings %}
+  Настроить новости
+{% endphrase %}
+
+{% phrase render_error__nonews %}
+  {% if is_active_attention('news_ended') %}
+    {{ get_news_ended_text() }}
+  {% else %}
+    К сожалению, я не смогла найти новостей по данному запросу.
+  {% endif %}
+
+  {% if not ns.no_promo and req_info.experiments['alice_station_news_rubric_promo'] != None %}
+    {% maybe 0.2 %}
+      {{ tts_pause(1000) }}
+      {% voice %}{{ no_news_rubric_promo_text() }}{% endvoice %}
+    {% endmaybe %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__system %}
+  К сожалению, я не смогла найти новостей по данному запросу.
+{% endphrase %}

@@ -1,0 +1,89 @@
+{
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "./current-uniproxy-creator.log",
+                "MinLevel": "Debug"
+            }
+        ]
+    },
+    "ProcessorConfig": {
+        "OutputTable": "//home/alice/test/tables/uniproxy-creator/uniproxy-prepared",
+        "UuidMessageIdQueue": {
+            "OutputCodec": "zstd_6",
+            "OutputQueue": "//home/alice/test/megamind-resharder/qyt/uuid-message-ids",
+            "ShardsCount": 1
+        }
+    },
+    "Suppliers": [
+        {
+            "YtSupplier": {
+                "QueueConsumer": "uniproxy-creator",
+                "QueuePath": "//home/alice/test/uniproxy-resharder/qyt/uniproxy-events",
+                "ChunkSize": 500,
+                "DelayAfterEmptyReadMs": 100,
+                "FlushChunkIntervalMs": 100
+            },
+            "Alias": "uniproxy-resharder"
+        }
+    ],
+    "ProtoStateManagerConfig": {
+        "StateManagerConfig": {
+            "StateCacheConfig": {
+                "PinnedEpochsCount": 5
+            }
+        },
+        "StateTable": "//home/alice/test/states/uniproxy-creator/uniproxy-prepared"
+    },
+    "ConsumingSystem": {
+        "MaxShards": 1,
+        "MaxShardsToCheck": 1,
+        "MainPath": "//home/alice/test/uniproxy-creator/cs/main"
+    },
+    "HttpServer": {
+        "Port": 3445
+    },
+    "YtClientConfig": {
+        "YtConfigLayers": [
+            {
+                "DirectLookupReplicas": {
+                    "GetInSyncTimeoutSec": 2,
+                    "ReplicasListRefreshPeriodSec": 30
+                }
+            },
+            {
+                "Retrying": {
+                    "RetryingExecutorConfig": {
+                        "Attempts": 10,
+                        "SlowdownCoeff": 2,
+                        "MinIntervalMs": 100
+                    },
+                    "ErrorCodesMinIntervalMs": {
+                        "108": 2000
+                    },
+                    "RetryableErrorCodes": [
+                        1,
+                        2,
+                        3,
+                        100,
+                        101,
+                        105,
+                        108,
+                        116,
+                        1701,
+                        1702,
+                        1707,
+                        1714,
+                        1722,
+                        1723
+                    ]
+                }
+            }
+        ],
+        "TransactionKeeper": {
+            "ShareTransactionMultiplier": 0,
+            "CommitPeriodMs": 500
+        }
+    },
+    "MaxInflightBytes": 1000000
+}

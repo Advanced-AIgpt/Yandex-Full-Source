@@ -1,0 +1,116 @@
+action: scenario
+name: spotter.basic
+debug_directives: false
+steps:
+    - action: proxy.session
+      uuid: ffffffffffffffff919b525400123456
+      steps:
+        - action: proxy.synchronize_state
+          description: System.SynchronizeState
+          experiments:
+            - disregard_uaas
+          app_id: uniproxy.test
+          app_version: 1.2.3
+          platform: android
+          os_version: "5.0"
+          device_manufacturer: Yandex
+          device_model: Station
+
+        - action: proxy.vins.voice_input
+          description: Vins.VoiceInput
+          partials: false
+          punctuation: false
+          stream:
+            - resource: /scenarios/data/spotter.opus
+              chunk_size: 8000
+              chunk_duration: 0.1
+              flush: true
+            - resource: /scenarios/data/hello.opus
+              chunk_size: 800
+              chunk_duration: 0.1
+          asr_balancer: yaldi.alice.yandex.net
+
+          spotter_validation:
+            phrase: алиса
+            spotter_back: 450
+            request_front: 800
+
+        - action: proxy.aggregate_replies
+          messages:
+            - message: Spotter.Validation
+              checks:
+                - check: proxy.check.event_payload
+                  key: result
+                  value: 1
+
+                - check: proxy.check.event_payload
+                  key: valid
+                  value: 1
+
+            - message: ASR.Result
+              checks:
+                - check: proxy.check.event_payload
+                  key: messagesCount
+                  value: 6
+
+                - check: proxy.check.event_payload
+                  key: responseCode
+                  value: OK
+
+                - check: proxy.check.event_payload
+                  key: endOfUtt
+                  value: true
+
+                - check: proxy.check.event_payload
+                  key: metainfo.topic
+                  value: $topic$
+                  warning: true
+
+                - check: proxy.check.asr_normalized
+                  oneof:
+                    - привет
+
+            - message: Vins.VinsResponse
+              checks:
+                - check: proxy.check.event_payload
+                  key: voice_response.should_listen
+                  value: true
+
+                - check: proxy.check.event_payload
+                  key: voice_response.output_speech.type
+                  value: simple
+
+                - check: proxy.check.event_payload_one_of
+                  key: voice_response.output_speech.text
+                  values:
+                    - Я тут.
+                    - Я здесь.
+                    - Хай.
+                    - Привет.
+                    - Здравствуйте.
+                    - Категорически приветствую.
+                    - Приветствую вас - человек.
+                    - Привет-привет!
+                    - Хеллоу.
+                    - К+уу!
+                    - Ага, и вам доброго. Чего-нибудь.
+                    - Бон-ж+ур.
+                    - Кто меня звал?
+
+            - message: TTS.Speak
+              checks:
+                - check: proxy.check.event_payload
+                  key: lazy_tts_streaming
+                  value: false
+
+                - check: proxy.check.event_payload
+                  key: disableInterruptionSpotter
+                  value: false
+
+                - check: proxy.check.event_payload
+                  key: enable_bargin
+                  value: false
+
+                - check: proxy.check.event_payload
+                  key: format
+                  value: audio/opus

@@ -1,0 +1,151 @@
+{% from "cards/common.nlg" import font_color, simple_open_uri_action, get_skill_click_action with context %}
+
+
+{% macro render_skill_recommendation_card_classic_greetings() %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {{ separator("xs") }},
+          {% for case in context.data.cases %}
+            {{ render_case(case, loop.index) }},
+          {%- endfor %}
+          {{ separator("xs") }}
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#FFFFFF" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_skill_recommendation_card_classic(card_name) %}
+  {
+    {% set help_text = "ВСЕ НАВЫКИ" %}
+    {% set help_id = "skill_recommendation__all_skills" %}
+    {% set help_url = context.data["store_url"] %}
+    {% set help_data = dict(utm_medium=card_name, utm_campaign='', utm_source='Yandex_Alisa', utm_term='', utm_content='textlink') %}
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {{ separator("xs") }},
+          {% for case in context.data.cases %}
+            {{ render_case(case, loop.index) }},
+          {%- endfor %}
+          {{ separator("xs", True) }},
+          {
+            "text": "{{ font_color("#0A4DC3", help_text) }}",
+            "type": "div-footer-block",
+            "action": {
+                "url": "{{ simple_open_uri_action(help_url, help_id, help_data) }}",
+                "log_id": "{{ help_id }}"
+            }
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#FFFFFF" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_case(obj, item_number) %}
+  {% set log_id = "skill_recommendation__" + obj.recommendation_source + "__" + obj.recommendation_type + "__" + obj.idx %}
+  {% set action_url = get_skill_click_action(log_id, obj.activation, item_number, obj.recommendation_source) %}
+  {% set title = obj.activation | html_escape | capitalize_first | end_without_terminal %}
+  {% set text = font_color('#7f7f7f', obj.description | html_escape | capitalize_first | end_with_dot) %}
+  {
+    "title": "{{ title }}",
+    "text": "{{ text }}",
+    "type": "div-universal-block",
+    "title_max_lines": 2,
+    "text_max_lines": 2,
+    "action": {
+      "url": "{{ action_url }}",
+      "log_id": "{{ log_id }}"
+    },
+    "side_element": {
+      "element": {
+        "image_url": "{{ obj.logo }}",
+        "ratio": 1,
+        "type": "div-image-element"
+      },
+      "size": "s",
+      "position": "left"
+    }
+  }
+{% endmacro %}
+
+
+{% macro render_skill_recommendation_card_classic_stub(data, card_name) %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {{ separator("xs") }}
+          {% for d in data %}
+            ,{{ render_stub_case(d[0], d[1], d[2], d[3], card_name, "static_2.0#", loop.index) }}
+          {%- endfor %}
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#FFFFFF" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_stub_case(activation, description, idx, logo, recommendation_source, recommendation_type, item_number) %}
+  {% set log_id = "skill_recommendation__" + recommendation_source + "__" + recommendation_type + "__" + idx %}
+  {% set action_url = get_skill_click_action(log_id, activation, item_number, recommendation_source) %}
+  {% set title = activation | html_escape | capitalize_first | end_without_terminal %}
+  {% set text = font_color('#7f7f7f', description | html_escape | capitalize_first | end_with_dot) %}
+  {
+    "title": "{{ title }}",
+    "text": "{{ text }}",
+    "type": "div-universal-block",
+    "title_max_lines": 2,
+    "text_max_lines": 2,
+    "action": {
+      "url": "{{ action_url }}",
+      "log_id": "{{ log_id }}"
+    },
+    "side_element": {
+      "element": {
+        "image_url": "{{ logo }}",
+        "ratio": 1,
+        "type": "div-image-element"
+      },
+      "size": "s",
+      "position": "left"
+    }
+  }
+{% endmacro %}
+
+
+{% macro separator(size="xxs", delimiter=False) %}
+  {
+    "size": "{{ size }}",
+    "type": "div-separator-block"
+    {% if delimiter %}
+      , "has_delimiter": 1
+    {% endif %}
+  }
+{% endmacro %}

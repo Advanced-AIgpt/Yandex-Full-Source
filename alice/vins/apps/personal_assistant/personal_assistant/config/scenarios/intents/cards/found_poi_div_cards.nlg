@@ -1,0 +1,270 @@
+{% from "json_macro.jinja" import json_items %}
+{% from "cards/common.nlg" import open_uri_action, font_color with context %}
+
+{% macro make_working_hours_text(hours) -%}
+  {% if hours %}
+    {% if hours|get_item('24_hours') %}
+      Круглосуточно
+    {% else %}
+      {% if hours|get_item('current_status') == 'open' %}
+        {% if hours|get_item('working.0.to') %}
+          Открыто до {{ hours|get_item('working.0.to')|parse_dt|format_datetime('%H:%M') }}
+        {% else %}
+          Сейчас открыто
+        {% endif %}
+      {% else %}
+        {% if hours|get_item('working.0.from') %}
+          Закрыто до {{ hours|get_item('working.0.from')|parse_dt|format_datetime('%H:%M') }}
+        {% else %}
+          Сейчас закрыто
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro make_description_from_features(features) -%}
+  {% with texts = [] -%}
+    {% if features -%}
+      {% for feature in features -%}
+        {% if feature|get_item('type') == 'text' -%}
+          {% do texts.append('%s %s'|format(feature|get_item('name'), feature|get_item('value'))) %}
+        {%- endif %}
+      {%- endfor %}
+      {% for feature in features -%}
+        {% if feature|get_item('type') == 'bool' and feature|get_item('value') == 1 -%}
+          {% do texts.append(feature|get_item('name')) %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %} {{ texts|join(', ')|capitalize }}
+  {%- endwith %}
+{%- endmacro %}
+
+{% macro render_found_poi_card(poi_data) %}
+{% set poi_meta = poi_data|get_item('company_meta_data') %}
+{% set net_icon = poi_data|get_item('icons.Net') %}
+{% set phone_icon = poi_data|get_item('icons.Telephone') %}
+{% set location_icon = poi_data|get_item('icons.Location S Colored') %}
+{% set route_icon = poi_data|get_item('icons.Route') %}
+{% set fill_star_icon = poi_data|get_item('icons.Fill') %}
+{% set half_star_icon = poi_data|get_item('icons.Half') %}
+{% set empty_star_icon = poi_data|get_item('icons.None') %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        {
+          "title": "{{ poi_meta|get_item('name')|html_escape }}",
+          "text": "{% if form.last_found_poi.geo %}{{ font_color('#7F7F7F', form.last_found_poi.geo|geo_city_address|html_escape) }}<br/>{% endif %}{{ font_color('#7F7F7F', make_description_from_features(poi_meta|get_item('Features'))|html_escape) }}",
+          "title_style": "title_s",
+          "text_style": "text_s",
+          {% with image_url = poi_data|get_item('photos.Photo.urlTemplate') or poi_data|get_item('photos.Photos.0.urlTemplate') %}
+            {% if image_url %}
+            {% set image_url = image_url|format('S') %}
+            "side_element": {
+              "element": {
+                "image_url": "{{ image_url }}",
+                "ratio": {{ image_url|image_ratio }},
+                "type": "div-image-element"
+              },
+              "size": "m",
+              "position": "right"
+            },
+            {% endif %}
+          {% endwith %}
+          "type": "div-universal-block"
+        },
+        {
+          {% with working_hours_text=make_working_hours_text(form.last_found_poi.hours) %}
+          "rows": [
+            {
+              "cells": [
+              {% if working_hours_text %}
+                {
+                  "text": "{{ font_color('#7F7F7F', working_hours_text) }}",
+                  "text_style": "text_s"
+                },
+              {% endif %}
+                {
+                  "image": {
+                    "image_url": "https://avatars.mds.yandex.net/get-bass/469429/orgs_c3d52c9b5c09dd0a78d814961dddf04c0c7d52db41048ca509137e6c302aae7e.png/orig",
+                    "ratio": 1,
+                    "type": "div-image-element"
+                  },
+                  "image_size": "xs",
+                  "horizontal_alignment": "center"
+                },
+                {
+                  "text": "{{ font_color('#B87305', poi_meta|get_item('Distance.text')) }}",
+                  "text_style": "text_s"
+                }
+              ],
+              "type": "row_element"
+            }
+          ],
+          "columns": [
+            {% if working_hours_text %}
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              },
+              {
+                "left_padding": "xs",
+                "right_padding": "zero"
+              },
+            {% else %}
+              {
+                "left_padding": "zero",
+                "right_padding": "zero"
+              },
+            {% endif %}
+            {
+              "left_padding": "zero",
+              "right_padding": "zero"
+            }
+          ],
+          "type": "div-table-block"
+          {% endwith %}
+        },
+        {% with rating = poi_data|get_item('rating.score')|float|round|int,
+                icons = [] %}
+          {% if rating %}
+            {% for i in range(rating//2) %}
+              {% do icons.append(fill_star_icon) %}
+            {% endfor %}
+            {% if rating % 2 == 1 %}
+              {% do icons.append(half_star_icon) %}
+            {% endif %}
+            {% for i in range(5 - rating//2 - rating%2) %}
+              {% do icons.append(empty_star_icon) %}
+            {% endfor %}
+            {
+              "rows":[
+                {
+                  "cells": [
+                    {% call(icon) json_items(icons) %}
+                    {
+                      "image": {
+                        "image_url": "{{ icon }}",
+                        "ratio": 1,
+                        "type": "div-image-element"
+                      },
+                      "vertical_alignment": "center",
+                      "horizontal_alignment": "center",
+                      "image_size": "xs"
+                    }
+                    {% endcall %}
+                    ,
+                    {
+                      "text": "{{ font_color('#7F7F7F', '%s/10'|format(rating)) }}",
+                      "text_style": "text_s",
+                      "horizontal_alignment": "right",
+                      "vertical_alignment": "bottom"
+                    }
+                  ]
+                  ,
+                  "type": "row_element"
+                }
+              ],
+              "columns": [
+                {
+                  "right_padding": "zero",
+                  "left_padding": "zero"
+                },
+                {
+                  "right_padding": "zero",
+                  "left_padding": "zero"
+                },
+                {
+                  "right_padding": "zero",
+                  "left_padding": "zero"
+                },
+                {
+                  "right_padding": "zero",
+                  "left_padding": "zero"
+                },
+                {
+                  "right_padding": "zero",
+                  "left_padding": "zero"
+                },
+                {
+                  "left_padding": "xs"
+                }
+              ],
+              "type": "div-table-block"
+            },
+          {% endif %}
+        {% endwith %}
+        {
+          "type": "div-separator-block",
+          "size": "xxs"
+        },
+        {
+          "items": [
+            {% if poi_data|get_item('phone_uri') %}
+            {
+              "image": {
+                "image_url": "{{ phone_icon }}",
+                "type": "div-image-element"
+              },
+              "action": {
+                "url": "{{ open_uri_action(poi_data|get_item('phone_uri'), 'phone_call__button') }}",
+                "log_id": "whole_card__phone"
+              }
+            },
+            {% endif %}
+            {% if poi_data|get_item('url') %}
+            {
+              "image": {
+                "image_url": "{{ net_icon }}",
+                "type": "div-image-element"
+              },
+              "text": "Сайт",
+              "action": {
+                "url": "{{ open_uri_action(poi_data|get_item('url'), 'open_web__button') }}",
+                "log_id": "whole_card__web"
+              }
+            },
+            {% endif %}
+            {
+              "image": {
+                "image_url": "{{ route_icon }}",
+                "type": "div-image-element"
+              },
+              "text": "Маршрут",
+              "action": {
+                "url": "{{ open_uri_action(poi_data|get_item('route_uri'), 'show_route__button') }}",
+                "log_id": "whole_card__route"
+              }
+            }
+          ],
+          "type": "div-buttons-block"
+        },
+        {
+          "type": "div-separator-block",
+          "size": "xxs"
+        }
+      ],
+      "action": {
+        "url": "{{ open_uri_action(poi_data|get_item('object_uri'), 'whole_card', 'poi_found_whole_card') }}",
+        "log_id": "whole_card"
+      }
+    }
+  ],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endmacro %}
+
+{% card found_poi %}
+	{{ render_found_poi_card(context.data) }}
+{% endcard %}

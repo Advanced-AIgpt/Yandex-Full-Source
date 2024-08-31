@@ -1,0 +1,54 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/show_collection_div_cards.nlg" %}
+{% from "common/error.nlg" import render_error %}
+
+{% macro collection_gen(id, tag) %}
+{{
+  {
+    'MuradOsmann': {'voice': 'FollowMeTo <[folou mi tu]>', 'text': 'FollowMeTo'},
+    'PokrasLampas': {'voice': 'покрас лампаса', 'text': 'Покрас Лампаса'},
+    'SofiFil': {'voice': 'Софьи Филлиповой', 'text': 'Софьи Филлиповой'},
+    'SergeySuhov': {'voice': 'Сергея Сухова', 'text': 'Сергея Сухова'},
+    'SergeyKalujny': {'voice': 'Сергея Калюжного', 'text': 'Сергея Калюжного'},
+    'NikolaiSobolev': {'voice': 'Николая Соболева', 'text': 'Николая Соболева'},
+    'КonstantinPavlov': {'voice': 'Константина Павлова', 'text': 'Константина Павлова'},
+    'DmitriyMaslennikov': {'voice': 'Дмитрия Масленникова', 'text': 'Дмитрия Масленникова'},
+    'PolinaTrubenkova': {'voice': 'Полины Трубенковой', 'text': 'Полины Трубенковой'},
+    'OlgaMarkes': {'voice': 'Ольги Маркес', 'text': 'Ольги Маркес'}
+  }.get(id).get(tag)
+}}
+{% endmacro %}
+
+{% phrase show_collection %}
+{% set raw_collection_name = form.raw_form.get_slot_by_name('collection').source_text | inflect('gen') | capitalize_all %}
+  {% vc %}
+    Вот коллекции {{ collection_gen(form.collection, 'voice') or raw_collection_name }}
+  {% evc %}
+  {% tx %}
+    Вот коллекции {{ collection_gen(form.collection, 'text') or raw_collection_name }}.
+  {% etx %}
+{% endphrase %}
+
+{% phrase render_error__collectionerror %}
+{% if context.error.data.code == 'collection_not_found' %}
+  {% chooseline %}
+    К сожалению, не смогла найти такой коллекции.
+    К сожалению, такой коллекции у меня нет.
+  {% endchooseline %}
+{% else %}
+  {{ render_error() }}
+{% endif %}
+{% endphrase %}
+
+{% phrase ask_collection %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+{% if context.error.data.code == 'div_cards_not_supported' %}
+  {% chooseline %}
+    Не могу показать коллекцию на этом устройстве.
+  {% endchooseline %}
+{% else %}
+  {{ render_error() }}
+{% endif %}
+{% endphrase %}

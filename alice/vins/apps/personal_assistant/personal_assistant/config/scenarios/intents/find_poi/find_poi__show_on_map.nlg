@@ -1,0 +1,25 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "find_poi/find_poi__ask.nlg" %}
+
+{% from "find_poi/find_poi_common.nlg" import nothing_found, show_on_map %}
+{% from "scenarios/intents/common.nlg" import showing_map_not_supported %}
+
+{% phrase render_uri %}
+  {% if not is_smart_speaker() %}
+    {% if form.last_found_poi %}
+      {{ form.last_found_poi.geo_uri }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.last_found_poi %}
+    {% if is_smart_speaker() %}
+      {{ showing_map_not_supported() }}
+    {% else %}
+      {{ show_on_map() }}
+    {% endif %}
+  {% else %}
+    {{ nothing_found(form) }}
+  {% endif %}
+{% endphrase %}

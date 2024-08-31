@@ -1,0 +1,85 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "timer/timer__common.nlg" %}
+{% from "timer/timer__common.nlg" import render_error, format_time %}
+
+{% macro render_compact_confirmation() %}
+  {% chooseline %}
+    Хорошо
+    Окей
+    Поняла
+    Готово
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('timer__need_confirmation') %}
+  {% elif is_active_attention('timer__already_set') %}
+    {% tx %}Таймер{% etx %}{% vc %}т+аймер{% evc %} уже запущен, заменить его?
+  {% elif form.specification == "sleep" %}
+    {% if is_active_attention('timer__abs_time') %}
+      {{ render_compact_confirmation() }}. Выключусь в {{ format_time(form.time, absolute=True) }}.
+    {% else %}
+      {{ render_compact_confirmation() }}. Выключусь через {{ format_time(form.time) }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      Хорошо. {{ format_time(form.time, case='nom') }}. Время пошло!
+    {# {% or %}
+      Сделано. Через {{ format_time(form.time) }} я вам посигналю. #}
+    {% or %}
+      Поставила {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} на {{ format_time(form.time) }}.
+    {% or %}
+      Готово. {{ format_time(form.time, case='nom') }}. Начинаю отсчёт.
+    {% or %}
+      Хорошо. {{ format_time(form.time, case='nom') }}. Отсчёт пошёл.
+    {% endchooseitem %}
+  {% endif %}
+{% endphrase %}
+
+{% macro timer_hint() %}
+  {% set minutes = range(5,20) | random %}
+  {% set seconds = range(5,20) | random %}
+  {% chooseline %}
+    Чтобы установить {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} скажите, например, "Установи {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} на {{ minutes }} минут {{ seconds }} секунд".
+    Чтобы запустить {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} скажите, например, "Установи {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} на {{ seconds }} секунд".
+    Чтобы засечь время скажите, например, "Засеки {{ minutes }} минут".
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase ask__time %}
+  На какое время поставить {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %}{% if form.specification == "sleep" %} сна{% endif %}?
+{% endphrase %}
+
+{% phrase ask__sleep_time %}
+  {% chooseline %}
+    Пожалуйста, повторите, через сколько мне нужно отключиться?
+    Что-то я отвлеклась. Повторите, через сколько мне нужно отключиться?
+    Ой, отвлеклась. Повторите, через сколько мне нужно отключиться?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_error__timererror %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {% if is_elari_watch() %}
+      Я скоро научусь это делать. Время пролетит незаметно.
+    {% else %}
+      {% chooseline %}
+        Засекать время я пока не умею. Обязательно научусь.
+        Нет, {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} я пока не умею устанавливать. Но это временно.
+        Я пока не умею устанавливать {% tx %}таймеры{% etx %}{% vc %}т+аймеры{% evc %} на этом устройстве, но когда-нибудь научусь.
+      {% endchooseline %}
+    {% endif %}
+  {% elif context.error.data.code == 'bad_arguments' or context.error.data.code == 'time_exceeds_limit' %}
+    {% if form.time %}
+      Я могу поставить {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} длительностью до {% vc %}{{ '#gen' }}{% evc %} 24 часов.
+    {% else %}
+      {{ timer_hint() }}
+    {% endif %}
+  {% elif context.error.data.code == 'setting_failed' %}
+    У меня не получилось поставить {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %}, придется вам это сделать самостоятельно.
+  {% else %}
+    {% if not is_active_attention('timer__need_confirmation') %}
+      {{ render_error(context.error.data.code) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

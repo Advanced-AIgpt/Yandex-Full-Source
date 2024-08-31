@@ -1,0 +1,20 @@
+{% nlgimport "player/player__common.nlg" %}
+{% from "video/video__common.nlg" import attentions_general with context %}
+{% from "player/player__common.nlg" import alicesdk_player_response with context %}
+
+{% macro render_set_repeat() %}
+  Ставлю на повтор
+{% endmacro %}
+
+{% phrase render_result %}
+{% set attention = attentions_general(form, context, 'say nothing').strip() %}
+  {% if is_active_attention('cannot_repeat_tv_stream') %}
+    Не могу повторить эфирную программу
+  {% elif attention %}
+    {{ attention }}
+  {% elif has_alicesdk_player() %}
+    {{ alicesdk_player_response(render_set_repeat()) }}
+  {% elif is_smart_speaker() %}
+    {{ render_set_repeat() }}
+  {% endif %}
+{% endphrase %}

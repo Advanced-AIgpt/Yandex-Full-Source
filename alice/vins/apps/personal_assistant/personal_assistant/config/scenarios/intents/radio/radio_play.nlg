@@ -1,0 +1,162 @@
+{% nlgimport "radio/radio__common.nlg" %}
+{% nlgimport "music/music__common.nlg" %}
+
+{% from "radio/radio__common.nlg" import render_radio_title, render_unknown_station, render_unsupported_user_region, render_unconfigured_station with context %}
+{% from "music/music__common.nlg" import render_authorization_from_music_play %}
+
+{% set bass_results = namespace() %}
+{% set bass_results.stream_data = form.radio_search_results|get_item('stream_data') %}
+{% set bass_results.fm_radio_name = bass_results.stream_data|get_item('result')|get_item('title') %}
+
+{% macro no_station() %}
+  {% chooseline %}
+    Извините, не могу найти такую станцию.
+    К сожалению в моей базе нет такого радио.
+    Не могу найти.
+    Не получилось найти радио.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro station_not_found_in_region() %}
+  {% chooseline %}
+    Эта станция недоступна в вашем регионе. Такие дела.
+    К сожалению, в вашем регионе эта станция недоступна.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_launch_personal_auto() %}
+  {{ render_unconfigured_station() }}
+  Зато могу включить вам
+  {% chooseline %}
+    радио с вашими треками на
+    персональное радио на
+  {% endchooseline %}
+  {% tx %}Яндекс.Музыке{% etx %}
+  {% vc %}Яндекс Музыке{% evc %}
+  .
+{% endmacro %}
+
+{% macro render_result_auto(no_fm_station, launch_personal) %}
+  {% if no_fm_station %}
+    {{ station_not_found_in_region() }}
+  {% elif launch_personal %}
+    {{ render_launch_personal_auto() }}
+  {% else %}
+    {% if form.fm_radio %}
+      Включаю "{{ bass_results.fm_radio_name or form.fm_radio }}".
+    {% elif form.ya_radio %}
+      Включаю "{{ form.ya_radio }}".
+    {% elif form.fm_radio_freq %}
+      Включаю частоту "{{ form.fm_radio_freq }}".
+    {% else %}
+      Включаю радио.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_launch_personal() %}
+  {% chooseitem %}
+    {% tx %}
+      Зато могу включить вам подборку с вашими треками на Яндекс.Музыке.
+    {% etx %}
+    {% vc %}
+      Зато могу включить вам подборку с вашими треками на Яндекс Музыке.
+    {% evc %}
+    {% or %}
+    {% tx %}
+      Зато могу включить вам персональную подборку на Яндекс.Музыке.
+    {% etx %}
+    {% vc %}
+      Зато могу включить вам персональную подборку на Яндекс Музыке.
+    {% evc %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_launch_recommended(radio_title) %}
+  {% chooseline %}
+    Могу предложить вам
+    Но могу включить вам
+    Зато могу включить вам
+  {% endchooseline %}
+  {{ render_radio_title(radio_title) }}.
+{% endmacro %}
+
+{% macro render_long_radio_intro(radio_title) %}
+{% set rendered_radio_title = render_radio_title(radio_title) %}
+{% set simple_nlu = is_active_attention('simple_nlu') %}
+  {% if simple_nlu %}
+    Включаю {{ rendered_radio_title }}.
+  {% else %}
+    {% chooseitem %}
+      Включаю {{ rendered_radio_title }}.
+    {% or %}
+      Окей! {{ rendered_radio_title | capitalize_first }}.
+    {% or %}
+      Хорошо! {{ rendered_radio_title | capitalize_first }}.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+{% set active = bass_results.stream_data|get_item('active', False) %}
+{% set available = bass_results.stream_data|get_item('available', False) %}
+{% set launch_personal = is_active_attention('station_not_found_launch_personal') %}
+{% set launch_recommended = is_active_attention('station_not_found_launch_recommended') %}
+{% set no_fm_station = is_active_attention('no_fm_station') %}
+{% set no_station = is_active_attention('no_station') %}
+{% set open_website = is_active_attention('open_radiostation_website') %}
+{% set radio_title = bass_results.stream_data|get_item('title', 'радио') %}
+{% set restricted_by_child_content_settings = is_active_attention('station_restricted_by_child_content_settings') %}
+{% set use_long_intro = is_active_attention('use_long_intro') %}
+  {% if form.disable_nlg %}
+    {# nlg is explicitly disabled #}
+  {% else %}
+    {% if is_active_attention('suggest_authorization_from_music_play') %}
+      {% text %}
+        {{ render_authorization_from_music_play() }}
+        \n
+      {% endtext %}
+    {% endif %}
+
+    {% if restricted_by_child_content_settings %}
+      Лучше слушать эту станцию вместе с родителями.
+    {% else %}
+      {% if no_station %}
+        {{ render_unknown_station() }}
+      {% elif is_auto() %}
+        {{ render_result_auto(no_fm_station, launch_personal) }}
+      {% elif active and available and not launch_recommended %}
+        {% if use_long_intro or not is_tv_plugged_in() %}
+          {{ render_long_radio_intro(radio_title) }}
+        {% else %}
+          Секунду.
+        {% endif %}
+      {% elif active and not available %}
+        Эта станция временно недоступна.
+        {% if not open_website and not launch_personal %}
+          {% chooseline %}
+            Такие дела.
+            Попробуйте позже.
+          {% endchooseline %}
+        {% endif %}
+      {% elif is_active_attention('unsupported_user_region') %}
+        {{ render_unsupported_user_region() }}
+      {% else %}
+        {{ render_unconfigured_station() }}
+      {% endif %}
+      {% if open_website %}
+        Но я могу открыть её сайт.
+      {% elif launch_personal %}
+        {{ render_launch_personal() }}
+      {% elif launch_recommended %}
+        {{ render_launch_recommended(radio_title) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__unauthorized %}
+  {% if context.error.data.code == 'music_authorization_problem' %}
+    {{ no_station() }}
+  {% endif %}
+{% endphrase %}

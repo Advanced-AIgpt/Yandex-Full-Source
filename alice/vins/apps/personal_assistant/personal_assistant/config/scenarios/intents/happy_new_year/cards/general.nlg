@@ -1,0 +1,364 @@
+{% from "cards/common.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color, logged_action_url with context %}
+{% from "happy_new_year/cards/general_consts.nlg" import hny_onboarding, hny_bloggers, hny_present %}
+
+{% macro separator(size="xxs", delimiter=False) %}
+  {
+    "size": "{{ size }}",
+    "type": "div-separator-block"
+  {% if delimiter %}
+    , "has_delimiter": 1
+  {% endif %}
+  },
+{% endmacro %}
+
+{% macro get_click_action_with_form_update(case_name, item_number) %}
+  {% set payload = dict(case_name=case_name) %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+      server_action_directive(
+        'update_form',
+        {
+          'form_update': {
+            'name': 'personal_assistant.scenarios.hny.' + case_name
+          },
+          'resubmit': True
+        }
+      )
+    ], payload)
+  }}
+{% endmacro %}
+
+{% macro get_click_action_with_music_form_update(case_name, special_playlist, item_number) %}
+  {% set payload = dict(case_name=case_name) %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+      server_action_directive(
+        'update_form',
+        {
+          'form_update': {
+            'name': 'personal_assistant.scenarios.music_play',
+            'slots': [{
+              'name': 'special_playlist',
+              'type': 'special_playlist',
+              'value': special_playlist,
+              'optional': True
+            }]
+          },
+          'resubmit': True
+        }
+      )
+    ], payload)
+  }}
+{% endmacro %}
+
+{% macro get_click_action_with_text(case_name, text, item_number, analytics_tag) %}
+  {% set payload = dict(case_name=case_name) %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+        client_action_directive(name='type', sub_name=analytics_tag|default(case_name), payload={'text': text}),
+     ], payload)
+  }}
+{% endmacro %}
+
+{% macro get_click_action(case_name, text, obj, item_number) -%}
+  {% if case_name in ['ya_decorate', 'ya_offer', 'ya_wear', 'ya_cook'] %}
+    {{ get_click_action_with_form_update(case_name, item_number) }}
+  {% elif case_name in ['ya_have_fun', 'ya_see', 'ya_listen'] %}
+    {{ open_uri_action_for_item_in_list(obj.action_url, 'hny_collection_' + case_name, item_number) }}
+  {% else %}
+    {{ get_click_action_with_text(case_name, text, item_number) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_onboarding_item(case_name, item_number) %}
+{% set obj = hny_onboarding[case_name] %}
+{% set url = get_click_action(case_name, obj.title, obj, item_number) | strip %}
+{
+   "height":{
+      "type":"numeric",
+      "value":204,
+      "unit":"dp"
+   },
+   "width":{
+      "type":"numeric",
+      "value":124,
+      "unit":"dp"
+   },
+   "alignment_horizontal":"left",
+   "frame":{
+      "style":"border",
+      "color":"{{ '#dcdee0' }}"
+   },
+   "action": {
+      "url": "{{ url }}",
+      "log_id": "{{ case_name }}"
+   },
+   "children":[
+      {
+         "type":"div-image-block",
+         "image":{
+            "type":"div-image-element",
+            "ratio":1.24,
+            "image_url":"{{ obj.image_url }}"
+         }
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#ffffff', obj.title) }}",
+        "title_style": "text_l",
+        "title_max_lines": 4
+      }
+   ],
+   "background":[
+      {
+        "type":"div-gradient-background",
+        "start_color": "{{ obj.start_color }}",
+        "end_color": "{{ obj.end_color }}"
+      }
+   ],
+   "type":"div-container-block",
+   "alignment_vertical":"top",
+   "direction":"vertical"
+}
+{% endmacro %}
+
+{% macro render_bloggers_item(blogger_name, item_number) %}
+{% set obj = hny_bloggers[blogger_name] %}
+{% set url = get_click_action(blogger_name, obj.title, obj, item_number) | strip %}
+{
+   "height":{
+      "type":"numeric",
+      "value":196,
+      "unit":"dp"
+   },
+   "width":{
+      "type":"numeric",
+      "value":132,
+      "unit":"dp"
+   },
+   "alignment_horizontal":"left",
+   "frame":{
+      "style":"border",
+      "color":"{{ '#dcdee0' }}"
+   },
+   "action": {
+      "url": "{{ url }}",
+      "log_id": "{{ blogger_name }}"
+   },
+   "children":[
+      {
+         "type":"div-image-block",
+         "image":{
+            "type":"div-image-element",
+            "ratio":1.32,
+            "image_url":"{{ obj.image_url }}"
+         }
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#ffffff', obj.title) }}",
+        "title_style": "text_l",
+        "title_max_lines": 4
+      }
+   ],
+   "background":[
+      {
+        "type":"div-gradient-background",
+        "start_color": "{{ obj.start_color }}",
+        "end_color": "{{ obj.end_color }}"
+      }
+   ],
+   "type":"div-container-block",
+   "alignment_vertical":"top",
+   "direction":"vertical"
+}
+{% endmacro %}
+
+{% macro render_gallery(type) %}
+{
+   "states":[
+      {
+         "state_id": 1,
+         "blocks":[
+            {
+               "type":"div-gallery-block",
+               "items":[
+                 {% for case in context.data %}
+                   {% if loop.index0 %}
+                    ,
+                   {% endif %}
+                   {% if type == 'onboarding' %}
+                    {{ render_onboarding_item(case.name, loop.index) }}
+                   {% elif type == 'bloggers' %}
+                    {{ render_bloggers_item(case.name, loop.index) }}
+                   {% endif %}
+                 {% endfor %}
+               ]
+            }
+         ]
+      }
+   ],
+   "background":[
+    {
+       "type":"div-solid-background",
+       "color":"{{ '#ffffff' }}"
+    }
+   ]
+}
+{% endmacro %}
+
+
+{% macro render_collection(blogger_name) %}
+{% set obj = hny_bloggers[blogger_name] %}
+{
+   "states":[
+      {
+         "state_id": 1,
+         "blocks":[
+            {
+               "type":"div-gallery-block",
+               "items":[ {
+                 "height":{
+                    "type":"numeric",
+                    "value":236,
+                    "unit":"dp"
+                 },
+                 "width":{
+                    "type":"numeric",
+                    "value":296,
+                    "unit":"dp"
+                 },
+                 "alignment_horizontal":"left",
+                 "frame":{
+                    "style":"border",
+                    "color":"{{ '#dcdee0' }}"
+                 },
+                 "action": {
+                    "url": "{{ open_uri_action(obj.action_url, 'hny_collection_' + blogger_name) }}",
+                    "log_id": "hny_collection_{{ blogger_name }}"
+                 },
+                 "children":[
+                     {
+                        "type":"div-image-block",
+                        "image":{
+                          "type":"div-image-element",
+                          "ratio":1.72,
+                          "image_url":"{{ obj.collection_image_url }}"
+                       }
+                      },
+                      {{ separator("xxs") }}
+                    {
+                      "type": "div-universal-block",
+                      "title": "{{ font_color('#ffffff', obj.text | html_escape) }}",
+                      "title_style": "text_l",
+                      "title_max_lines": 2
+                    }
+                 ],
+                 "background":[
+                    {
+                      "type":"div-gradient-background",
+                      "start_color": "{{ obj.start_color }}",
+                      "end_color": "{{ obj.end_color }}"
+                    }
+                 ],
+                 "type":"div-container-block",
+                 "alignment_vertical":"top",
+                 "direction":"vertical"
+              } ]
+            }
+         ]
+      }
+   ],
+   "background":[
+    {
+       "type":"div-solid-background",
+       "color":"{{ '#ffffff' }}"
+    }
+   ]
+}
+{% endmacro %}
+
+
+{% macro render_present() %}
+{
+   "states":[
+      {
+         "state_id": 1,
+         "blocks":[
+            {
+               "type":"div-gallery-block",
+               "items":[ {
+                 "height":{
+                    "type":"numeric",
+                    "value":172,
+                    "unit":"dp"
+                 },
+                 "width":{
+                    "type":"numeric",
+                    "value":296,
+                    "unit":"dp"
+                 },
+                 "alignment_horizontal":"left",
+                 "frame":{
+                    "style":"border",
+                    "color":"{{ '#dcdee0' }}"
+                 },
+                 "action": {
+                    "url": "{{ open_uri_action(hny_present.action_url, 'hny_present') }}",
+                    "log_id": "hny_present"
+                 },
+                 "children":[
+                     {
+                        "type":"div-image-block",
+                        "image":{
+                          "type":"div-image-element",
+                          "ratio":1.72,
+                          "image_url":"{{ hny_present.image_url }}"
+                       }
+                     }
+                 ],
+                 "background":[
+                    {
+                      "type":"div-solid-background",
+                      "color": "{{ '#253A23' }}"
+                    }
+                 ],
+                 "type":"div-container-block",
+                 "alignment_vertical":"top",
+                 "direction":"vertical"
+              } ]
+            }
+         ]
+      }
+   ],
+   "background":[
+    {
+       "type":"div-solid-background",
+       "color":"{{ '#ffffff' }}"
+    }
+   ]
+}
+{% endmacro %}
+
+
+{% card hny_onboarding %}
+	{{ render_gallery('onboarding') }}
+{% endcard %}
+
+{% card hny_bloggers %}
+  {{ render_gallery('bloggers') }}
+{% endcard %}
+
+{% card hny_collection %}
+  {{ render_collection(context.data.name) }}
+{% endcard %}
+
+{% card hny_present %}
+  {{ render_present() }}
+{% endcard %}

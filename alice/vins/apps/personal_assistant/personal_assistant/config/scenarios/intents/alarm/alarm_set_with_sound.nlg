@@ -1,0 +1,33 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "alarm/alarm__common.nlg" %}
+{% from "alarm/alarm_set.nlg" import alarm_set_render_result, render_error_impl__alarmerror with context %}
+{% from "alarm/alarm_set_sound.nlg" import alarm_set_sound_render_result, ask_sound with context %}
+{% from "music/music__common.nlg" import render_error_impl__musicerror, render_error_impl__unauthorized with context %}
+
+{% set alarm_set_success = is_active_attention('alarm__success') %}
+
+{% phrase render_result %}
+  {{ alarm_set_render_result() }}
+  {% if alarm_set_success %}
+    {% if is_active_attention('deleted_error__musicerror') %}
+      {{ render_error_impl__musicerror(get_attention('deleted_error__musicerror').data) }}
+    {% elif is_active_attention('deleted_error__unauthorized') %}
+      А изменить звук будильника не вышло.
+      {{ render_error_impl__unauthorized(get_attention('deleted_error__unauthorized').data) }}
+    {% else %}
+      {{ alarm_set_sound_render_result(combo_render=True) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase ask__sound %}
+  {{ alarm_set_render_result() }}
+  {% if alarm_set_success %}
+    {{ ask_sound() }}
+  {% endif %}
+{% endphrase %}
+
+{# this overrides similar phrase in alarm__common #}
+{% phrase render_error__alarmerror %}
+  {{ render_error_impl__alarmerror() }}
+{% endphrase %}

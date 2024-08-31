@@ -1,0 +1,78 @@
+{
+  "form": "search",
+  "events": [
+    {
+      "event": "submit",
+      "handlers": [
+        {
+          "handler": "callback",
+          "name": "universal_callback",
+          "balancer_type": "slow"
+        }
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "slot": "query",
+      "type": "string",
+      "optional": false,
+      "share_tags": ["search__query"],
+      "prefix_normalization": [
+        {
+          "source_case": "accs",
+          "prefix": "((.* |^)про|((найди|поищи)(| мне)))$"
+        },
+        {
+          "source_case": "loct",
+          "prefix": "(.* |^)о(б|)$"
+        }
+      ],
+      "events": [
+        {
+          "event": "ask",
+          "handlers": [
+            {
+              "handler": "callback",
+              "name": "nlg_callback",
+              "params": {
+                "phrase_id": "ask__query",
+                "question": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slot": "search_results",
+      "type": "search_results",
+      "optional": true,
+      "share_tags": ["search__search_results"]
+    },
+    {
+      "slot": "disable_change_intent",
+      "type": "bool",
+      "optional": true
+    },
+    {
+      "slot": "anaphora_resolved_flag",
+      "type": "bool",
+      "source_annotation": "anaphora_resolved_flag",
+      "optional": true
+    },
+    {
+      "slot": "related_query",
+      "type": "string",
+      "optional": true,
+      "share_tags": ["search__related_query"]
+    },
+    {
+      "slot": "related_queries_history",
+      "type": "related_queries_history",
+      "optional": true,
+      "share_tags": ["search__related_queries_history"],
+      "import_tags": ["search__related_queries_history"]
+    }
+  ]
+}

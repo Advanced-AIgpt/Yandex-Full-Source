@@ -1,0 +1,102 @@
+labels:
+  call_prefix: '(Набираю|Звоню||Уже набираю|Сейчас позвоним).*'
+  arbitrary_calls_not_supported: 'Пока что я умею звонить только в экстренные службы\.'
+  calls_not_supported_on_device: '.*\b(со?( своего)? телефона|на телефоне)\b.*'
+  no_recipient: 'Куда.+звонить\?'
+
+
+test_basic:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони в скорую:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: '103'
+
+      button_actions:
+      - name: 'open_uri'
+        title: 'Позвонить'
+        payload:
+          uri: '103'
+
+    а теперь в полицию: '{call_prefix}...'
+    а пожарным: '{call_prefix}...'
+    а в службу спасения: '{call_prefix}...'
+  app_info:
+    ignore:
+    - pa_android
+    - watch
+    - pa_ios
+    - irbis
+    - speaker
+    - auto
+    - desktop_alice
+    - dexp
+    - navigator_android
+    - navigator_ios
+
+
+test_cannot_call:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  app_info:
+    app_id: 'telegram'
+    app_version: '0'
+    os_version: '0'
+    platform: 'telegram'
+
+  dialog:
+    вызови скорую:
+      voice: '{calls_not_supported_on_device}'
+
+
+test_call_arbitrary_unsupported:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони киске:
+      voice: '{arbitrary_calls_not_supported}'
+      directives:
+        exact_match: true
+        data: []
+  app_info:
+    ignore:
+    - irbis
+    - speaker
+    - auto
+    - desktop_alice
+    - watch
+    - dexp
+
+
+test_no_recipient:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '0'
+    os_version: '0'
+    platform: 'android'
+
+  dialog:
+    позвони:
+      voice: '{no_recipient}'
+
+

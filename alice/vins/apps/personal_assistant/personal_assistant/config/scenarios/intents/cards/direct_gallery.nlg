@@ -1,0 +1,144 @@
+{% from "cards/common.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color with context %}
+
+{% macro render_direct_gallery_item(gallery_item, idx, gallery_items, data) %}
+{% set card_height = data|get_item('card_height') %}
+{% set has_disclaimer = data|get_item('has_disclaimer') %}
+{% set has_large_disclaimer = data|get_item('has_large_disclaimer') %}
+{% set cards_with_button = data|get_item('cards_with_button') %}
+{
+  "type": "div-container-block",
+  "frame": {
+    "style": "border",
+    "color": "{{ '#E5E5E5' }}"
+  },
+  "width": {
+    "value": 260,
+    "unit": "sp",
+    "type": "numeric"
+  },
+  "height": {
+    "value": {{ card_height }},
+    "unit": "sp",
+    "type": "numeric"
+  },
+  "action": {
+    "url": "{{ open_uri_action_for_item_in_list(gallery_item|get_item('url'), 'whole_card', idx, 'search_gallery_whole_card') }}",
+    "log_id": "direct_gallery_whole_card_click_{{- idx -}}"
+  },
+  "children": [
+    {
+      "type": "div-separator-block",
+      "size": "xs"
+    },
+    {
+      "type": "div-universal-block",
+      "title_style": "title_s",
+      "title": "{{ font_color('#0044bb', gallery_item|get_item('title')|html_escape) }}",
+      "title_max_lines": 2
+    },
+    {
+      "type": "div-table-block",
+      "rows": [
+        {
+          "type": "row_element",
+          "cells": [
+            {
+              "text": "{{ font_color('#007700', gallery_item|get_item('green_url')|html_escape) }}",
+              "horizontal_alignment": "left",
+              "text_style": "text_s"
+            },
+            {
+              "image": {
+                "type": "div-image-element",
+                "image_url": "https://i.imgur.com/w0vC6z4.png"
+              },
+              "image_size": "s",
+              "horizontal_alignment": "center"
+            }
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "left_padding": "zero"
+        },
+        {}
+      ]
+    },
+    {
+      "type": "div-universal-block",
+      "text_style": "text_m",
+      "text_max_lines": {% if has_disclaimer %} 3 {% else %} 4 {% endif %},
+      "text": "{{ font_color('#000000', gallery_item|get_item('text')|html_escape) }}"
+    }
+    {% if has_disclaimer %}
+      ,
+      {
+        "type": "div-universal-block",
+        "text_style": {% if gallery_item|get_item('required_size') == '10' %} "title_s" {% elif gallery_item|get_item('required_size') == '5' %} "text_l" {% else %} "text_s" {% endif %},
+        "text_max_lines": 3,
+        "text": "{{ font_color('#999999', gallery_item|get_item('disclaimer')|html_escape) }}"
+      }
+    {% endif %}
+    {% if cards_with_button %}
+      ,
+      {
+        "type": "div-separator-block",
+        "has_delimiter": 1,
+        "size": "match_parent"
+      },
+      {
+        "type": "div-footer-block",
+        "text": "{{ font_color('#6839cf', 'ПЕРЕЙТИ НА САЙТ') }}",
+        "action": {
+            "url": "{{ open_uri_action_for_item_in_list(gallery_item|get_item('url'), 'open_uri__button', idx, 'direct_gallery_open_uri') }}",
+            "log_id": "direct_gallery_button_click_{{- idx -}}"
+        }
+      }
+    {% endif %}
+  ]
+}
+{% endmacro %}
+
+{% macro render_direct_gallery_card(data) %}
+{% set items = data|get_item("direct_items") %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-gallery-block",
+          "tail" : {
+            "text": "Все результаты поиска",
+            "icon" : {
+            },
+            "action": {
+              "url": "{{ open_uri_action(data|get_item('serp_url'), 'open_serp__button') }}",
+              "log_id": "direct_gallery__serp"
+            }
+          },
+          "items": [
+            {% for item in items %}
+               {% if loop.index0 %}
+                 ,
+               {% endif %}
+               {{ render_direct_gallery_item(item, loop.index, items, data) }}
+            {% endfor %}
+          ]
+        }
+      ]
+    }
+  ],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endmacro %}
+
+{% card direct_gallery %}
+  {{ render_direct_gallery_card(context.data) }}
+{% endcard %}

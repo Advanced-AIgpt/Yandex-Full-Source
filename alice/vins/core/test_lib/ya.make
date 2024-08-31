@@ -1,0 +1,83 @@
+PY2_LIBRARY()
+
+OWNER(g:alice)
+
+PEERDIR(
+    contrib/python/fakeredis
+    contrib/python/mock
+    contrib/python/moto
+    contrib/python/requests-mock
+    contrib/python/pytest-mock
+    contrib/python/freezegun
+    alice/vins/apps/personal_assistant
+    alice/vins/core
+    alice/vins/sdk
+)
+
+SRCDIR(alice/vins/core)
+
+PY_SRCS(
+    TOP_LEVEL
+    vins_core/test/test_data/app.py
+    vins_core/test/test_data/__init__.py
+    vins_core/test/test_data/nlu_eval_data.py
+)
+
+RESOURCE_FILES(
+    vins_core/test/test_data/additional_nlu_source.tsv
+    vins_core/test/test_data/custom_currency.json
+    vins_core/test/test_data/test.regexp.feature.json
+    vins_core/test/test_data/entitysearch_base.json
+    vins_core/test/test_data/eval/capio2.tsv
+    vins_core/test/test_data/eval/music.tsv
+    vins_core/test/test_data/eval/navi_flow.tsv
+    vins_core/test/test_data/eval/navi_longtail.tsv
+    vins_core/test/test_data/eval/weather.tsv
+    vins_core/test/test_data/microintents/correct_config_with_everything.yaml
+    vins_core/test/test_data/microintents/incorrect_config_with_wrong_nlg.yaml
+    vins_core/test/test_data/microintents/incorrect_config_with_wrong_nlu.yaml
+    vins_core/test/test_data/microintents/incorrect_config_with_wrong_suggests.yaml
+    vins_core/test/test_data/microintents/incorrect_config_without_nlu.yaml
+    vins_core/test/test_data/microintents/test_microintent_cfg1.yaml
+    vins_core/test/test_data/microintents/test_microintent_cfg2.yaml
+    vins_core/test/test_data/personal_assistant/general_conversation.nlu
+    vins_core/test/test_data/personal_assistant/search.nlu
+    vins_core/test/test_data/protobuf/sample_features
+    vins_core/test/test_data/sessions/new_session0.json
+    vins_core/test/test_data/sessions/new_session1.json
+    vins_core/test/test_data/sessions/new_session2.json
+    vins_core/test/test_data/sessions/new_session3.json
+    vins_core/test/test_data/sessions/new_session4.json
+    vins_core/test/test_data/sessions/new_session5.json
+    vins_core/test/test_data/sessions/new_session6.json
+    vins_core/test/test_data/sessions/new_session7.json
+    vins_core/test/test_data/sessions/new_session8.json
+    vins_core/test/test_data/sessions/new_session9.json
+    vins_core/test/test_data/sessions/session0.json
+    vins_core/test/test_data/sessions/session1.json
+    vins_core/test/test_data/sessions/session2.json
+    vins_core/test/test_data/sessions/session3.json
+    vins_core/test/test_data/sessions/session4.json
+    vins_core/test/test_data/sessions/session5.json
+    vins_core/test/test_data/sessions/session6.json
+    vins_core/test/test_data/sessions/session7.json
+    vins_core/test/test_data/sessions/session8.json
+    vins_core/test/test_data/sessions/session9.json
+    vins_core/test/test_data/test_app/Vinsfile.json
+    vins_core/test/test_data/test_app/_internal_/VinsProjectfile.yaml
+    vins_core/test/test_data/test_app/_internal_/intents/dont_understand.json
+    vins_core/test/test_data/test_app/_internal_/intents/dont_understand.nlg
+    vins_core/test/test_data/test_app/_internal_/intents/dont_understand.nlu
+    vins_core/test/test_data/test_app/general/VinsProjectfile.json
+    vins_core/test/test_data/test_app/general/custom_intents.json
+    vins_core/test/test_data/test_app/general/intents/intent1.nlu
+    vins_core/test/test_data/test_app/general/intents/intent1.yaml
+    vins_core/test/test_data/test_app/general/intents/intent2.nlu
+    vins_core/test/test_data/test_app/general/intents/intent2.yaml
+    vins_core/test/test_data/test_app/general/intents/micro.microintents.yaml
+    vins_core/test/test_data/test_app/nlg/common.nlg
+    vins_core/test/test_data/transition_model.yaml
+    vins_core/test/test_data/transition_model_no_zeros.yaml
+)
+
+END()

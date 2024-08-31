@@ -1,0 +1,18 @@
+# registry.yandex.net/vins/vins-all
+
+FROM registry.yandex.net/vins/base:1.9
+
+ENV KERAS_BACKEND=tensorflow
+
+COPY . code
+
+RUN cd code \
+    && ./docker_scripts/install_app_deps.sh core sdk api apps/personal_assistant apps/navi apps/pa_skills test_bot \
+    && cd ..
+
+COPY ./docker_scripts/run-vins.sh run-vins.sh
+
+RUN chmod +x run-vins.sh ./code/cit_configs/sandbox/run-vins.py
+
+USER vins
+CMD ./run-vins.sh

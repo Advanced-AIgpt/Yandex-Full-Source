@@ -1,0 +1,33 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "search/search__ask.nlg" %}
+
+{% from "scenarios/intents/common.nlg" import render_call, calls_not_supported %}
+{% from "search/search__common.nlg" import get_search_info  %}
+
+{% set info = namespace() %}
+{% do get_search_info(form, info, req_info.experiments['enable_factoid_child_answer'] != None) %}
+
+
+{% phrase render_uri %}
+  {% if not (is_smart_speaker() or is_auto())  %}
+    {% if info.factoid_phone_uri %}
+      {{ info.factoid_phone_uri }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if (is_smart_speaker() or is_auto()) and info.is_factoid_with_phone %}
+    {{ calls_not_supported() }}
+  {% else %}
+    {% if info.factoid_phone_uri %}
+      {{ render_call() }}
+    {% else %}
+      {% chooseline %}
+        Я не понимаю, куда позвонить.
+        Я не нашла никакого номера телефона.
+        Я не понимаю, о каком номере телефона вы говорите.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

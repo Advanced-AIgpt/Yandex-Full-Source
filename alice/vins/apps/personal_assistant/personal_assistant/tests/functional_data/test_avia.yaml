@@ -1,0 +1,956 @@
+freeze_time: '2018-06-01 10:00:00'
+
+labels:
+  ask_to: '.*(Куда летим|Куда будем искать билеты|Куда вам нужно).*'
+  avia_promo: '(Это я на Яндекс Авиабилетах смотрю, там ещё много вариантов)|(Смотрела
+    на Яндекс Авиабилетах, там есть и другие варианты)|(Это — самая лучшая цена на
+    Яндекс Авиабилетах. Там и другие есть)'
+  price: '[0-9]+ рубл(ь|ей|я)'
+  found_without_date_msk_par: '([Ии]з Москвы в Париж можно улететь за|[Дд]о Парижа
+    можно долететь за|[Вв] Париж можно улететь за)'
+  answer1: '.*{found_without_date_msk_par}.*{price}.*{avia_promo}.*'
+  answer2: '[123][0-9]? марта {answer1}'
+  no_price_text: '(Вы меня озадачили. Кажется, придётся искать на сайте.)|(Вы меня озадачили. Давайте посмотрим на Яндекс.Авиабилетах.)|(Непростой запрос. Давайте лучше на сайте посмотрим.)|(Это не так просто, как кажется. Давайте поищем на Яндекс.Авиабилетах.)'
+  no_price_voice: '(Вы меня озадачили. Кажется, придётся искать на сайте.)|(Вы меня озадачили. Давайте посмотрим на Яндекс Авиабилетах.)|(Непростой запрос. Давайте лучше на сайте посмотрим.)|(Это не так просто, как кажется. Давайте поищем на Яндекс Авиабилетах.)'
+  no_arrival_airport: '(Аэропорт в месте прибытия нам бы точно не помешал.)|(Вы не обижайтесь, но в месте прибытия вообще нет аэропорта.)|(Я не нашла аэропорта в точке «Тверь».)'
+  no_departure_airport: '(Аэропорт в месте отправления нам бы точно не помешал.)|(Вы не обижайтесь, но в месте отправления вообще нет аэропорта.)|(Я не нашла аэропорта в точке «Тверь».)'
+  checkout_text: '(Начнём.)|(Давайте приступим.)|(Легко.)|(Я готова.)|(Сейчас всё сделаем.)'
+
+test_without_points1:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: ask__to
+          - type: suggest
+            suggest_type: avia__point_to
+            data:
+              caption: 'москва'
+              price: 1000
+          - type: suggest
+            suggest_type: avia__point_to
+            data:
+              caption: 'париж'
+          - type: suggest
+            suggest_type: avia__point_to
+            data:
+              caption: 'Франция'
+          form_name: personal_assistant.scenarios.avia__ask_to
+        text: '{ask_to}'
+        suggests:
+        - type: avia__point_to
+          caption: 'В Москву'
+        - type: avia__point_to
+          caption: 'В Париж'
+        - type: avia__point_to
+          caption: 'Во Францию'
+
+    app_info:
+      ignore:
+      - auto
+      - pa_ios
+      - watch
+      - desktop_alice
+      - pa_android
+      - speaker
+      - navigator_android
+      - dexp
+      - irbis
+      - navigator_ios
+
+
+test_without_points2:
+  experiments: ['avia']
+  test:
+    dialog:
+      билет на самолет:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: ask__to
+          form_name: personal_assistant.scenarios.avia__ask_to
+          suggests:
+          - type: avia__ask_to
+        text: '{ask_to}'
+    app_info:
+      ignore:
+      - watch
+
+
+test_without_points3:
+  experiments: ['avia']
+  dialog:
+    купи билет на самолет:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+      bass:
+        blocks:
+          - type: text_card
+            phrase_id: ask__to
+          - type: suggest
+            suggest_type: avia__ask_to
+        form_name: personal_assistant.scenarios.avia__ask_to
+      text: '{ask_to}'
+
+    в париж:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ask_to
+        slots:
+          geo_to:
+            value: париж
+      bass:
+        blocks:
+        - type: text_card
+          phrase_id: without_cards
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+          min_price:
+            value: 12345
+        suggests:
+        - type: avia__dates
+      text: '{answer1}'
+
+    12 марта:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+          date_forward:
+            value:
+              months: 3
+              days: 12
+      bass:
+        blocks:
+          - type: text_card
+            phrase_id: without_cards
+          - type: suggest
+            suggest_type: avia__dates
+            data:
+              date_forward:
+                  months: 3
+                  days: 13
+              price: 1000
+          - type: suggest
+            suggest_type: avia__dates
+            data:
+              date_forward:
+                  months: 3
+                  days: 14
+                  years: 2019
+          - type: suggest
+            suggest_type: avia__month
+            data:
+              month: 4
+          - type: text_card
+            phrase_id: without_cards
+          - type: suggest
+            suggest_type: avia__dates
+            data:
+              date_forward:
+                months: 3
+                days: 13
+              price: 1000
+          - type: suggest
+            suggest_type: avia__dates
+            data:
+              date_forward:
+                months: 3
+                days: 14
+          - type: suggest
+            suggest_type: avia__month
+            data:
+              month: 4
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+          min_price:
+            value: 12345
+          date_forward:
+            value:
+              months: 3
+              days: 12
+              years: 2019
+      suggests:
+      - type: avia__dates
+        caption: '13 марта'
+      - type: avia__dates
+        caption: '14 марта'
+      - type: avia__month
+        caption: 'В апреле'
+      text: '{answer2}'
+  app_info:
+    ignore:
+    - dexp
+    - pa_android
+    - desktop_alice
+    - pa_ios
+    - navigator_android
+    - watch
+    - speaker
+    - navigator_ios
+    - auto
+    - irbis
+
+    беру:
+      vins_form:
+        name: personal_assistant.scenarios.avia__checkout
+        slots:
+          geo_from: Москва
+          geo_to:
+            value: Париж
+          date_forward:
+            value:
+              months: 3
+              days: 12
+              years: 2019
+      bass:
+        form_name: personal_assistant.scenarios.avia__checkout
+        blocks:
+          - type: text_card
+            phrase_id: avia__checkout_text
+
+      text: '{checkout_text}'
+
+test_with_point_to:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет в париж:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to:
+              value: париж
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: without_cards
+          suggests:
+          - type: avia__dates
+          form:
+            geo_from:
+              value: Москва
+            geo_to:
+              value: Париж
+            min_price:
+              value: 7225
+
+        text: '{answer1}'
+
+      рецепт вкусного борща:
+        vins_form:
+          name: personal_assistant.scenarios.search
+
+    app_info:
+      ignore:
+      - watch
+
+
+test_with_points_to_and_from_cards:
+  app_info:
+    app_id: 'com.yandex.dialog_assistant.sample'
+    app_version: '1.0'
+    os_version: '7.0.0'
+    platform: 'android'
+  experiments: ['avia']
+  test:
+    авиабилет из москвы в париж:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: париж
+          geo_from:
+            value: москвы
+      bass:
+        blocks:
+          - type: div_card
+            card_template: avia_direction
+            data:
+              geo_from: Москва
+              geo_to: Париж
+              min_price: 12345
+              min_price_date:
+                value:
+                  days: 1
+                  months: 2
+                  year: 2019
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+      cards:
+        - div_card
+
+    13 марта:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+         geo_to:
+            value: Париж
+         geo_from:
+           value:  Москва
+         date_forward:
+           value:
+             days: 13
+             months: 3
+      bass:
+        blocks:
+          - type: div_card
+            card_template: avia_direction_with_dates
+            data:
+              geo_from: Москва
+              geo_to: Париж
+              date_forward:
+                days: 13
+                months: 3
+                years: 2019
+              min_price: 12345
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+          date_forward:
+            value:
+              days: 13
+              months: 3
+              years: 2019
+      cards:
+        - div_card
+
+
+test_with_points_to_and_from_with_dates_cards:
+  app_info:
+    app_id: 'com.yandex.dialog_assistant.sample'
+    app_version: '1.0'
+    os_version: '7.0.0'
+    platform: 'android'
+  experiments: ['avia']
+  test:
+    авиабилет из москвы в париж 12 марта:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+         geo_to:
+            value: париж
+         geo_from:
+           value: москвы
+         date_forward:
+           value:
+             months: 3
+             days: 12
+
+      bass:
+        blocks:
+          - type: div_card
+            card_template: avia_direction_with_dates
+            data:
+              geo_from: Москва
+              geo_to: Париж
+              date_forward:
+                  months: 3
+                  days: 12
+                  years: 2019
+              min_price: 12345
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_to:
+            value: Париж
+          geo_from:
+            value: Москва
+          date_forward:
+            value:
+              months: 3
+              days: 12
+              years: 2019
+
+      cards:
+        - div_card
+    беру:
+      vins_form:
+        name: personal_assistant.scenarios.avia__checkout
+        slots:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+          date_forward:
+            value:
+              months: 3
+              days: 12
+              years: 2019
+      bass:
+        form_name: personal_assistant.scenarios.avia__checkout
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Париж
+        blocks:
+            - type: text_card
+              phrase_id: avia__checkout
+            - type: suggest
+              suggest_type: avia__checkout_link
+              data:
+                uri: 'https://avia.yandex.ru/routes/MOW/PAR/MOW-PAR/prices?when=2019-03-01'
+      suggests:
+        - type: avia__checkout_link
+          payload:
+            uri: 'https://avia.yandex.ru/routes/MOW/PAR/MOW-PAR/prices?when=2019-03-01'
+
+      text: '{checkout_text}'
+
+
+test_to_country:
+  app_info:
+    app_id: 'com.yandex.dialog_assistant.sample'
+    app_version: '1.0'
+    os_version: '7.0.0'
+    platform: 'android'
+  experiments: ['avia']
+  test:
+    авиабилеты из москвы в турцию:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: турцию
+          geo_from:
+            value: москвы
+      bass:
+        blocks:
+        - type: div_card
+          card_template: avia_country
+          data:
+            geo_from: Москва
+            geo_to: Турция
+            cities:
+              - title: Анкара
+                min_price: 1234
+                link: some_url
+              - title: Стамбул
+                link: some_url
+
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Турция
+
+      cards:
+        - div_card
+
+    13 марта:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+          geo_to:
+            value: Турция
+          geo_from:
+            value: Москва
+          date_forward:
+            value:
+              days: 13
+              months: 3
+      bass:
+        blocks:
+        - type: div_card
+          card_temlpate: avia_country
+          data:
+            geo_from: Москва
+            geo_to: Турция
+            date_forward:
+              value:
+                days: 13
+                months: 3
+                years: 2019
+            cities:
+              - title: Анкара
+                min_price: 1234
+                link: some_url
+              - title: Стамбул
+                link: some_url
+
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from: Москва
+          geo_to: Турция
+          date_forward:
+            value:
+              days: 13
+              months: 3
+              years: 2019
+
+
+
+test_with_points_to_and_from:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет из москвы в париж:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to:
+              value: париж
+            geo_from:
+              value: москвы
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: without_cards
+          form:
+            geo_from:
+              value: Москва
+            geo_to:
+              value: Париж
+            min_price:
+              value: 7225
+        text: '{answer1}'
+        cards:
+        - simple_text
+
+    app_info:
+      ignore:
+      - watch
+
+
+test_to_without_airports:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет в тверь:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to: тверь
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: ask__to
+          form:
+            error:
+              value: Тверь
+            error_code:
+              value: no_airport
+        text: '{no_arrival_airport}'
+    app_info:
+      ignore:
+      - watch
+
+test_to_without_airports2:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет из твери в москву:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_from: твери
+            geo_to: москвy
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: ask__from
+          form:
+            error:
+              value: Тверь
+            error_code:
+              value: no_airport
+        text: '{no_departure_airport}'
+    app_info:
+      ignore:
+      - watch
+
+
+
+test_no_avia:
+  experiments: ['avia']
+  test:
+    билеты из москвы в сочи:
+      vins_form:
+        name: personal_assistant.scenarios.search
+
+test_month:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилеты в мае:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            date_forward:
+              months: 5
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: ask__to
+        text: '{ask_to}'
+    app_info:
+      ignore:
+      - watch
+
+
+test_difficult_taggers:
+  experiments: ['avia']
+  test:
+    авиабилеты москва сиэтл туда 25 октября обратно 1 ноября:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_from:
+            value: москва
+          geo_to:
+            value: сиэтл
+          date_forward:
+            value:
+              days: 25
+              months: 10
+          date_backward:
+            value:
+              days: 1
+              months: 11
+
+test_with_strange_transitions:
+  experiments: ['avia']
+  test:
+    авиабилеты в париж 13 марта:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: париж
+          date_forward:
+            value:
+              days: 13
+              months: 3
+
+      bass:
+        form_name:  personal_assistant.scenarios.avia
+        form:
+          geo_to:
+            value: Париж
+          geo_from:
+            value: Москва
+        date_forward:
+          value:
+            days: 13
+            months: 3
+            years: 2019
+
+    в милан:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+          geo_to:
+            value: милан
+          geo_from:
+            value: Москва
+
+
+test_unknown_from:
+  experiments: ['avia']
+  test:
+    авиабилеты из оаааоаоаа:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_from:
+            value: оаааоаоаа
+
+      bass:
+        form_name:  personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: оаааоаоаа
+          error:
+            value: оаааоаоаа
+          error_code:
+            value: unparsed_from
+
+    из москвы:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+          geo_from:
+            value: москвы
+
+
+test_to_difficult_country:
+  experiments: ['avia']
+  app_info:
+    app_id: 'com.yandex.dialog_assistant.sample'
+    app_version: '1.0'
+    os_version: '7.0.0'
+    platform: 'android'
+  test:
+    авиабилеты на мальдивы:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: мальдивы
+      bass:
+        blocks:
+        - type: div_card
+          card_template: avia_country
+          data:
+            geo_from: Москва
+            geo_to: Мальдивы
+            cities:
+              - title: Мале
+                min_price: 1234
+                link: some_url
+
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Мальдивы
+
+      cards:
+        - div_card
+
+
+
+test_internal_error:
+  app_info:
+    ignore:
+    - auto
+    - pa_ios
+    - watch
+    - desktop_alice
+    - pa_android
+    - speaker
+    - navigator_android
+    - dexp
+    - irbis
+    - navigator_ios
+  experiments: ['avia']
+  test:
+    авиабилеты на мальдивы:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: мальдивы
+      bass:
+        blocks:
+        - type: text_card
+          phrase_id: without_cards
+
+        form_name: personal_assistant.scenarios.avia
+        form:
+          geo_from:
+            value: Москва
+          geo_to:
+            value: Мальдивы
+          error_code:
+            value: internal_error
+
+      text: 'Кажется, на сервере нелётная погода. Попробуйте позже.'
+
+
+
+test_ellipsis:
+  experiments: ['avia']
+  test:
+    авиабилеты москва казань:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: казань
+          geo_from:
+            value: москва
+
+      bass:
+        form_name:  personal_assistant.scenarios.avia
+        form:
+          geo_to:
+            value: Казань
+          geo_from:
+            value: Москва
+
+    а в сочи:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ellipsis
+        slots:
+          geo_to:
+            value: сочи
+          geo_from:
+            value: Москва
+
+
+test_saint_petersburg:
+  experiments: ['avia']
+  test:
+    авиабилеты:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+      bass:
+        form_name: personal_assistant.scenarios.avia__ask_to
+    санкт петербург:
+      vins_form:
+        name: personal_assistant.scenarios.avia__ask_to
+        slots:
+          geo_to:
+            value: санкт петербург
+          geo_from:
+            value: null
+  app_info:
+    ignore:
+      - watch
+
+
+test_with_connection:
+  experiments: ['avia']
+  test:
+    авиабилеты москва казань с пересадкой в париже:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: казань
+          geo_from:
+            value: москва
+
+
+test_with_connection2:
+  experiments: ['avia']
+  test:
+    авиабилеты москва казань через париж:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: казань
+          geo_from:
+            value: москва
+
+test_with_connection3:
+  experiments: ['avia']
+  test:
+    авиабилеты из москвы в казань с пересадкой в париже:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: казань
+          geo_from:
+            value: москвы
+
+
+test_with_connection4:
+  experiments: ['avia']
+  test:
+    авиабилеты из москвы в казань через париж:
+      vins_form:
+        name: personal_assistant.scenarios.avia
+        slots:
+          geo_to:
+            value: казань
+          geo_from:
+            value: москвы
+
+test_with_point_to_witout_prepositon:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет париж:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to:
+              value: париж
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: without_cards
+          suggests:
+          - type: avia__dates
+          form:
+            geo_from:
+              value: Москва
+            geo_to:
+              value: Париж
+            min_price:
+              value: 7225
+
+        text: '{answer1}'
+  app_info:
+    ignore:
+      - watch
+
+test_without_prices:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет в париж:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to:
+              value: париж
+        bass:
+          blocks:
+          - type: text_card
+            phrase_id: avia_direction_no_prices
+          suggests:
+          - type: avia__dates
+          form:
+            geo_from:
+              value: Москва
+            geo_to:
+              value: Париж
+
+        text: '{no_price_text}'
+        voice: '{no_price_voice}'
+
+      рецепт вкусного борща:
+        vins_form:
+          name: personal_assistant.scenarios.search
+
+    app_info:
+      ignore:
+      - watch
+
+
+
+test_porty:
+  experiments: ['avia']
+  test:
+    dialog:
+      авиабилет в порту:
+        vins_form:
+          name: personal_assistant.scenarios.avia
+          slots:
+            geo_to:
+              value: порту
+
+    app_info:
+      ignore:
+      - watch

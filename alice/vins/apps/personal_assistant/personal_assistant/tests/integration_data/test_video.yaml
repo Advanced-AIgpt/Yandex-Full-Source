@@ -1,0 +1,773 @@
+labels:
+  goto_screen_prefix: 'Открываю'
+  show_gallery: '(Вот что удалось найти|Сейчас поищем|Одну секунду|Секундочку, сейчас найдем)\.'
+  show_season_gallery: '(Открываю|Секунд(очк)?у|Сейчас открою)\.'
+  show_description: '.*\b([Оо]писание|подробную информацию|подробная информация|секунду)\b.*'
+  video_autoplay: '(Включаю|Сейчас включу|Секунду|Секундочку)\.'
+  paid_content: '.*\b(платный контент|контент платный)\b.*\bописание\b.*'
+  gc_instead_of_search: '^((?!не могу показать результаты поиска).)*$'
+  steve_jobs_info: '.*(Steven Paul Jobs|[Сс]тив [Пп]ол [Дд]жобс|[Сс]тива? [Дд]жобса?|Сти.?вен Пол \(Стив\) Джобс).*'
+  not_found: '.*\b(нет этого видео|не нашла|Лучше что\-то\, чем ничего)\b.*'
+  non_authorized: '.*\b(необходимо авторизоваться)\b.*'
+  no_such_season: '.*\b[Сс]езона\b.*\bнет\b.*'
+  no_such_episode: '.*\b[Сс]ерии\b.*\bнет\b.*'
+  payment_confirmed: '.*\b(продолжить оплату|платный|[Пп]родолжите оплату|оплатить фильм|ссылка на оплату)\b.*'
+
+app_info:
+  app_id: 'ru.yandex.quasar.vins_test'
+  app_version: '1.0'
+  os_version: '6.0.1'
+  platform: 'android'
+
+device_state:
+  is_tv_plugged_in: true
+
+test_user_info:
+  tags:
+    - 'oauth'
+    - 'video'
+
+test_gc_instead_of_search:
+  experiments: ['quasar_gc_instead_of_search']
+  dialog:
+    кто такой стив джобс: '{steve_jobs_info}'
+    найди рецепт салата цезарь: '{gc_instead_of_search}'
+
+
+test_basic_1:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  включи фильм титаник:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: 'movie'
+        content_provider:
+          value: null
+        search_text:
+          value: 'титаник'
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: 'Фильмы по запросу «титаник»'
+
+test_basic_2:
+  порекомендуй свежий мультик на иви:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'recommend'
+        content_type:
+          value: 'cartoon'
+        content_provider:
+          value: 'ivi'
+        search_text:
+          value: null
+        new:
+          value: 'new_video'
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_3:
+  лучшие новые клипы на youtube:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: null
+        content_type:
+          value: 'music_video'
+        content_provider:
+          value: 'youtube'
+        search_text:
+          value: null
+        new:
+          value: 'new_video'
+        top:
+          value: 'top_video'
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_4:
+  порекомендуй топовый свежий фильм:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: recommend
+        content_type:
+          value: 'movie'
+        content_provider:
+          value: null
+        search_text:
+          value: null
+        new:
+          value: 'new_video'
+        top:
+          value: 'top_video'
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_5:
+  что поглядеть на амедиатеке:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: recommend
+        content_type:
+          value: null
+        content_provider:
+          value: 'amediateka'
+        search_text:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_6:
+  включи 6 сезон 3 серию друзей:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        search_text:
+          value: 'друзей'
+        season:
+          value: 6
+        episode:
+          value: 3
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    # TODO: test for text='{video_autoplay}' after sorting out problems with auth tokens
+
+
+test_basic_7:
+  включи 3 серию последнего сезона сериала друзья:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: 'tv_show'
+        content_provider:
+          value: null
+        search_text:
+          value: 'друзья'
+        season:
+          value: 'last'
+        episode:
+          value: 3
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    # TODO: test for text='{video_autoplay}' after sorting out problems with auth tokens
+
+test_basic_8:
+  смотреть фильм бесплатно:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: 'movie'
+        content_provider:
+          value: null
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: 'free_video'
+
+    text: '{show_gallery}'
+
+test_basic_9:
+  последний сезон lost:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: null
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        search_text:
+          value: 'lost'
+        season:
+          value: 'last'
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_10:
+  поставь французскую комедию:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: 'франция'
+        video_film_genre:
+          value: 'comedy'
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_11:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  смотреть немецкий артхаус:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: 'германия'
+        video_film_genre:
+          value: 'arthouse'
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{not_found}'
+
+test_basic_12:
+  покажи японское аниме восьмидесятых:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: 'япония'
+        video_film_genre:
+          value: 'anime'
+        release_date:
+          value: '1980:1989'
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_13:
+  покажи боевики этого года:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: null
+        video_film_genre:
+          value: 'action'
+        release_date:
+          value: '0'
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_gallery}'
+
+test_basic_14:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  покажи русские детективы прошлого года:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: 'россия'
+        video_film_genre:
+          value: 'detective'
+        release_date:
+          value: '-1'
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{not_found}'
+
+test_basic_15:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  покажи советские боевики 1985 года:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: 'ссср'
+        video_film_genre:
+          value: 'detective'
+        release_date:
+          value: 1985
+        search_text:
+          value: null
+        season:
+          value: null
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{not_found}'
+
+test_basic_16:
+  покажи список серий последнего сезона игры престолов:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: list_episodes
+        content_type:
+          value: null
+        content_provider:
+          value: null
+        country:
+          value: null
+        video_film_genre:
+          value: null
+        release_date:
+          value: null
+        search_text:
+          value: 'игры престолов'
+        season:
+          value: last
+        episode:
+          value: null
+        new:
+          value: null
+        top:
+          value: null
+        free:
+          value: null
+
+    text: '{show_season_gallery}'
+
+
+test_goto_video_screen:
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'main'
+
+  dialog:
+    новинки:
+      vins_form:
+        slots:
+          screen:
+            value: 'new_screen'
+
+      text: '{goto_screen_prefix} новинки.'
+
+    открой рекомендации:
+      vins_form:
+        slots:
+          screen:
+            value: 'recommendations_screen'
+
+      text: '{goto_screen_prefix} рекомендации.'
+
+    включи видео в сети:
+      vins_form:
+        slots:
+          screen:
+            value: 'top_screen'
+
+      text: '{goto_screen_prefix} видео-топ.'
+
+
+test_video_play_from_greeting_letter:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  Алиса, включи последнюю серию «Мира Дикого Запада»:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        search_text:
+          value: 'мира дикого запада'
+        episode:
+          value: 'last'
+
+    text: '{paid_content}'
+    # TODO: test for text='{video_autoplay}' after sorting out problems with auth tokens
+
+  Алиса, включи фильм про Терминатора:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'play'
+        search_text:
+           value: 'про терминатора'
+        content_type:
+           value: 'movie'
+
+    text: 'Фильмы по запросу «про терминатора»'
+
+  Алиса, посоветуй хорошую комедию:
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        action:
+          value: 'recommend'
+        top:
+          value: 'top_video'
+        film_genre:
+          value: 'comedy'
+
+    text: '{show_gallery}'
+
+test_QUASARSUP_308:
+  flags:
+    xfail:
+      value: true
+      reason: ASSISTANT-2502
+  найди ла ла ленд:
+    text: '{show_description}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'ла ла ленд'
+        action:
+          value: 'find'
+
+  найди дэдпул:
+    text: '{show_description}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'дэдпул'
+        action:
+          value: 'find'
+
+  найди красный воробей:
+    text: '{show_description}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'красный воробей'
+        action:
+          value: 'find'
+
+  найди записки юного врача:
+    text: '{show_description}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'записки юного врача'
+        action:
+          value: 'find'
+
+  найди доктор хаус:
+    text: '{show_description}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'доктор хаус'
+        action:
+          value: 'find'
+
+  Включи вселенную стивена хокинга:
+    text: '{paid_content}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'вселенную стивена хокинга'
+        action:
+          value: 'play'
+
+  Найти Гарри Поттер на ivi:
+    text: '{show_gallery}'
+    vins_form:
+      name: personal_assistant.scenarios.video_play
+      slots:
+        search_text:
+          value: 'гарри поттер'
+        action:
+          value: 'find'
+        content_provider:
+          value: 'ivi'
+
+test_next_season:
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'season_gallery'
+  dialog:
+    следующий сезон:
+      vins_form:
+        name: 'personal_assistant.scenarios.quasar.open_current_video'
+        slots:
+          season:
+            value: 'next'
+
+# попросить включить несуществующую серию существующего сезона сериала
+test_attention_no_such_eposode__description:
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'description'
+      screen_state:
+        item:
+          provider_name: 'amediateka'
+          provider_item_id: 'ighra_priestolov_93b7fddb-b084-489f-b7bf-49c80661a2b0'
+          type: 'tv_show'
+  dialog:
+    включи 30 серию 1 сезона:
+      vins_form:
+        name: personal_assistant.scenarios.quasar.open_current_video
+        slots:
+          action:
+            value: 'play'
+          season:
+            value: 1
+          episode:
+            value: 30
+      text: '{no_such_episode}'
+
+
+# попросить включить несуществующий сезон существующего сериала
+test_attention_no_such_season__description:
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'description'
+      screen_state:
+        item:
+          provider_name: 'amediateka'
+          provider_item_id: 'ighra_priestolov_93b7fddb-b084-489f-b7bf-49c80661a2b0'
+          type: 'tv_show'
+  dialog:
+    включи 30 сезон:
+      vins_form:
+        name: personal_assistant.scenarios.quasar.open_current_video
+        slots:
+          action:
+            value: 'play'
+          season:
+            value: 30
+      text: '{no_such_season}'
+
+# с экрана описания фильма, который не куплен у пользователя ни на одном провайдере, сказать "смотреть"
+test_attention_sent_buy_video_push:
+  flags:
+    xfail:
+      value: true
+      reason: 'Video intents in VINS are turned of, https://st.yandex-team.ru/MEGAMIND-385#5dd800f94b92d70cc178c24a'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'description'
+      screen_state:
+        item:
+          provider_name: 'ivi'
+          provider_item_id: '106220'
+          type: 'movie'
+          name: 'Бесславные ублюдки'
+  dialog:
+    смотреть:
+      vins_form:
+        name: personal_assistant.scenarios.quasar.open_current_video
+        slots:
+          action:
+            value: 'play'
+      text: '{payment_confirmed}'
+
+
+# с экрана описания фильма, который доступен пользователю хотя бы на одном провайдере, сказать "смотреть"
+test_attention_video_autoplay:
+  flags:
+    xfail:
+      value: true
+      reason: 'Video intents in VINS are turned of, https://st.yandex-team.ru/MEGAMIND-385#5dd800f94b92d70cc178c24a'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'description'
+      screen_state:
+        item:
+          provider_name: 'kinopoisk'
+          provider_item_id: '42f2dbf8769771ee8e369dae46e6e677'
+          type: 'tv_show'
+  dialog:
+    смотреть:
+      vins_form:
+        name: personal_assistant.scenarios.quasar.open_current_video
+        slots:
+          action:
+            value: 'play'
+      text: '{video_autoplay}'
+
+# с главного экрана попросить включить фильм, а OAuth токен пользователя должен отсутствовать
+# сейчас отдаёт Unexpected text response "Прошу прощения, что-то сломалось. Спросите попозже, пожалуйста."
+# причина: биллинг кидает ошибку с неавторизованным пользователем
+test_attention_video_non_authorized_user:
+  flags:
+    skip:
+      reason: 'ASSISTANT-2990'
+  test_user_info: null
+  device_state:
+    is_tv_plugged_in: true
+    current_screen: 'main'
+  dialog:
+    включи бесславные ублюдки:
+      vins_form:
+        name: personal_assistant.scenarios.video_play
+        slots:
+          search_text:
+            value: 'бесславные ублюдки'
+          action:
+            value: 'play'
+      text: '{non_authorized}'

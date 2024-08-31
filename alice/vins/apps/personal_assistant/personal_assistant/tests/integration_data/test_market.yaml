@@ -1,0 +1,345 @@
+labels:
+  found: '.*(С учетом вашего последнего запроса|Могу предложить следующие варианты с Маркета по
+    вашему запросу|Весь Маркет просмотрела, отобрала самое лучшее по запросу|Везде все изучила -
+    вот варианты на Маркете по вашему запросу).*'
+  found_model: '.*(Я нашла товар).*'
+  open_serp: '.*([Ии]щу|[Нн]айд(у|ётся)|[Нн]айдём|Одну секунду|поиск|поищем|[Оо]ткрываю).*'
+  error: '.*(Выжить в магазине - это успех\!|Я еще только учусь искать по товарам|У
+    меня голова идет кругом от количества товаров, не могу определиться|Давайте попробуем
+    поискать еще раз, эта попытка не удалась, извините).*'
+  not_found: 'Ничего не нашлось\. Повторите, пожалуйста\.|Что-то я ничего не нашла\.
+    Попробуйте назвать товар по-другому\.|Не нашла подходящих вещей\. Назовите товар
+    ещё раз\.|Ничего нет, эх! Попробуйте изменить запрос\.'
+  activation: '.*(Люблю шопинг! Когда надоест, скажите «Алиса, хватит»\. Какой товар
+    вам посоветовать?|Начнём шопинг\. Не забывайте — когда я увлечена покупками, о
+    другом думать не могу\. В общем, если надоест, просто скажите: «Алиса, хватит»\.
+    Что вам посоветовать?|Начнём покупки\. Но помните — когда я увлечена шопингом,
+    в Яндекс смотреть некогда\. Если передумаете, скажите «Алиса, хватит»\. Какой
+    товар вам нужен?|Начнём! Если шопинг вас утомит, скажите «Алиса, хватит»\. Что
+    вы ищете?).*'
+  show_model_card: '...'
+  start_choice_again: 'Хорошо\. Какой товар я могу вам посоветовать\?'
+
+# default client does not supports div cards
+test_market_without_div:
+  experiments: []
+  test_popular_goods:
+    dialog:
+      Помоги с покупкой:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      Купить лего:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+        text: '{found}'
+        cards:
+        - simple_text
+
+    app_info:
+      ignore:
+      - irbis
+      - navigator_android
+      - auto
+      - dexp
+      - navigator_ios
+      - speaker
+      - watch
+
+  test_model:
+    dialog:
+      помоги выбрать товар:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      купить смартфон Samsung Galaxy j7 2017:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+          slots:
+            request:
+              value: 'смартфон samsung galaxy j7 2017'
+        cards:
+        - div_card
+
+    app_info:
+      ignore:
+      - navigator_ios
+      - navigator_android
+      - speaker
+      - auto
+      - dexp
+      - irbis
+      - watch
+
+
+test_market_not_found:
+  experiments: []
+  test_crazy_request:
+    dialog:
+      Алиса, посоветуй товар:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      купить тратата:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+          slots:
+            request:
+              value: 'тратата'
+        text: '{not_found}'
+    app_info:
+      ignore:
+      - navigator_android
+      - navigator_ios
+      - auto
+      - irbis
+      - dexp
+      - speaker
+      - watch
+
+
+test_market_ellipsis:
+  dialog:
+    Алиса, посоветуй товар:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+    хочу купить айфон:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__market'
+        slots:
+          request:
+            value: 'айфон'
+
+    с большим экраном:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__market__ellipsis'
+  app_info:
+    ignore:
+    - navigator_android
+    - speaker
+    - auto
+    - irbis
+    - navigator_ios
+    - dexp
+    - watch
+
+
+test_market_number_filter:
+  dialog:
+    Алиса, посоветуй товар:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+    хочу купить телефон самсунг:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__market'
+        slots:
+          request:
+            value: 'телефон самсунг'
+
+    до 10000 рублей:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__number_filter'
+        slots:
+          amount_to:
+            value: '10000'
+          unit:
+            value: 'rur'
+
+    за 15000 рублей:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__number_filter'
+        slots:
+          amount:
+            value: '15000'
+          unit:
+            value: 'rur'
+          price:
+            value:
+              from: null
+              to: 10000
+
+    от 2 500:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__number_filter'
+        slots:
+          amount_from:
+            value: '2 500'
+          price:
+            value:
+              from: 13500
+              to: 16500
+
+    до 10,5 тысяч:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__number_filter'
+        slots:
+          amount_to:
+            value: '10,5 тысяч'
+          price:
+            value:
+              from: 2500
+              to: 16500
+
+    до 20000 рублей:
+      vins_form:
+        slots:
+          price:
+            value:
+              from: 2500
+              to: 10500
+  app_info:
+    ignore:
+    - navigator_ios
+    - irbis
+    - speaker
+    - auto
+    - dexp
+    - navigator_android
+    - watch
+
+
+test_market_start_choice_again:
+  experiments: []
+  test_in_market_intent:
+    dialog:
+      Алиса, посоветуй товар:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      хочу купить айфон:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+
+      очисти поиск:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__start_choice_again'
+        text: '{start_choice_again}'
+    app_info:
+      ignore:
+      - navigator_android
+      - dexp
+      - auto
+      - speaker
+      - irbis
+      - navigator_ios
+      - watch
+
+
+  test_in_market_ellipsis_intent:
+    dialog:
+      Алиса, посоветуй товар:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      хочу купить айфон:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+
+      золотой:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market__ellipsis'
+
+      очисти поиск:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__start_choice_again'
+        text: '{start_choice_again}'
+    app_info:
+      ignore:
+      - navigator_android
+      - irbis
+      - dexp
+      - navigator_ios
+      - speaker
+      - auto
+      - watch
+
+
+  test_save_market_choice_type_slot:
+    dialog:
+      Помоги купить на беру:
+        vins_form:
+          name: 'personal_assistant.scenarios.market_beru'
+          slots:
+            market_choice_type: 'BLUE'
+
+      хочу купить айфон:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+          slots:
+            market_choice_type: 'BLUE'
+
+      очисти поиск:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__start_choice_again'
+          slots:
+            market_choice_type: 'BLUE'
+        text: '{start_choice_again}'
+
+      хочу купить утюг:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+          slots:
+            market_choice_type: 'BLUE'
+    app_info:
+      ignore:
+      - dexp
+      - irbis
+      - navigator_ios
+      - auto
+      - navigator_android
+      - speaker
+      - watch
+
+
+  test_clear_choice_slots:
+    dialog:
+      Алиса, посоветуй товар:
+        vins_form:
+          name: 'personal_assistant.scenarios.market'
+
+      хочу купить айфон:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__market'
+
+      очисти поиск:
+        vins_form:
+          name: 'personal_assistant.scenarios.market__start_choice_again'
+          slots:
+            gl_filters: null
+            category: null
+            text_redirect: null
+        text: '{start_choice_again}'
+    app_info:
+      ignore:
+      - irbis
+      - navigator_android
+      - speaker
+      - auto
+      - dexp
+      - navigator_ios
+      - watch
+
+
+test_fixed_goods:
+  dialog:
+    Алиса, посоветуй товар:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+    детские раскраски:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__market__ellipsis'
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios

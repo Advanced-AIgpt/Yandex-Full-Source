@@ -1,0 +1,29 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import no_valid_response, order_status with context %}
+{% from "common/macros.nlg" import inability %}
+
+{% phrase render_result %}
+  {% if form.cancel_price %}
+    {% if form.status == 'transporting' %}
+      Вы уже едете в машине.
+    {% else %}
+      Машина уже ждёт вас.
+    {% endif %}
+    За отмену поездки придётся заплатить {{ form.cancel_price }} рублей.
+    Вы точно хотите её отменить?
+  {% elif form.orderid %}
+    {% if form.cancel_message %}
+      {{ form.cancel_message }}
+    {% endif %}
+
+    {% chooseline %}
+      Вы точно хотите отменить поездку?
+      Вы уверены, что хотите отменить поездку?
+      Вы хотите, чтобы я отменила поездку?
+    {% endchooseline %}
+  {% else %}
+    {{ no_valid_response() }}
+  {% endif %}
+{% endphrase %}

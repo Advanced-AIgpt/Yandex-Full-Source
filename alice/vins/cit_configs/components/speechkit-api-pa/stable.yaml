@@ -1,0 +1,53 @@
+---
+include:
+  - components/speechkit-api-pa/base.yaml
+  - extensions/mongodb_stable.yaml
+  - extensions/s3_stable.yaml
+  - extensions/common_stable.yaml
+component:
+  nanny:
+    keychainId: "alice"
+    environmentVariables:
+      VINS_QLOUD_COMPONENT: "vins"
+      VINS_QLOUD_ENVIRONMENT: "stable"
+    services:
+      -
+        name: "vins_sas"
+        category: "/alice/production/vins/"
+        gencfg: []
+      -
+        name: "vins_man"
+        category: "/alice/production/vins/"
+        gencfg: []
+      -
+        name: "vins_vla"
+        category: "/alice/production/vins/"
+        gencfg: []
+  diskSize: 100
+  network: "VINS_INT_PROD_NETS"
+  environmentVariables:
+    VINS_SENTRY_DSN: "https://4a302c966fcb49d2971457f3ec7dc5ed:be15c86414864e11a0c67d402842d969@sentry.voicetech.yandex.net/8?verify_ssl=0"
+    VINS_DISABLE_SENTRY: "0"
+    VINS_SKILLS_ENV_TYPE: production
+    VINS_ENABLE_METRICS: '1'
+    VINS_DISABLE_JSON_VALIDATION: "true"
+  instanceGroups:
+    -
+      backup: false
+      location: MYT
+      units: 5
+      weight: 1
+    -
+      backup: false
+      location: SASOVO
+      units: 5
+      weight: 1
+    -
+      backup: false
+      location: IVA
+      units: 5
+      weight: 1
+  prepareRecipe:
+    recipe: INTERNAL
+    updateWindow: "10%"
+    doneThreshold: "100%"

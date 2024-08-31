@@ -1,0 +1,37 @@
+---
+include:
+  - components/speechkit-api-pa/base.yaml
+  - extensions/mongodb_testing.yaml
+  - extensions/s3_testing.yaml
+component:
+  nanny:
+    keychainId: "alice-testing"
+    environmentVariables:
+      VINS_QLOUD_COMPONENT: "vins"
+      VINS_QLOUD_ENVIRONMENT: "experiments"
+    services:
+      -
+        name: "man_vins_experiments"
+        category: "/alice/beta/vins/"
+        gencfg: []
+  network: "VINS_INT_TEST_NETS"
+  instanceGroups:
+    -
+      location: "ALL"
+      units: 1
+      backup: false
+  environmentVariables:
+    YENV_TYPE: development
+    VINS_SKILLS_ENV_TYPE: testing
+    VINS_ENABLE_METRICS: '1'
+routes:
+  -
+    location: /speechkit/app/quasar/
+    proxyConnectTimeout: 200ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 5000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: /speechkit/app/pa/
+    yandexErrorPage: "OFF"
+    componentName: speechkit-api-pa

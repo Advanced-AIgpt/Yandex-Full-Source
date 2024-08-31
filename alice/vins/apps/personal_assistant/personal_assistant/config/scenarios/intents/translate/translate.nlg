@@ -1,0 +1,271 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/translate.nlg" %}
+
+{% macro lang_declension(lang, case) %}
+  {% if lang == "малаялам" or lang == "коса" or lang == "гуджарати" or (lang == "македонский" and case == "acc") %}
+    {{ lang }}
+  {% else %}
+    {{ lang | inflect(case) }}
+  {% endif %} 
+{% endmacro %}
+
+{% macro failed_to_process_impl() %}
+  {% chooseitem %}
+    Не поняла. Давайте снова. Пример: {% tx %}«{% etx %}переведи слово {% tx %}"{% etx %}кошка{% tx %}"{% etx %} на испанский{% tx %}»{% etx %}.
+  {% or %}
+    Не поняла. Повторите, пожалуйста. Пример: {% tx %}«{% etx %}переведи слово {% tx %}"{% etx %}собака{% tx %}"{% etx %} на немецкий{% tx %}»{% etx %}.
+  {% or %}
+    А что именно перевести? Попробуйте спросить по-другому. Например: {% tx %}«{% etx %}как будет {% tx %}"{% etx %}стол{% tx %}"{% etx %} по-английски?{% tx %}»{% etx %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro failed_to_translate_impl() %}
+  {% chooseitem %}
+    Переводчик меня игнорирует. Давайте ещё раз.
+  {% or %}
+    Что-то пошло не так. Попробуйте снова.
+  {% or %}
+    Не могу найти свой словарь. Эх.
+  {% or %}
+    Ой. У меня что-то сломалось.
+  {% or %}
+    Словарь куда-то пропал. Извините.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro wrong_language_translate_impl() %}
+  {% chooseitem %}
+    Это и есть нужный вам язык, {{ form.lang_dst | inflect('nom') }}.
+  {% or %}
+    Если я не ошибаюсь, это уже {{ form.lang_dst | inflect('nom') }}.
+  {% or %}
+    Сдаётся мне, это и есть {{ form.lang_dst | inflect('nom') }}.
+  {% or %}
+    Погодите. Эта фраза уже на {{ lang_declension(form.lang_dst, 'abl') }}.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro unsupported_language_impl() %}
+  {% chooseitem %}
+    Я не знаю {% if 'unsupported ' in form.lang_src and 'unsupported ' in form.lang_dst %} ни {{ form.lang_src[12:] | inflect('gen') }}, ни {{ form.lang_dst[12:] | inflect('gen') }} {% elif 'unsupported ' in  form.lang_src %} {{ form.lang_src[12:] | inflect('gen') }} {% else %} {{form.lang_dst[12:] | inflect('gen') }} {% endif %}. Когда-нибудь изучу.
+  {% or %}
+    У меня тут 95 языков, но {% if 'unsupported ' in form.lang_src and 'unsupported ' in form.lang_dst %} ни {{ form.lang_src[12:] | inflect('gen') }}, ни {{ form.lang_dst[12:] | inflect('gen') }} {% elif 'unsupported ' in form.lang_src %} {{ form.lang_src[12:] | inflect('gen') }} {% else %} {{ form.lang_dst[12:] | inflect('gen') }} {% endif %} среди них нет. Увы.
+  {% or %}
+    Мне не {% tx %} знаком {% etx %} {% vc %} знак+ом {% evc %} {% if 'unsupported ' in form.lang_src and 'unsupported ' in form.lang_dst %} ни {{ form.lang_src[12:] | inflect('nom') }}, ни {{ form.lang_dst[12:] | inflect('nom') }} {% elif 'unsupported ' in form.lang_src %} {{ form.lang_src[12:] | inflect('nom') }} {% else %} {{ form.lang_dst[12:] | inflect('nom') }} {% endif %}. Такое бывает.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase render_error__translateerror %}
+  {% if context.error.message == 'failed_to_process' %}
+    {{ failed_to_process_impl() }}
+  {% elif context.error.message == 'failed_to_translate' %}
+    {{ failed_to_translate_impl() }}
+  {% elif context.error.message == 'wrong_language_translate' %}
+    {{ wrong_language_translate_impl() }}
+  {% elif context.error.message == 'not_supported_language' %}
+    {{ unsupported_language_impl() }}
+  {% endif %}
+{% endphrase %}
+
+{% macro open_translate_impl() %}
+  {% voice %}
+    Открываю Переводчик
+  {% endvoice %}
+{% endmacro %}
+
+{% macro default_answer_impl() %}
+  {% voice %}
+    {{ form.voice }}
+  {% endvoice %}
+  {% if not is_active_attention('result_card') %}
+    {% text %}
+      {{ form.result }}
+    {% endtext %}
+  {% endif %}
+{% endmacro %}
+
+{% macro swear_unlimited_impl() %}
+  {% chooseitem %}
+    Вот вам не видно, а я покраснела. Держите перевод:
+  {% or %}
+    Ну ладно, тоже язык. Перевод такой:
+  {% endchooseitem %}
+  {{ default_answer_impl() }}
+{% endmacro %}
+
+{% macro swear_children_impl() %}
+  {% if is_elari_watch() %}
+    {% chooseitem %}
+      Есть слова, которые я переводить не буду. Не буду - и всё.
+    {% or %}
+      Тяга к языкам - это прекрасно, но тебе такое рановато знать.
+    {% endchooseitem %}
+  {% elif (is_ios() and not is_navigator()) or is_searchapp_android() or is_smart_speaker() %}
+    {% chooseitem %}
+      Я бы с радостью это перевела, но вам нужно включить режим поиска без ограничений.
+    {% or %}
+      Вот когда {% tx %} включите {% etx %} {% vc %} вкл+ючите {% evc %} режим поиска без ограничений, тогда и переведу.
+    {% endchooseitem %}
+  {% else %}
+    {% chooseitem %}
+      Некоторые слова я не перевожу. Скажите иначе.
+    {% or %}
+      Есть слова, которые я переводить не буду. Не буду - и всё.
+    {% or %}
+      Я всё поняла, но переводить не стану. Найдите другие слова.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% macro no_voice_impl() %}
+  {% voice %}
+    {% if is_elari_watch() %}
+      {% chooseitem %}
+        Выговорить не получается.
+      {% or %}
+        Не могу произнести. Но очень хочу, поверьте.
+      {% or %}
+        Я пыталась, но - увы.
+      {% endchooseitem %}
+    {% else %}
+      {% chooseitem %}
+        Вот смотрите.
+      {% or %}
+        Смотрите.
+      {% or %}
+        Произнести не смогу, а вот показать - с удовольствием.
+      {% or %}
+        Сказать не скажу, а показать - без проблем.
+      {% endchooseitem %}
+    {% endif %}
+  {% endvoice %}
+  {% text %}
+      {% if not is_active_attention('result_card') %}
+        {{ form.result }}
+      {% endif %}
+  {% endtext %}
+{% endmacro %}
+
+{% macro translate_from_russian_prepend() %}
+  {% chooseitem %}
+    Перевела на {{ lang_declension(form.lang_dst, 'acc') }}:
+  {% or %}
+    {{ form.text_to_translate | capitalize_first }} на {{ lang_declension(form.lang_dst, 'abl')}} -
+  {% or %}
+    {{ form.text_to_translate | capitalize_first }} - это
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro translate_from_foreign_impl() %}
+  {% chooseitem %}
+    Сдаётся мне, {% tx %} {{ form.text_to_translate }} {% etx %} {% vc %} {{ form.text_to_translate_voice }} <speaker voice="shitova"> {% evc %} - это
+  {% or %}
+    Подозреваю, что {% tx %} {{ form.text_to_translate }} {% etx %} {% vc %} {{ form.text_to_translate_voice }} <speaker voice="shitova"> {% evc %} - это
+  {% or %}
+    Кажется, что {% tx %} {{ form.text_to_translate }} {% etx %} {% vc %} {{ form.text_to_translate_voice }} <speaker voice="shitova"> {% evc %} - это
+  {% endchooseitem %}
+  {{ default_answer_impl() }}
+{% endmacro %}
+
+{% macro translate_from_foreign_card_impl() %}
+  {% chooseitem %}
+    Сдаётся мне, перевод такой:
+  {% or %}
+    Подозреваю, что вот так:
+  {% or %}
+    Вроде так:
+  {% or %}
+    Кажется, вот так:
+  {% endchooseitem %}
+  {{ default_answer_impl() }}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('open_translate') %}
+    {{ open_translate_impl() }}
+  {% elif is_active_attention('open_search') %}
+
+  {% elif is_active_attention('repeat_voice') %}
+    {% voice %}
+      {{ form.voice }}
+    {% endvoice %}
+  {% elif is_active_attention('swear_children') %}
+    {{ swear_children_impl() }}
+  {% elif is_active_attention('no_voice') %}
+    {{ no_voice_impl() }}
+  {% elif not is_active_attention('result_card') %}
+    {% if is_active_attention('swear_unlimited') %}
+      {{ swear_unlimited_impl() }}
+    {% elif form.lang_src | inflect('nom') == 'русский' %}
+      {{ translate_from_russian_prepend() }}
+      {{ default_answer_impl() }}
+    {% elif form.text_to_translate_voice %}
+      {{ translate_from_foreign_impl() }}
+    {% else %}
+      {{ translate_from_foreign_card_impl() }}
+    {% endif %}
+  {% elif not is_active_attention('swear_unlimited') and form.lang_src | inflect('nom') == 'русский' %}
+    {% voice %}
+      {{ translate_from_russian_prepend() }} {{ form.voice }}
+    {% endvoice %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase swear_unlimited %}
+  {{ swear_unlimited_impl() }}
+{% endphrase %}
+
+{% phrase foreign_translate %}
+  {{ translate_from_foreign_card_impl() }}
+{% endphrase %}
+
+{% phrase unsupported_lang %}
+  {{ unsupported_language_impl() }}
+  {% voice %}
+    Давайте поищем в Яндексе
+  {% endvoice %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__translate__repeat %}
+  Повтори
+{% endphrase %}
+
+{% phrase render_suggest_utterance__translate__repeat %}
+  Повтори
+{% endphrase %}
+
+{% phrase render_suggest_caption__translate__change_language %}
+  А на {{ lang_declension(context.translate__change_language.data, 'abl') }}?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__translate__change_language %}
+  А на {{ lang_declension(context.translate__change_language.data, 'abl') }}?
+{% endphrase %}
+
+{% phrase render_suggest_caption__translate__open_uri %}
+  Открой Переводчик
+{% endphrase %}
+
+{% phrase render_suggest_utterance__translate__open_uri %}
+  Открой Переводчик
+{% endphrase %}
+
+{% phrase render_suggest_caption__translate__slower %}
+  Медленнее
+{% endphrase %}
+
+{% phrase render_suggest_caption__translate__quicker %}
+  Быстрее
+{% endphrase %}
+
+{% phrase render_suggest_utterance__translate__slower %}
+  Медленнее
+{% endphrase %}
+
+{% phrase render_suggest_utterance__translate__quicker %}
+  Быстрее
+{% endphrase %}
+
+{% phrase ask__query %}
+  {{ failed_to_process_impl() }}
+{% endphrase %}

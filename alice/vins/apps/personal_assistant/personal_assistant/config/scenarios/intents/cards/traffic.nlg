@@ -1,0 +1,145 @@
+{% from "cards/common.nlg" import font_color, open_uri_action with context %}
+
+{% macro render_traffic_level_short() %}
+  На дорогах
+  {{ form.traffic_info.level }}
+  {{ "балл" | pluralize(form.traffic_info.level) }}
+{% endmacro %}
+
+{% macro render_traffic_level_prediction() %}
+  {{ render_traffic_forecast(form.traffic_info.level, form.traffic_info.forecast) }}
+{% endmacro %}
+
+{% macro render_forecast_hour(hour_forecast, index0) %}
+  {% if hour_forecast.score > 5 %}
+    {% set predicted_color = '#FF5F57' %}
+  {% elif hour_forecast.score > 3 %}
+    {% set predicted_color = '#FFCC00' %}
+  {% else %}
+    {% set predicted_color = '#69A942' %}
+  {% endif %}
+  {% if index0 == 0 %}
+    {% set hour = 'ч' %}
+    {% set comma = '' %}
+  {% else %}
+    {% set hour = '' %}
+    {% set comma = ',' %}
+  {% endif %}
+  {{ comma }}
+  {
+     "color":"{{ predicted_color }}",
+     "text":"{{ hour_forecast.hour }}{{ hour }}",
+     "score":"{{ hour_forecast.score }}"
+  }
+{% endmacro %}
+
+{% macro render_traffic_lights_image_url() -%}
+  {% set data = context.data %}
+  "{{ data.traffic_lights_image_url }}"
+{% endmacro %}
+
+{% macro render_image_block() %}
+  {
+     "type":"div-image-block",
+     "image":{
+        "type":"div-image-element",
+        "ratio":1.45,
+        "image_url":"{{ form.traffic_info.static_map_url }}"
+     }
+  }
+{% endmacro %}
+
+{% macro render_footer() %}
+  {
+     "type":"div-footer-block",
+     "text":"{{ font_color('#0A4DC3', 'ПОСМОТРЕТЬ ПРОБКИ В КАРТАХ') }}"
+  }
+{% endmacro %}
+
+
+{% card traffic_with_score %}
+  {
+     "background":[
+        {
+           "type":"div-solid-background",
+           "color":"{{ '#FFFFFF' }}"
+        }
+     ],
+     "states":[
+        {
+           "blocks":[
+              {{ render_image_block() }}
+              ,
+              {
+                 "type":"div-separator-block"
+              },
+              {
+                 "side_element":{
+                    "element":{
+                       "type":"div-image-element",
+                       "image_url": {{ render_traffic_lights_image_url() }}
+                    }
+                 },
+                 "title":"{{ render_traffic_level_short() }}",
+                 "type":"div-universal-block"
+                 {% if form.traffic_info.forecast -%}
+                    ,
+                    "text":"{{ render_traffic_level_prediction() }}"
+                 {% endif %}
+              },
+              {% if form.traffic_info.forecast %}
+                {
+                   "type":"div-traffic-block",
+                   "items":[
+                      {% for hour_forecast in form.traffic_info.forecast %}
+                        {{ render_forecast_hour(hour_forecast, loop.index0) }}
+                      {% endfor %}
+                   ],
+                   "padding_modifier":{
+                      "position":"left",
+                      "size":"s"
+                   }
+                },
+              {% endif %}
+              {
+                 "type":"div-separator-block",
+                 "size":"s",
+                 "has_delimiter":1
+              },
+              {{ render_footer() }}
+           ],
+           "state_id":1,
+           "action": {
+              "url": "{{ open_uri_action(form.traffic_info.url, 'traffic_card_with_score') }}",
+              "log_id": "traffic_card_with_score"
+           }
+        }
+     ]
+  }
+{% endcard %}
+
+
+{% card traffic_without_score %}
+    {
+     "background":[
+        {
+           "type":"div-solid-background",
+           "color":"{{ '#FFFFFF' }}"
+        }
+     ],
+     "states":[
+        {
+           "blocks":[
+              {{ render_image_block() }}
+              ,
+              {{ render_footer() }}
+           ],
+           "state_id":1,
+           "action": {
+              "url": "{{ open_uri_action(form.traffic_info.url, 'traffic_card_without_score') }}",
+              "log_id": "traffic_card_without_score"
+           }
+        }
+     ]
+  }
+{% endcard %}

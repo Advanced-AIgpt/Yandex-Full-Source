@@ -1,0 +1,34 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/external_skill.nlg" %}
+{% nlgimport "external_skill/external_skill_common.nlg" %}
+{% from "common/macros.nlg" import get_alice_name with context %}
+
+{% from "external_skill/external_skill_common.nlg" import render_skill_response %}
+
+{% phrase render_result %}
+  {% if form.unsupported_platform %}
+    {% chooseline %}
+      Я бы и рада помочь, но тут голосом не обойдёшься.
+      {%tx%}Я это, конечно, умею. Но в другом приложении.{%etx%}{%vc%}Я это конечно умею. Но в друг+ом приложении{%evc%}
+    {% endchooseline %}
+  {% elif form.response %}
+    {{ render_skill_response(form) }}
+  {% else %}
+    {% if not form.silent %}
+      {% if form.skill_id is gc_skill %}
+        {% chooseline %}
+          {# Неплохо поговорили. Теперь можно спросить у меня погоду, курс валюты или попросить поставить музыку. #}
+          {# Хорошо поговорили. Теперь можете спросить у меня что-то полезное или поискать в Яндексе. #}
+          Мне нравится с вами болтать. А вам?
+          Кажется, неплохо поговорили. Что думаете?
+          Люблю болтать. Как вам беседа?
+          Говорите со мной чаще. Как вам беседа?
+        {% endchooseline %}
+      {% elif form.skill_id is total_dictation %}
+        Хорошо. Если захотите вернуться, скажите: «{{ get_alice_name() }}, прочитай "Тотальный диктант"».
+      {% else %}
+        Отлично, будет скучно — обращайтесь.
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

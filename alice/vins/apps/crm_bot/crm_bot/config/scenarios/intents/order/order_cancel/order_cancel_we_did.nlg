@@ -1,0 +1,171 @@
+{% nlgimport "common.nlg" %}
+{% from "common.nlg" import operator_symbol %}
+
+{% macro need_all() %}
+  Чтобы я мог посмотреть причину отмены вашего заказа, мне нужно знать его номер,
+  а также номер телефона или адрес электронной почты, на которые этот заказ был оформлен.
+{% endmacro %}
+
+{% phrase need_order_id_and_phone_or_email %}
+  {{ need_all() }}
+{% endphrase %}
+
+{% phrase need_phone_or_email %}
+  Чтобы я мог посмотреть причину отмены вашего заказа ({{ form.order_id }}), мне нужно быть уверенным, что это действительно ваш заказ.
+  Назовите, пожалуйста, номер телефона или адрес электронной почты, к которым он привязан.
+{% endphrase %}
+
+{% phrase need_order_id %}
+  {% if form.phone and form.phone != "" %}
+    К сожалению, я не могу ничего узнать только по номеру телефона. Назовите, пожалуйста,
+    номер заказа.
+  {% elif form.email and form.email != "" %}
+    К сожалению, я не могу ничего узнать только по адресу электронной почты. Назовите, пожалуйста,
+    номер заказа.
+  {% else %}
+    {{ need_all() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase order_not_found %}
+  {% if context.data.phoneNumber and context.data.phoneNumber != "" and
+      context.data.email and context.data.email != "" %}
+    К сожалению, ни с почтой {{ context.data.email }}, ни с телефоном {{ context.data.phoneNumber }} заказ с номером
+    {{ context.data.orderId }} не связан.
+  {% elif context.data.phoneNumber and context.data.phoneNumber != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с номером телефона {{ context.data.phoneNumber }}.
+  {% elif context.data.email and context.data.email != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с электронной почтой {{ context.data.email }}.
+  {% else %}
+    К сожалению, среди ваших заказов мне не удалось найти заказ с таким номером.
+  {% endif %}
+{% endphrase %}
+
+{% phrase respond_with_order_list %}
+  Какой заказ вас интересует?
+  \n\n
+  {% for order in context.data.orders %}
+    Заказ {{ order.id }} ({{ order.created_at }})\n
+  {% endfor %}
+{% endphrase %}
+
+{% phrase call_operator %}
+  {% if not is_webim_v1() %}
+    К сожалению, ситуация с вашим заказом требует вмешательства человека. Подождите, пожалуйста, я позову моего коллегу —
+    он со всем разберется.
+    {{ default_redirect() }}
+  {% else %}
+    К сожалению, ситуация с вашим заказом требует вмешательства человека. Разрешите мне позвать моего коллегу —
+    он со всем разберется.
+  {% endif %}
+{% endphrase %}
+
+{% phrase cancel_operator_redirect %}
+  Хорошо, я не буду вас переводить на оператора. Задайте другой вопрос, пожалуйста.
+{% endphrase %}
+
+{% phrase render_suggest_caption__call_operator %}
+  {{ operator_symbol() }} Позови человека
+{% endphrase %}
+
+{% phrase render_suggest_utterance__call_operator %}
+  {{ operator_symbol() }} Позови человека
+{% endphrase %}
+
+{% macro user_requested() %}
+  Я вижу, что заказ был отменён по вашей просьбе. Если это не вы отменили заказ, проверьте, пожалуйста, имеют
+  ли доступ к вашему личному кабинету другие люди. На всякий случай, поменяйте пароль.
+{% endmacro %}
+
+{% macro credit_offer_failed() %}
+  Я вижу, что вы оформляли заказ в кредит. Сожалею, но банк отказал в оформлении кредита.
+  Вы можете оформить заказ заново с другим способом оплаты.
+{% endmacro %}
+
+{% macro logistics_issues() %}
+  Я вижу, что мои коллеги-люди отменили этот заказ из-за проблем на складе. Нам очень жаль, что это случилось.
+  Пожалуйста, сделайте новый заказ, а мы постараемся вас больше не расстраивать.
+{% endmacro %}
+
+{% phrase reason_BANK_REJECT_CREDIT_OFFER %}
+  {{ credit_offer_failed() }}
+{% endphrase %}
+
+{% phrase reason_BROKEN_ITEM %}
+  Я вижу, что служба доставки отменила заказ, так как при заказе товар был повреждён.
+  Мои коллеги-люди уже знают об этом и должны с вами связаться в ближайшее время,
+  чтобы помочь с оформлением заказа заново.
+{% endphrase %}
+
+{% phrase reason_CREDIT_OFFER_FAILED %}
+  {{ credit_offer_failed() }}
+{% endphrase %}
+
+{% phrase reason_CUSTOM %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_CUSTOMER_REJECT_CREDIT_OFFER %}
+  Я вижу, что вы оформляли заказ в кредит и не подтвердили открытие кредита или отказались от
+  него в личном кабинете банка. Этот заказ отменён. Если нужно, вы можете заказать товары снова
+  с другим способом оплаты.
+{% endphrase %}
+
+{% phrase reason_DELIVERY_PROBLEMS %}
+  {{ logistics_issues() }}
+{% endphrase %}
+
+{% phrase reason_MISSING_ITEM %}
+  {{ logistics_issues() }}
+{% endphrase %}
+
+{% phrase reason_PENDING_CANCELLED %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_PICKUP_EXPIRED %}
+  Я вижу, что вы не смогли забрать заказ из пункта самовывоза, и заказ отправился обратно на склад. Мне жаль,
+  но развернуть его и доставить заново не получится. Если вы платили за заказ онлайн, то деньги вернутся на карту
+  в течение 10 дней с момента возврата товара на склад. Бонусы и промокоды восстанавливаются быстрее - всего за 2 часа
+{% endphrase %}
+
+{% phrase reason_USER_BOUGHT_CHEAPER %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_USER_CHANGED_MIND %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_USER_NOT_PAID %}
+  Я вижу, что заказ не был оплачен картой за 2 часа. Поэтому мы были вынуждены отменить этот заказ.
+  Пожалуйста, соберите заказ заново.
+{% endphrase %}
+
+{% phrase reason_USER_PLACED_OTHER_ORDER %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_USER_REFUSED_DELIVERY %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_USER_REFUSED_PRODUCT %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase reason_USER_REFUSED_QUALITY %}
+  {{ user_requested() }}
+{% endphrase %}
+
+{% phrase order_not_cancelled %}
+  Простите, но у меня нет отметки, что заказ {{ context.data.orderId }} был отменен.
+{% endphrase %}
+
+{% phrase render_suggest_caption__order_status %}
+  Статус заказа
+{% endphrase %}
+
+{% phrase render_suggest_utterance__order_status %}
+  Статус заказа
+{% endphrase %}

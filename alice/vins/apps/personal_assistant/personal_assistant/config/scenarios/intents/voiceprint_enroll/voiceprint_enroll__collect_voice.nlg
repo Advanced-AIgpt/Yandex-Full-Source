@@ -1,0 +1,78 @@
+{% from "common/macros.nlg" import get_alice_name with context %}
+{% from "common/error.nlg" import render_error %}
+
+{% set enroll_phrases = [
+  "включи музыку",
+  "поставь будильник на семь часов",
+  "какие сейчас пробки?",
+  "давай сыграем в города",
+  "поставь звуки природы"
+] %}
+
+{% set enroll_prefixes = [
+  "Скажите:",
+  "Класс. А теперь повторите:",
+  "Теперь спросите:",
+  "Отлично. Теперь скажите:",
+  "Почти всё. Скажите:"
+] %}
+
+{% macro confirm_frozen_name(form) %}
+   Если вы хотите изменить имя {{ form.user_name_frozen|capitalize }} на другое, скажите: «Меня зовут...» — и добавьте новое.
+   А если нет, скажите «я готов» или «я готова» — и мы продолжим знакомиться.
+{% endmacro %}
+
+{% phrase render_result %}
+
+{% if not form.user_name_frozen %}
+  {% chooseitem %}
+    Простите, не расслышала. Скажите: «Меня зовут...» — и добавьте своё имя.
+  {% or %}
+    Что-то у меня в ушах звенит. Пожалуйста, повторите: «Меня зовут...» — и добавьте своё имя.
+  {% endchooseitem %}
+{% else %}
+  {% if form.is_need_explain %}
+    Я могу запомнить ваш голос.
+    Это позволит мне понять, когда включить музыку просите именно вы. Друзья и близкие тоже смогут её включать — но это не повлияет на ваши рекомендации и подборки.
+    Ваш голос будет связан с аккаунтом в Яндексе, с которого вы активировали это устройство.
+    Если знакомство вас утомит, скажите: «{{ get_alice_name() }}, хватит».
+    {{ confirm_frozen_name(form) }}
+  {% else %}
+    {% if not form.ready_frozen %}
+      {% if form.user_name and form.raw_form.get_slot_by_name('user_name').value_type != 'swear' %}
+        {% chooseitem %}
+          {{ form.user_name_frozen|capitalize }}, если вы хотите называться по-другому, скажите: «Меня зовут...» — и добавьте новое имя.
+          Если имя верное, скажите «я готов» или «я готова» — и мы продолжим знакомиться.
+        {% or %}
+          {{ form.user_name_frozen|capitalize }}, если вы хотите изменить имя, скажите: «Меня зовут...» — и добавьте новое имя.
+          Если всё хорошо, скажите «я готов» или «я готова» — и мы продолжим знакомиться.
+        {% endchooseitem %}
+      {% else %}
+        {% chooseline %}
+          Простите, не расслышала.
+          Простите, в ушах звенит.
+        {% endchooseline %}
+        {{ confirm_frozen_name(form) }}
+      {% endif %}
+    {% else %}
+      {% if form.phrases_count == 0 and (not form.is_server_repeat) %}
+        Ура! Я попрошу вас повторить {{enroll_phrases | length}} фраз. Постарайтесь говорить как обычно, будто общаетесь с другом.
+        Лучше, чтобы на фоне ничего не шумело. Если вдруг забудете или не услышите фразу, скажите: «{{ get_alice_name() }}, повтори».
+      {% endif %}
+      {% if form.is_server_repeat %}
+        {# form.is_server_repeat means something is wrong on server, we need to ask user to repeat last phrase and remind how to leave scenario #}
+        {% chooseitem %}
+          Что-то я подвисла, извините.
+        {% or %}
+          Извините, задумалась о вечном.
+        {% endchooseitem %}
+        Пожалуйста, повторите фразу{% vc %}:{%evc%}
+        «{{ get_alice_name()}}, {{ enroll_phrases[form.phrases_count] }}».
+        Если вам надоело знакомиться, скажите: «{{ get_alice_name() }}, хватит».
+      {% else %}
+        {{ enroll_prefixes[form.phrases_count] }} «{{ get_alice_name()}}, {{ enroll_phrases[form.phrases_count] }}».
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endif %}
+{% endphrase %}

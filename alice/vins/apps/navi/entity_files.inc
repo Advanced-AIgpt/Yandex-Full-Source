@@ -1,0 +1,13 @@
+SET(NAVI_ENTITY_FILES
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/lane.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_accidents.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_cameras.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_parking.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_roadevents.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_roadworks.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_talks.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/layer_traffic.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/nearest_marker.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/route_marker.json
+    ${NAVI_APP_ROOT}/navi_app/config/navi_ru/entities/talk_action.json
+)

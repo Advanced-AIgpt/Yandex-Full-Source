@@ -1,0 +1,65 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% from "common/macros.nlg" import inability %}
+
+{% macro sound_done() %}
+  {% chooseline %}
+      Сделала
+      Готово
+      Как скажете
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro respond_only_for_alicesdk_player(text) %}
+  {% if has_alicesdk_player() %}
+    {% if is_active_attention('is_playing_audio') %}
+      {{ text | only_text }}
+    {% else %}
+      {{ text }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_error__sounderror %}
+  {% if context.error.data.code == 'already_max' %}
+    {% chooseline %}
+      Уже максимум
+      Громче уже некуда
+      Куда уж громче
+      Громче уже нельзя
+      Соседи говорят что и так всё хорошо слышат
+    {% endchooseline %}
+  {% elif context.error.data.code == 'already_min' %}
+    {% chooseline %}
+      Уже минимум
+      Уже и так без звука
+      Тише уже некуда
+      Куда уж тише
+      Тише уже нельзя
+    {% endchooseline %}
+   {% elif context.error.data.code == 'already_set' %}
+    {% chooseline %}
+      Хорошо
+      Уже сделала
+      Звук уже выставлен
+      Такой уровень звука уже стоит
+      Ничего не изменилось
+    {% endchooseline %}
+  {% elif context.error.data.code == 'level_out_of_range' %}
+    {% chooseline %}
+      Выберите число попроще: например, от 0 до 10
+      Так нельзя - уровень должен быть от 0 до 10
+      Больше 10 или меньше 0 нельзя
+    {% endchooseline %}
+  {% else %}
+    {{ error.render_error() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+  {{ inability() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {{ respond_only_for_alicesdk_player(sound_done()) }}
+{% endphrase %}

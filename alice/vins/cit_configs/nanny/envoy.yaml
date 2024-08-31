@@ -1,0 +1,67 @@
+admin:
+  access_log_path: "/logs/admin_access.log"
+  address:
+    socket_address:
+      address: "::"
+      ipv4_compat: true
+      port_value: 9901
+static_resources:
+  listeners:
+    - name: "vins_proxy"
+      address:
+        socket_address:
+          address: "::"
+          ipv4_compat: true
+          port_value: 84
+      filter_chains:
+        - filters:
+            - name: envoy.http_connection_manager
+              config:
+                codec_type: auto
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: backend
+                      domains: ["*"]
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: vins
+                            retry_policy:
+                              num_retries: 0
+                http_filters:
+                  - name: envoy.filters.http.health_check
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      pass_through_mode: false
+                      cluster_min_healthy_percentages:
+                        vins:
+                          value: 100
+                      headers:
+                        - name: ":path"
+                          exact_match: "/ping"
+                  - name: envoy.router
+  clusters:
+    - name: vins
+      connect_timeout: 0.01s
+      type: STATIC
+      lb_policy: ROUND_ROBIN
+      common_lb_config:
+        ignore_new_hosts_until_first_hc: true
+        healthy_panic_threshold:
+          value: 0
+      close_connections_on_host_health_failure: true
+      hosts:
+        - socket_address:
+            address: 127.0.0.1
+            port_value: 85
+      health_checks:
+        - timeout: 0.05s
+          interval: 0.1s # how frequently should be health check be performed
+          unhealthy_threshold: 5 # the number of unhealthy health checks required before a host is marked unhealthy
+          healthy_threshold: 10 # the number of healthy health checks required before a host is marked healthy
+          no_traffic_interval: 0.1s
+          http_health_check:
+            path: "/ping"

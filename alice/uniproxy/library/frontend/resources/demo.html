@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="no-js consumer" lang="en">
+  <head>
+    <link rel="icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
+    <script type="text/javascript" src="//yandex.st/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="//yandex.st/jquery-ui/1.11.1/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="//yastatic.net/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="//yastatic.net/bootstrap/3.3.1/css/bootstrap.min.css"/>
+
+    <script type="text/javascript" src="/webspeechkit/recorder.js"></script>
+    <script type="text/javascript" src="/webspeechkit/recorderWorker.js"></script>
+    <script type="text/javascript" src="/webspeechkit/recognizer.js"></script>
+    <script type="text/javascript" src="/webspeechkit/speechrecognition.js"></script>
+    <script type="text/javascript" src="/webspeechkit/webaudiowrapper.js"></script>
+    <script type="text/javascript" src="/settings.js"></script>
+
+    <meta charset="utf-8">
+    <title>Yandex SpeechKit JS API - ASR demo</title>
+  </head>
+
+  <body role="document">
+    <div class="container theme-showcase" role="main">
+      <div class="page-header">
+        <h1>Yandex SpeechkitKit JS API - ASR demo</h1>
+      </div>
+      <div>
+        <a href="https://tech.yandex.ru/speechkit/jsapi/doc/intro/concepts/index-docpage/">Документация</a>
+      </div>
+      <div class="panel panel-default form-group">
+        <div class="panel-heading">
+          <h3 class="panel-title">{{ tr('Параметры', 'Parameters') }}</h3>
+        </div>
+        <div class="panel-body">
+          <div>
+            <label><a href="https://developer.tech.yandex.ru/">{{ tr('Ключ разработчика', 'API key') }}</a>
+              <input class="form-control" id="apikey" value="{{ apikey }}" />
+            </label>
+          </div>
+
+          <div>
+            <label>UUID
+              <input class="form-control" id="uuid" />
+            </label>
+          </div>
+            
+          <div>
+            <label>deviceUUID
+              <input class="form-control" id="deviceuuid" />
+            </label>
+          </div>
+
+          <div>
+            <label>yandexuid
+              <input class="form-control" id="yandexuid" />
+            </label>
+          </div>
+          
+          <div>
+            <label>
+              <input type="checkbox" id="custom_lm">{{ tr('Custom model', 'Custom model') }}</input>
+            </label>
+              <div id="custom_div">
+                Put here your grammar text (each command on each line) or SRGS (see <a href="https://www.w3.org/TR/grammar-spec/">https://www.w3.org/TR/grammar-spec/</a>)
+                <textarea class="form-control" id="custom_model"></textarea>
+                <a href="/srgs.xml">SRGS example</a>
+              </div>
+          </div>
+            
+          <div>
+          <label>{{ tr('Модель (тема)', 'Model') }}
+            <select class="form-control" id="sel_model">
+              <option name="model" value="notes">Notes (Freeform, Dictation)</option>
+              <option name="model" value="queries">Queries (Search engine queries)</option>
+              <option name="model" value="desktopgeneral">Desktop general</option>
+              <option name="model" value="mapsyari">Maps</option>
+              <option name="model" value="names">Names</option>
+              <option name="model" value="music">Music (Bands, Titles, etc.)</option>
+              <option name="model" value="buying">Buying (Confirm, Order, Shipping, etc.)</option>
+              <option name="model" value="spun">Counters (0-9 + запятая)</option>
+              <option name="model" value="numbers">Numbers (General numbers)</option>
+              <option name="model" value="insurance">Insurance</option>
+              <option name="model" value="questionnaire">Questionnaire</option>
+              <option name="model" value="severstal">SevST</option>
+              <option name="model" value="maptalks">Razgovortschiki</option>
+              <option name="model" value="autolauncher">Autolauncher</option>
+              <option name="model" value="yabio-register">Register speaker</option>
+              <option name="model" value="yabio-score">Score speaker</option>
+              <option name="model" value="onthefly">On the fly</option>
+              <option name="model" value="custom">Sandbox</option>
+            </select>
+              <input class="form-control" id="sandbox_model" />
+          </label>
+          </div>
+
+          <label>{{ tr('Язык', 'Language') }}
+            <select class="form-control" id="sel_lang">
+            </select></label>
+            
+          <label>{{ tr('Биометрия', 'Biometry') }}
+            <select class="form-control" id="sel_biometry">
+              <option name="biometry" value="" selected>-</option>
+              <option name="biometry" value="gender">gender</option>
+              <option name="biometry" value="age">age</option>
+              <option name="biometry" value="group">group</option>
+              <option name="biometry" value="language">language</option>
+              <option name="biometry" value="children">children</option>
+              <option name="biometry" value="emotion">emotion</option>
+              <option name="biometry" value="gender,age,group,language,children,emotion">all</option>
+          </select></label>
+
+            <div class="checkbox">
+              <label><input type="checkbox" id="punctuation" checked=true>Punctuation</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="manual_punctuation">Manual punctuation</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="stronglanguagefilter" checked=true>"Strong language" filtering</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="allowmultiutt" checked=true>Allow multi utterance</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="partialresults" checked=true>Partial results</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="capitalize"/>{{ tr('С большой буквы', 'Capitalize') }}</label>
+            </div>
+            <div class="checkbox">
+              <label><input type="checkbox" id="use_snr">Use snr</label>
+            </div>
+            <label>Snr flags
+              <input class="form-control" type="snr_flags" id="snr_flags" value="" /></label>
+            <label>{{ tr('Пауза между предложениям (in 100 mc)', 'Inter utterance silence') }}
+              <input class="form-control" type="utterance_silence" id="uttr_sil" value="120" /></label>
+            <label>cmn_window
+              <input class="form-control" type="cmn_window" id="cmn_window" value="600" /></label>
+            <label>cmn_latency
+              <input class="form-control" type="cmn_latency" id="cmn_latency" value="150" /></label>
+            <label>chunk_process_limit
+              <input class="form-control" type="chunk_process_limit" id="chunk_process_limit" value="500" /></label>
+            <label>{{ tr('Сколько ожидается цифр', 'Expected numbers count') }}
+              <input class="form-control" id="exp_num_count" value="0" /></label>
+            <div><label>{{ tr('Формат аудио', 'Audio format') }}
+              <select class="form-control" id="sel_format">
+                <option name="format" value="OPUS" selected="true">Opus</option>
+                <option name="format" value="PCM44">PCM 44KHz</option>
+                <option name="format" value="PCM16">PCM 16KHz</option>
+                <option name="format" value="PCM8">PCM 8KHz</option>
+                <option name="format" value="SPX">SPX</option>
+                <option name="format" value="MP3">MP3</option>
+              </select>
+                <input id="format_mime" value="audio/ogg;codecs=opus" />
+              </label>
+            </div>
+        </div>
+      </div>
+      <p id="control">
+        <input type="button" class="btn btn-default" id="start_btn" value="Start"/>
+        <input type="button" class="btn btn-default" id="stop_btn" value="Stop"/>
+        <input type="button" class="btn btn-default" id="pause_btn" value="Pause"/>
+        <span class="label label-info" id="info">
+          Send <span id="bytes_send">0</span> bytes, <span id="packages_send">0</span> packages. Processed <span id="processed">0</span> packages.
+        </span>
+
+        <div class="panel panel-default form-group">
+          <div class="panel-heading">
+            <h3 class="panel-title">{{ tr('Результаты', 'Results') }}</h3>
+          </div>
+          <div class="panel-body">
+            <div id="results">
+              <span class="final" id="content_uttr"></span> <span class="interim" id="content_curr"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default form-group">
+          <div class="panel-heading">
+            <h3 class="panel-title">{{ tr('Лог предложений', 'Utterances') }}</h3>
+          </div>
+          <div class="panel-body">
+            <div id="results">
+              <div id="uttr_log"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default form-group">
+          <div class="panel-heading">
+            <h3 class="panel-title">{{ tr('Выравнивание', 'Align info') }}</h3>
+          </div>
+          <div class="panel-body">
+            <table class="table table-hover">
+                <thead>
+                <tr><th>Utterance score</th><th>Words</th></tr>
+                </thead>
+                <tbody id="alignblock">
+                </tbody>
+            </table>
+          </div>
+        </div>
+
+    </div>
+    <script type="text/javascript" src="/demo.js"></script>
+    <script>
+        var language = "{{ language }}".substring(0, 2);
+        $('option[name=lang]').filter('[value^="' + language + '"]').prop('selected', true);
+        var model = "{{ model }}";
+        if (model.startsWith("dictation:")) {
+            model = model.substring(11);
+        }
+        if (model == 'freeform') {
+            model = 'notes';
+        } else if (model == 'general') {
+            model = 'queries';
+        } else if (model == 'maps') {
+            model = 'mapsyari';
+        }
+        $('option[name=model]').filter('[value="' + model + '"]').prop('selected', true);
+
+        $('#sandbox_model').val($('#sel_model').val());
+    </script>
+  </body>
+</html>

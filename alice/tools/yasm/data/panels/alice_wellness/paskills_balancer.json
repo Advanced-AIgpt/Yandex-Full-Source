@@ -1,0 +1,85 @@
+{
+    "objects": {
+        "paskills_quantiles": {
+            "label": "Quantiles (balancer)",
+            "normalize": true,
+            "gen_chart": [
+                {
+                    "type": "quantiles",
+                    "host": "ASEARCH",
+                    "colors": ["#ff0000", "#ffa500", "#ffff00", "#008000", "#42aaff", "#0000ff"],
+                    "quantiles": [50, 75, 90, 95, 99, 999],
+                    "title": "q{quantile}",
+                    "tag": "itype=balancer; ctype=prod; prj=dialogs.alice.yandex.net",
+                    "signal": "quant(balancer_report-report-service_total-processing_time_hgram,{quantile})",
+                    "normalizable": true
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "paskills_requests": {
+            "label": "Requests (balancer)",
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "colors": ["#ff0000", "#008000", "#0000ff"],
+                    "locations": ["man", "sas", "vla"],
+                    "host": "ASEARCH",
+                    "signal": "balancer_report-report-service_total-requests_summ",
+                    "tag": "itype=balancer;ctype=prod;prj=dialogs.alice.yandex.net;geo={loc}",
+                    "title": "{loc}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "paskills_unanswers": {
+            "label": "Unanswers (balancer), %: man(red), sas(green), vla(blue)",
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "colors": ["#ff0000", "#008000", "#0000ff"],
+                    "locations": ["man", "sas", "vla"],
+                    "alertName": "paskills-int_5xx_err_summ_{loc}",
+                    "host": "ASEARCH",
+                    "signal": "or(perc(balancer_report-report-service_total-outgoing_5xx_summ, balancer_report-report-service_total-requests_summ), 0)",
+                    "tag": "itype=balancer;ctype=prod;prj=dialogs.alice.yandex.net;geo={loc}",
+                    "title": "{loc}"
+                }
+            ],
+            "size": [
+                4,
+                3
+            ]
+        },
+        "paskills_int_5xx_err_summ_man": {
+            "alert": "paskills-int_5xx_err_summ_man",
+            "label": "5xx man",
+            "size": [
+                2,
+                1
+            ]
+        },
+        "paskills_int_5xx_err_summ_sas": {
+            "alert": "paskills-int_5xx_err_summ_sas",
+            "label": "5xx sas",
+            "size": [
+                2,
+                1
+            ]
+        },
+        "paskills_int_5xx_err_summ_vla": {
+            "alert": "paskills-int_5xx_err_summ_vla",
+            "label": "5xx vla",
+            "size": [
+                2,
+                1
+            ]
+        }
+    }
+}

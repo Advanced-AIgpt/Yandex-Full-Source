@@ -1,0 +1,98 @@
+package NAlice.NWonderlogs;
+
+import "voicetech/library/proto_api/analytics_info.proto";
+
+import "alice/library/censor/protos/extension.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TAsr {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TRecognition {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Normalized = 1 [json_name = "normalized", (NYT.column_name) = "normalized", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+        repeated string Words = 2 [json_name = "words", (NYT.column_name) = "words", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    }
+
+    optional string MdsKey = 1 [json_name = "mds_key", (NYT.column_name) = "mds_key", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    optional TRecognition Recognition = 2 [json_name = "recognition", (NYT.column_name) = "recognition"];
+    optional bool Trash = 3 [json_name = "trash", (NYT.column_name) = "trash"];
+    repeated TRecognition Hypotheses = 4 [json_name = "hypotheses", (NYT.column_name) = "hypotheses", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+    optional bool Whisper = 5 [json_name = "whisper", (NYT.column_name) = "whisper"];
+}
+
+message TOnlineValidation {
+    optional string MdsKey = 1 [json_name = "mds_key", (NYT.column_name) = "mds_key", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+}
+
+message TAsrPrepared {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    reserved "AliceRequest"; reserved 6;
+
+    message TError {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EProcess {
+            P_UNDEFINED = 0;
+            P_ASR_MAPPER = 1;
+            P_ASR_PREPARED_REDUCER = 2;
+        }
+
+        enum EReason {
+            R_UNDEFINED = 0;
+            R_INVALID_VALUE = 1;
+            R_FAILED_CONVERT_YSON_TO_PROTO = 2;
+            R_DIFFERENT_VALUES = 3;
+        }
+
+        optional EProcess Process = 1 [json_name = "process", (NYT.column_name) = "process"];
+        optional EReason Reason = 2 [json_name = "reason", (NYT.column_name) = "reason"];
+        optional string Message = 3 [json_name = "message", (NYT.column_name) = "message"];
+        optional string Uuid = 4 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 5 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional string SetraceUrl = 6 [json_name = "setrace_url", (NYT.column_name) = "setrace_url"];
+    }
+
+    message TPresence {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional bool Asr = 1 [json_name = "asr", (NYT.column_name) = "asr"];
+        optional bool OnlineValidation = 2 [json_name = "online_validation", (NYT.column_name) = "online_validation"];
+    }
+
+    message TData {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        reserved "AliceRequest"; reserved 5;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional TAsr Data = 3 [json_name = "data", (NYT.column_name) = "data"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional string Topic = 6 [json_name = "topic", (NYT.column_name) = "topic"];
+        optional YaldiProtobuf.AnalyticsInfo AnalyticsInfo = 7 [json_name = "analytics_info", (NYT.column_name) = "analytics_info"];
+    }
+
+    message TOnlineValidation {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional NWonderlogs.TOnlineValidation Value = 3 [json_name = "value", (NYT.column_name) = "value"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+    optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+    optional TAsr Data = 3 [json_name = "data", (NYT.column_name) = "data"];
+    optional bool PresentInUniproxyLogs = 4 [json_name = "present_in_uniproxy_logs", (NYT.column_name) = "present_in_uniproxy_logs"];
+    // start session timestamp
+    optional uint64 TimestampLogMs = 5 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    optional string Topic = 7 [json_name = "topic", (NYT.column_name) = "topic"];
+    optional YaldiProtobuf.AnalyticsInfo AnalyticsInfo = 8 [json_name = "analytics_info", (NYT.column_name) = "analytics_info"];
+    optional NWonderlogs.TOnlineValidation OnlineValidation = 9 [json_name = "online_validation", (NYT.column_name) = "online_validation"];
+    optional TPresence Presence = 10 [json_name = "presence", (NYT.column_name) = "presence"];
+}

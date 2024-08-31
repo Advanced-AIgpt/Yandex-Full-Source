@@ -1,0 +1,35 @@
+{% macro get_to_preposition(city) -%}
+    {% set prep %}
+        {% if city[0] in 'вВфФ' %}
+            во
+        {% else %}
+            в
+        {% endif %}
+    {% endset %}
+
+    {{ prep }}
+{%- endmacro %}
+
+
+{% macro render_date(date) -%}
+    {{ date.get('days') }} {{ month_name(date.get('months')) | inflect('gen')}}
+{%- endmacro %}
+
+{% macro render_point_from(title) -%}
+    {{ title | inflect('gen') | capitalize_first }}
+{%- endmacro %}
+
+{% macro render_point_to(title) -%}
+    {{ get_to_preposition(title) }} {{ title | inflect('acc') | capitalize_first }}
+{%- endmacro %}
+
+
+{% macro is_month_query(date_forward) -%}
+    {{ '1' if date_forward and (not date_forward.get('days')) and (not date_forward.get('weeks')) and date_forward.get('months') else '0'  }}
+{%- endmacro %}
+
+
+{% macro month_name(number) -%}
+    {% set MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'] %}
+    {{ MONTHS[number - 1] }}
+{%- endmacro %}

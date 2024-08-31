@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+import "tasklet/services/yav/proto/yav.proto";
+
+package alice.tasklet.release_rm_graphs;
+
+message Context {
+    option (.tasklet.context) = true;
+    yav_service.YavService yav = 1 [(.tasklet.inject) = true];
+}
+
+message Config {
+    string component_name = 1;
+    int32 branch = 2;
+    int32 svn_revision = 3;
+    int32 tag_number = 4;
+    string release_to = 5;
+
+    int32 retries = 6;
+    int32 sleep_time = 7;
+    float backoff = 8;
+}
+
+message State {
+    bool success = 1;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message Output {
+    State state = 1;
+}
+
+message ReleaseRmGraphs {
+    option (.tasklet.tasklet_interface) = true;
+
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+
+    Context ctx = 3;
+}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+
+package alice.tasklet.create_new_rm_branch;
+
+message Context {
+    option (.tasklet.context) = true;
+    .ci.CiService ci = 1 [(.tasklet.inject) = true];
+}
+
+message Config {
+    string component_name = 1;
+    repeated string resource_name = 2;
+    string major_version = 3;
+    string minor_version = 4;
+    int32 retries = 5;
+    int32 sleep_time = 6;
+    float backoff = 7;
+    int32 svn_revision = 8;
+}
+
+message Resources {
+    map<string, int64> resources = 1;
+}
+
+message State {
+    bool success = 1;
+    int32 branch = 2;
+    int32 tag = 3;
+    int32 first_tag_revision = 4;
+    int32 base_commit_id = 5;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message Output {
+    State state = 1;
+    Resources resources = 2;
+}
+
+message CreateNewRmBranch {
+    option (.tasklet.tasklet_interface) = true;
+
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+
+    Context ctx = 3;
+}

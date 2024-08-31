@@ -1,0 +1,210 @@
+{% nlgimport "music/music__common.nlg" %} {# for music alarm errors #}
+{% from "music/music__common.nlg" import render_music_answer, render_music_tags_default, render_music_tags, ya_plus with context %}
+{% from "radio/radio__common.nlg" import render_radio_title, render_unknown_station, render_unsupported_user_region, render_unconfigured_station with context %}
+{% from "alarm/alarm__common.nlg" import set_sound_phrase %}
+
+{% macro repeat() -%}
+  {% if form.repeat and not (form.target_type and form.target_type == 'radio') %}
+    {% chooseline %}
+      на повторе
+      на репите
+    {%- endchooseline %}
+  {%- endif %}
+{%- endmacro %}
+
+{% macro set_track_phrase() %}
+  "Алиса, разбуди меня этой песней"
+{% endmacro %}
+
+{% macro render_wrong_usage_failure(combo_render=False) %}
+  {% set radio_shazam = is_active_attention('alarm_sound__music_from_radio') %}
+  {% set video_shazam = is_active_attention('alarm_sound__music_from_video') %}
+  {% if radio_shazam %}
+    {% chooseline %}
+      Чтобы проснуться под любимый трек, включите его и
+      Чтобы установить нужный трек на будильник, попросите меня включить его. А потом
+    {% endchooseline %}
+    скажите: {{ set_track_phrase() }}.
+  {% elif video_shazam %}
+    {% if combo_render %}
+      А настроить на нём звук не вышло.
+    {% endif %}
+    {% chooseline %}
+      С видео такого не провернуть. Лучше попросите меня включить любой трек и
+      Увы, я справлюсь только с музыкой. Попросите меня включить любой трек и
+    {% endchooseline %}
+    скажите: {{ set_track_phrase() }}.
+  {% else %}
+    {% chooseline %}
+      Я могу поставить на будильник любую песню, группу, радио или музыку для создания определенного настроения. Скажите
+      Я могу поставить на будильник песню, группу или радиостанцию. Скажите, например,
+      Стандартную мелодию можно заменить песней, группой или радиостанцией. Например, скажите
+    {% endchooseline %}
+    {{ set_sound_phrase() }}.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_radio_search_failure() %}
+  {% if is_active_attention('no_station') %}
+    {{ render_unknown_station() }}
+  {% elif is_active_attention('unsupported_user_region') %}
+    {{ render_unsupported_user_region() }}
+  {% else %}
+    {{ render_unconfigured_station() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_failure(combo_render=False) %}
+  {% if is_active_attention('alarm_sound__unauthorized') %}
+    {% if not combo_render %}
+      Вы не авторизовались.
+    {% else %}
+      А музыку поставить не могу, ведь вы не авторизовались.
+    {% endif %}
+  {% elif is_active_attention('alarm_sound__payment_required') %}
+    {% if not combo_render %}
+      Чтобы ставить на будильник музыку,
+    {% else %}
+      А чтобы ставить на него музыку,
+    {% endif %}
+    {% if is_active_attention('alarm_sound__plus_push') %}
+      вам нужна подписка {{ ya_plus() }}.
+      Ссылка для покупки придёт на ваш смартфон — я уже её отправила.
+    {% else %}
+      необходимо купить подписку на {{ ya_plus() }}.
+    {% endif %}
+  {% elif is_active_attention('alarm_sound__no_user_info') or is_active_attention('alarm_sound__unknown_error') %}
+    {% if not combo_render %}
+      Не получилось это поставить, что-то пошло не так.
+    {% else %}
+      А звук настроить мне не удалось, что-то пошло не так.
+    {% endif %}
+  {% elif is_active_attention('alarm_sound__radio_search_failure') %}
+    {{ render_radio_search_failure() }}
+  {% else %}
+    {{ render_wrong_usage_failure(combo_render) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_filtered_success(combo_render=False) %}
+  {% set filters_count = form.music_result.filters | length %}
+  {% if filters_count > 1 %}
+    {{ render_music_tags_default() }}
+  {% elif filters_count == 1 %}
+    {# there can only be one key-value pair in this dict #}
+    {% for filter, tag in form.music_result.filters.items() %}
+      {% set tag = tag | replace('-', '_') %}
+      {{ render_music_tags(filter, tag) }}
+    {% endfor %}
+  {% else %}
+    Что-то во мне драматично надломилось.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_song_success(combo_render=False) %}
+  {% if combo_render %}
+    Вас разбудит
+  {% elif is_active_attention('alarm_sound__set_song_instead') %}
+    Так я ещё не умею. Зато могу поставить песню. Вас разбудит
+  {% else %}
+    {% chooseline %}
+      Хорошо. Вас разбудит
+      Отличный выбор. Теперь на вашем будильнике
+      Запомнила. Вас разбудит
+      Отличный выбор. Вас разбудит
+      Установила. На будильнике
+    {% endchooseline %}
+  {% endif %}
+  {{ repeat() }}
+  {% vc %}
+    {{ render_music_answer(form.music_result, 'nom', render_album=False, shorten=True) | tts_domain('music') }}
+  {% evc %}
+  {% tx %}
+    {{ render_music_answer(form.music_result, 'nom') }}
+  {% etx %}
+  .
+{% endmacro %}
+
+{% macro render_radio_success(combo_render=False) %}
+  {% set radio_title = render_radio_title(form.radio_result | get_item('title', 'радио')) %}
+  {% if not form.radio_result|get_item('active', false) %}
+    {% if not combo_render %}
+      Окей!
+    {% endif %}
+    Поставила на будильник {{ radio_title }}, но эта станция временно недоступна.
+  {% else %}
+    {% if not combo_render %}
+      {% chooseitem %}
+        Готово. Вас разбудит {{ radio_title }}.
+      {% or %}
+        {{ radio_title | capitalize_first }} — хороший выбор. Разбужу вас этой станцией.
+      {% endchooseitem %}
+    {% else %}
+      Вас разбудит {{ radio_title }}.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_success(combo_render=False) %}
+  {% if form.radio_result %}
+    {{ render_radio_success(combo_render) }}
+  {% elif not form.music_result %}
+    Кажется, я поломалась. Этого не должно было произойти.
+  {% elif form.music_result.filters %}
+    {{ render_filtered_success(combo_render) }}
+  {% else %}
+    {{ render_song_success(combo_render) }}
+  {% endif %}
+  {% if req_info.experiments['change_alarm_with_sound'] == None %}
+    {% chooseline %}
+      А будильник нужно завести отдельно — я пока не умею ставить всё сразу.
+      А время сигнала установите отдельно. Я пока не умею менять все настройки сразу.
+    {% endchooseline %}
+  {% elif not combo_render and is_active_attention('alarm_sound__no_alarms') %}
+    {% chooseline %}
+      Не забудьте завести будильник.
+      Только будильник завести не забудьте.
+      Только сам будильник вы забыли установить. Переживаю.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro alarm_set_sound_render_result(combo_render=False) %}
+  {% if is_active_attention('alarm_sound__supported') %}
+    {% if form.music_result or form.radio_result %}
+      {{ render_success(combo_render) }}
+    {% else %}
+      {{ render_failure(combo_render) }}
+    {% endif %}
+  {% elif not has_uncontrollable_updates() and is_active_attention('alarm_sound__update_first') %}
+    {% if not combo_render %}
+      Разработчики уже выпустили обновление, в котором я это умею. Чтобы его установить,
+    {% else %}
+      А изменить звук будильника не удалось, сначала нужно установить обновление. Для этого
+    {% endif %}
+    оставьте колонку включённой {%tx%}на ночь{%etx%}{%vc%}н+аночь{%evc%} — и всё загрузится само.
+  {% else %}
+    {% if not combo_render %}
+      Извините, я пока не умею изменять звук будильника на этом устройстве.
+    {% else %}
+      А изменять звук будильника на этом устройстве я пока не умею, извините.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ alarm_set_sound_render_result() }}
+{% endphrase %}
+
+{% macro ask_sound() %}
+  Вы можете поставить на будильник свою любимую песню, группу или радиостанцию.
+  {% if form.target_type and form.target_type == 'radio' %}
+    Какое радио вы хотите установить на будильник?
+  {% else %}
+    Какую музыку вы хотите установить на будильник?
+  {% endif %}
+{% endmacro %}
+
+{% phrase ask__sound %}
+  {{ ask_sound() }}
+{% endphrase %}

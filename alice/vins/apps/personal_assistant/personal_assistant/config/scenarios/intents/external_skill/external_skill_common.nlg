@@ -1,0 +1,71 @@
+{% from "common/macros.nlg" import get_alice_name with context %}
+
+{% macro render_skill_response(form) %}
+  {% if form.skill_info.voice %}
+    {% voice %}
+      <speaker voice="{{ form.skill_info.voice }}">
+    {% endvoice %}
+  {% endif %}
+  {% if form.response.voice %}
+    {% voice %}
+      {{ form.response.voice }}
+    {% endvoice %}
+    {% text %}
+      {{ form.response.text }}
+    {% endtext %}
+  {% else %}
+    {{ form.response.text }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase unknown_skill_id %}
+  Извините, по такому запросу я ничего не нашла.
+{% endphrase %}
+
+{% phrase render_error__external_skill_deactivated %}
+  Прошу прощения, но в данный момент этот диалог выключен.
+{% endphrase %}
+
+{% phrase render_error__external_skill_unavaliable %}
+  Извините, {{ form.skill_info.name or 'диалог' }} не отвечает.
+{% endphrase %}
+
+{% phrase render_error__external_skill_unavailable %}
+  Извините, {{ form.skill_info.name or 'диалог' }} не отвечает.
+{% endphrase %}
+
+{% phrase render_suggest_caption__external_skill %}
+  {{ context.external_skill.data.title }}
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__external_skill %}
+  {% if context.external_skill.data.payload and not context.external_skill.data.url %}
+    {{ context.external_skill.data.title }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__external_skill %}
+  {% if not context.external_skill.data.payload and not context.external_skill.data.url %}
+    {{ context.external_skill.data.title }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__external_skill -%}
+  {{ context.external_skill.data.url or '' }}
+{%- endphrase %}
+
+{% phrase render_suggest_caption__external_skill_deactivate %}
+  {% if form.skill_id is gc_skill %}
+    Хватит болтать {{ ':x:' | emojize }}
+  {% else %}
+    Закончить {{ ':x:' | emojize }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__external_skill_deactivate %}
+  {% if form.skill_id is gc_skill %}
+    Хватит болтать.
+  {% else %}
+    {{ get_alice_name() }}, хватит.
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,185 @@
+rules:
+- type: check_form_active_slots
+  prev_intent: crm_bot.scenarios.search
+  curr_intent: crm_bot.scenarios.search
+  boost: 1.75
+
+- type: logic_rule
+  boost: 1.1
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_status
+          - crm_bot.scenarios.order_status__data
+          - crm_bot.scenarios.order_status__continuation
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_status
+          - crm_bot.scenarios.order_status__data
+          - crm_bot.scenarios.order_status__continuation
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(DELIVERY_MESSED_UP_BUT_STILL_HAPPENING|PICKUP|CANCELLED|DELIVERED|UNPAID|PENDING|HAS_CANCELLATION_REQUEST|DELIVERY_TODAY_FINE|DELIVERY_FUTURE_FINE|RESOLVED_IN_THANKS)'
+
+- type: logic_rule
+  boost: 0.0
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_status
+          - crm_bot.scenarios.order_status__data
+          - crm_bot.scenarios.order_status__continuation
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_status
+          - crm_bot.scenarios.order_status__data
+          - crm_bot.scenarios.order_status__continuation
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(?!DELIVERY_MESSED_UP_BUT_STILL_HAPPENING|PICKUP|CANCELLED|DELIVERED|UNPAID|PENDING|HAS_CANCELLATION_REQUEST|DELIVERY_TODAY_FINE|DELIVERY_FUTURE_FINE|RESOLVED_IN_THANKS)'
+
+- type: logic_rule
+  boost: 1.1
+  operation: and
+  children:
+  - type: check_prev_curr_intent
+    prev_intent:
+      - crm_bot.scenarios.order_status
+      - crm_bot.scenarios.order_status__data
+      - crm_bot.scenarios.order_status__continuation
+    curr_intent: crm_bot.scenarios.order_status__continuation
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(DELIVERY_FUTURE_RESCHEDULED|DELIVERY_FUTURE_LOST|DELIVERY_TODAY_LOST|DELIVERY_TODAY_COURIER_IN_TRAFFIC)'
+
+- type: logic_rule
+  boost: 0.0
+  operation: and
+  children:
+  - type: check_prev_curr_intent
+    prev_intent:
+      - crm_bot.scenarios.order_status
+      - crm_bot.scenarios.order_status__data
+      - crm_bot.scenarios.order_status__continuation
+    curr_intent: crm_bot.scenarios.order_status__continuation
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(?!DELIVERY_FUTURE_RESCHEDULED|DELIVERY_FUTURE_LOST|DELIVERY_TODAY_LOST|DELIVERY_TODAY_COURIER_IN_TRAFFIC|DELIVERY_TODAY_LOST_COMPLETELY|DELIVERY_TODAY_LOST_CALL|DELIVERY_FUTURE_LOST_COMPLETELY|DELIVERY_MESSED_UP)'
+
+- type: logic_rule
+  boost: 1.1
+  operation: and
+  children:
+  - type: allow_prev_intents
+    prev_intents:
+      - crm_bot.scenarios.order_cancel_for_me__bought_cheaper
+      - crm_bot.scenarios.order_cancel_for_me__changed_mind
+      - crm_bot.scenarios.order_cancel_for_me__placed_other_order
+      - crm_bot.scenarios.order_cancel_for_me__refused_delivery
+    curr_intent: crm_bot.scenarios.order_cancel_for_me_finish
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(REASON_SELECTED)'
+
+- type: logic_rule
+  boost: 0
+  operation: and
+  children:
+  - type: allow_prev_intents
+    prev_intents:
+      - crm_bot.scenarios.order_cancel_for_me__bought_cheaper
+      - crm_bot.scenarios.order_cancel_for_me__changed_mind
+      - crm_bot.scenarios.order_cancel_for_me__placed_other_order
+      - crm_bot.scenarios.order_cancel_for_me__refused_delivery
+    curr_intent: crm_bot.scenarios.order_cancel_for_me_finish
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(?!REASON_SELECTED)'
+
+- type: logic_rule
+  boost: 1.1
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_for_me_finish
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_for_me_finish
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(CANCELLED|CANCEL_ABORTED)'
+
+- type: logic_rule
+  boost: 0
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_for_me_finish
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_for_me_finish
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(?!CANCELLED|CANCEL_ABORTED)'
+
+- type: logic_rule
+  boost: 1.1
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_we_did
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_we_did
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(REASON_STATED)'
+
+- type: logic_rule
+  boost: 0
+  operation: and
+  children:
+  - type: logic_rule
+    operation: or
+    children:
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_we_did
+        curr_intent: crm_bot.scenarios.feedback_positive
+      - type: check_prev_curr_intent
+        prev_intent:
+          - crm_bot.scenarios.order_cancel_we_did
+        curr_intent: crm_bot.scenarios.feedback_negative
+  - type: check_form_slot_value
+    slot: 'scenario_status'
+    value: '(?!REASON_STATED)'

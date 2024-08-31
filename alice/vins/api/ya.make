@@ -1,0 +1,113 @@
+PY2_LIBRARY()
+
+OWNER(g:alice)
+
+PEERDIR(
+    contrib/python/gunicorn
+    contrib/python/MarkupSafe
+    contrib/python/path.py
+    contrib/python/raven
+    contrib/python/contextlib2
+    contrib/python/falcon
+    contrib/python/redis
+    contrib/python/hiredis
+    contrib/python/pycrypto
+    contrib/python/requests
+    contrib/python/six
+    alice/megamind/protos/scenarios
+    alice/protos/extensions
+    alice/vins/api/vins_api/speechkit/connectors/protocol/protos
+    alice/vins/api/vins_api/speechkit/protos
+    alice/vins/api_helper
+    alice/vins/core
+    alice/vins/sdk
+    alice/vins/apps/navi
+    alice/vins/apps/pa_skills
+    alice/vins/apps/personal_assistant
+    alice/vins/apps/personal_assistant/testing_framework
+    library/python/langs
+)
+
+
+PY_SRCS(
+    TOP_LEVEL
+    vins_api/__init__.py
+    vins_api/common/__init__.py
+    vins_api/common/api.py
+    vins_api/common/auth.py
+    vins_api/common/db.py
+    vins_api/common/knn_cache.py
+    vins_api/common/middleware.py
+    vins_api/common/resources.py
+    vins_api/common/rtlog_counters.py
+    vins_api/common/vins_apps.py
+    vins_api/external_skill/__init__.py
+    vins_api/external_skill/api.py
+    vins_api/external_skill/connector.py
+    vins_api/external_skill/gunicorn_conf.py
+    vins_api/external_skill/resources.py
+    vins_api/external_skill/schemas.py
+    vins_api/external_skill/settings.py
+    vins_api/speechkit/__init__.py
+    vins_api/speechkit/api.py
+    vins_api/speechkit/connectors/__init__.py
+    vins_api/speechkit/connectors/navi.py
+    vins_api/speechkit/connectors/protocol/__init__.py
+    vins_api/speechkit/connectors/protocol/directives.py
+    vins_api/speechkit/connectors/protocol/match.py
+    vins_api/speechkit/connectors/protocol/testing.py
+    vins_api/speechkit/connectors/protocol/utils.py
+    vins_api/speechkit/connectors/speechkit.py
+    vins_api/speechkit/gunicorn_conf.py
+    vins_api/speechkit/resources/__init__.py
+    vins_api/speechkit/resources/common.py
+    vins_api/speechkit/resources/navi.py
+    vins_api/speechkit/resources/protocol.py
+    vins_api/speechkit/resources/qa.py
+    vins_api/speechkit/resources/speechkit.py
+    vins_api/speechkit/schemas.py
+    vins_api/speechkit/session.py
+    vins_api/speechkit/settings.py
+    vins_api/webim/__init__.py
+    vins_api/webim/api.py
+    vins_api/webim/crypto.py
+    vins_api/webim/gunicorn_conf.py
+    vins_api/webim/primitives.py
+    vins_api/webim/settings.py
+    vins_api/webim/schemas.py
+    vins_api/webim/schemas_v2.py
+    vins_api/webim/schemas_ocrm.py
+    vins_api/webim/connectors/__init__.py
+    vins_api/webim/connectors/webim.py
+    vins_api/webim/connectors/ocrm.py
+    vins_api/webim/middleware/__init__.py
+    vins_api/webim/middleware/auth.py
+    vins_api/webim/middleware/log.py
+    vins_api/webim/middleware/request_id.py
+    vins_api/webim/resources/__init__.py
+    vins_api/webim/resources/webim.py
+    vins_api/webim/resources/ocrm.py
+)
+
+END()
+
+RECURSE(
+    vins_api/speechkit/connectors/protocol/protos
+    vins_api/speechkit/protos
+)
+
+RECURSE_FOR_TESTS(
+    protocol_ut
+    protocol_ut/functional/auto
+    protocol_ut/functional/desktop_alice
+    protocol_ut/functional/dexp
+    protocol_ut/functional/implicit
+    protocol_ut/functional/irbis
+    protocol_ut/functional/navigator_android
+    protocol_ut/functional/navigator_ios
+    protocol_ut/functional/pa_android
+    protocol_ut/functional/pa_ios
+    protocol_ut/functional/speaker
+    protocol_ut/functional/watch
+    ut
+)

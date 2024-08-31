@@ -1,0 +1,371 @@
+{% macro polite() %}
+  {% maybe 0.3 %}
+    {% chooseline %}
+      пожалуйста
+      плиз
+      если не трудно
+      будь добра
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro junk() %}
+  {% maybe 0.3 %}
+    {% chooseline %}
+      бесплатно
+      онлайн
+      давай
+      мне
+      скачать
+      на телефоне
+      ну
+      типа
+      хочу
+      блин
+      ну ка
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro action_request() %}
+  {% set result %}
+    {%- chooseline -%}
+      включай
+      включи
+      включите
+      включить
+      включать
+      врубай
+      врубить
+      врубать
+      вруби
+      запусти
+      запустить
+      заслушаем
+      запустите
+      запускать
+      запускайте
+      играй
+      играйте
+      играть
+      петь
+      пой
+      пойте
+      послушать
+      послушаем
+      поставить
+      поставь
+      поставьте
+      проиграй
+      проигрывать
+      проигрывайте
+      проиграть
+      слушать
+      услышать
+      прослушать
+      прослушивать
+      спеть
+      спой
+      спойте
+      слышать
+      ставить
+      ставьте
+      ставь
+      сыграй
+      сыграть
+      сыграйте
+      воспроизводить
+      воспроизведи
+      воспроизведите
+      воспроизвести
+      исполни
+      исполняй
+    {%- endchooseline -%}
+  {%- endset %}
+  '{{ result.strip() }}'(action_request)
+{% endmacro %}
+
+{% macro nonaction_request() -%}
+  {% chooseline %}
+    дай
+    дать
+    давай
+    найди
+    найти
+    найдите
+    искать
+    ищи
+    ищите
+    поискать
+    поищи
+    поищите
+    покажи
+    покажите
+    показать
+    открой
+    откройте
+    открыть
+    скачать
+    скачай
+    скачайте
+    закачать
+    закачай
+    закачайте
+    прокачать
+    прокачай
+    прокачайте
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_request() -%}
+  {% chooseitem 1 %}
+    {{ action_request() }} {{ polite() }}
+  {% or 1 %}
+    {{ polite() }} {{ action_request() }}
+  {% or 1 %}
+    {{ nonaction_request() }} {{ polite() }}
+  {% or 1 %}
+    {{ polite() }} {{ nonaction_request() }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_music() %}
+  {% chooseitem 1 %}
+    музыка
+  {% or 0.2 %}
+    музяка
+  {% or 0.5 %}
+    музычка
+  {% or 0.2 %}
+    музло
+  {% or 0.4 %}
+    музон
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_track() %}
+  {% chooseitem 1 %}
+    песня
+  {% or 0.5 %}
+    трэк
+  {% or 0.5 %}
+    трек
+  {% or 0.2 %}
+    хит
+  {% or 0.3 %}
+    песенка
+  {% or 0.2 %}
+    мелодия
+  {% or 0.2 %}
+    композиция
+  {% or 0.2 %}
+    произведение
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_playlist() %}
+  {% chooseline %}
+    плейлист
+    подборка
+    сборник
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_soundtrack() %}
+  {% chooseline %}
+    саундтрек
+    саундтрэк
+    ост
+    ost
+  {% endchooseline %}
+{% endmacro %}
+
+{%- macro render_target(type_list, inflect_list=[]) -%}
+  {% set type = type_list | random %}
+  {% if type == 'music' %}
+    {{ inflect_fix(render_music(), inflect_list) }}
+  {% elif type == 'track' %}
+    {{ inflect_fix(render_track(), inflect_list) }}
+  {% elif type == 'tracks' %}
+    {{ inflect_fix(inflect_fix(render_track(), ['pl']), inflect_list) }}
+  {% elif type == 'soundtrack' %}
+    {{ inflect_fix(render_soundtrack(), inflect_list) }}
+  {% elif type == 'soundtracks' %}
+    {{ inflect_fix(inflect_fix(render_soundtrack(), ['pl']), inflect_list) }}
+  {% elif type == 'playlist' %}
+    {{ inflect_fix(render_playlist(), inflect_list) }}
+  {% elif type == 'playlist_tracks' %}
+    {{ inflect_fix(render_playlist(), inflect_list) }} {{ inflect_fix(render_track(), ['gen', 'pl']) }}
+  {% elif type == 'playlist_music' %}
+    {{ inflect_fix(render_playlist(), inflect_list) }} {{ inflect_fix(render_music(), ['gen']) }}
+  {% elif type == 'playlist_soundtracks' %}
+    {{ inflect_fix(render_playlist(), inflect_list) }} {{ inflect_fix(render_soundtrack(), ['gen', 'pl']) }}
+  {% endif %}
+{%- endmacro -%}
+
+{% macro render_general_template(name, target, target_acc, label) %}
+  {% chooseitem 1 %}
+    {% set obj = '\'' + [target_acc] | shuffle([], [name.strip()]) | join + '\'(' + label + ')' %}
+    {{ [render_request()] | shuffle([], [obj, junk(), junk()]) | join }}
+  {% or 1 %}
+    {# '{{ target_acc }}'({{ label }}) {{ render_request() }} '{{ name.strip() }}'({{ label }}) #}
+  {# {% or 1 %} #}
+    {# '{{ name.strip() }}'({{ label }}) {{ render_request() }} '{{ target_acc }}'({{ label }}) #}
+  {# {% or 1 %} #}
+    {% set obj = '\'' + [target] | shuffle([], [name.strip()]) | join + '\'(' + label + ')' %}
+    {{ [obj] | shuffle([], [junk(), junk()]) | join }}
+  {# {% or 1 %} #}
+    {# {{ ['\'' + name.strip() + '\'(' + label + ')'] | shuffle([], [target]) | join }} #}
+  {# {% or 1 %} #}
+    {# {{ ['\'' + name.strip() + '\'(' + label + ')'] | shuffle([], [render_request(), target_acc)]) | join }} #}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_cinema(name, type) %}
+  {% set simple_target %}
+    {{ render_target(['music', 'track', 'tracks', 'soundtrack', 'soundtracks']) }}
+  {% endset %}
+  {% set playlist_target %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks', 'playlist_soundtracks']) }}
+  {% endset %}
+  {% set playlist_target_acc %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks', 'playlist_soundtracks'], ['acc']) }}
+  {% endset %}
+  {% set cinema %}
+    {% chooseitem 1 %}
+      из {{ inflect_fix(type, ['gen']) }} {{ name }}
+    {% or 1 %}
+      из {{ inflect_fix(name, ['gen']) }}
+    {% or 1 %}
+      к {{ inflect_fix(type, ['dat']) }} {{ name }}
+    {% or 1 %}
+      к {{ inflect_fix(name, ['dat']) }}
+    {% endchooseitem %}
+  {% endset %}
+  {% chooseitem 1 %}
+    {{ render_general_template(cinema, simple_target, inflect_fix(simple_target, ['acc']), 'search_text') }}
+  {% or 0.5 %}
+    {{ render_general_template(cinema, playlist_target, playlist_target_acc, 'playlist') }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_award(award, participant) %}
+  {% set simple_target %}
+    {{ render_target(['music', 'tracks']) }}
+  {% endset %}
+  {% set playlist_target %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks']) }}
+  {% endset %}
+  {% set playlist_target_acc %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks'], ['acc']) }}
+  {% endset %}
+  {% set award_full %}
+    {% chooseitem 1 %}
+      {{ inflect_fix(participant, ['gen', 'pl']) }} {{ inflect_fix(award, ['gen']) }}
+    {% or 1 %}
+      с {{ inflect_fix(award, ['gen']) }}
+    {% endchooseitem %}
+    {% maybe 0.3 %}
+      {{ range(2000, 2020) | random }}
+    {% endmaybe %}
+  {% endset %}
+  {% chooseitem 1 %}
+    {{ render_general_template(award_full, simple_target, inflect_fix(simple_target, ['acc']), 'search_text') }}
+  {% or 1 %}
+    {{ render_general_template(award_full, playlist_target, playlist_target_acc, 'playlist') }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_general_for_playlist(name) %}
+  {% set playlist_target %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks']) }}
+  {% endset %}
+  {% set playlist_target_acc %}
+    {{ render_target(['playlist', 'playlist_music', 'playlist_tracks'], ['acc']) }}
+  {% endset %}
+  {% chooseitem 1 %}
+    {{ render_general_template(name, playlist_target, playlist_target_acc, 'playlist') }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_general_for_tracks(name) %}
+  {% set target %}
+    {{ render_target(['tracks']) }}
+  {% endset %}
+  {% chooseitem 1 %}
+    {{ render_general_template(name, target, inflect_fix(target, ['acc']), 'search_text') }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_general_for_music(name) %}
+  {% set target %}
+    {{ render_target(['music']) }}
+  {% endset %}
+  {% chooseitem 1 %}
+    {{ render_general_template(name, target, inflect_fix(target, ['acc']), 'search_text') }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_general_for_nothing(name) %}
+  {% chooseitem 1 %}
+    '{{ name.strip() }}'(search_text)
+  {% or 1 %}
+    {{ ['\'' + inflect_fix(name.strip(), ['acc']).strip() + '\'(search_text)'] | shuffle([], [render_request()]) | join }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro render_general_for_nothing_pl(name) %}
+  {% chooseitem 1 %}
+    '{{ name.strip() }}'(playlist)
+  {% or 1 %}
+    {{ ['\'' + name.strip() + '\'(playlist)'] | shuffle([], [render_request()]) | join }}
+  {% endchooseitem%}
+{% endmacro %}
+
+{% macro inflect_fix(val, args = []) %}
+  {% if (val.strip() == 'плейлист') and (args == ['acc']) %}
+    плейлист
+  {% elif (val.strip() == 'музяка') and (args == ['acc']) %}
+    музяку
+  {% elif (val.strip() == 'музяка') and (args == ['gen']) %}
+    музяки
+  {% elif (val.strip() == 'музло') and (args == ['gen']) %}
+    музла
+  {% elif (val.strip() == 'номинант') and (args == ['gen', 'pl']) %}
+    номинантов
+  {% elif (val.strip() == 'усадьба джаз') and (args == ['gen']) %}
+    усадьбы джаз
+  {% elif (val.strip() == 'мелодии') and (args == ['acc']) %}
+    мелодии
+  {% elif (val.strip() == 'композиции') and (args == ['acc']) %}
+    композиции
+  {% elif (val.strip() == 'саундтрэк') and (args == ['acc']) %}
+    саундтрэк
+  {% elif (val.strip() == 'трэк') and (args == ['acc']) %}
+    трэк
+  {% elif (val.strip() == 'ост') and (args == ['gen', 'pl']) %}
+    ост
+  {% elif (val.strip() == 'ост') and (args == ['pl']) %}
+    ост
+  {% else %}
+    {{ val | trim | inflect(*args) }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_query %}
+  {% if form.form_name == "cinema" %}
+    {{ render_cinema(form.names, form.types) }}
+  {% elif form.form_name == "award" %}
+    {{ render_award(form.names, form.participant) }}
+  {% elif form.form_name == "general_case" and form.type == "playlist" %}
+    {{ render_general_for_playlist(form.names) }}
+  {% elif form.form_name == "general_case" and form.type == "tracks" %}
+    {{ render_general_for_tracks(form.names) }}
+  {% elif form.form_name == "general_case" and form.type == "music" %}
+    {{ render_general_for_music(form.names) }}
+  {% elif form.form_name == "general_case" and form.type == "nothing" %}
+    {{ render_general_for_nothing(form.names) }}
+  {% elif form.form_name == "general_case" and form.type == "nothing_pl" %}
+    {{ render_general_for_nothing_pl(form.names) }}
+  {% endif %}
+{% endphrase %}

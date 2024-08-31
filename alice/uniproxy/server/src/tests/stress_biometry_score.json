@@ -1,0 +1,93 @@
+[
+    {
+        "action": "set_timeout",
+        "action_ref": "timelimit",
+        "timelimit": 10
+    },
+    {
+        "action": "send_message",
+        "name": "send_synchronize_state_asr",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "System",
+                    "name": "SynchronizeState"
+                },
+                "payload": {
+                    "vins": {
+                        "application": {
+                            "app_id": "com.yandex.vins.shooting",
+                            "app_version": "1.2.3",
+                            "os_version": "5.0",
+                            "platform": "android",
+                            "uuid": "",
+                            "lang": "ru-RU"
+                        }
+                    },
+                    "voice": "shitova.us"
+                }
+            }
+        },
+        "apply_to_message": [
+            "auth_token",
+            "new_message_id",
+            "new_uuid",
+            "new_vins_application_uuid"
+        ]
+    },
+    {
+        "action": "send_message",
+        "action_ref": "bio_request",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "Biometry",
+                    "name": "Identify"
+                },
+                "payload": {
+                    "format": "audio/opus",
+                    "biometry_group": "uniproxy_test"
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_stream_id",
+            "new_message_id"
+        ]
+    },
+    {
+        "action": "async_send_data",
+        "action_ref": "send_audio_file",
+        "filename": "data/school.opus",
+        "chunk_size": 2000,
+        "chunk_duration": 0.2,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "recv_message",
+        "action_ref": "bio_result",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "Biometry",
+                    "name": "IdentifyComplete"
+                },
+                "payload": {
+                    "status": "ok"
+                }
+            }
+        }
+    }
+]

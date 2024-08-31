@@ -1,0 +1,32 @@
+---
+include:
+  - extensions/common.yaml
+  - extensions/http_status_hook.yaml
+  - extensions/pa_resources.yaml
+component:
+  deployPolicy: InPlace
+  environmentVariables:
+    RUN_COMMAND: "/home/vins/external_skill"
+    DJANGO_SETTINGS_MODULE: vins_api.external_skill.settings
+    VINS_ENABLE_BACKGROUND_UPDATES: "1"
+    VINS_PRELOAD_APP: gc_skill
+    VINS_WORKERS_COUNT: "10"
+    VINS_GC_MAX_SUGGESTS: "5"
+    VINS_GC_FORCE_QUESTION_TOP_K: "4"
+  image:
+    repo: registry.yandex.net/vins/vins-all
+    tag: ~
+  minPrepared: "100"
+  secrets: []
+  size: 32;8.0;256
+routes:
+  -
+    location: /external_skill/app/gc_skill/
+    proxyConnectTimeout: 200ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 5000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: ""
+    yandexErrorPage: "OFF"
+    componentName: external-skills

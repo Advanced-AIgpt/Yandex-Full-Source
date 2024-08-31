@@ -1,0 +1,3536 @@
+# music verbs
+
+music_action:
+  extends: common.abstract_action
+
+launch_imperf:
+  extends: music_action
+  lex:
+    - запускать
+    - играть
+    - проигрывать
+    - ставить
+    - врубать
+    - включать
+    - воспроизводить
+
+sing_imperf:
+  extends: music_action
+  lex: [петь]
+
+launch_perf:
+  extends: music_action
+  lex:
+    - запустить
+    - сыграть
+    - проиграть
+    - плей
+    - play
+    - поставить
+    - врубить
+    - включить
+    - воспроизвести
+
+sing_perf:
+  extends: music_action
+  lex: [спой]  
+
+listen_perf:
+  extends: music_action
+  lex:
+    - услышать
+    - прослушать
+    - послушать
+
+listen_imperf:
+  extends: music_action
+  lex:
+    - слушать
+    - прослушивать
+    - слышать
+
+all_autoplay_launch_verbs:
+  tag: action_request
+  content:
+    - launch_perf
+    - launch_imperf
+
+all_autoplay_launch_verbs_no_tag:
+  - launch_perf
+  - launch_imperf
+
+all_autoplay_listen_verbs:
+  tag: action_request
+  content:
+    - listen_perf
+    - listen_imperf
+
+all_sing_verbs:
+  tag: action_request
+  content:
+    - sing_perf
+    - sing_imperf
+
+all_sing_verbs_no_tag:
+  - sing_perf
+  - sing_imperf
+
+all_autoplay_verbs:
+  - all_autoplay_launch_verbs
+  - all_autoplay_listen_verbs
+
+non_autoplay_verbs:
+  extends: music_action
+  lex:
+    - найти
+    - найти
+    - найти
+    - открыть
+    - открыть
+    - открыть
+    - открыть
+    - дать
+
+all_launch_verbs:
+  - all_autoplay_launch_verbs
+  - non_autoplay_verbs
+
+all_launch_verbs_no_tag:
+  - all_autoplay_launch_verbs_no_tag
+  - non_autoplay_verbs
+
+all_music_verbs:
+  - all_autoplay_verbs
+  - non_autoplay_verbs
+  - extends: music_action
+    content:
+      - root:
+          root:
+            extends: common.abstract_action
+            lex: [скачать, закачать]
+          conj_right: all_autoplay_listen_verbs
+      - lex: [скачать, закачать]
+  - extends: music_action
+    root:
+      - all_autoplay_verbs
+      - non_autoplay_verbs
+    conj_right:
+      - lex: [скачать, закачать]
+
+ability:
+  lex: ['можешь','не могла бы ты','ты можешь','ты не могла бы','сможешь','можешь ли ты']
+
+do_you_mind:
+  root:
+    tag: action_request
+    content: launch_perf
+  proclitic_oblig: ability
+
+do_you_mind_sing:
+  root:
+    tag: action_request
+    content: sing_perf
+  proclitic_oblig: ability
+
+do_you_mind_no_tag:
+  root: launch_perf
+  proclitic_oblig: ability
+
+# music objects
+
+abstract_album_collection:
+  onto:
+    type: collection
+    proto:
+      type: album
+  content:
+    root:
+      reference: proto
+      root: 
+        tag: album
+        content: album_keyword
+      genetive: 
+        reference: artist
+        content: artist_mention
+      attr: novelty_attr
+
+abstract_music_keyword:
+  extends: common.abstract_object
+  tag: music_keyword
+  content:
+    - gramm: [sing]
+      lex:
+        - мьюзик
+        - музыка
+        - музон
+        - музяка
+        - музло
+        - песня
+        - трек
+        - трэк
+        - песенка
+    - gramm: [plur]
+      lex: [песня, песенка, трек, трэк]
+
+
+abstract_song_collection:
+  onto:
+    type: collection
+    proto:
+      type: track
+      need_similar: exact
+  content:
+    root:
+      reference: proto
+      content:
+        - root:
+            extends: common.relative_base
+            content:
+              - abstract_music_keyword
+              - genre
+              - extends: common.abstract_object
+                root:
+                  extends: common.abstract_object
+                  gramm: [plur]
+                  lex: [хит]
+                genetive_oblig: genre
+              - extends: [common.has_children, common.abstract_object]
+                content:
+                  - common.what_word
+                  - gramm: [sing,neut]
+              - extends: common.abstract_object
+                root:
+                  reference: novelty
+                  tag: novelty
+                  content:
+                    - gramm: [plur]
+                      lex: [новинка]
+                    - lex: [свежак,свежачок,новинка]
+                    - root:
+                        extends: common.abstract_object
+                        gramm: [neut,sing]
+                      attr_uniq_left:
+                        lex: [новый,новенький,свежий,свеженький,современный,недавний,последний]
+                    - root:
+                        extends: common.abstract_object
+                        gramm: [neut,sing]
+                      any_uniq_indecl:
+                        lex: [поновее,посвежее,посовременней]
+          infinitive_indecl:
+            root:
+              extends: common.abstract_entity
+              content:
+                - mood_infinitive
+                - activity_infinitive
+            proclitic:
+              lex: [чтобы,для того чтобы,чтоб,для того чтоб,затем чтобы,затем чтоб,с целью]
+          attr_uniq_left_opt:
+            - common.some_word
+            - lex: [разный,любой,приятный,платный,хороший,хорошенький,нормальный,классный,прикольный,зачетный,клевый,офигенный]
+          purpose:
+            - activity_purpose
+            - mood_purpose
+            - genre_purpose
+            - root:
+                extends: common.abstract_named_object
+                gramm: [sing]
+                lex: [прослушивание,воспроизведение,проигрывание,игра,звучание]
+                gov:
+                  inside_oblig:
+                    orientation: right
+              inside_oblig: activity_area
+          attr:
+            - activity_attr
+            - epoch_attr
+            - language_attr
+            - mood_attr
+            - genre_attr
+            - personal_attr
+            - personal_attr
+            - personal_attr
+            - personal_attr
+            - novelty_attr
+            - instrumental_attr
+          on_the: language_language
+          with:
+            - language_words
+            - vocal_noun
+          from:
+            reference: album
+            content: album_mention
+          any_indecl: epoch_indecl
+          inside_acc:
+            gramm: [sing]
+            content: activity_area
+          under:
+            root:
+              extends: common.abstract_object
+              gramm: [sing]
+              lex: [настроение]
+            attr_uniq_left: mood_attr
+          inside:
+            - root:
+                extends: common.abstract_named_object
+                gramm: [sing]
+                lex: [жанр, стиль]
+              name: 
+                - genre
+                - root: 
+                    extends: common.abstract_object
+                    content:
+                      - gramm: [sing]
+                        lex: [музыка,песня]
+                      - gramm: [plur]
+                        lex: [песня]
+                  attr_uniq_left: genre_attr
+            - root:
+                extends: common.abstract_object
+                gramm: [sing]
+                lex: [исполнение]
+              genetive_uniq: 
+                - reference: artist
+                  content: artist_mention
+            - reference: album
+              content: album_mention
+            - reference: playlist
+              content: playlist_mention
+          indecl_genet: epoch_genet
+          genetive:
+            - genre_area
+            - reference: artist
+              content: artist_mention
+            - root:
+                extends: common.abstract_object
+                gramm: [sing]
+                lex: [авторство,сочинение]
+              genetive_uniq: 
+                - reference: artist
+                  content: artist_mention
+          near:
+            reference: artist
+            content: artist_mention
+          within:
+            - genre_by_source
+            - reference: playlist
+              content: playlist_mention
+            - reference: album
+              content: album_mention
+          for:
+            onto:
+              genre: forchildren
+            root:
+              reference: genre
+              tag: genre
+              content:
+                - root:
+                    extends: common.abstract_object
+                    lex: [ребенок,малыш,малышка,сын,дочь]
+                  attr_uniq_left_opt:
+                    gramm: [adj]
+                    lex: [маленький,любимый]
+                - root:
+                    extends: common.abstract_object
+                    gramm: [noun]
+                  attr_uniq_left:
+                    gramm: [adj]
+                    lex: [маленький]
+          relative_inside:
+              root:
+                gramm: [nom]
+                content: common.relative_word
+              relative_clause:
+                - language_sing_clause
+                - vocal_sing_clause
+          relative_no_agree:
+            - root: common.where_word
+              relative_clause:
+                - language_sing_clause
+                - vocal_sing_clause
+            - language_short
+            - vocal_short
+          relative:
+            - reference: personality
+              content:
+                - root:
+                    gramm: [nom]
+                    content: common.relative_word
+                  relative_clause_agree: like_passive_clause_me
+                - root:
+                    gramm: [acc]
+                    content: common.relative_word
+                  relative_clause: like_active_clause_me
+            - root:
+                gramm: [acc]
+                content: common.relative_word
+              relative_clause_agree: vocal_sing_clause_agree
+          relative_clause_agree_opt:
+            reference: personality
+            content: like_passive_clause_me
+          relative_clause_opt:
+            reference: personality
+            content: like_active_clause_me
+        - root: common.relative_pro
+          relative_clause_agree:
+            reference: personality
+            content: like_passive_clause_me
+        - root: common.relative_pro
+          relative_clause:
+            reference: personality
+            content: like_active_clause_me
+
+# персональность
+
+like_passive_clause_me:
+  root: common.finite_clause
+  action:
+    root:
+      extends: common.abstract_action
+      gramm: ['3',fin]
+      tag: personality
+      lex: [нравиться]
+    dative_object:
+      lex: [я]  
+
+like_active_clause_me:
+  root: common.finite_clause
+  action:
+    root:
+      extends: common.abstract_action
+      gramm: ['1',act,sing,fin]
+      tag: personality
+      lex: [любить,обожать]
+    subject:
+      lex: [я]
+
+personal_attr:
+  onto:
+    personality: is_personal
+  root:
+    tag: personality
+    reference: personality
+    content:
+      - root:
+          extends: common.abstract_attribute
+          gramm: [det]
+          lex: [мой]    
+        conj_attr_opt:
+          root:
+            extends: common.abstract_attribute
+            gramm: [adj]
+            lex: [любимый]
+          conj_attr_opt:
+            lex: [самый]
+      - root:
+          extends: common.abstract_attribute
+          gramm: [adj]
+          lex: [любимый]
+        conj_attr_opt:
+          lex: [самый]
+
+# новизна
+
+novelty_attr:
+  onto:
+    novelty: {}
+  root:
+    tag: novelty
+    reference: novelty
+    content:
+    - root:
+        extends: common.abstract_attribute
+      conj_attr:
+        lex: [новый,новенький,свежий,свеженький,современный,недавний,последний]
+      conj_attr_opt:
+        lex: [самый]
+    - root:
+        extends: common.abstract_entity
+      any_uniq_indecl:
+        lex: [посвежее,поновее,посовременнее]
+
+# языки
+
+language_attr_strict:
+  onto:
+    language: {}
+  root:
+    tag: language
+    reference: language
+    content:
+      - onto: russian
+        lex: [русский]  
+      - onto: 'not-russian'
+        lex: [иностранный,иностранный,зарубежный,нерусский,английский]
+      - onto: 'not-russian'
+        root:
+          extends: common.abstract_attribute
+          lex: [родной,русский,славянский]
+        proclitic_oblig:
+          lex: [не]
+      - onto: spanish
+        lex: [испанский]
+      - onto: french
+        lex: [французский]
+      - onto: german
+        lex: [немецкий]
+      - onto: italian
+        lex: [итальянский]
+      - onto: portuguese
+        lex: [португальский]
+      - onto: swedish
+        lex: [шведский]
+      - onto: netherlandish
+        lex: [голландский,нидерландский]
+      - onto: ukrainian
+        lex: [украинский]
+      - onto: romanian
+        lex: [румынский]
+      - onto: turkish
+        lex: [турецкий]
+      - onto: finnish
+        lex: [финский]
+      - onto: bosnian
+        lex: [боснийский]
+      - onto: malay
+        lex: [малайский,малазийский]
+      - onto: swahili
+        lex: [суахили]
+
+language_attr:
+  - language_attr_strict
+  - onto:
+      language: {}
+    root:
+      tag: language
+      reference: language
+      content:
+        - onto: russian
+          lex: [родной,отечественный,русскоязычный,наш]  
+        - onto: 'not-russian'
+          lex: [западный,англоязычный]
+        - onto: 'not-russian'
+          root:
+            extends: common.abstract_attribute
+            lex: [русскоязычный,наш]
+          proclitic_oblig:
+            lex: [не]
+
+language_short:
+  onto:
+    language: {}
+  root:
+    tag: language
+    content:
+    - root:
+        extends: common.abstract_attribute
+        gramm: [short,plur]
+        reference: language
+        content:
+          - onto: russian
+            lex: [русский]  
+          - onto: 'not-russian'
+            lex: [нерусский,английский]
+          - onto: 'not-russian'
+            root:
+              extends: common.abstract_attribute
+              lex: [русский,славянский]
+            proclitic_oblig:
+              lex: [не]
+          - onto: spanish
+            lex: [испанский]
+          - onto: french
+            lex: [французский]
+          - onto: german
+            lex: [немецкий]
+          - onto: italian
+            lex: [итальянский]
+          - onto: portuguese
+            lex: [португальский]
+          - onto: swedish
+            lex: [шведский]
+          - onto: netherlandish
+            lex: [голландский,нидерландский]
+          - onto: ukrainian
+            lex: [украинский]
+          - onto: romanian
+            lex: [румынский]
+          - onto: turkish
+            lex: [турецкий]
+          - onto: finnish
+            lex: [финский]
+          - onto: bosnian
+            lex: [боснийский]
+          - onto: malay
+            lex: [малайский,малазийский]
+      proclitic_oblig:
+        lex: [по]
+    - root:
+        extends: common.abstract_attribute
+        gramm: [short,plur]
+        reference: language
+        content:
+          - onto: 'not-russian'
+            root:
+              extends: common.abstract_attribute
+              lex: [русский,славянский]
+            proclitic_oblig:
+              lex: [не по]
+
+language_words:
+  onto:
+    language: {}
+  content:
+    - root:
+        extends: common.abstract_object
+        content:
+          - lex: [текст]
+          - gramm: [plur]
+            lex: [слово]  
+          - gramm: [sing,fem]
+            lex: [лирика]
+      attr_uniq_left: language_attr
+    - root:
+        extends: common.abstract_object
+        content:
+          - lex: [текст]
+          - gramm: [plur]
+            lex: [слово]  
+          - gramm: [sing,fem]
+            lex: [лирика]
+      relative_no_agree: language_short
+
+language_language:
+  onto:
+    language: {}
+  content:
+    - root:
+        extends: common.abstract_object
+        gramm: [sing]
+        lex: [язык,мова]
+      attr_uniq_left: language_attr
+    - root:
+        extends: common.abstract_object
+        gramm: [sing,noun,masc]
+      attr_uniq_left: language_attr_strict
+
+language_sing_clause:
+  onto:
+    language: {}
+  root: common.finite_clause
+  action:
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',plur,act,pres,fin]
+        lex: [петь,исполнять]
+      on_the: language_language
+      object_opt: language_words
+      circ: language_short
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',act,pres,fin]
+        lex: [петься,исполняться]
+      on_the: language_language
+      subject_opt_agree_number: language_words
+      circ: language_short
+    - root:
+        extends: common.abstract_action
+      subject_agree_number: language_words
+
+# типы вокала
+
+instrumental_attr:
+  onto:
+    vocal: {}
+  root:
+    tag: vocal
+    reference: vocal
+    content:
+      onto: instrumental
+      lex: [инструментальный]
+
+vocal_attr:
+  onto:
+    vocal: {}
+  root:
+    tag: vocal
+    reference: vocal
+    content:
+      - onto: male
+        lex: [мужской,мужицкий]
+      - onto: female 
+        lex: [женский,девчачий]
+
+vocal_person:
+  onto:
+    vocal: {}
+  root:
+    extends: common.abstract_object
+    tag: vocal
+    reference: vocal
+    content:
+      - onto: male
+        lex: [мужчина,парень,мужик]
+      - onto: female 
+        lex: [женщина,девчонка,женщина,девчонка,девка]
+  proclitic:
+    lex: [только]
+
+vocal_noun:
+  onto:
+    vocal: {}
+  content:
+    root:
+      extends: common.abstract_object
+      content:
+        - lex: [голос]
+        - gramm: [sing]
+          lex: [вокал]  
+    attr_uniq_left: vocal_attr
+
+vocal_short:
+  onto:
+    vocal: {}
+  root:
+    tag: vocal
+    reference: vocal
+    content:
+      onto: instrumental
+      root:
+        extends: common.abstract_object
+        gramm: [gen]
+        content:
+          - lex: [текст]
+          - gramm: [plur]
+            lex: [слово]
+          - gramm: [sing,fem]
+            lex: [лирика]
+      proclitic_oblig:
+        lex: [без]
+
+vocal_sing_clause:
+  onto:
+    vocal: {}
+  root: common.finite_clause
+  action:
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',act,pres,fin]
+        lex: [петь,исполнять]
+      subject_opt_agree_number: vocal_person
+      circ: vocal_short
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',act,pres,sing,fin]
+        lex: [петься,исполняться]
+      instr_opt: vocal_person
+      circ: vocal_short
+    - tag: vocal
+      reference: vocal
+      content:
+        - onto: instrumental
+          root: common.abstract_action
+          circ_oblig:
+            extends: common.abstract_object
+            gramm: [gen]
+            content:
+              - lex: [текст]
+              - gramm: [plur]
+                lex: [слово]
+              - gramm: [sing,fem]
+                lex: [лирика]
+          proclitic_oblig:
+            lex: [нет]
+        - onto: instrumental
+          root:
+            extends: common.abstract_action
+            gramm: ['3',act,pres,plur,fin]
+            lex: [петь]
+          proclitic_oblig:
+            lex: [не]
+
+vocal_sing_clause_agree:
+  onto:
+    vocal: {}
+  root: common.finite_clause
+  action:
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',act,pres,fin]
+        lex: [петь,исполнять]
+      subject_opt_agree_number: vocal_person
+      circ: vocal_short
+    - root:
+        extends: common.abstract_action
+        gramm: ['3',act,pres,fin]
+        lex: [петься,исполняться]
+      instr_opt: vocal_person
+      circ: vocal_short
+
+# \/ песни с женским/мужским вокалом/голосом
+# \/ песни без слов/текста
+# \/ песни в которых нет слов/текста
+# \/ песни где поют женщины/мужчины
+# \/ песни в которых поют женщины/мужчины
+# \/ инструментальные песни/музыка
+# \/ песни в которых не поют
+# песни которые поются мужчинами/женщинами
+# песни которые поют мужчины/женщины
+
+# эпохи
+
+epoch_indecl:
+  onto:
+    epoch: {}
+  root:
+    tag: epoch
+    reference: epoch
+    content:
+      - onto: the-greatest-hits
+        lex: [на все времена]  
+      - onto: nineties
+        lex: [времен перестройки]
+
+epoch_attr:
+  onto:
+    epoch: {}
+  root:
+    tag: epoch
+    reference: epoch
+    content:
+      - onto: the-greatest-hits
+        lex: [вечный, золотой]  
+      - onto: nineties
+        lex: [перестроечный]
+
+epoch_genet:
+  onto:
+    epoch: {}
+  root:
+    extends: common.abstract_object
+    content:
+      - lex: [годов,годков]
+      - {}
+  any_uniq_indecl:
+    tag: epoch
+    reference: epoch
+    root:
+      extends: common.abstract_entity
+      content:
+        - onto: fifties
+          lex: [50-х,пятидесятых,'50','1950','1950-х']
+        - onto: sixties
+          lex: [60-х,шестидесятых,'60','1960','1960-х']
+        - onto: seventies
+          lex: [70-х,семидесятых,'70','1970','1970-х']
+        - onto: eighties
+          lex: [80-х,восьмидесятых,'80','1980','1980-х']
+        - onto: nineties
+          lex: [90-х,девяностых,'90','1990','1990-х']
+        - onto: zeroes
+          lex: [нулевых]
+    proclitic:
+      lex: [конца, начала, середины]      
+
+# жанры
+
+genre:
+  onto:
+    genre: {}
+  content:
+    - genre_plur
+    - genre_sing
+
+genre_plur:
+  onto:
+    genre: {}
+  extends: common.abstract_object
+  root:
+    reference: genre
+    gramm: [plur]
+    tag: genre
+    content:
+      - onto: romances
+        lex: [романс]
+
+genre_sing:
+  onto:
+    genre: {}
+  extends: common.abstract_object
+  root:
+    reference: genre
+    gramm: [sing]
+    tag: genre
+    content:
+      - onto: lounge
+        content:
+          - lex: [лаунж,лаундж]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [lounge]
+      - onto: house
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+        any_uniq_indecl: 
+          lex: [хаус,house]
+      - onto: pop
+        content:
+          - lex: [попса]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [поп]      
+      - onto: tradjazz
+        root:
+          extends: common.abstract_object
+          lex: [джаз]
+        attr_uniq_left:
+          lex: [традиционный]
+      - onto: rusrap
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+          lex: [рэп,реп,репчик,рэпчик,рэпчина,рэпачок,репчина]
+        attr_uniq_left:
+          lex: [русский,отечественный,местный,наш]
+      - onto: rusestrada
+        root:
+          extends: common.abstract_object
+          lex: [эстрада]
+        attr_uniq_left:
+          lex: [русский]
+      - onto: rusrock
+        root:
+          extends: common.abstract_object
+          lex: [рок]
+        attr_uniq_left:
+          lex: [русский,отечественный,местный,наш]
+      - onto: hardcore
+        content:
+          - lex: [хардкор,жестяк,жесткач]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [hardcore,'хард кор']
+      - onto: vocal
+        lex: [опера]
+      - onto: dub
+        content:
+          - lex: [даб]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [dub]
+      - onto: dubstep
+        content:
+          - lex: [дабстеп]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [dubstep,'даб степ']
+      - onto: urban
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+        any_uniq_indecl: 
+          lex: [урбан,urban]
+      - onto: local-indie
+        root:
+          extends: common.abstract_object
+          lex: [инди]
+        attr_uniq_left:
+          lex: [русский,отечественный,местный,наш]
+      - onto: industrial
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+        any_uniq_indecl: 
+          lex: [индастриал,industrial]
+      - onto: classicmetal
+        root:
+          extends: common.abstract_object
+          lex: [классика]
+        genetive_uniq:
+          gramm: [noun]
+          lex: [металл,метал,metal]
+      - onto: newage
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+        any_uniq_indecl: 
+          lex:
+            - нью-эйдж
+            - нью эйдж
+            - ню-эйдж
+            - ню эйдж
+            - newage
+            - new age
+      - onto: conjazz
+        root:
+          extends: common.abstract_object
+          lex: [джаз]
+        attr_uniq_left:
+          lex: [современный]
+      - onto: romances
+        lex: [романс]
+      - onto: techno
+        content:
+          - lex: [техно]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [techno]
+      - onto: modern
+        root:
+          extends: common.abstract_object
+          lex: [классика]
+        attr_uniq_left:
+          lex: [современный]
+      - onto: soul
+        content:
+          - lex: [соул]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [soul]
+      - onto: indie
+        content:
+          - lex: [инди,инди-рок]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [indie,'indie rock']
+          - root:
+              extends: common.abstract_object
+              lex: [рок]
+            any_uniq_indecl: 
+              lex: [indie,инди]
+      - onto: trance
+        content:
+          - lex: [транс]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [trance]
+      - onto: meditation
+        root:
+          extends: common.abstract_object
+          gramm: [masc]
+        any_uniq_indecl: 
+          lex: [эмбиент,эмбиэнт,ambient]
+      - onto: rnr
+        content:
+          - lex: [рок-н-ролл,рокенрол,рокенролл]
+          - root:
+              extends: common.abstract_entity
+              lex: [ролл]
+            proclitic_oblig: 
+              lex: ['рок н']          
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: ["rock'n'roll",'rock n roll',rocknroll]
+      - onto: progmetal
+        content:
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            any_uniq_indecl: 
+              lex: [прогрессив,progressive,prog]
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            attr_uniq_left:
+              lex: [прогрессивный]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [progmetal,'prog metal','progressive metal']
+      - onto: folkmetal
+        content:
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            any_uniq_indecl: 
+              lex: [фолк,folk]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [folkmetal,'folk metal']
+      - onto: extrememetal
+        content:
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            any_uniq_indecl: 
+              lex: [экстрим,extreme]
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            attr_uniq_left:
+              lex: [экстремальный]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: ['extreme metal']
+      - onto: funk
+        content:
+          - lex: [фанк]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [funk]
+      - onto: numetal
+        content:
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            proclitic_oblig: 
+              lex: [ню,нью,new]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [newmetal,numetal,'new metal']
+      - onto: rock
+        content:
+          - lex: [хардрок]
+          - root: 
+              extends: common.abstract_object
+              lex: [рок]
+            attr_uniq_left_opt:
+              - lex: [тяжелый]
+              - root:
+                  extends: common.abstract_entity
+                proclitic: 
+                  lex: [hard,хард]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [rock,'hard rock',hardrock]
+      - onto: prog
+        content:
+          - lex: [прогрок]
+          - root:
+              extends: common.abstract_object
+              lex: [рок]
+            any_uniq_indecl: 
+              lex: [прогрессив,progressive]
+          - root:
+              extends: common.abstract_object
+              lex: [рок]
+            attr_uniq_left:
+              lex: [прогрессивный]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [progrock,'prog rock','progressive rock']
+      - onto: dnb
+        content:
+          - lex: [драм-н-бэйс]
+          - root:
+              extends: common.abstract_entity
+              lex: [бэйс,бейс]
+            proclitic_oblig:
+              lex: ['драм н','драм энд']          
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: ["drum'n'bass",'drum n bass','drum and bass',drumnbass]
+      - onto: epicmetal
+        content:
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            any_uniq_indecl: 
+              lex: [эпик,epic]
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            attr_uniq_left:
+              lex: [эпический]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: ['epic metal',epicmetal]
+      - onto: disco
+        content:
+          - lex: [диско]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [disco]
+      - onto: metal
+        content:
+          - gramm: [noun]
+            lex: [металл,метал,metal]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [metal,heavymetal]
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+              lex: [металл,метал,metal]
+            any_uniq_indecl: 
+              lex: [хеви,хэви,heavy]
+      - onto: postrock
+        content:
+          - lex: [построк]
+          - root:
+              extends: common.abstract_object
+              lex: [рок]
+            proclitic_oblig: 
+              lex: [пост,post]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [postrock,'post rock']
+      - onto: alternative
+        lex: [альтернатива]
+      - onto: bollywood
+        content:
+          - lex: [болливуд]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [bollywood]
+      - onto: newwave
+        content:
+          - root:
+              extends: common.abstract_object
+              lex: [волна]
+            attr_uniq_left:
+              lex: [новый]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: ['new wave',ньювэйв,ньювейв,newwave]
+      - onto: balkan
+        lex: [балканщина]
+      - onto: electronics
+        lex: [электроника]
+      - onto: dance
+        lex: [дискач,дискотека,клубняк]
+      - onto: rap
+        root:
+          extends: common.abstract_object
+          content:
+            - lex: [рэп,реп,'хип-хоп',репчик,рэпчик,рэпчина,рэпачок,репчина]
+            - root:
+                extends: common.abstract_entity
+                lex: [хоп]
+              proclitic_oblig: 
+                lex: [хип]
+            - root:
+                extends: common.abstract_object
+                gramm: [masc]
+              any_uniq_indecl: 
+                lex: [rap] 
+        attr_uniq:
+          lex: [зарубежный,западный,заграничный]
+      - onto: rnb
+        root:
+          extends: common.abstract_object
+          gramm: [neut]
+        any_uniq_indecl: 
+          lex: ['R&B',арэнби,аренби,'rnb','r n b']
+      - onto: jazz
+        content:
+          - lex: [джаз,джазня,джазок]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [jazz]
+      - onto: blues
+        content:
+          - lex: [блюз]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [blues]
+      - onto: reggae
+        content:
+          - lex: [регги,реггей,растафара]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: ['джа растафара',reggae]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [растафарай]
+      - onto: reggaeton
+        content:
+          - lex: [реггетон,реггитон,реггейтон]
+          - root:
+              extends: common.abstract_entity
+              lex: [тон]
+            proclitic:
+              lex: ['регги','реггей','регге']   
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: ['регги тон','реггей тон','регге тон',reggaeton]
+      - onto: ska
+        content:
+          - lex: [ска]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [ska]
+      - onto: punk
+        content:
+          - lex: [панк]
+          - root:
+              extends: common.abstract_object
+              gramm: [masc]
+            any_uniq_indecl: 
+              lex: [punk]
+      - onto: classical
+        lex: [классика]
+      - onto: estrada
+        lex: [эстрада]
+      - onto: shanson
+        lex: [шансон,блатняк,блатнячок,дальнобой]
+      - onto: country
+        content:
+          - lex: [кантри]
+          - root:
+              extends: common.abstract_object
+              gramm: [neut]
+            any_uniq_indecl: 
+              lex: [country]
+
+genre_attr:
+  onto:
+    genre: {}
+  root:
+    reference: genre
+    tag: genre
+    content:
+      - onto: rusfolk
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr_opt:
+              lex: [русский,славянский,местный,наш]
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            any_uniq_indecl:
+              lex: [русско]
+          - lex: славянский
+      - onto: pop
+        content:
+          - lex: [попсовый,попсовенький]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [поп,pop]
+      - onto: tradjazz
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [джазовый]
+            conj_attr:
+              lex: [традиционный]
+          - root:
+              extends: common.abstract_attribute
+              lex: [традиционный]
+            any_uniq_indecl:
+              lex: [джаз,jazz]
+      - onto: rusrap
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [русский,местный,наш]
+            any_uniq_indecl:
+              lex: [рэп,реп,rap]
+          - root:
+              lex: [реперский,рэперский,реповый,рэповый]
+            conj_attr_left_opt:
+              lex: [русский,местный,наш]
+      - onto: rusestrada
+        root:
+          extends: common.abstract_attribute
+          lex: [эстрадный,эстрадненький]
+        conj_attr:
+          lex: [русский,славянский,местный,наш]
+      - onto: rusrock
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [русский,местный,наш,славянский]
+            any_uniq_indecl:
+              lex: [рок,rock]
+          - root:
+              extends: common.abstract_attribute
+              lex: [роковый]
+            conj_attr:
+              lex: [русский,славянский,местный,наш]
+      - onto: hardcore
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [хардкор,hardcore]
+          - lex: [жесткий,хардкорный,хардкорненький]
+      - onto: rusbards
+        root:
+          extends: common.abstract_attribute
+          lex: [авторский,бардовский,бардовый]
+        conj_attr:
+          lex: [русский,славянский,местный,наш]
+      - onto: vocal
+        lex: [оперный,вокальный]
+      - onto: dubstep
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [дабстеп,dubstep]
+          - lex: [дабстеповый,дабстепный]
+      - onto: dub
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [даб,dub,'с басами',бас]
+          - lex: [басовый,дабовый]
+      - onto: local-indie
+        root:
+          extends: common.abstract_object
+        any_uniq_indecl:
+          lex: [инди,indie]
+        attr_oblig:
+          lex: [местный,русский,наш,славянский]
+      - onto: industrial
+        content:
+          - lex: [индустриальный,индустриальненький]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [индастриал,industrial]
+      - onto: classicmetal
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [металлический]
+            conj_attr:
+              lex: [классический,зарубежный,западный]
+          - root:
+              extends: common.abstract_attribute
+              lex: [классический,зарубежный,западный]
+            any_uniq_indecl:
+              gramm: [noun]
+              lex: [металл,метал,metal]
+      - onto: tatar
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [татарский]
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            any_uniq_indecl:
+              lex: [татарско]
+          - lex: татарский
+      - onto: newage
+        content:
+          - lex: [ньюэйджевый,нюэйджевый]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: ['нью эйдж','ню эйдж','нью-эйдж','ню-эйдж','new age']
+      - onto: conjazz
+        root:
+          extends: common.abstract_attribute
+          lex: [джазовый]
+        conj_attr:
+          lex: [современный]
+      - onto: techno
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: [техно,techno]
+      - onto: tvseries
+        lex: [сериальный]
+      - onto: modern
+        root:
+          extends: common.abstract_attribute
+          lex: [классический]
+        conj_attr:
+          lex: [современный]
+      - onto: soul
+        content:
+          - lex: [соуловый]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [соул,soul]
+      - onto: indie
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: [инди,indie]
+      - onto: trance
+        content:
+          - lex: [трансовый]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [транс,trans]
+      - onto: meditation
+        content:
+          - lex: [медитативный,медитативненький,медленный,плавный,плавненький]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [эмбиэнт,эмбиент,ambient]
+      - onto: caucasian
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [кавказский]
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            any_uniq_indecl:
+              lex: [кавказско]
+          - lex: кавказский
+      - onto: rnr
+        content:
+          - lex: ['рок-н-ролльный',рокнролльный,рокенролльный]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: ["rock'n'roll","рок'н'ролл",'рок н ролл','rock n roll']
+      - onto: animated
+        lex: [мультяшный]
+      - onto: experimental
+        lex: [экспериментальный]
+      - onto: funk
+        content:
+          - lex: [фанковый,пиздатый,позитивный]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [фанк,funk]
+      - onto: ruspop
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [русский,местный,наш,славянский]
+            any_uniq_indecl:
+              lex: [поп,pop]
+          - root:
+              extends: common.abstract_attribute
+              lex: [попсовый]
+            conj_attr:
+              lex: [русский,местный,наш,славянский]
+      - onto: celtic
+        lex: [кельтский]
+      - onto: rock
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [рок,rock]
+          - lex: [роковый]
+      - onto: prog
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [прогрессив,progressive]
+          - lex: [прогрессивный,прогрессивненький,серьезненький,интересный,интересненький]
+      - onto: epicmetal
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [металлический]
+            conj_attr:
+              lex: [эпический,эпичненький]
+          - root:
+              extends: common.abstract_attribute
+              lex: [эпический,эпичненький]
+            any_uniq_indecl:
+              gramm: [noun]
+              lex: [металл,метал,metal]
+      - onto: urban
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [urban,урбан]
+          - lex: [урбанистский,урбанистический,городской]     
+      - onto: disco
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: [диско,disco]
+      - onto: metal
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              gramm: [noun]
+              lex: [метал,металл,metal]
+          - lex: [металлический]
+      - onto: postrock
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [построк,'пост рок','пост-рок','post rock','postrock','post-rock']
+          - lex: [построковый]
+      - onto: alternative
+        lex: [альтернативный,альтернативненький]
+      - onto: balkan
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [балканский]
+          - lex: балканский
+      - onto: electronics
+        lex: [электронный]
+      - onto: dance
+        content:
+          - lex: [танцевальный,танцевальненький,дискотечный,клубный]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [танц,танцевать,потанцевать]
+      - onto: eurofolk
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный]
+            conj_attr:
+              lex: [европейский]
+          - lex: европейский
+      - onto: rap
+        content:
+        - root:
+            extends: common.abstract_attribute
+          any_uniq_indecl:
+            lex: 
+              - рэп
+              - реп
+              - rap 
+              - 'hip-hop'
+              - 'hip hop'
+              - hiphop
+              - 'хип-хоп'
+              - 'хип хоп'
+              - хипхоп
+          conj_attr_left_opt:
+            lex: [западный,зарубежный]
+        - root:
+            lex: [реперский,рэперский,реповый,рэповый]
+          conj_attr_left_opt:
+            lex: [западный,зарубежный]
+      - onto: jewish
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [еврейский]
+          - lex: еврейский
+      - onto: rnb
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: ['R&B',арнби,арэнби,аренби,"ар'н'би"]
+      - onto: jazz
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [джаз,jazz]
+          - lex: [джазовый]
+      - onto: blues
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [блюз,blues]
+          - lex: [блюзовый]
+      - onto: reggae
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [реггей,регги,регге,растафарай,растафара]
+          - lex: [реггийный]
+      - onto: reggaeton
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [реггетон,реггитон,реггетон,'регге тон','регги тон']
+          - root:
+              extends: common.abstract_attribute
+              lex: [новый]
+            proclitic_oblig:
+              lex: ['регги то','реггей то','регге то']
+          - lex: [реггетоновый,реггитоновый,реггейтоновый]
+      - onto: ska
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: [ска,ska]
+      - onto: eastern
+        lex: [восточный,восточненький]
+      - onto: punk
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [панк,punk]
+          - lex: [панковский]
+      - onto: folk
+        lex: [мировой,космический,вселенский]
+      - onto: african
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [африканский]
+          - lex: африканский
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [африкано,africano]
+      - onto: classical
+        root:
+          extends: common.abstract_attribute
+        conj_attr:
+          lex: [классический,камерный,серьезный]
+      - onto: latinfolk
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [латиноамериканский,латинский]
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький,американский]
+            any_uniq_indecl:
+              lex: [латино]
+          - lex: латиноамериканский
+      - onto: estrada
+        lex: [эстрадный,эстрадненький]
+      - onto: amerfolk
+        content:
+          - root:
+              extends: common.abstract_attribute
+              lex: [народный,народненький]
+            conj_attr:
+              lex: [американский]
+          - lex: американский
+      - onto: shanson
+        content:
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [шансон]
+          - lex: [блатной,дальнобойный,дальнобойщеский,шоферский]
+      - onto: country
+        root:
+          extends: common.abstract_attribute
+        any_uniq_indecl:
+          lex: [кантри,country]
+      - onto: bard
+        lex: [авторский,бардовский,бардовый]
+      - onto: forchildren
+        lex: [детский]
+
+
+genre_by_source:
+  onto:
+    genre: {}
+  root:
+    reference: genre
+    tag: genre
+    content:
+      - onto: films
+        lex: [фильм,кино,кинофильм,синематограф,кинематограф,киношка]
+      - onto: tvseries
+        lex: [сериал]
+      - onto: animated
+        lex: [мультик,мультфильм]
+      - onto: videogame
+        content:
+          - lex: [видеоигра,игра,видеоигрушка,игрушка]
+          - root:
+              extends: common.abstract_object
+              lex: [игра,игрушка]
+            attr_uniq:
+              lex: [компьютерный]
+          - root:
+              extends: common.abstract_object
+              lex: [игра,игрушка]
+            proclitic_oblig:
+              lex: [видео]
+      - onto: musical
+        lex: [мюзикл]
+      - onto: soundtrack
+        lex: [саундтрек]
+
+genre_purpose:
+  onto:
+    genre: {}
+  root:
+    tag: genre
+    reference: genre
+    content:
+      - onto: meditation
+        lex: [медитация]
+      - onto: forchildren
+        content:
+          - root:
+              extends: common.abstract_object
+              lex: [ребенок,малыш,малышка,сын,дочь]
+            attr_uniq_left_opt:
+              gramm: [adj]
+              lex: [маленький,любимый]
+          - root:
+              extends: common.abstract_object
+              gramm: [noun]
+            attr_uniq_left:
+              gramm: [adj]
+              lex: [маленький]
+      - onto: dance
+        lex: [танец,танцулька]
+
+genre_area:
+  onto:
+    genre: {}
+  root:
+    tag: genre
+    reference: genre
+    gramm: [sing,noun]
+    content:
+      - onto: folk
+        lex: [вселенная,мир,космос]
+
+# активности
+
+heavy_transport:
+  lex:
+    - автомобиль
+    - машина
+    - транспорт
+    - грузовик
+
+transport:
+  - heavy_transport
+  - lex:
+      - мотоцикл
+      - байк
+      - скутер
+
+activity_attr:
+  onto:
+    activity: {}
+  root:
+    tag: activity
+    reference: activity
+    content:
+      - onto: wake-up
+        lex: [пробуждающий,вдохновляющий,бодрящий,мощный,сильный,утренний]
+      - onto: driving
+        lex: [автомобильный]
+      - onto: beloved
+        content:
+          - lex: [романтический,романтичный,романтичненький,нежный,нежненький,чувственный,любовный,любовненький]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [романтик,romantic] 
+      - onto: fall-asleep
+        lex: [сонный,успокаивающий,успокоительный,расслабляющий,расслабленный]
+      - onto: work-background
+        lex: [рабочий,фоновый,интерьерный,легкий,легенький]
+      - onto: workout
+        lex: [спортивный,спортивненький,велосипедный,беговой]
+      - onto: party
+        lex: [праздничный]
+      - onto: sex
+        lex: [сексуальный,эротичный,эротический,взрослый]
+      - onto: road-trip
+        lex: [дорожный,прогулочный]
+
+activity_infinitive:
+  onto:
+    activity: {}
+  root:
+    tag: activity
+    reference: activity
+    content:
+      - onto: wake-up
+        lex: [проснуться,просыпаться,вдохновиться,приободриться]
+      - onto: driving
+        lex: [водить машину,ездить на машине,кататься на машине]
+      - onto: beloved
+        lex: [влюбляться,любить,влюбиться]
+      - onto: fall-asleep
+        lex: [уснуть,заснуть,успокоиться,расслабиться]
+      - onto: work-background
+        lex: [работать,поработать,трудиться,пахать,впахивать]
+      - onto: workout
+        lex: [ездить на велике,кататься на велике,покататься на велике,ездить на велосипеде,кататься на велосипеде,покататься на велосипеде,бегать,качаться,заниматься спортом,заняться спортом,заниматься фитнессом,заняться фитнессом,заниматься в спортзале]
+      - onto: party
+        lex: [отпраздновать,праздновать]
+      - onto: sex
+        lex: [заниматься сексом,заняться сексом,трахаться,потрахаться,позаниматься сексом,заниматься любовью,заняться любовью,танцевать стриптиз]
+      - onto: road-trip
+        lex: [путешествовать,попутешествовать,отправиться в путешествие,поехать в путешествие]
+
+activity_purpose:
+  onto:
+    activity: {}
+  root:
+    tag: activity
+    reference: activity
+    content:
+      - gramm: [sing]
+        content:
+          - onto: wake-up
+            lex: [пробуждение, бессоница, утро, утречко]
+          - onto: driving
+            content:
+              # автомобиль (в контекстах "музыка для автомобиля")
+              - transport
+              # просто вождение/езда
+              - lex: [вождение, езда]
+              # вождение машины
+              - root:
+                  extends: common.abstract_object
+                  gramm: [sing]
+                  lex: [вождение]
+                genetive_uniq: transport
+              # автомобильная езда
+              - root:
+                  extends: common.abstract_object
+                  gramm: [sing]
+                  lex: [езда]
+                attr_uniq_left:
+                  lex: [автомобильный]
+              # езда на мотоцикле
+              - root:
+                  extends: common.abstract_object
+                  gramm: [sing]
+                  lex: [езда,перемещение]
+                  gov:
+                    on_the:
+                      orientation: right
+                on_the: transport
+              # вождение скутера
+              - root:
+                  extends: common.abstract_object
+                  gramm: [sing]
+                  lex: [вождение,езда]
+                  gov:
+                    inside:
+                      orientation: right
+                inside: transport
+          - onto: fall-asleep
+            lex: [сон,успокоение,покой,расслабление,расслабон,засыпание]
+          - onto: work-background
+            lex: [работа]
+          - onto: workout
+            content:
+              - lex: [спорт,велосипед,кач,борцуха,бег,марафон,спортзал,фитнесс,фитнес]
+              - root:
+                  extends: common.abstract_object
+                  lex: [занятие]
+                instr_uniq:
+                  gramm: [sing]
+                  lex: [спорт,бег,велосипед]
+              - root:
+                  extends: common.abstract_object
+                  content:
+                    - gramm: [sing]
+                      lex: [езда]
+                    - lex: [поездка,путешествие]
+                  gov:
+                    on_the_uniq:
+                      orientation: right
+                on_the_uniq: 
+                  gramm: [sing]
+                  lex: [велосипед]
+          - onto: party
+            lex: [пати]
+          - onto: sex
+            content:
+              - lex: [секс,стриптиз]
+              - root:
+                  extends: common.abstract_object
+                  lex: [занятие]
+                  gov:
+                    instr_uniq:
+                      orientation: right
+                instr_uniq: 
+                  gramm: [sing]
+                  lex: [секс,любовь,стриптиз]
+      - onto: road-trip
+        lex: [путешествие, пикник]
+      - onto: workout
+        lex: [тренировка, покатушка, тренажерка, пробежка]
+      - onto: party
+        lex: [вечеринка,тусовка,пати]
+      - onto: beloved
+        content:
+        - root:
+            extends: common.abstract_object
+            lex: [встреча,свидание,свиданка,любовь]
+          attr_uniq_left_opt:
+            lex: [романтический,романтичный,романтичненький,любовный]
+        - gramm: [noun]
+          lex: [влюбленный,возлюбленный,возлюбленная]
+
+activity_area:
+  onto:
+    activity: {}
+  root:
+    tag: activity
+    reference: activity
+    content:
+      - onto: driving
+        content: heavy_transport
+      - onto: road-trip
+        lex: [путешествие]
+
+# настроение
+
+mood_infinitive:
+  onto:
+    mood: {}
+  root:
+    tag: mood
+    reference: mood
+    content:
+      - onto: sad
+        lex: [печалиться,погрустить,грустить,ностальгировать,поностальгировать,тосковать]
+      - onto: healing
+        lex: [вылечиться,излечиться,выздороветь,прийти в себя,поправиться,прийти в норму]
+      - onto: winter
+        lex: [кататься на санках,играть в снежки]
+      - onto: summer
+        lex: [загорать на пляже,загорать,согреться]
+      - onto: dream
+        lex: [мечтать,помечтать]
+      - onto: dark
+        lex: [ненавидеть,всех ненавидеть,злиться,бояться]
+      - onto: newyear
+        lex: [праздновать новый год,справлять новый год,отпраздновать новый год,справить новый год]
+      - onto: happy
+        lex: [радоваться,веселиться,порадоваться,повеселиться,стать счастливым]
+      - onto: sentimental
+        lex: [пускать слюни,плакать,расплакаться,поплакать]
+      - onto: energetic
+        lex: [взбодриться,обрести бодрость,зажигать,зажечь,отжечь,отжигать]
+
+mood_attr:
+  onto:
+    mood: {}
+  root:
+    tag: mood
+    reference: mood
+    content:
+      - onto: aggressive
+        lex: [агрессивный,агрессивненький]
+      - onto: spring
+        lex: [весенний]
+      - onto: sad
+        lex: 
+          - печальный
+          - печальненький
+          - душевный
+          - лирический
+          - лиричненький
+          - задушевный
+          - ностальгический
+          - ностальгичненький
+          - меланхоличный
+          - депрессивный
+          - тоскливый
+      - onto: sad
+        root: 
+          extends: common.abstract_attribute
+          lex: [грустный,грустненький]
+        proclitic:
+          lex: [очень]
+      - onto: rainy
+        lex: [дождливый,дождливенький,мокрый,мокренький]
+      - onto: healing
+        lex:
+          - жаропонижающий
+          - исцеляющий
+          - излечивающий
+          - лечебный
+          - лечащий
+          - оздоровительный
+          - оздаравливающий
+      - onto: winter
+        lex: [зимний,ледяной,холодный,холодненький,снежный,снежненький]
+      - onto: beautiful
+        lex: [красивый,красивенький,милый,миленький,симпатичный,симпатичненький,няшный]
+      - onto: cool
+        root: 
+          extends: common.abstract_object
+          lex: [крутой,реальный]
+        attr_uniq_left_opt:
+          lex: [самый]
+      - onto: summer
+        lex: [летний,теплый,жаркий]
+      - onto: dream
+        lex: [мечтательный,возвышенный]
+      - onto: haunting
+        lex: [мистический,таинственный]
+      - onto: dark
+        lex:
+          - мрачный
+          - мрачненький
+          - запретный
+          - злой
+          - страшный
+          - страшненький
+          - нагнетающий
+          - напряженный
+          - тревожный
+          - тревожненький
+          - зловещий
+      - onto: newyear
+        lex: [новогодний]
+      - onto: autumn
+        lex: [осенний]
+      - onto: happy
+        lex: [радостный,веселый,веселенький,счастливый,счастливенький]
+      - onto: happy
+        root: 
+          extends: common.abstract_attribute
+          lex: [грустный,грустненький]
+        proclitic_oblig:
+          lex: [не,'совсем не']
+      - onto: relaxed
+        content:
+          - lex:
+            - расслабленный
+            - спокойный
+            - спокойненький
+            - успокаивающий
+            - успокоительный
+            - медленный
+            - плавный
+            - плавненький
+            - расслабляющий
+            - ночной
+            - легкий
+            - легенький
+          - root:
+              extends: common.abstract_entity
+            any_uniq_indecl:
+              lex: [релакс]
+      - onto: sentimental
+        lex: [сентиментальный,сентиментальненький,трогательный,сопливый]
+      - onto: energetic
+        lex:
+          - бодрый
+          - энергичный
+          - динамичный
+          - зажигательный
+          - горячий
+          - горяченький
+          - громкий
+          - быстрый
+          - быстренький
+      - onto: epic
+        lex: [эпичный,эпический,эпичненький,оригинальный,необычный]
+
+mood_attr_more_cmp:
+  onto:
+    mood: {}
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    tag: mood
+    reference: mood
+    content:
+      - onto: aggressive
+        lex: [агрессивнее,жестче]
+      - onto: sad
+        lex: [грустнее,печальнее,душевнее,лиричнее,ностальгичнее,меланхоличнее,тоскливее,депрессивнее]
+      - onto: rainy
+        lex: [дождливее,мокрее]
+      - onto: winter
+        lex: [холоднее]
+      - onto: beautiful
+        lex: [красивее,милее,симпатичнее,няшнее]
+      - onto: cool
+        lex: [круче]
+      - onto: summer
+        lex: [теплее,жарче]
+      - onto: dream
+        lex: [мечтательнее,возвышеннее]
+      - onto: haunting
+        lex: [мистичнее,таинственнее]
+      - onto: dark
+        lex: [мрачнее,запретнее,злее,страшнее,напряженнее,тревожнее]
+      - onto: newyear
+        lex: [новогоднее]
+      - onto: happy
+        lex: [радостнее,веселее,счастливее]
+      - onto: relaxed
+        lex: [расслабленнее,спокойнее,успокоительнее,медленнее,плавнее,легче]
+      - onto: sentimental
+        lex: [сентиментальнее,трогательнее,сопливее]
+      - onto: energetic
+        lex: [энергичнее,динамичнее,зажигательнее,горячее,быстрее,бодрее]
+      - onto: epic
+        lex: [эпичнее,оригинальнее,необычнее]
+
+mood_attr_more_cmp_po:
+  onto:
+    mood: {}
+  root:    
+    extends: common.abstract_object
+  any_uniq_indecl:
+    tag: mood
+    reference: mood
+    content:
+      - onto: aggressive
+        lex: [поагрессивнее,пожестче]
+      - onto: sad
+        lex: [погрустнее,попечальнее,подушевнее,полиричнее,поностальгичнее,потоскливее,подепрессивнее]
+      - onto: rainy
+        lex: [подождливее,помокрее]
+      - onto: winter
+        lex: [похолоднее]
+      - onto: beautiful
+        lex: [покрасивее,помилее,посимпатичнее,поняшнее]
+      - onto: cool
+        lex: [покруче]
+      - onto: summer
+        lex: [потеплее,пожарче]
+      - onto: dream
+        lex: [помечтательнее,повозвышеннее]
+      - onto: haunting
+        lex: [помистичнее,потаинственнее]
+      - onto: dark
+        lex: [помрачнее,позапретнее,позлее,пострашнее,понапряженнее,потревожнее]
+      - onto: newyear
+        lex: [поновогоднее]
+      - onto: happy
+        lex: [порадостнее,повеселее,посчастливее]
+      - onto: relaxed
+        lex: [порасслабленнее,поспокойнее,поуспокоительнее,помедленнее,поплавнее,полегче]
+      - onto: sentimental
+        lex: [посентиментальнее,потрогательнее,посопливее]
+      - onto: energetic
+        lex: [поэнергичнее,подинамичнее,позажигательнее,погорячее,побыстрее,пободрее]
+      - onto: epic
+        lex: [поэпичнее,пооригинальнее,понеобычнее]
+
+mood_attr_short:
+  onto:
+    mood: {}
+  extends: common.abstract_entity
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    tag: mood
+    reference: mood
+    content:
+      - onto: aggressive
+        lex: [агрессивно]
+      - onto: spring
+        lex: [весенне]
+      - onto: sad
+        lex: [грустно,печально,душевно,лирично,задушевно,ностальгично,меланхолично,тоскливо,депрессивно]
+      - onto: rainy
+        lex: [дождливо,мокро]
+      - onto: winter
+        lex: [холоднее,холодно,снежно,зимне]
+      - onto: beautiful
+        lex: [красиво,мило,симпатично,няшно]
+      - onto: cool
+        lex: [круто]
+      - onto: summer
+        lex: [летне,жарко]
+      - onto: dream
+        lex: [мечтательно,возвышенно]
+      - onto: haunting
+        lex: [таинственно,мистично]
+      - onto: dark
+        lex: [нагнетающе,мрачно,запретно,зло,страшно,напряженно,тревожно,зловеще]
+      - onto: newyear
+        lex: [новогодне]
+      - onto: autumn
+        lex: [осенне]
+      - onto: happy
+        lex: [радостно,весело,счастливо]
+      - onto: relaxed
+        lex: [успокаивающе,релакс,расслабляюще,раслабленно,спокойно,успокоительно,медленно,плавно,легко]
+      - onto: sentimental
+        lex: [сентиментально,трогательно,сопливо]
+      - onto: energetic
+        lex: [энергично,динамчно,зажигательно,горячо,быстро,бодро]
+      - onto: epic
+        lex: [эпично,оригинально,необычно]
+
+
+mood_attr_more:
+  onto:
+    type: collection
+    proto:
+      type: track
+      mood: {}
+      need_similar: {}
+  content:
+    - root:
+        reference: proto
+        extends: common.abstract_entity
+        content:
+          - root: 
+              extends: common.abstract_entity
+              content: mood_attr_more_cmp
+            proclitic:
+              lex: [по]
+          - mood_attr_more_cmp_po
+      proclitic:
+        lex: [немного,чуть,чуть чуть]
+    - root: 
+        reference: proto
+        content: mood_attr_short
+      any_uniq_indecl:
+        lex: [более,чуть более,чуть чуть более]
+
+mood_attr_less:
+  onto:
+    type: collection
+    proto:
+      type: track
+      mood: {}
+      need_similar: {}
+  root:
+    reference: proto
+    content: mood_attr_short
+  any_uniq_indecl:
+    lex: [менее,чуть менее,чуть чуть менее,не так,не столь,не настолько]
+
+mood_purpose:
+  onto:
+    mood: {}
+  root:
+    tag: mood
+    reference: mood
+    content:
+      - gramm: [sing]
+        content:
+          - onto: sad
+            lex: [душа, печаль, ностальгия, меланхолия, тоска, депрессия]
+          - onto: happy
+            lex: [настроение,счастье,радость,веселье]
+          - onto: relaxed
+            lex: [релакс,расслабление,отдых,релаксация]
+          - onto: cool
+            root:
+              extends: common.abstract_object
+              lex: [пацан,чувак,парень]
+            attr_oblig:
+              lex: [реальный, крутой]
+          - onto: autumn
+            lex: [осень,листопад]
+          - onto: winter
+            lex: [зима,снег]
+          - onto: energetic
+            lex: [отжиг]
+
+# специальные музыкальные сущности
+
+# любимые песни Алисы
+
+like_passive_clause:
+  root: common.finite_clause
+  action:
+    root:
+      extends: common.abstract_action
+      gramm: ['3',fin]
+      lex: [нравиться]
+    dative_object:
+      lex: [ты]  
+
+like_active_clause:
+  root: common.finite_clause
+  action:
+    root:
+      extends: common.abstract_action
+      gramm: ['2',act,sing,fin]
+      lex: [любить,обожать,слушать]
+    subject:
+      lex: [ты]
+
+
+favorite_alice_music:
+  onto: 
+    id: alice
+  tag: special_playlist
+  content:
+    - root:
+        extends: common.abstract_object
+        content:
+          root: 
+            - abstract_music_keyword
+            - playlist_keyword
+          attr_uniq_left:
+            gramm: [adj]
+            lex: [любимый]
+      attr:
+        reference: id
+        lex: [свой, твой]
+    - root:
+        extends: common.abstract_object
+        content:
+          root: 
+            - abstract_music_keyword
+            - playlist_keyword
+      relative:
+        reference: id
+        content:
+          - root:
+              gramm: [nom]
+              content: common.relative_word
+            relative_clause_agree: like_passive_clause
+          - root:
+              gramm: [acc]
+              content: common.relative_word
+            relative_clause: like_active_clause
+    - root: common.relative_pro
+      relative_clause_agree:
+        reference: id
+        content: like_passive_clause
+    - root: common.relative_pro
+      relative_clause:
+        reference: id
+        content: like_active_clause
+
+# чарты
+
+trending_music_keyword:
+  extends: common.abstract_object
+  lex: [чарт,хит]
+
+trending_attr:
+  extends: common.abstract_attribute
+  content:
+    - root:
+        extends: common.abstract_attribute
+        tag: special_playlist
+        content:
+          - lex: [популярный,трендовый,топовый,модный,молодежный,лучший,крутой,известный]
+          - root:
+              extends: common.abstract_attribute
+            any_uniq_indecl:
+              lex: [best,бест,топ,top]
+      any_uniq_opt_indecl:
+        lex: 
+          - на сегодняшний день
+          - на текущий момент
+          - на сегодня
+          - сегодня
+          - в текущий момент
+          - в наше время
+          - в наши дни
+          - в мире
+          - на планете
+          - всех времен
+      conj_attr_opt:
+        lex: [самый]    
+
+popular_clause:
+  root:
+    extends: common.abstract_attribute
+    gramm: ['short']
+    tag: special_playlist
+    lex: [популярный,известный]
+  any_uniq_opt_indecl:
+    lex: 
+      - на сегодняшний день
+      - на текущий момент
+      - на сегодня
+      - сегодня
+      - в текущий момент
+      - в наше время
+      - в наши дни
+      - в мире
+      - на планете
+
+ya_music_chart:
+  onto:
+    id: chart
+  content:
+    - root: 
+        content:
+          - common.what_word
+          - abstract_music_keyword
+      any_uniq_indecl:
+        tag: special_playlist
+        lex: [помоднее,попопулярнее,помодней,попопулярней,получше,покруче,помолодежнее,помолодежней]
+    - root:
+        reference: id
+        tag: special_playlist
+        content:
+          - trending_music_keyword
+          - gramm: [plur]
+            content: trending_music_keyword
+      any_uniq_opt_indecl:
+        lex: [помоднее,попопулярнее,помодней,попопулярней,получше,покруче,помолодежнее,помолодежней]
+    - root:
+        reference: id
+        content:
+          - abstract_music_keyword
+          - common.what_word
+          - extends: common.abstract_object
+            gramm: [neut,sing]
+          - trending_music_keyword
+          - gramm: [plur]
+            content: trending_music_keyword
+      attr_uniq_left: trending_attr
+    - root: abstract_music_keyword
+      relative_oblig:
+        content:
+          root:
+            gramm: [nom]
+            content: common.relative_word
+          relative_clause_agree: popular_clause
+
+# песни алисиного "сочинения"
+
+creation_active_clause:
+  root: common.finite_clause
+  action:
+    root:
+      extends: common.abstract_action
+      gramm: [fem,act,sing,past,fin]
+      lex: [придумать,сгенерировать,создать,сочинить,сгенерить]
+    any_indecl:
+      lex: 
+        - для нового года
+        - на новый год
+    subject:
+      gramm: [sing]
+      lex: [ты]
+
+creation_attr:
+  root:
+    extends: common.abstract_action
+    gramm: [past,part,pass]
+    lex: [придумать,сгенерировать,создать,сочинить,сгенерить]
+  any_indecl:
+    lex: 
+      - для нового года
+      - на новый год
+  instr:
+    gramm: [sing]
+    lex: [ты]
+
+new_year_music:
+  extends: common.abstract_object
+  content:
+    root: 
+      - abstract_music_keyword
+      - common.what_word
+      - playlist_keyword
+    attr_uniq_left_opt:
+      gramm: [adj]
+      lex: [новогодний]  
+
+music_created_by_alice:
+  onto:
+    id: ny_alice_playlist
+  tag: special_playlist
+  reference: id
+  content:
+    - root: new_year_music
+      attr_uniq_left:
+        lex: [свой, твой]
+    - root: new_year_music
+      attr_uniq_left: creation_attr
+    - root: new_year_music
+      attr_uniq_left_opt:
+        - lex: [свой, твой]
+      relative_oblig:
+        content:
+          root:
+            gramm: [acc]
+            content: common.relative_word
+          relative_clause: creation_active_clause
+    - root: common.relative_pro
+      relative_clause: creation_active_clause
+
+playlist_of_the_day:
+  onto:
+    id: playlist_of_the_day
+  tag: special_playlist
+  reference: id
+  content:
+  - root: playlist_keyword
+    enclitic_oblig:
+      lex: [дня,'на сегодня','на день']
+  - root: playlist_keyword
+    attr_uniq:
+      lex: [дневной,сегодняшний]
+
+playlist_premiere:
+  onto:
+    id: recent_tracks
+  tag: special_playlist
+  reference: id
+  content:
+  - root: playlist_keyword
+    enclitic_oblig:
+      lex: [премьера,premiere,премьер]
+  - root: playlist_keyword
+    attr_uniq:
+      lex: [премьерный]
+
+playlist_hiding_place:
+  onto:
+    id: missed_likes
+  tag: special_playlist
+  reference: id
+  content:
+  - root: playlist_keyword
+    enclitic_oblig:
+      lex: [тайник]
+  - root: playlist_keyword
+    attr_uniq:
+      lex: [тайный]
+
+playlist_dejavu:
+  onto:
+    id: never_heard
+  tag: special_playlist
+  reference: id
+  root: playlist_keyword
+  enclitic_oblig:
+    lex: [дежавю,dejavu,'dejavu']
+
+special_music:
+  onto:
+    type: special_playlist
+    id: {}
+  content:
+    - favorite_alice_music
+    - ya_music_chart
+    - music_created_by_alice
+    - playlist_of_the_day
+    - playlist_premiere
+    - playlist_hiding_place
+    - playlist_dejavu
+
+# именованные элементы (треки, альбомы, исполнители, плейлисты)
+
+track_keyword:
+  extends: common.abstract_named_object
+  lex:
+    - песня
+    - трэк
+    - трек
+    - track
+    - хит
+    - hit
+    - песенка
+    - мелодия
+    - композиция
+    - произведение
+
+track_name:
+  extends: common.abstract_object
+  onto:
+    type: track
+    name: {}
+  tag: track
+  lookup: name
+
+track_indecl_name:
+  onto:
+    type: track
+    name: {}
+  content:
+    root:
+      extends: common.bracketed
+    tag: track
+    inner:
+      lookup: name
+
+specific_track_mention:
+  - onto:
+      definite: 'true'
+    content: track_name
+  - onto:
+      definite: {}
+    root:
+      gramm: [sing]
+      content: track_keyword
+    name: track_indecl_name
+    genetive:
+      reference: artist
+      content: artist_mention
+    within:
+      - reference: album
+        content: album_mention
+      # - reference: playlist
+      #  content: playlist_mention
+    inside:
+      - reference: album
+        content: album_mention
+      # - reference: playlist
+      #  content: playlist_mention
+  - onto:
+      artist: {}
+      definite: {}
+    root:
+      reference: artist
+      content: artist_mention
+    conjunct:
+      root:
+        gramm: [sing]
+        content: track_keyword
+      name: track_indecl_name
+      within:
+        - reference: album
+          content: album_mention
+        # - reference: playlist
+        #  content: playlist_mention
+      inside:
+        - reference: album
+          content: album_mention
+        # - reference: playlist
+        #  content: playlist_mention
+  - root:
+      content:
+        - onto:
+            definite: {}
+          root:
+            gramm: [sing]
+            content: track_keyword
+          name: track_indecl_name
+        - onto:
+            definite: 'true'
+          content: track_name
+    conjunct:
+      - reference: artist
+        content: artist_mention
+      - reference: album
+        content: album_mention
+      # - reference: playlist
+      #  content: playlist_mention
+
+track_mention:
+  - onto:
+      type: track
+      name: {}
+      need_similar: exact
+    content: specific_track_mention
+  - onto:
+      type: track
+      name: {}
+      need_similar: need_similar
+    root:
+      - abstract_music_keyword
+      - extends: [common.has_children, common.abstract_object]
+        content:
+          - common.what_word
+          - gramm: [sing,neut]
+    attr_uniq:
+      root:
+        tag: need_similar
+        content: common.similarity_core
+      sim_target: specific_track_mention
+
+album_keyword:
+  extends: common.abstract_named_object
+  gramm: [sing]
+  lex:
+    - альбом
+    - пластинка
+    - диск
+
+album_indecl_name:
+  onto:
+    type: album
+    name: {}
+  content:
+    root:
+      extends: common.bracketed
+    tag: album
+    inner:
+      lookup: name
+
+album_indecl_name_search_tag:
+  onto:
+    type: album
+    name: {}
+  content:
+    root:
+      extends: common.bracketed
+    tag: album
+    inner:
+      lookup: name
+
+album_mention:
+  onto:
+    type: album
+    name: {}
+  content:
+    - onto:
+        definite: {}
+      root: album_keyword
+      name: album_indecl_name
+      genetive: 
+        reference: artist
+        content: artist_mention
+    - onto:
+        definite: {}
+      root:
+        extends: common.abstract_object
+        root: album_keyword
+        name: album_indecl_name
+      conjunct:
+        reference: artist
+        content: artist_mention
+    - onto:
+        definite: 'true'
+      content: album_indecl_name_search_tag
+
+
+artist_keyword:
+  extends: common.abstract_named_object
+  gramm: [sing]
+  content:
+    - lex:
+      - группа
+      - группировка
+      - бэнд
+      - бенд
+      - банд
+      - band
+      - команда
+      - ВИА
+      - коллектив
+      - ансамбль
+      - певец
+      - певица
+      - исполнитель
+      - исполнительница
+      - артист
+      - артистка
+      - дуэт
+      - трио
+      - квартет
+    - root:
+        extends: common.abstract_object
+        gramm: [sing]
+        lex: коллектив
+      attr_uniq_left:
+        lex: музыкальный
+
+artist_name:
+  onto:
+    type: artist
+    name: {}
+  tag: artist
+  keep_categories: [number]
+  lookup: name
+
+artist_indecl_name:
+  onto:
+    type: artist
+    name: {}
+  content:
+    root:
+      extends: common.bracketed
+    tag: artist
+    inner:
+      lookup: name
+
+specific_artist_mention:
+  - onto:
+      definite: {}
+    root: artist_keyword
+    name: artist_indecl_name
+  - onto:
+      definite: 'true'
+    content: artist_name
+
+artist_mention:
+  - onto:
+      type: artist
+      name: {}
+      need_similar: exact
+    content: specific_artist_mention
+  - onto:
+      type: artist
+      name: {}
+      need_similar: need_similar
+    root:
+      - abstract_music_keyword
+      - extends: [common.has_children, common.abstract_object]
+        content:
+          - common.what_word
+          - gramm: [sing,neut]
+    attr_uniq:
+      root:
+        tag: need_similar
+        content: common.similarity_core
+      sim_target: specific_artist_mention
+
+playlist_keyword:
+  extends: common.abstract_named_object
+  gramm: [sing]
+  content:
+    - lex:
+      - плейлист
+      - плэйлист
+      - подборка
+      - треклист
+      - трэклист
+      - сборник
+    - root:
+        extends: common.abstract_object
+        gramm: [sing]
+        lex: [список, набор, сборник]
+      genetive_oblig:
+        gramm: [plur]
+        content: track_keyword
+    - root:
+        extends: common.abstract_object
+        gramm: [sing,inan]
+        lex: [лист]
+      proclitic_oblig:
+        lex: [плей,плэй,трек,трэк]
+
+playlist_name:
+  onto:
+    type: playlist
+    name: {}
+  content:
+    root:
+      extends: common.bracketed
+    inner:
+      lookup: name
+
+playlist_mention:
+  onto:
+    type: playlist
+    name: {}
+  tag: playlist
+  root: playlist_keyword
+  name:
+    - playlist_name
+
+all_music:
+  - abstract_song_collection
+  - abstract_album_collection
+  - album_mention
+  - playlist_mention
+  - artist_mention
+  - track_mention
+
+all_ondemand_music:
+  - album_mention
+  - playlist_mention
+  - artist_mention
+  - track_mention
+
+# на повторе/шафл
+
+shuffle_phrase:
+  tag: order
+  root:
+    reference: order
+    root:
+      onto: shuffle
+      lex: 
+        - вперемешку
+        - в перемешку
+        - в произвольном порядке
+        - в случайном порядке
+        - шафл
+        - рандомно
+        - на рандоме
+        - в рандомном порядке
+        - в рандоме
+        - в любом порядке
+        - в смешанном порядке
+
+shuffle_action:
+  tag: order
+  root:
+    reference: order
+    root:
+      onto: shuffle
+      lex: 
+        - перемешать
+        - замешать
+        - смешать
+
+repeat_phrase:
+  tag: repeat
+  root:
+    reference: repeat
+    lex: 
+      - на повторе
+      - на повтор
+      - на повторы
+      - на репите
+      - циклом
+      - в цикле
+      - по кругу
+      - нон стоп
+      - без остановки
+      - без перерыва
+
+repeat_action:
+  tag: repeat
+  root:
+    reference: repeat
+    lex: [закольцевать]
+
+# основной интент включения музыки
+
+fuzzy_phrase:
+  lex:
+    - бесплатно
+    - без смс
+    - без рекламы
+    - без регистрации
+    - mp3
+    - мр3
+    - эмпэтри
+    - мп3
+    - мптри
+    - мп 3       
+    - онлайн
+    - яндекс музыка
+    - яндекс радио
+    - радио
+    - яндекс музыка платная
+    - яндекс.музыка
+    - на Яндекс Музыке
+    - на телефон
+    - на телефоне
+    - на моем телефоне
+    - пожалуйста
+    - плиз
+    - прошу
+    - очень прошу
+    - будьте добры
+    - будь добра
+    - нахуй
+    - блядь
+    - блять
+    - через наушники
+    - в хорошем качестве
+    - прямо сейчас
+    - по быстрому
+    - подряд
+    - в оригинале
+    - погромче
+
+let_it_play:
+  extends: music_action
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    root:
+      extends: common.abstract_action
+      tag: action_request
+      lex: [играет,звучит,заиграет,зазвучит]
+    proclitic_oblig:
+      lex: пусть 
+
+turn_music_on:
+  onto:
+    type: switch_on
+    target: {}
+  content:
+    - root: common.infinitive_clause
+      infinitive:
+        onto:
+          target: {}
+        content:
+          root: 
+            - all_music_verbs
+            - do_you_mind
+            - extends: music_action
+              root: 
+                - all_autoplay_listen_verbs
+                - extends: common.abstract_action
+                  lex: [найти, скачать, закачать, получить]
+              proclitic_oblig:
+                lex: [хочу,'я хочу','мне надо',хочется,'очень хочется',можно,нужно,где]
+            - let_it_play
+          object:
+            reference: target
+            content: all_music
+          circ_indecl:
+            - shuffle_phrase
+            - repeat_phrase
+            - fuzzy_phrase
+            - onto:
+                target:
+                  type: artist
+              lex:
+                - все альбомы
+                - все его альбомы
+                - все их альбомы
+                - все ее альбомы
+                - все их песни
+                - все его песни
+                - все ее песни
+                - все песни
+                - подряд все песни
+          conj_right:
+            - shuffle_action
+            - repeat_action
+    - root: common.imperative_clause
+      imperative:
+        onto:
+          target: {}
+        content:
+          root:
+            - gramm: [sing]
+              content: all_launch_verbs
+            - extends: music_action
+              content:
+                - root:
+                    gramm: [sing]
+                    content: all_launch_verbs_no_tag
+                  infinitive:
+                    - all_autoplay_listen_verbs
+                    - tag: action_request
+                      lex: [играть]
+                - root: 
+                    extends: common.abstract_entity
+                    lex: [дать]
+                  any_uniq_indecl:
+                    tag: action_request
+                    lex: [послушаем,заслушаем,слушать]
+          object:
+            reference: target
+            content: 
+              - all_music
+              - special_music
+          circ_indecl:
+            - shuffle_phrase
+            - repeat_phrase
+            - fuzzy_phrase
+          conj_right:
+            - shuffle_action
+            - repeat_action
+          subject_opt:
+            lex: [ты,вы]
+          any_uniq_opt_indecl:
+            lex: [мне,нам]
+    - root: common.infinitive_clause
+      infinitive:
+        gramm: [inf] 
+        content: all_music_verbs
+      aux:
+        - root:
+            extends: common.abstract_action
+          subject:
+            reference: target
+            content: all_music
+        - fuzzy_phrase
+    - onto:
+        type: switch_on
+        target:
+          type: artist
+          definite: 'false'
+      root: common.abstract_clause
+      aux:
+        - root:
+            extends: common.abstract_action
+          subject:
+            reference: target
+            content: all_music
+        - fuzzy_phrase
+    - onto:
+        type: switch_on
+        target:
+          type: track
+          definite: 'false'
+          need_similar: exact
+      root: common.abstract_clause
+      aux:
+        - root:
+            extends: common.abstract_action
+          subject:
+            reference: target
+            content: all_music
+        - fuzzy_phrase
+
+sing_music:
+  onto:
+    type: switch_on
+    target: {}
+  content:
+    - root: common.infinitive_clause
+      infinitive:
+        onto:
+          target: {}
+        content:
+          root: 
+            - do_you_mind_sing
+            - all_sing_verbs
+          object:
+            reference: target
+            content: all_ondemand_music
+          circ_indecl:
+            - shuffle_phrase
+            - repeat_phrase
+            - fuzzy_phrase
+            - onto:
+                target:
+                  type: artist
+              lex:
+                - все альбомы
+                - все его альбомы
+                - все их альбомы
+                - все ее альбомы
+                - все их песни
+                - все его песни
+                - все ее песни
+                - все песни
+                - подряд все песни
+          conj_right:
+            - shuffle_action
+            - repeat_action
+    - root: common.imperative_clause
+      imperative:
+        onto:
+          target: {}
+        content:
+          root:
+            gramm: [sing]
+            content: all_sing_verbs
+          object:
+            reference: target
+            content: all_ondemand_music
+          circ_indecl:
+            - shuffle_phrase
+            - repeat_phrase
+            - fuzzy_phrase
+          conj_right:
+            - shuffle_action
+            - repeat_action
+          subject_opt:
+            lex: [ты,вы]
+          any_uniq_opt_indecl:
+            lex: [мне,нам]
+
+# больше/меньше
+
+more_music:
+  onto:
+    type: more
+    target: {}
+  root:
+    extends: common.abstract_object
+    root:
+      extends: common.abstract_object
+    any_uniq_indecl: 
+      lex: [больше,побольше]
+  genetive_uniq:
+    reference: target
+    content: 
+      - abstract_song_collection
+      - abstract_album_collection
+      - artist_mention
+
+less_music:
+  onto:
+    type: less
+    target: {}
+  root:
+    extends: common.abstract_object
+    root:
+      extends: common.abstract_object
+    any_uniq_indecl: 
+      lex: [меньше,поменьше]
+  genetive_uniq: 
+    reference: target
+    content: 
+      - abstract_song_collection
+      - abstract_album_collection
+      - artist_mention
+
+more_preambula_abstract:
+  extends: common.abstract_action
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    lex: 
+      - сделай
+      - сделайте
+      - пусть будет
+      - пусть играет
+      - теперь
+      - добавь
+      - добавьте
+      - добавляй
+      - прибавь
+      - прибавляй
+      - прибавьте
+      - подмешай
+      - подмешайте
+      - надо
+
+less_preambula_abstract:
+  extends: common.abstract_action
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    lex: 
+      - сделай
+      - сделайте
+      - пусть будет
+      - пусть играет
+      - теперь
+      - надо
+
+more_preambula:
+  extends: common.abstract_action
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    lex: 
+      - добавь
+      - добавляй
+      - добавьте
+      - прибавь
+      - прибавляй
+      - прибавьте
+      - подмешай
+      - подмешайте
+      - что так мало
+
+less_preambula:
+  extends: common.abstract_action
+  root:
+    extends: common.abstract_object
+  any_uniq_indecl:
+    lex: 
+      - не надо столько
+      - не надо так много
+      - не надо столько много
+      - не нужно столько
+      - не нужно так много
+      - не нужно столько много
+      - не так много
+      - что так много
+
+music_fraction:
+  root:
+    extends: common.abstract_object
+    gramm: [noun,sing]
+    lex: [доля,процент]
+  genetive_uniq:
+    - abstract_song_collection
+    - abstract_album_collection
+    - artist_mention
+
+switch_on_more_music:
+  onto:
+    type: more
+    target: {}
+  content:
+    - root:
+        extends: common.abstract_entity
+      any_uniq_indecl:
+        reference: target
+        content: mood_attr_more
+    - root: common.infinitive_clause
+      infinitive:
+        - root:
+            - all_launch_verbs_no_tag
+            - all_sing_verbs_no_tag
+            - do_you_mind_no_tag
+          object: more_music
+        - root: 
+            - all_launch_verbs_no_tag
+            - all_sing_verbs_no_tag
+          any_uniq_indecl:
+            reference: target
+            content: mood_attr_more
+        - root:
+            extends: common.abstract_action
+            lex: [увеличить,поднять]
+          object: 
+            reference: target
+            content: music_fraction
+    - root: common.imperative_clause
+      imperative:
+        - root:
+            extends: common.abstract_action
+            lex: [увеличить,увеличивать,поднять,поднимать]
+          object: 
+            reference: target
+            content: music_fraction
+        - root: 
+            gramm: [sing]
+            content: 
+              - all_launch_verbs_no_tag
+              - all_sing_verbs_no_tag
+          object: more_music
+        - root: 
+            gramm: [sing]
+            content: 
+              - all_launch_verbs_no_tag
+              - all_sing_verbs_no_tag
+          any_uniq_indecl:
+            reference: target
+            content: mood_attr_more
+    - root: more_preambula_abstract
+      object: more_music
+    - root: more_preambula
+      genetive_object: 
+        reference: target
+        content: 
+          - abstract_song_collection
+          - abstract_album_collection
+          - artist_mention
+
+switch_on_less_music:
+  onto:
+    type: less
+    target: {}
+  content:
+    - root:
+        extends: common.abstract_entity
+      any_uniq_indecl:
+        reference: target
+        content: mood_attr_less
+    - root: common.infinitive_clause
+      infinitive:
+        - root:
+            - all_launch_verbs_no_tag
+            - all_sing_verbs_no_tag
+            - do_you_mind_no_tag
+          object: less_music
+        - root: 
+            - all_launch_verbs_no_tag
+            - all_sing_verbs_no_tag
+          any_uniq_indecl:
+            reference: target
+            content: mood_attr_less
+        - root:
+            extends: common.abstract_action
+            lex: [уменьшить,снизить,понизить]
+          object: 
+            reference: target
+            content: music_fraction
+    - root: common.imperative_clause
+      imperative:
+        - root:
+            extends: common.abstract_action
+            lex: [уменьшить,уменьшать,снизить,снижать,понизить,понижать]
+          object: 
+            reference: target
+            content: music_fraction
+        - root: 
+            gramm: [sing]
+            content: 
+              - all_launch_verbs_no_tag
+              - all_sing_verbs_no_tag
+          object: less_music
+        - root: 
+            gramm: [sing]
+            content: 
+              - all_launch_verbs_no_tag
+              - all_sing_verbs_no_tag
+          any_uniq_indecl:
+            reference: target
+            content: mood_attr_less
+    - root: less_preambula_abstract
+      object: less_music
+    - root: less_preambula
+      genetive_object: 
+        reference: target
+        content: 
+          - abstract_song_collection
+          - abstract_album_collection
+          - artist_mention
+
+activation:
+  onto:
+    type: {}
+  root:
+    extends: common.abstract_entity
+    content:
+      - switch_on_less_music
+      - switch_on_more_music
+      - less_music
+      - more_music
+      - turn_music_on
+  proclitic_oblig:
+    - root:
+        extends: common.abstract_entity
+        lex: [гугл,google,яндекс,сири,siri]
+      proclitic:
+        lex: [слушай,ок,привет]
+    - lex: [привет,девушка]

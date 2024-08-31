@@ -1,0 +1,645 @@
+labels:
+  already_added: 'Такой товар уже есть в вашем списке покупок\.'
+  already_added_multiple: 'Такие товары уже есть в вашем списке покупок\.'
+  added_or_already_added: 'Добавила( \S.*)? в ваш список покупок( \S.*)?\.|({already_added})|({already_added_multiple})'
+  all_was_deleted: 'Ваш список покупок теперь пуст\.'
+  all_was_already_deleted: 'Ваш список покупок уже пуст\.'
+  all_was_deleted_or_all_was_already_deleted: '({all_was_deleted})|({all_was_already_deleted})'
+  what_add: 'Чтобы пополнить список покупок.*'
+  empty: 'Ваш список покупок пока пуст\.'
+  show_list_on_screen_device: 'Вот что сейчас в вашем списке покупок.\n\.\.\.'
+  test_result__show_list_on_screenless_device: 'В вашем списке покупок сейчас лежит 2 товара\.\n1\) колбаса.\n2\) мазик\.'
+
+
+test_add_external:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # exit the scenario
+  - request: 'Привет'
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.hello'
+  # start test
+  - request: 'Добавь литр молока в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value: 'литр молока'
+      text: 'Добавила литр молока в ваш список покупок.'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_add_internal:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list and enter the scenario
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  - request: 'Добавь литр молока в список'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__add'
+        slots:
+          item:
+            value: 'литр молока'
+      text: 'Добавила литр молока в ваш список покупок.'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_add_empty:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  - request: 'Добавь в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value: null
+      text: '{what_add}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_add_many_items:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # exit the scenario just to avoid conflict with personal_assistant.scenarios.shopping_list_show__add
+  - request: 'Привет'
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.hello'
+  # start test
+  - request: 'Добавь пшёнку, тушёнку и хлеб в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'пшёнка'
+            - 'тушёнка'
+            - 'хлеб'
+      text: 'Добавила в ваш список покупок пшенку, тушенку и хлеб.'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_item_already_added:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  - request: 'Добавь картошку в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value: 'картошка'
+      text: '{added_or_already_added}'
+  - request: 'Добавь картошку в мой список покупок'
+    response:
+      vins_form:
+        slots:
+          item:
+            value: 'картошка'
+      text: '{already_added}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_already_added_multiple:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # start test
+  - request: 'Добавь щётку и пасту в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'щётка'
+            - 'паста'
+      text: '{added_or_already_added}'
+  - request: 'Добавь щётку и пасту в мой список покупок'
+    response:
+      vins_form:
+        slots:
+          item:
+            value:
+            - 'щётка'
+            - 'паста'
+      text: '{already_added_multiple}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_show_list_on_screen_device:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # fill the list
+  - request: 'Добавь щётку и пасту в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'щётка'
+            - 'паста'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Покажи мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show'
+      text: '{show_list_on_screen_device}'
+      cards:
+      - simple_text
+      - div_card
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_show_list_on_screenless_device:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill the list
+  - request: 'Добавь колбасу и мазик в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'колбаса'
+            - 'мазик'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Покажи мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show'
+      text: '{test_result__show_list_on_screenless_device}'
+      cards:
+      - simple_text
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_show_list_empty:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # start test
+  - request: 'Покажи мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show'
+      text: '{empty}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_external:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+      text: '{added_or_already_added}'
+  # exit the scenario
+  - request: 'Привет'
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.hello'
+  # start test
+  - request: 'Удали газировку из моего списка покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_item'
+        slots:
+          item:
+            value: 'газировка'
+      text: 'Удалила газировку из вашего списка покупок.'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_internal:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Удали газировку'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_item'
+        slots:
+          item:
+            value: 'газировка'
+      text: 'Удалила газировку из вашего списка покупок.'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_not_existing:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку в мой список покупок'
+    response:
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Удали яблоки'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_item'
+        slots:
+          item:
+            value: 'яблоки'
+      text: 'Не нашла такого товара в вашем списке покупок.'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_multiple:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку, бананы в мой список покупок'
+    response:
+      vins_form:
+        slots:
+          item:
+            value:
+            - 'газировка'
+            - 'бананы'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Удали бананы и газировку'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_item'
+        slots:
+          item:
+            value:
+            - 'бананы'
+            - 'газировка'
+      text: 'Удалила из вашего списка покупок бананы и газировку.'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_by_index:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку, бананы, пирожки в мой список покупок'
+    response:
+      vins_form:
+        slots:
+          item:
+            value:
+            - 'газировка'
+            - 'бананы'
+            - 'пирожки'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'покажи мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show'
+      text: '{show_list_on_screen_device}'
+  - request: 'Удали пункт 2 из списка'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_index'
+        slots:
+          index:
+            value: "2"
+      text: 'Удалила бананы из вашего списка покупок.'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_multiple_by_index:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # clear shopping list
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  # fill shopping_list
+  - request: 'Добавь газировку, бананы, пирожки в мой список покупок'
+    response:
+      vins_form:
+        slots:
+          item:
+            value:
+            - 'газировка'
+            - 'бананы'
+            - 'пирожки'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'покажи мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show'
+      text: '{show_list_on_screen_device}'
+  - request: 'Удали из списка покупок пункт 2 и 3'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_index'
+        slots:
+          index:
+            value: "2 и 3"
+      text: 'Удалила из вашего списка покупок бананы и пирожки.'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_by_index_when_list_wasnt_shown_before:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # fill shopping_list
+  - request: 'Добавь газировку, бананы, пирожки в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Удали пункт 2 из списка'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_index'
+      text: 'Я уже и не помню что там было на какой позиции. Давайте вместе посмотрим в список покупок?'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_all_external:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # fill the list
+  - request: 'Добавь газировку, бананы, пирожки в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'газировка'
+            - 'бананы'
+            - 'пирожки'
+      text: '{added_or_already_added}'
+  # exit the scenario
+  - request: 'Привет'
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.hello'
+  # start test
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_all_internal:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  # fill the list
+  - request: 'Добавь газировку, бананы, пирожки в мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_add'
+        slots:
+          item:
+            value:
+            - 'газировка'
+            - 'бананы'
+            - 'пирожки'
+      text: '{added_or_already_added}'
+  # start test
+  - request: 'Удали всё'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_show__delete_all'
+      text: '{all_was_deleted}'
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+
+
+test_delete_all_from_empty_list:
+  experiments: [market, shopping_list]
+  test_user_info:
+    tags:
+    - beru_with_orders
+  dialog:
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_deleted_or_all_was_already_deleted}'
+  - request: 'Очисти мой список покупок'
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.shopping_list_delete_all'
+      text: '{all_was_already_deleted}'
+  app_info:
+    app_id: 'ru.yandex.searchplugin.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'

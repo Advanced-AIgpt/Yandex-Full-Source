@@ -1,0 +1,93 @@
+{
+    "ShardingConfig": {
+        "ShardingAlgorithm": "by_uuid",
+        "Splitter": {
+            "LogfellerSplitter": "\n"
+        },
+        "SkipUsersPercent": 99,
+        "OutputCodec": "zstd_6",
+        "OutputQueue": "//home/alice/test/big-rt/qyt/sharded-events",
+        "ShardsCount": 64
+    },
+    "TvmConfig": {
+        "CacheDir": "./tvm_cache/",
+        "DstServices": [
+            {
+                "Alias": "logbroker",
+                "Id": 2001059
+            }
+        ],
+        "SrcIdEnvName": "RESHARDER_TVM_ID",
+        "SrcSecretEnvName": "RESHARDER_TVM_SECRET"
+    },
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "/logs/current-uniproxy-resharder.log"
+            }
+        ]
+    },
+    "HttpServer": {
+        "Port": 3448
+    },
+    "Suppliers": [
+        {
+            "Alias": "alice-uniproxy-production-vla",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "vla.logbroker.yandex.net",
+                "SrcTopic": "/alice-production/uniproxy"
+            }
+        },
+        {
+            "Alias": "alice-uniproxy-production-sas",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "sas.logbroker.yandex.net",
+                "SrcTopic": "/alice-production/uniproxy"
+            }
+        },
+        {
+            "Alias": "alice-uniproxy-production-man",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "man.logbroker.yandex.net",
+                "SrcTopic": "/alice-production/uniproxy"
+            }
+        },
+        {
+            "Alias": "alice-uniproxy-production-myt",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "myt.logbroker.yandex.net",
+                "SrcTopic": "/alice-production/uniproxy"
+            }
+        }
+    ],
+    "ConsumingSystem": {
+        "Cluster": "markov",
+        "MainPath": "//home/alice/test/big-rt/cs/uniproxy-resharder/main",
+        "OffsetsTable": "//home/alice/test/big-rt/cs/uniproxy-resharder/offsets",
+        "LaunchShardProcessorInFiber": true,
+        "MasterBalancing": {
+            "MasterPath": "//home/alice/test/big-rt/cs/uniproxy-resharder/master"
+        },
+        "MaxShardsAutoResolveRatio": 0.661,
+        "MaxShardsToCheckAutoResolveRatio": 0.04,
+        "WorkerMinorName": "worker_uniproxy_resharder_log",
+        "ThreadLabelPrefix": "thread_uniproxy_resharder_log",
+        "MaxShardsToCheck": 2
+    },
+    "StatelessShardProcessorConfig": {
+        "CommitPeriodMs": 300
+    },
+    "MaxInflightBytes": 10000000
+}

@@ -1,0 +1,1033 @@
+{
+  "project": {
+    "name": "personal_assistant",
+    "includes": [
+      {
+        "path": "personal_assistant/config/automotive/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/general_conversation/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/scenarios/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/stroka/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/navi/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/handcrafted/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/internal/VinsProjectfile.json",
+        "type": "file"
+      },
+      {
+        "path": "personal_assistant/config/feedback/VinsProjectfile.json",
+        "type": "file"
+      }
+    ]
+  },
+  "post_classifier": {
+    "reranker": {
+      "model": "combined",
+      "params": {
+        "fixlist_candidates_reranker": {
+          "model": "experiment_based",
+          "params": {
+            "inner_models": [
+              {
+                "model": "descending_by_scores_and_transition_model",
+                "experiment": "sorting_transition_model"
+              },
+              {
+                "model": "descending_by_scores"
+              }
+            ]
+          }
+        },
+        "apply_to_first_non_empty_group_only": true,
+        "passed_candidates_reranker": {
+          "model": "experiment_based",
+          "params": {
+            "inner_models": [
+              {
+                "model": "independent_catboost",
+                "experiment": "catboost_post_classifier_relev_markup_ind",
+                "params": {
+                  "used_factors": [
+                      "fallback_classifier",
+                      "scenarios_word_lstm",
+                      "toloka_word_lstm",
+                      "intent_info",
+                      "bag_of_entitysearch",
+                      "bag_of_ner",
+                      "bag_of_wizard"
+                    ],
+                  "models": {
+                    "personal_assistant.scenarios.music_play": {
+                      "desc_resource": "resource://catboost/catboost/model_independent.desc",
+                      "model_resource": "resource://catboost/catboost/independent/music"
+                    },
+                    "personal_assistant.scenarios.video_play": {
+                      "desc_resource": "resource://catboost/catboost/model_independent.desc",
+                      "model_resource": "resource://catboost/catboost/independent/video"
+                    },
+                    "personal_assistant.scenarios.other": {
+                      "desc_resource": "resource://catboost/catboost/model_independent.desc",
+                      "model_resource": "resource://catboost/catboost/independent/other"
+                    }
+                  }
+                }
+              },
+              {
+                "model": "external_reranker",
+                "experiment": "external_postclassifier",
+                "params": {
+                  "intent_flags": {
+                    "personal_assistant.scenarios.music_play": "personal_assistant.scenarios.music_play",
+                    "personal_assistant.scenarios.video_play":"personal_assistant.scenarios.video_play",
+                    "personal_assistant.scenarios.other": "personal_assistant.scenarios.other"
+                  }
+                }
+              },
+              {
+                "model": "descending_by_scores_and_transition_model",
+                "experiment": "sorting_transition_model"
+              },
+              {
+                "model": "descending_by_scores"
+              }
+            ]
+          }
+        },
+        "active_slot_candidates_reranker": {
+          "model": "descending_by_scores"
+        }
+      }
+    },
+    "factor_calcer": {
+      "factors": {
+        "scenarios": {
+          "model": "scenarios"
+        },
+        "fallback_classifier": {
+          "model": "fallback_classifier"
+        },
+        "setup": {
+          "model": "dense_feature",
+          "params": {
+            "feature_list_path": "personal_assistant/data/post_classifier/video_setup_features.txt",
+            "feature_name": "video_play_setup"
+          }
+        },
+        "intent_info": {
+          "model": "intent_info",
+          "params": {
+            "known_intents_path": "personal_assistant/data/post_classifier/intent_info_known_intents.txt"
+          }
+        },
+        "bag_of_wizard": {
+          "model": "bag_of_entities",
+          "params": {
+            "known_entities_path": "personal_assistant/data/post_classifier/wizard_entities.txt",
+            "feature_name": "wizard",
+            "apply_to_tag_sequence": true
+          }
+        },
+        "bag_of_nlu_extra": {
+          "model": "bag_of_entities",
+          "params": {
+            "known_entities_path": "personal_assistant/data/post_classifier/nlu_extra_entities.txt",
+            "feature_name": "nlu_extra",
+            "apply_to_tag_sequence": "true"
+          }
+        },
+        "bag_of_entitysearch": {
+          "model": "bag_of_entities",
+          "params": {
+            "known_entities_path": "personal_assistant/data/post_classifier/entitysearch_entities.txt",
+            "feature_name": "entitysearch",
+            "apply_to_tag_sequence": false
+          }
+        },
+        "music": {
+          "model": "dense_feature",
+          "params": {
+            "feature_list_path": "personal_assistant/data/post_classifier/music_features.txt",
+            "feature_name": "music_features"
+          }
+        },
+        "bag_of_ner": {
+          "model": "bag_of_entities",
+          "params": {
+            "known_entities_path": "personal_assistant/data/post_classifier/ner_entities.txt",
+            "feature_name": "ner",
+            "apply_to_tag_sequence": true
+          }
+        },
+        "scenarios_word_lstm": {
+          "model": "word_nn",
+          "params": {
+            "model_name": "scenarios_word_lstm",
+            "desc_resource": "resource://scenarios_word_lstm/scenarios_word_lstm/model_description",
+            "model_resource": "resource://scenarios_word_lstm/scenarios_word_lstm/model.mmap",
+            "embeddings_name": "alice_requests_emb",
+            "labels_resource": "resource://scenarios_word_lstm/scenarios_word_lstm/model.labels"
+          }
+        },
+        "toloka_word_lstm": {
+          "model": "word_nn",
+          "params": {
+            "model_name": "toloka_word_lstm",
+            "desc_resource": "resource://toloka_word_lstm/toloka_word_lstm/model_description",
+            "model_resource": "resource://toloka_word_lstm/toloka_word_lstm/model.mmap",
+            "embeddings_name": "alice_requests_emb",
+            "labels_resource": "resource://toloka_word_lstm/toloka_word_lstm/model.labels"
+          }
+        }
+      }
+    }
+  },
+  "nlu": {
+    "utterance_tagger": {
+      "model": "combine_scores",
+      "params": {
+        "taggers": [
+          {
+            "model": "protocol_semantic_frame",
+            "params": {
+              "matching_score": 1
+            }
+          },
+          {
+            "model": "rnn_new",
+            "params": {
+              "intent_conditioned": true
+            },
+            "name": "tagger"
+          },
+          {
+            "model": "nlu_exact_matching"
+          },
+          {
+            "model": "regex",
+            "params": {
+              "source": "personal_assistant/config/fixlists/tagger_fixlist.yaml"
+            }
+          },
+          {
+            "model": "granet",
+            "params": {
+              "matching_score": 1
+            }
+          }
+        ]
+      },
+      "features": [
+        "alice_requests_emb",
+        "postag",
+        "ner",
+        "wizard"
+      ]
+    },
+    "transition_model": {
+      "priority_boost": 1.000001,
+      "custom_rules": {
+        "path": "personal_assistant/config/transition_rules.yaml",
+        "enable": true
+      },
+      "boosts": {
+        "quasar_open_or_continue": 0.99,
+        "quasar_open_or_continue_on_video_screens": 0.999,
+        "quasar_video_mode": 1.03,
+        "autoapp": 1.05,
+        "internal_search": "priority_boost",
+        "quasar_stop_buzzing": 1.03,
+        "chat_tab": 10.0,
+        "quasar_fairy_tale": 1.001,
+        "active_slot_ellipsis": 1.11,
+        "quasar_music": 1.03,
+        "stroka_desktop": "priority_boost",
+        "quasar_tv": 1.03,
+        "navigator": "priority_boost",
+        "internal": "priority_boost",
+        "anaphora": "priority_boost",
+        "quasar_open_site_or_app": 0.975,
+        "video_without_screen": 0.9,
+        "image_what_is_this_specific": 1.0000005
+      },
+      "model_name": "personal_assistant"
+    },
+    "custom_templates": {
+      "again": "personal_assistant/config/nlu_templates/again.txt",
+      "alarm_where": "personal_assistant/config/nlu_templates/alarm_where.txt",
+      "album": "personal_assistant/config/nlu_templates/music/album.txt",
+      "app_launch": "personal_assistant/config/nlu_templates/app_launch.txt",
+      "artist": "personal_assistant/config/nlu_templates/music/artist.txt",
+      "bank_card": "personal_assistant/config/nlu_templates/bank_card.txt",
+      "blogger_name": "personal_assistant/config/nlu_templates/blogger_name.txt",
+      "brand": "personal_assistant/config/nlu_templates/brand.txt",
+      "buy": "personal_assistant/config/nlu_templates/buy.txt",
+      "call_action": "personal_assistant/config/nlu_templates/call_action.txt",
+      "call_recipient": "personal_assistant/config/nlu_templates/call_recipient.txt",
+      "cancel": "personal_assistant/config/nlu_templates/cancel.txt",
+      "change": "personal_assistant/config/nlu_templates/change.txt",
+      "chart": "personal_assistant/config/nlu_templates/music/chart.txt",
+      "colour": "personal_assistant/config/nlu_templates/colour.txt",
+      "conv_source_bank": "personal_assistant/config/nlu_templates/currency/conv_source_bank.txt",
+      "conv_source_exchange": "personal_assistant/config/nlu_templates/currency/conv_source_exchange.txt",
+      "conv_source_exchange_point": "personal_assistant/config/nlu_templates/currency/conv_source_exchange_point.txt",
+      "country_adjective": "personal_assistant/config/nlu_templates/country_adjective.txt",
+      "create_reminder": "personal_assistant/config/nlu_templates/create_reminder.txt",
+      "create_reminder_ext": "personal_assistant/config/nlu_templates/create_reminder_ext.txt",
+      "date_range": "personal_assistant/config/nlu_templates/date_range.txt",
+      "day_part": "personal_assistant/config/nlu_templates/day_part.txt",
+      "day_part_plural": "personal_assistant/config/nlu_templates/day_part_plural.txt",
+      "day_part_without_whole_day": "personal_assistant/config/nlu_templates/day_part_without_whole_day.txt",
+      "decades_adjective": "personal_assistant/config/nlu_templates/decades_adjective.txt",
+      "default_app": "personal_assistant/config/nlu_templates/default_app.txt",
+      "event_poi": "personal_assistant/config/nlu_templates/event_poi.txt",
+      "exchange_rate": "personal_assistant/config/nlu_templates/currency/exchange_rate.txt",
+      "fairy_tale": "personal_assistant/config/nlu_templates/fairy_tale.txt",
+      "fairy_tale_celebrity": "personal_assistant/config/nlu_templates/fairy_tale_celebrity.txt",
+      "fm_radio_station": "personal_assistant/config/nlu_templates/music/fm_radio_station.txt",
+      "fm_radio_station_explicit": "personal_assistant/config/nlu_templates/music/fm_radio_station_explicit.txt",
+      "folder": "personal_assistant/config/nlu_templates/folder.txt",
+      "games_and_chats": "personal_assistant/config/nlu_templates/games_and_chats.txt",
+      "image": "personal_assistant/config/nlu_templates/image.txt",
+      "incomplete_time": "personal_assistant/config/nlu_templates/incomplete_time.txt",
+      "int_number": "personal_assistant/config/nlu_templates/int_number.txt",
+      "language": "personal_assistant/config/nlu_templates/languages.txt",
+      "launch": "personal_assistant/config/nlu_templates/music/launch.txt",
+      "launch_fm": "personal_assistant/config/nlu_templates/music/launch_fm.txt",
+      "list_todo": "personal_assistant/config/nlu_templates/list_todo.txt",
+      "list_todo_action": "personal_assistant/config/nlu_templates/list_todo_action.txt",
+      "market_appeal": "personal_assistant/config/nlu_templates/market/appeal.txt",
+      "market_approximation": "personal_assistant/config/nlu_templates/market/approximation.txt",
+      "market_ask_filter_prefix": "personal_assistant/config/nlu_templates/market/ask_filter_prefix.txt",
+      "market_currency": "personal_assistant/config/nlu_templates/market/currency.txt",
+      "market_goods": "personal_assistant/config/nlu_templates/market/goods.txt",
+      "market_goods_requests": "personal_assistant/config/nlu_templates/market/goods_requests.txt",
+      "market_how_much_prefix": "personal_assistant/config/nlu_templates/market/how_much_prefix.txt",
+      "market_index": "personal_assistant/config/nlu_templates/market/index.txt",
+      "market_int_number_and_a_half": "personal_assistant/config/nlu_templates/market/int_number_and_a_half.txt",
+      "market_int_number_by_parts": "personal_assistant/config/nlu_templates/market/int_number_by_parts.txt",
+      "market_log_requests": "personal_assistant/config/nlu_templates/market/log_requests.txt",
+      "market_magic_word": "personal_assistant/config/nlu_templates/market/magic_word.txt",
+      "market_parameter": "personal_assistant/config/nlu_templates/market/parameter.txt",
+      "market_prefix": "personal_assistant/config/nlu_templates/market/prefix.txt",
+      "market_price_parameter": "personal_assistant/config/nlu_templates/market/price_parameter.txt",
+      "market_resolution": "personal_assistant/config/nlu_templates/market/resolution.txt",
+      "market_size": "personal_assistant/config/nlu_templates/market/size.txt",
+      "market_suffix": "personal_assistant/config/nlu_templates/market/suffix.txt",
+      "market_unit": "personal_assistant/config/nlu_templates/market/unit.txt",
+      "market_used": "personal_assistant/config/nlu_templates/market/used.txt",
+      "market_vendor": "personal_assistant/config/nlu_templates/market/vendor.txt",
+      "market_yandex_goods": "personal_assistant/config/nlu_templates/market/yandex_goods.txt",
+      "marketplace_blue": "personal_assistant/config/nlu_templates/market/marketplaces/blue.txt",
+      "marketplace_other": "personal_assistant/config/nlu_templates/market/marketplaces/other.txt",
+      "marketplace_white": "personal_assistant/config/nlu_templates/market/marketplaces/white.txt",
+      "messenger": "personal_assistant/config/nlu_templates/messenger.txt",
+      "metro_stations": "personal_assistant/config/nlu_templates/metro_stations.txt",
+      "mood": "personal_assistant/config/nlu_templates/music/mood.txt",
+      "movie": "personal_assistant/config/nlu_templates/video/movie.txt",
+      "music": "personal_assistant/config/nlu_templates/music/music.txt",
+      "music_search_text": "personal_assistant/config/nlu_templates/music/music_search_text.txt",
+      "music_target": "personal_assistant/config/nlu_templates/music/music_target.txt",
+      "navi_map_layers": "personal_assistant/config/nlu_templates/navi/navi_map_layers.txt",
+      "navi_refuel_column": "personal_assistant/config/nlu_templates/navi/refuel/column.txt",
+      "navi_refuel_fuel_type": "personal_assistant/config/nlu_templates/navi/refuel/fuel_type.txt",
+      "navi_refuel_volume_liter": "personal_assistant/config/nlu_templates/navi/refuel/volume_liter.txt",
+      "navi_refuel_volume_rub": "personal_assistant/config/nlu_templates/navi/refuel/volume_rub.txt",
+      "navi_road_events": "personal_assistant/config/nlu_templates/navi/road_events.txt",
+      "navi_road_via_ru": "personal_assistant/config/nlu_templates/navi/road_via_ru.txt",
+      "navi_talk_text": "personal_assistant/config/nlu_templates/navi/talk_text.txt",
+      "navi_top_search": "personal_assistant/config/nlu_templates/navi/top_search.txt",
+      "navi_voices": "personal_assistant/config/nlu_templates/navi/voices.txt",
+      "news_main_topic": "personal_assistant/config/nlu_templates/news_main_topic.txt",
+      "news_more_subject": "personal_assistant/config/nlu_templates/news_more_subject.txt",
+      "news_more_verb": "personal_assistant/config/nlu_templates/news_more_verb.txt",
+      "news_topic": "personal_assistant/config/nlu_templates/news_topic.txt",
+      "news_topic_covid": "personal_assistant/config/nlu_templates/news_topic_covid.txt",
+      "news_topic_smi": "personal_assistant/config/nlu_templates/news_topic_smi.txt",
+      "next_album": "personal_assistant/config/nlu_templates/music/next_album.txt",
+      "next_marker": "personal_assistant/config/nlu_templates/music/next_marker.txt",
+      "next_track": "personal_assistant/config/nlu_templates/music/next_track.txt",
+      "next_video": "personal_assistant/config/nlu_templates/music/next_video.txt",
+      "notch": "personal_assistant/config/nlu_templates/notch.txt",
+      "ny_alice_playlist": "personal_assistant/config/nlu_templates/music/ny_alice_playlist.txt",
+      "on_christmas": "personal_assistant/config/nlu_templates/on_christmas.txt",
+      "on_weekdays": "personal_assistant/config/nlu_templates/on_weekdays.txt",
+      "on_weekdays_without_days": "personal_assistant/config/nlu_templates/on_weekdays_without_days.txt",
+      "open_collection": "personal_assistant/config/nlu_templates/open_collection.txt",
+      "order_number": "personal_assistant/config/nlu_templates/order_number.txt",
+      "organization": "personal_assistant/config/nlu_templates/organization.txt",
+      "pa_scenario_utterance": "personal_assistant/config/nlu_templates/pa_scenario_utterance.txt",
+      "pause": "personal_assistant/config/nlu_templates/pause.txt",
+      "phone_type": "personal_assistant/config/nlu_templates/phone_type.txt",
+      "playlist": "personal_assistant/config/nlu_templates/music/playlist.txt",
+      "playlist_title": "personal_assistant/config/nlu_templates/music/playlist_title.txt",
+      "popular_names": "personal_assistant/config/nlu_templates/popular_names.txt",
+      "prev_album": "personal_assistant/config/nlu_templates/music/prev_album.txt",
+      "prev_marker": "personal_assistant/config/nlu_templates/music/prev_marker.txt",
+      "prev_track": "personal_assistant/config/nlu_templates/music/prev_track.txt",
+      "prev_video": "personal_assistant/config/nlu_templates/music/prev_video.txt",
+      "purchase_action": "personal_assistant/config/nlu_templates/video/purchase_action.txt",
+      "quasar_video_screen": "personal_assistant/config/nlu_templates/video/quasar_video_screen.txt",
+      "radio": "personal_assistant/config/nlu_templates/music/radio.txt",
+      "radio_station": "personal_assistant/config/nlu_templates/music/radio_station.txt",
+      "read": "personal_assistant/config/nlu_templates/read.txt",
+      "recognize": "personal_assistant/config/nlu_templates/recognize.txt",
+      "rel_time_without_now": "personal_assistant/config/nlu_templates/rel_time_without_now.txt",
+      "relative_day_indication": "personal_assistant/config/nlu_templates/relative_day_indication.txt",
+      "repeat": "personal_assistant/config/nlu_templates/music/repeat.txt",
+      "resume": "personal_assistant/config/nlu_templates/resume.txt",
+      "rewind": "personal_assistant/config/nlu_templates/music/rewind.txt",
+      "rewind_type": "personal_assistant/config/nlu_templates/music/rewind_type.txt",
+      "ride_on_taxi": "personal_assistant/config/nlu_templates/ride_on_taxi.txt",
+      "route_type_drive": "personal_assistant/config/nlu_templates/geo/route_type_drive.txt",
+      "route_type_transport": "personal_assistant/config/nlu_templates/geo/route_type_transport.txt",
+      "scenario_name": "personal_assistant/config/nlu_templates/scenario_name.txt",
+      "search_filter_how": "personal_assistant/config/nlu_templates/search_filter/how.txt",
+      "search_filter_set_cancel": "personal_assistant/config/nlu_templates/search_filter/set_cancel.txt",
+      "send_sms_action": "personal_assistant/config/nlu_templates/send_sms_action.txt",
+      "set": "personal_assistant/config/nlu_templates/set.txt",
+      "set_my_name_prefix": "personal_assistant/config/nlu_templates/my_name/set_my_name_prefix.txt",
+      "set_my_name_suffix": "personal_assistant/config/nlu_templates/my_name/set_my_name_suffix.txt",
+      "settings": "personal_assistant/config/nlu_templates/settings.txt",
+      "shopping_from_list_suffix": "personal_assistant/config/nlu_templates/market/shopping_list/from_list_suffix.txt",
+      "shopping_list_add_good": "personal_assistant/config/nlu_templates/market/shopping_list/add_good.txt",
+      "shopping_list_add_good__command": "personal_assistant/config/nlu_templates/market/shopping_list/add_good__command.txt",
+      "shopping_list_delete_good": "personal_assistant/config/nlu_templates/market/shopping_list/delete_good.txt",
+      "shopping_list_delete_good__command": "personal_assistant/config/nlu_templates/market/shopping_list/delete_good__command.txt",
+      "shopping_list_goods": "personal_assistant/config/nlu_templates/market/shopping_list/list_goods.txt",
+      "shopping_list_long_goods": "personal_assistant/config/nlu_templates/market/shopping_list/list_long_goods.txt",
+      "shopping_to_list_suffix": "personal_assistant/config/nlu_templates/market/shopping_list/to_list_suffix.txt",
+      "short_message": "personal_assistant/config/nlu_templates/short_message.txt",
+      "show_timer_prefixes": "personal_assistant/config/nlu_templates/timers/show_timer_prefixes.txt",
+      "show_timer_suffixes": "personal_assistant/config/nlu_templates/timers/show_timer_suffixes.txt",
+      "similarity_marker": "personal_assistant/config/nlu_templates/music/similarity_marker.txt",
+      "site": "personal_assistant/config/nlu_templates/site.txt",
+      "sleep_action": "personal_assistant/config/nlu_templates/timers/sleep_action.txt",
+      "sleep_action_question": "personal_assistant/config/nlu_templates/timers/sleep_action_question.txt",
+      "sleep_specification": "personal_assistant/config/nlu_templates/timers/sleep_specification.txt",
+      "smart_speaker": "personal_assistant/config/nlu_templates/smart_speaker.txt",
+      "sms_recipient": "personal_assistant/config/nlu_templates/sms_recipient.txt",
+      "soft": "personal_assistant/config/nlu_templates/soft.txt",
+      "something": "personal_assistant/config/nlu_templates/something.txt",
+      "special_playlist": "personal_assistant/config/nlu_templates/music/special_playlist.txt",
+      "taxi_order": "personal_assistant/config/nlu_templates/taxi_order.txt",
+      "taxi_stop_options": "personal_assistant/config/nlu_templates/taxi_stop_options.txt",
+      "tell_fairy_tale": "personal_assistant/config/nlu_templates/music/tell_fairy_tale.txt",
+      "text": "personal_assistant/config/nlu_templates/text.txt",
+      "that_album": "personal_assistant/config/nlu_templates/music/that_album.txt",
+      "that_track": "personal_assistant/config/nlu_templates/music/that_track.txt",
+      "that_video": "personal_assistant/config/nlu_templates/music/that_video.txt",
+      "this": "personal_assistant/config/nlu_templates/this.txt",
+      "this_album": "personal_assistant/config/nlu_templates/music/this_album.txt",
+      "this_artist": "personal_assistant/config/nlu_templates/music/this_artist.txt",
+      "this_track": "personal_assistant/config/nlu_templates/music/this_track.txt",
+      "this_video": "personal_assistant/config/nlu_templates/music/this_video.txt",
+      "ticket": "personal_assistant/config/nlu_templates/ticket.txt",
+      "todo": "personal_assistant/config/nlu_templates/todo.txt",
+      "track": "personal_assistant/config/nlu_templates/music/track.txt",
+      "transport": "personal_assistant/config/nlu_templates/transport.txt",
+      "try": "personal_assistant/config/nlu_templates/try.txt",
+      "tv_action": "personal_assistant/config/nlu_templates/tv_broadcast/tv_action.txt",
+      "tv_bad_genre": "personal_assistant/config/nlu_templates/tv_broadcast/tv_bad_genre.txt",
+      "tv_channel": "personal_assistant/config/nlu_templates/tv_broadcast/tv_channel.txt",
+      "tv_genre": "personal_assistant/config/nlu_templates/tv_broadcast/tv_genre.txt",
+      "tv_personal_channel": "personal_assistant/config/nlu_templates/tv_broadcast/tv_personal_channel.txt",
+      "tv_program": "personal_assistant/config/nlu_templates/tv_broadcast/tv_program.txt",
+      "tv_risky_channel": "personal_assistant/config/nlu_templates/tv_broadcast/tv_risky_channel.txt",
+      "tv_show": "personal_assistant/config/nlu_templates/video/tv_show.txt",
+      "tv_yandex": "personal_assistant/config/nlu_templates/tv_broadcast/tv_yandex.txt",
+      "units_time": "personal_assistant/config/nlu_templates/units_time.txt",
+      "user_favorites": "personal_assistant/config/nlu_templates/user_favorites.txt",
+      "video": "personal_assistant/config/nlu_templates/music/video.txt",
+      "video_action": "personal_assistant/config/nlu_templates/video/action.txt",
+      "video_content_provider": "personal_assistant/config/nlu_templates/video/content_provider.txt",
+      "video_content_type": "personal_assistant/config/nlu_templates/video/content_type.txt",
+      "video_film_genre": "personal_assistant/config/nlu_templates/video/film_genre.txt",
+      "video_index": "personal_assistant/config/nlu_templates/video/video_index.txt",
+      "video_selection_action": "personal_assistant/config/nlu_templates/video/video_selection_action.txt",
+      "video_tv_content_type": "personal_assistant/config/nlu_templates/video/tv_content_type.txt",
+      "video_tv_show_episode": "personal_assistant/config/nlu_templates/video/episode.txt",
+      "video_tv_show_season": "personal_assistant/config/nlu_templates/video/season.txt",
+      "video_years": "personal_assistant/config/nlu_templates/video/years.txt",
+      "voiceprint_enroll": "personal_assistant/config/nlu_templates/voiceprint_enroll/voiceprint_enroll.txt",
+      "voiceprint_remove": "personal_assistant/config/nlu_templates/voiceprint_remove/voiceprint_remove.txt",
+      "volume_alarm": "personal_assistant/config/nlu_templates/volume/alarm.txt",
+      "volume_number": "personal_assistant/config/nlu_templates/volume/number.txt",
+      "volume_prep": "personal_assistant/config/nlu_templates/volume/preposition.txt",
+      "volume_set": "personal_assistant/config/nlu_templates/volume/set.txt",
+      "volume_setting": "personal_assistant/config/nlu_templates/volume/setting.txt",
+      "wake_me_up": "personal_assistant/config/nlu_templates/wake_me_up.txt",
+      "what_is_my_name": "personal_assistant/config/nlu_templates/my_name/what_is_my_name.txt",
+      "what_remind": "personal_assistant/config/nlu_templates/what_remind.txt"
+    },
+    "wizard_custom_entities": [
+      "action_request",
+      "ambient_sound",
+      "camera_type",
+      "cancel_action",
+      "catalog_section",
+      "collection",
+      "currency_conv_source",
+      "date_or_day_pointer",
+      "day_part",
+      "default_app",
+      "directory",
+      "disk",
+      "external_skill_activation",
+      "external_skill_type",
+      "fuel_type",
+      "geo_adjective",
+      "known_phones",
+      "language",
+      "launch_command",
+      "layer",
+      "list_reminders",
+      "list_todo",
+      "list_todo_reminders_action",
+      "named_location",
+      "need_similar",
+      "non_existant_country",
+      "novelty",
+      "offset",
+      "order",
+      "phone_types",
+      "poi_open",
+      "popular_names",
+      "quasar_video_screen",
+      "reminder",
+      "rewind_type",
+      "road_event",
+      "scroll_next_action",
+      "selection",
+      "settings",
+      "site_or_app",
+      "skill",
+      "special_location",
+      "tank_volume",
+      "tense",
+      "todo",
+      "video_action",
+      "video_content_type",
+      "video_episode",
+      "video_film_genre",
+      "video_free",
+      "video_new",
+      "video_provider",
+      "video_recommendation_country",
+      "video_season",
+      "video_selection_action",
+      "video_top",
+      "vocal",
+      "volume_setting",
+      "volume_type",
+      "year_adjective",
+      "year"
+    ],
+    "feature_extractors": [
+      {
+        "type": "ngrams",
+        "id": "word",
+        "n": 1
+      },
+      {
+        "type": "ngrams",
+        "id": "bigram",
+        "n": 2
+      },
+      {
+        "type": "lemma",
+        "id": "lemma"
+      },
+      {
+        "type": "postag",
+        "id": "postag"
+      },
+      {
+        "type": "case",
+        "id": "case"
+      },
+      {
+        "type": "ner",
+        "id": "ner"
+      },
+      {
+        "use_onto": true,
+        "type": "wizard",
+        "id": "wizard",
+        "use_freebase": true
+      },
+      {
+        "type": "nlu_extra",
+        "id": "nlu_extra"
+      },
+      {
+        "type": "granet",
+        "id": "granet"
+      },
+      {
+        "type": "music_features",
+        "id": "music_features"
+      },
+      {
+        "feature": "scores",
+        "model": "charcnn",
+        "type": "classifier",
+        "id": "gc_search",
+        "model_file": "resource://query_subtitles_charcnn"
+      },
+      {
+        "frequency_file_or_dict": "personal_assistant/data/serp/alice_requests_popular_words.json",
+        "sequence": false,
+        "trie": "resource://suggest/query_wizard_features/query_wizard_features.trie",
+        "data": "resource://suggest/query_wizard_features/query_wizard_features.data",
+        "prior_strength": 10,
+        "log_surplus": true,
+        "log_frequency": true,
+        "type": "serp",
+        "id": "serp"
+      },
+      {
+        "resource": "resource://req_embeddings",
+        "type": "embeddings",
+        "id": "alice_requests_emb"
+      },
+      {
+        "resource": "resource://embeddings",
+        "type": "embeddings",
+        "id": "emb233342907"
+      },
+      {
+        "resource": "resource://embeddings_ids",
+        "type": "embeddings_ids",
+        "id": "emb_ids",
+        "embeddings_map_key": "metric_learning"
+      },
+      {
+        "resource": "resource://dssm_embeddings/tf_model",
+        "type": "dssm_embeddings",
+        "id": "dssm"
+      }
+    ],
+    "fallback_intent_classifiers": [
+      {
+        "fallback_threshold": 0,
+        "model": "rnn",
+        "params": {
+          "nb_epoch": 20,
+          "verbose": true
+        },
+        "name": "search-or-converse",
+        "features": [
+          "emb233342907",
+          "serp",
+          "ner",
+          "postag",
+          "gc_search"
+        ]
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "s3_lookup",
+        "params": {
+          "source": "pa_banlist_boltalka_50.json",
+          "update_period": 300,
+          "regexp": true
+        },
+        "name": "banlist"
+      }
+    ],
+    "anaphora_resolution": {
+      "matcher": {
+        "border": 0.7587,
+        "border_model_id": "resource://anaphora/anaphora_model/border.bin",
+        "rank_border": 0.3324,
+        "rank_model_id": "resource://anaphora/anaphora_model/rank.bin",
+        "name": "catboost"
+      },
+      "intents": [
+        "personal_assistant.scenarios.search",
+        "personal_assistant.scenarios.search_anaphoric",
+        "personal_assistant.scenarios.convert"
+      ],
+      "resolver": {
+        "max_utterances": 2,
+        "with_entitysearch": true
+      }
+    },
+    "compiled_model": {
+      "path": "resource://personal_assistant_model_directory",
+      "archive": "DirectoryView",
+      "chunks": "personal_assistant/config/chunks.yaml",
+      "chunks_config": "personal_assistant/config/chunks_config.yaml"
+    },
+    "intent_classifiers": [
+      {
+        "fallback_threshold": 0,
+        "model": "s3_lookup",
+        "params": {
+          "source": "pa_fixlist.json",
+          "update_period": 300,
+          "regexp": false
+        },
+        "name": "pa_fixlist"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "protocol_semantic_frame",
+        "name": "protocol_semantic_frame",
+        "params": {
+          "matching_score": 1
+        }
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "irrelevant",
+        "name": "irrelevant",
+        "params": {
+          "matching_intent": "personal_assistant.scenarios.common.irrelevant",
+          "matching_score": 1
+        }
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "soft_force_intents",
+        "name": "soft_force_intents"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "hc_lookup",
+        "params": {
+          "update_period": 300,
+          "regexp": true
+        },
+        "name": "hardcoded_responses"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "file_lookup",
+        "params": {
+          "regexp": true,
+          "source": "personal_assistant/config/fixlists/classifier_fixlist.yaml"
+        },
+        "name": "code_words"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "data_lookup",
+        "params": {
+          "regexp": true,
+          "intent_texts": {
+            "personal_assistant.scenarios.voiceprint_enroll__collect_voice": [
+              ".*"
+            ],
+            "personal_assistant.scenarios.external_skill__continue": [
+              ".*"
+            ],
+            "personal_assistant.internal.bugreport__continue": [
+              ".*"
+            ]
+          }
+        },
+        "name": "continue_intents"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "utterance_input_source_lookup",
+        "params": {
+          "input_source_to_intent": {
+            "image": "personal_assistant.scenarios.image_what_is_this",
+            "music": "personal_assistant.scenarios.music_what_is_playing"
+          }
+        },
+        "name": "media_recognizer"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "file_lookup",
+        "params": {
+          "regexp": true,
+          "source": "personal_assistant/config/fixlists/fast_commands_classifier_fixlist.yaml"
+        },
+        "name": "fast_commands"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "data_lookup",
+        "params": {
+          "regexp": true,
+          "intent_texts": {
+            "personal_assistant.scenarios.quasar.select_video_from_gallery_by_text": [
+              ".*"
+            ],
+            "personal_assistant.scenarios.quasar.select_ether_from_gallery_by_text": [
+              ".*"
+            ],
+            "personal_assistant.scenarios.quasar.select_channel_from_gallery_by_text": [
+              ".*"
+            ]
+          }
+        },
+        "name": "quasar_select_video_from_gallery_by_text"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "data_lookup",
+        "params": {
+          "regexp": true,
+          "intent_texts": {
+            "personal_assistant.scenarios.taxi_new_order__select_card": [
+              ".*(\\d|\\s)+.*"
+            ]
+          }
+        },
+        "name": "taxi_new_order__select_card"
+      },
+      {
+        "fallback_threshold": 0,
+        "model": "granet",
+        "name": "granet",
+        "params": {
+          "matching_score": 1
+        }
+      },
+      {
+        "fallback_threshold": 0.75,
+        "model": "combine_scores",
+        "params": {
+          "method": "best_score",
+          "classifiers": [
+            {
+              "model": "nlu_exact_matching",
+              "params": {
+                "matching_score": 1.0,
+                "fixlist_score": 1.0
+              },
+              "name": "exact_matching"
+            },
+            {
+              "model": "combine_scores",
+              "params": {
+                "method": "multiply",
+                "classifiers": [
+                  {
+                    "app": "aliced*|ru.yandex.quasar.*",
+                    "params": {
+                      "nonmatching_score": 1.5,
+                      "intent_texts": {
+                        "personal_assistant.scenarios.other": [
+                          "(пожалуйста )?(включи|запусти|вруби|поставь|(с)?пой|(по)?слушать|смотреть|покажи(те)?) ((?!(на паузу|фото|фотки|картин|радио|аудиокниг|матч| тв |тнт|рен тиви| стс|гороскоп)).)*"
+                        ]
+                      },
+                      "fixlist_score": 1.5,
+                      "default_score": 1,
+                      "matching_score": 0.5,
+                      "regexp": true
+                    },
+                    "model": "data_lookup",
+                    "name": "fix_scenarios"
+                  },
+                  {
+                    "model": "knn",
+                    "params": {
+                      "use_hnsw": true,
+                      "verbose": true,
+                      "metric_function": "metric_learning",
+                      "normalize": false,
+                      "convert_to_prob": false,
+                      "embeddings_map_key": "metric_learning",
+                      "batch_samples_per_class": 40,
+                      "class_sampling": "sqrt_freq",
+                      "encoder_output_dense_layers": [
+                        {
+                          "dropout": 0,
+                          "num_units": 100,
+                          "relu": false
+                        }
+                      ],
+                      "lr": 0.001,
+                      "model_dir": "resource://personal_assistant_model_directory/metric_learning",
+                      "num_classes_in_batch": 100,
+                      "lr_decay": 0.1,
+                      "batch_generator_queue_maxsize": 5,
+                      "num_neighbors": 10,
+                      "oov": "ignore",
+                      "encoder_num_units": 256,
+                      "num_updates": 6000,
+                      "loss": {
+                        "distance": "cosine",
+                        "name": "margin",
+                        "trainable_threshold": true,
+                        "trash_non_anchors": false,
+                        "threshold": 0.5,
+                        "negative_mining": "hard",
+                        "margin": 0.1,
+                        "positive_mining": "uniform"
+                      },
+                      "batch_generator_njobs": 5,
+                      "fixlist_score": 1.0,
+                      "save_weights_mode": "best",
+                      "restore_weights_mode": "last",
+                      "encoder_num_layers": 1,
+                      "save_weights_start": 1,
+                      "encoder_pooling": "last",
+                      "train_split": 0.95,
+                      "model_name": "new_life",
+                      "std_normalize": true,
+                      "lr_decay_steps": 3000
+                    },
+                    "name": "scenarios",
+                    "features": [
+                      "emb_ids",
+                      "serp",
+                      "ner",
+                      "postag",
+                      "dssm",
+                      "wizard",
+                      "case"
+                    ]
+                  }
+                ]
+              },
+              "name": "scenarios_multiplied"
+            }
+          ]
+        },
+        "name": "scenarios_combined"
+      },
+      {
+        "model": "data_lookup",
+        "params": {
+          "regexp": true,
+          "intent_texts": {
+            "personal_assistant.scenarios.market__checkout_everything": [
+              ".*"
+            ],
+            "personal_assistant.scenarios.recurring_purchase__checkout_everything": [
+              ".*"
+            ],
+            "personal_assistant.scenarios.messaging__text": [
+              ".*"
+            ]
+          }
+        },
+        "name": "intents_after_knn"
+      }
+    ],
+    "fst": {
+      "parsers": [
+        "units_time",
+        "datetime",
+        "date",
+        "time",
+        "geo",
+        "num",
+        "fio",
+        "datetime_range",
+        "poi_category_ru",
+        "currency",
+        "float",
+        "calc",
+        "weekdays",
+        "soft",
+        "site",
+        "album",
+        "artist",
+        "track",
+        "films_100_750",
+        "films_50_filtered",
+        "swear"
+      ],
+      "resource": "resource://fst"
+    },
+    "samples_extractor": {
+      "pipeline": [
+        {
+          "name": "clip"
+        },
+        {
+          "name": "misspell"
+        },
+        {
+          "normalizer": "normalizer_ru",
+          "name": "normalizer"
+        },
+        {
+          "apply_to_text_input": true,
+          "name": "strip_activation",
+          "custom_back_activations": [
+            "алиса",
+            "алиска",
+            "алисочка",
+            "алис"
+          ],
+          "min_tokens_after_short_strip": 2,
+          "custom_front_activations": [
+            "алиса",
+            "алиска",
+            "алисочка",
+            "алис",
+            "алиса алиса",
+            "алис алиса",
+            "алиса алис",
+            "алис алиса алиса",
+            "алиса алиса алиса",
+            "алиска алиска",
+            "алиса алисочка",
+            "алиса привет",
+            "хей алиса",
+            "хэй алиса",
+            "эй алиса",
+            "ok алиса",
+            "окей алиса",
+            "слушай алиса",
+            "расскажи алиса",
+            "скажи алиса",
+            "хай алиса",
+            "алло алиса",
+            "привет алиса",
+            "привет алис",
+            "здравствуй алиса",
+            "здравствуйте алиса"
+          ],
+          "min_tokens_after_long_strip": 1
+        },
+        {
+          "name": "wizard"
+        },
+        {
+          "name": "entitysearch"
+        }
+      ]
+    }
+  },
+  "form_filling": {
+    "max_intents": 20,
+    "feature_updater": "bass_setup"
+  },
+  "nlg": {
+    "global": [
+      "common/error.nlg",
+      "common/postprocessors.nlg"
+    ],
+    "includes": [
+      "",
+      "personal_assistant/config",
+      "personal_assistant/config/scenarios/intents"
+    ]
+  }
+}

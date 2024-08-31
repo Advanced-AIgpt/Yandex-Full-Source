@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+import "tasklet/services/yav/proto/yav.proto";
+
+package alice.tasklet.find_st_ticket;
+
+message Context {
+    option (.tasklet.context) = true;
+    yav_service.YavService yav = 1 [(.tasklet.inject) = true];
+    .ci.CiService ci = 2 [(.tasklet.inject) = true];
+}
+
+message Config {
+    string queue = 1;
+    string ticket_summary_template = 2;
+    string search_key = 3;
+}
+
+message State {
+    bool success = 1;
+    string ticket_id = 2;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message Output {
+    State state = 1;
+}
+
+message FindStTicket {
+    option (.tasklet.tasklet_interface) = true;
+
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+
+    Context ctx = 3;
+}

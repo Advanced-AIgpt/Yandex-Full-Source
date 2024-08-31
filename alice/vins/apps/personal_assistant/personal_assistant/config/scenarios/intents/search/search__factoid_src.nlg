@@ -1,0 +1,48 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "search/search__ask.nlg" %}
+
+{% from "search/search__common.nlg" import get_search_info %}
+
+{% set info = namespace() %}
+{% do get_search_info(form, info, req_info.experiments['enable_factoid_child_answer'] != None) %}
+
+{% macro render_factoid_answer_preamble() %}
+  {% if is_smart_speaker() or is_auto() %}
+    {% chooseitem 1 %}
+      Подробнее в двух словах не расскажешь. Попробуйте спросить в Яндексе.
+    {% or 1 %}
+      Как раз читаю книгу про это, скоро обязательно расскажу!
+    {% or 0.25 %}
+      Я в этой теме плаваю, давайте о чём-нибудь другом.
+    {% or 0.1 %}
+      Я знала, но забыла. Ну вот, зачем вы меня расстроили.
+    {% endchooseitem %}
+  {% else %}
+    {% chooseline %}
+      Открываю источник информации.
+      Открываю свой источник.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_uri %}
+  {% if (not is_smart_speaker() or is_auto()) %}
+    {% if info.factoid_url %}
+      {{ info.factoid_url }}
+    {% elif info.object_url %}
+      {{ info.object_url }}
+    {% endif %}
+  {% endif %}
+
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if info.factoid_url or info.object_url %}
+    {{ render_factoid_answer_preamble() }}
+  {% else %}
+    {% chooseline %}
+      Извините, более подробной информации у меня нет.
+      Извините, подробнее рассказать не могу.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

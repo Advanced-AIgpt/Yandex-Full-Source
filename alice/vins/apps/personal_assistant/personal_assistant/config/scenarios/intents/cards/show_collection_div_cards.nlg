@@ -1,0 +1,87 @@
+{% from "cards/common.nlg" import open_uri_action_for_item_in_list with context  %}
+
+{% macro render_show_collection_gallery_item(data, item_number) %}
+{% set image_url = data|get_item('image_url') %}
+{% set url = data|get_item('url') %}
+{% set text = data|get_item('text') %}
+{
+   "height":{
+      "type":"numeric",
+      "value":160,
+      "unit":"dp"
+   },
+   "width":{
+      "type":"numeric",
+      "value":200,
+      "unit":"dp"
+   },
+   "alignment_horizontal":"left",
+   "frame":{
+      "style":"border",
+      "color":"{{ '#dcdee0' }}"
+   },
+   "action": {
+      "url": "{{ open_uri_action_for_item_in_list(url, 'show_collection_whole_card', item_number) }}",
+      "log_id": "show_route_gallery_card"
+   },
+   "children":[
+      {
+         "type":"div-image-block",
+         "image":{
+            "type":"div-image-element",
+            "ratio":1.79,
+            "image_url":"{{ image_url }}"
+         }
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ text }}",
+        "title_style": "text_m_medium",
+        "title_max_lines": 2
+      }
+   ],
+   "background":[
+      {
+         "type":"div-solid-background",
+         "color":"{{ '#ffffff' }}"
+      }
+   ],
+   "type":"div-container-block",
+   "alignment_vertical":"top",
+   "direction":"vertical"
+}
+{% endmacro %}
+
+{% macro render_show_collection_gallery(data) %}
+{
+   "states":[
+      {
+         "state_id": 1,
+         "blocks":[
+            {
+               "type":"div-gallery-block",
+               "items":[
+                 {% for item in data.collections %}
+                   {% if loop.index0 %}
+                    ,
+                   {% endif %}
+                   {{ render_show_collection_gallery_item(item, loop.index) }}
+                 {% endfor %}
+               ]
+            }
+         ]
+      }
+   ],
+   "background":[
+    {
+       "type":"div-solid-background",
+       "color":"{{ '#ffffff' }}"
+    }
+   ]
+}
+{% endmacro %}
+
+
+{% card show_collection_gallery %}
+	{{ render_show_collection_gallery(context.data) }}
+{% endcard %}

@@ -1,0 +1,50 @@
+OWNER(
+    g:voicetech-infra
+)
+
+RECURSE(
+    activation_storage
+    async_http_client
+    auth
+    backends_asr
+    backends_bio
+    backends_common
+    backends_ctxs
+    backends_laas
+    backends_memcached
+    backends_tts
+    common_handlers
+    delivery
+    event_patcher
+    events
+    experiments
+    extlog
+    frontend
+    global_counter
+    global_state
+    idm
+    legacy_navi
+    logging
+    mds
+    matrix_api
+    messenger
+    musicstream
+    notificator_api
+    perf_tester
+    processors
+    profiling
+    resolvers
+    responses_storage
+    settings
+    subway
+    tornado_speedups
+    uaas
+    uaas_mapper
+    unimemcached
+    unisystem
+    utils
+    vins
+    vins_context_storage
+    web_handlers
+    ydbs
+)

@@ -1,0 +1,2277 @@
+{% from "cards/common.nlg" import font_bold, font_color, logged_action_url, open_uri_action, open_uri_action_for_item_in_list with context %}
+{% from "json_macro.jinja" import json_items, json_enumerate_items %}
+
+{% macro render_cost(value, currency) -%}
+  {% set val = value|split_cost_with_spaces %}
+  {%- if currency == 'RUR' -%}
+    {{val}} ₽
+  {%- elif currency == 'USD' -%}
+    ${{val}}
+  {%- elif currency == 'EUR' -%}
+    {{val}} €
+  {%- else -%}
+    {{val}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_social_network(value) -%}
+  {% if value == 'vkontakte' %}
+    vk.com
+  {% elif value == 'odnoklassniki' %}
+    ok.ru
+  {% elif value == 'instagram' %}
+    instagram.com
+  {% elif value == 'twitter' %}
+    twitter.com
+  {% elif value == 'github' %}
+    github.com
+  {% else %}
+    {{value}}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_market_gallery_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('image') }}",
+          "ratio": 1
+        }
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      },
+      {
+        "type": "div-universal-block",
+        {% if item.get('price') %}
+          "title": "{{ render_cost(item.get('price'), item.get('currency')) }}",
+        {% else %}
+          "title": "Нет в продаже",
+        {% endif %}
+        "title_style": "title_m",
+        "title_max_lines": 1
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#8B8B8B', item.get('title') | html_escape) }}",
+        "title_max_lines": 2,
+        "title_style": "text_s"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "match_parent",
+        "weight": 1
+      },
+      {
+        "type": "div-universal-block",
+        "text": "{{ font_color('#106D1F', item.get('green_url') | html_escape) }}",
+        "text_max_lines": 1,
+        "text_style": "text_s"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 200,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 300,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'market_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_market_rating_opinions(model_rating, model_opinions_count, fill_star_icon, half_star_icon, empty_star_icon) %}
+  {
+    "rows":[
+      {
+        "cells": [
+          {% if model_rating %}
+            {% with rating_rounded = model_rating|float|round|int,
+                    rating = model_rating|float|int,
+                    rating_float = model_rating|float,
+                    icons = [] %}
+              {% for i in range(rating) %}
+                {% do icons.append(fill_star_icon) %}
+              {% endfor %}
+              {% if rating_rounded - rating == 1 %}
+                {% do icons.append(half_star_icon) %}
+              {% endif %}
+              {% for i in range(5 - rating_rounded) %}
+                {% do icons.append(empty_star_icon) %}
+              {% endfor %}
+
+              {% call(icon) json_items(icons) %}
+              {
+                "image": {
+                  "image_url": "{{ icon }}",
+                  "ratio": 1,
+                  "type": "div-image-element"
+                },
+                "vertical_alignment": "center",
+                "horizontal_alignment": "center",
+                "image_size": "xs"
+              }
+              {% endcall %}
+              ,
+            {% endwith %}
+          {% endif %}
+          {
+            {% if model_opinions_count is not none %}
+              "text": "{{ font_color('#7F7F7F', model_opinions_count|opinions_count) }}",
+            {% else %}
+              "text": "{{ font_color('#7F7F7F', '0'|opinions_count) }}",
+            {% endif %}
+            "text_style": "text_s",
+            {% if model_rating %}
+              "horizontal_alignment": "right",
+            {% else %}
+              "horizontal_alignment": "left",
+            {% endif %}
+            "vertical_alignment": "bottom"
+          }
+        ],
+        "type": "row_element"
+      }
+    ],
+    {% if model_rating %}
+      "columns": [
+        {
+          "right_padding": "zero",
+          "left_padding": "zero"
+          },
+        {
+          "right_padding": "zero",
+          "left_padding": "zero"
+        },
+        {
+        "right_padding": "zero",
+        "left_padding": "zero"
+        },
+        {
+          "right_padding": "zero",
+          "left_padding": "zero"
+        },
+        {
+          "right_padding": "zero",
+          "left_padding": "zero"
+        },
+        {
+          "left_padding": "xs"
+        }
+      ],
+    {% else %}
+      "columns": [
+        {
+          "right_padding": "zero",
+          "left_padding": "zero"
+        }
+      ],
+    {% endif %}
+    "type": "div-table-block"
+  }
+{% endmacro %}
+
+{% macro render_new_market_gallery_item(item, item_number, ico_url, fill_star_icon, half_star_icon, empty_star_icon) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      { "size": "xs", "type": "div-separator-block" },
+      {
+        "type": "div-universal-block",
+        {% if item.get('is_offer') %}
+          "title": "{{ render_cost(item.get('price'), item.get('currency')) }}",
+          "text": "{{ font_color('#8B8B8B', item.get('title') | html_escape) + '<br>' + font_color('#106D1F', item.get('green_url') | html_escape) }}",
+        {% else %}
+          {% if item.get('min_model_price') is not none%}
+            "title": "{{ render_cost(item.get('min_model_price'), item.get('currency')) }}",
+          {% else %}
+            "title": "Нет в продаже",
+          {% endif %}
+          "text": "{{ font_color('#8B8B8B', item.get('title') | html_escape) }}",
+        {% endif %}
+        "title_style": "title_s",
+        "title_max_lines": 1,
+        "text_max_lines": 3,
+        "text_style": "text_s",
+        "side_element": {
+          "element": {
+            "type": "div-image-element",
+            "ratio": 0.85,
+            "image_url": "{{ item.get('image') }}"
+          },
+          "position": "right",
+          "size": "m"
+        }
+      },
+      {{ render_market_rating_opinions(item.get('model_rating'), item.get('model_opinions_count'), fill_star_icon, half_star_icon, empty_star_icon) }}
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 250,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 115,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'market_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_market_gallery(data) %}
+  {
+    "type": "div-gallery-block",
+    "items": [
+      {% call(item_number, item) json_enumerate_items(data.get('market_gallery')) %}
+        {% if data.get('new_market_flag') %}
+          {{ render_new_market_gallery_item(item, item_number, data.get('market_buy_ico'), data.get('FillIcon'), data.get('HalfIcon'), data.get('NoneIcon')) }}
+        {% else %}
+          {{ render_market_gallery_item(item, item_number) }}
+        {% endif %}
+      {% endcall %}
+    ]
+    {% if data.get('tail_link') %}
+      ,
+      "tail": {
+        "action": {
+          "log_id": "image_recognizer_tail",
+          "url": "{{ open_uri_action(data.get('tail_link'), 'market_gallery__tail') }}"
+        },
+        "icon": {},
+        "text": "{{ font_color('#000000', 'Все похожие<br>товары') }}"
+      }
+    {% endif %}
+  }
+{% endmacro %}
+
+
+{% card image__market_gallery %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [ {{ render_market_gallery(context.data) }} ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+{% macro render_market_with_alice_url(title, market_type, market_id, index) -%}
+{%- if market_type == 'model' -%}
+  {% set market_id_field = "id" %}
+{%- else -%}
+  {% set market_id_field = "ware_id" %}
+{%- endif -%}
+{{ logged_action_url(
+  [
+    server_action_directive(
+      name="update_form",
+      payload={
+        "form_update": {
+          "slots": [
+            {
+              "type": "product",
+              "name": "product",
+              "value": {
+                "type": market_type,
+                market_id_field: market_id
+               }
+            },
+            {
+              "type": "market_type",
+              "name": "product_market_type",
+              "value": "GREEN"
+            },
+            {
+              "type": "string",
+              "name": "market__state",
+              "value": "Market.Choice.ProductDetails"
+            },
+            {
+              "type": "bool",
+              "name": "is_open",
+              "value": true
+            },
+            {
+              "type": "clid_type",
+              "name": "market_clid",
+              "value": "SEARCH_BY_PICTURE_IN_ALICE"
+            },
+            {
+              "type": "string",
+              "name": "referrer",
+              "value": "image_recognizer_market"
+            }
+          ],
+          "name": "personal_assistant.scenarios.market_product_details"
+        },
+        "resubmit": true
+      },
+      ignore_answer=False
+    )
+  ],
+  dict(item_number=index)
+)
+}}
+{%- endmacro -%}
+
+{% macro render_market_gallery_v3_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      { "size": "xxs", "type": "div-separator-block" },
+      {
+        "height": {
+          "value": 100,
+          "type": "numeric",
+          "unit": "sp"
+        },
+        "type": "div-container-block",
+        "width": {
+          "value": 100,
+          "type": "numeric",
+          "unit": "sp"
+        },
+        "children": [
+        {
+          "type": "div-image-block",
+          "image": {
+            "type": "div-image-element",
+            "ratio": 1,
+            "image_url": "{{ item.get('image') }}"
+          }
+        }
+        ]
+      },
+      {
+        "text_max_lines": 2,
+        "title_max_lines": 1,
+        {% if item.get('is_offer') %}
+        "title_style": "title_l",
+          "title": "{{ render_cost(item.get('price'), item.get('currency')) }}",
+          "text": "{{ font_color('#8B8B8B', item.get('title') | html_escape) }}",
+        {% else %}
+          {% if item.get('min_model_price') is not none %}
+            "title_style": "title_l",
+            {% if item.get('url') == "" %}
+              "title": "{{ render_cost(item.get('min_model_price'), item.get('currency')) }}",
+            {% else %}
+              "title": "{{ render_cost(item.get('price'), item.get('currency')) }}",
+            {% endif %}
+          {% else %}
+            "title_style": "title_l",
+            "title": "Нет в продаже",
+          {% endif %}
+          "text": "{{ font_color('#8B8B8B', item.get('title') | html_escape) }}",
+        {% endif %}
+        "type": "div-universal-block",
+        "text_style": "text_s"
+      },
+      {% if item.get('green_url') != "" %}
+        {
+          "type": "div-universal-block",
+          "text": "{{ font_color('#106D1F', item.get('green_url') | html_escape) }}",
+          "text_max_lines": 1,
+          "text_style": "text_s"
+        },
+      {% else %}
+        { "size": "l", "type": "div-separator-block" },
+        { "size": "xxs", "type": "div-separator-block" },
+      {% endif %}
+      {% if item.get('market_card_type') == 'market_with_alice' %}
+        {
+          "type": "div-buttons-block",
+          "is_fullwidth": 1,
+          "items": [
+            {
+              "background_color": "{{ '#6839CF' }}",
+              "text": "{{ font_color('#FFFFFF', 'Подробнее') }}",
+              "action": {
+                "url": "{{ render_market_with_alice_url(item.get('title'), item.get('market_type'), item.get('market_id'), item_number) }}",
+                "log_id": "image_recognizer"
+              }
+            }
+          ]
+        },
+      {% elif item.get('market_card_type') == 'market_external_link' %}
+        {
+          "type": "div-buttons-block",
+          "is_fullwidth": 1,
+          "items": [
+            {
+              "background_color": "{{ '#F5f5f5' }}",
+              "text": "Товар на Маркете",
+              "action": {
+                "url": "{{ open_uri_action(item.get('market_link'), 'market_gallery__item_link', item_number) }}",
+                "log_id": "image_recognizer"
+              }
+            }
+          ]
+        },
+      {% endif %}
+      {
+        "type": "div-separator-block",
+        "size": "xs"
+      }
+    ],
+    "direction": "vertical",
+    "alignment_horizontal": "center",
+    "width": {
+      "value": 180,
+      "type": "numeric"
+    },
+    "height": {
+      {% if item.get('market_card_type') == 'market_external_link' or item.get('market_card_type') == 'market_with_alice' %}
+        "value": 255,
+      {% else %}
+        "value": 210,
+      {% endif %}
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'market_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_market_gallery_v3(data) %}
+  {
+    "type": "div-gallery-block",
+    {% if data.get('tail_link') %}
+      "tail": {
+        "action": {
+          "log_id": "image_recognizer_tail",
+          "url": "{{ open_uri_action(data.get('tail_link'), 'market_gallery__tail') }}"
+        },
+        "icon": {
+          "border_color": "{{ '#8B0000' }}",
+          "icon_color": "{{ '#FF1000' }}",
+          "image_url": "https://avatars.mds.yandex.net/get-marketpic/330747/market-logo/50x50"
+        },
+        "text": "{{ font_color('#000000', 'Искать еще <br/>на Маркете') }}"
+      },
+    {% endif %}
+    "items": [
+      {% call(item_number, item) json_enumerate_items(data.get('market_gallery')) %}
+          {{ render_market_gallery_v3_item(item, item_number) }}
+      {% endcall %}
+    ]
+  }
+{% endmacro %}
+
+
+{% card image__market_gallery_v3 %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [ {{ render_market_gallery_v3(context.data) }} ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+
+{% macro render_similar_gallery_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('image') }}"
+        },
+        "ratio": 1
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 120,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 120,
+      "type": "numeric"
+    },
+    "alignment_horizontal": "center",
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'similar_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card image__similar_gallery %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(context.data.get('similar_gallery')) %}
+                {{ render_similar_gallery_item(item, item_number) }}
+              {% endcall %}
+            ]
+            {% if context.data.get('tail_link') %}
+              ,
+              "tail": {
+                "action": {
+                  "log_id": "image_recognizer_tail",
+                  "url": "{{ open_uri_action(context.data.get('tail_link'), 'similar_gallery__tail') }}"
+                },
+                "icon": {},
+                "text": "{{ font_color('#000000', 'Все похожие<br>картинки') }}"
+              }
+            {% endif %}
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+
+{% macro render_similar_gallery_v2_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('image') }}"
+        },
+        "ratio": 1
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#000000', item.get('title') | html_escape) }}",
+        "title_max_lines": 2,
+        "title_style": "text_s",
+        "text": "{{ font_color('#106D1F', item.get('html_host')) }}",
+        "text_max_lines": 1,
+        "text_style": "text_s"
+        {% if item.get('html_href') %}
+          ,
+          "action": {
+            "url": "{{ open_uri_action_for_item_in_list(item.get('html_href'), 'similar_gallery__item_url', item_number) }}",
+            "log_id": "image_recognizer"
+          }
+        {% endif %}
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 130,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 210,
+      "type": "numeric"
+    },
+    "alignment_horizontal": "center",
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'similar_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card image__similar_gallery_v2 %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(context.data.get('similar_gallery')) %}
+                {{ render_similar_gallery_v2_item(item, item_number) }}
+              {% endcall %}
+            ]
+            {% if context.data.get('tail_link') %}
+              ,
+              "tail": {
+                "action": {
+                  "log_id": "image_recognizer_tail",
+                  "url": "{{ open_uri_action(context.data.get('tail_link'), 'similar_gallery__tail') }}"
+                },
+                "icon": {},
+                "text": "{{ font_color('#000000', 'Все похожие<br>картинки') }}"
+              }
+            {% endif %}
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+{% macro render_onto_gallery_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('image') }}",
+          "ratio": 1.61
+        },
+        "ratio": 1
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xs"
+      },
+      {
+        "type": "div-universal-block",
+        "text": "{{ font_bold(font_color('#000000', item.get('title') | html_escape)) }}",
+        "text_max_lines": 2,
+        "text_style": "text_s"
+      },
+      {
+        "type": "div-separator-block",
+        "size": "s"
+      },      
+      {
+        "type": "div-universal-block",
+        "text": "{{ font_color('#106D1F', item.get('html_host')) }}",
+        "text_max_lines": 1,
+        "text_style": "text_s",
+        "alignment_vertical": "bottom"
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 180,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 180,
+      "type": "numeric"
+    },
+    "alignment_horizontal": "center",
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'similar_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card image__onto_gallery %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(context.data.get('similar_gallery')) %}
+                {{ render_onto_gallery_item(item, item_number) }}
+              {% endcall %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+{% macro update_clothes_form_action(item, item_number, answer_context) -%}
+  {% set payload = dict() %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url(
+        [
+          server_action_directive(
+            'update_form',
+            {
+              'form_update': {
+                'name': 'personal_assistant.scenarios.image_what_is_this__clothes',
+                'slots': [
+                  {
+                    'name': 'selected_clothes_crop',
+                    'type': 'crop',
+                    'value': {
+                      'category': item.category,
+                      'category_id': item.category_id,
+                      'crop_orig': item.crop_orig,
+                      'image': item.image,
+                      'clothes_original_image': answer_context.query_url,
+                    },
+                    'optional': True
+                  },
+                  {
+                    'name': 'answer',
+                    'type': 'image_result',
+                    'value': answer_context,
+                    'optional': True
+                  }
+                ]
+              },
+              'resubmit': True
+            }
+          )
+        ], payload)
+  }}
+{%- endmacro %}
+
+
+{% macro render_clothes_gallery_item(item, item_number, answer_context) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('image') }}",
+          "ratio": 1
+        }
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xs"
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#8B8B8B', item.get('category') | html_escape) }}",
+        "title_max_lines": 2,
+        "title_style": "text_s"
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 140,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 180,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ update_clothes_form_action(item, item_number, answer_context) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card image__clothes_gallery %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(form.answer.get('clothes_crops')) %}
+                {{ render_clothes_gallery_item(item, item_number, form.answer) }}
+              {% endcall %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+
+{% card image__clothes_tabs_gallery %}
+  {
+    "states": [{
+      "state_id": 1,
+      "blocks": [{
+        "type": "div-separator-block",
+        "size": "xxs"
+      }, {
+        "type": "div-tabs-block",
+        "has_delimiter": 0,
+        "inactive_tab_color": "{{ '#919CB5' }}",
+        "active_tab_color": "{{ '#FFFFFF' }}",
+        "active_tab_bg_color": "{{ '#6839CF' }}",
+        "items": [
+          {% if context.data | length > 1 %}
+          {
+            "content": {
+              "children": [{
+                "type": "div-separator-block",
+                "size": "xxs"
+              },
+              {
+                "type": "div-gallery-block",
+                "items": [
+                  {% call(gallery) json_items(context.data) %}
+                    {{ render_market_gallery_item(gallery.gallery.market_gallery[0], 0) }}
+                  {% endcall %}
+                ]
+              }
+              ],
+              "direction": "vertical",
+              "height": {
+                "type": "predefined",
+                "value": "wrap_content"
+              },
+              "type": "div-container-block",
+              "width": {
+                "type": "predefined",
+                "value": "match_parent"
+              }
+            },
+            "title": {
+              "text": "Все"
+            }
+          },
+          {% endif %}
+          {% for crop in context.data %}
+          {
+            "content": {
+              "children": [{
+                "type": "div-separator-block",
+                "size": "xxs"
+              },
+                {{ render_market_gallery(crop.gallery) }}
+              ],
+              "direction": "vertical",
+              "height": {
+                "type": "predefined",
+                "value": "wrap_content"
+              },
+              "type": "div-container-block",
+              "width": {
+                "type": "predefined",
+                "value": "match_parent"
+              }
+            },
+            "title": {
+              "text": "{{ crop.category | capitalize_first | html_escape }}"
+            }
+          }
+          {{ "," if not loop.last }}
+          {% endfor %}
+        ]
+      }, {
+        "type": "div-separator-block",
+        "size": "s",
+        "has_delimiter": 1
+      }]
+    }]
+  }
+{% endcard %}
+
+
+{% macro render_people_gallery_item(item, item_number) %}
+  {
+    "type": "div-container-block",
+    "children": [
+      {
+        "type": "div-image-block",
+        "image": {
+          "type": "div-image-element",
+          "image_url": "{{ item.get('avatar') }}",
+          "ratio": 1
+        }
+      },
+      {
+        "type": "div-separator-block",
+        "size": "xxs"
+      },
+      {
+        "type": "div-universal-block",
+        "title": "{{ font_color('#000000', item.get('name') | capitalize_first | html_escape) }}",
+        "title_max_lines": 2,
+        "title_style": "title_s",
+        "text": "{{ font_color('#8B8B8B', item.get('age') | human_age) }}",
+        "text_max_lines": 2,
+        "text_style": "text_s"
+      },
+      {
+        "type": "div-universal-block",
+        "text": "{{ font_color('#106D1F', render_social_network(item.get('network'))) }}",
+        "text_max_lines": 1,
+        "text_style": "text_s"
+      }
+    ],
+    "direction": "vertical",
+    "width": {
+      "value": 150,
+      "type": "numeric"
+    },
+    "height": {
+      "value": 260,
+      "type": "numeric"
+    },
+    "frame": {
+      "style": "border",
+      "color": "{{ '#e6e8eb' }}"
+    },
+    "action": {
+      "url": "{{ open_uri_action_for_item_in_list(item.get('link'), 'people_gallery__item', item_number) }}",
+      "log_id": "image_recognizer"
+    },
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card image__people_gallery %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-gallery-block",
+            "items": [
+              {% call(item_number, item) json_enumerate_items(context.data.get('people_gallery')) %}
+                {{ render_people_gallery_item(item, item_number) }}
+              {% endcall %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+
+{% macro common_object(data, search_button, search_logging, goto_button, goto_logging, card_prefix, card_url_param) %}
+  {% with title = data|get_item("card_title"),
+          text = data|get_item("card_text"),
+          image = data|get_item("img"),
+          search_url = data|get_item("search_url"),
+          promo_url = data|get_item("promo_url"),
+          card_url = data|get_item(card_url_param),
+          footer = data|get_item("card_footer"),
+          has_audio = data|get_item("has_audio") %}
+    {
+      "states": [
+        {
+          "state_id": 1,
+          "blocks": [
+            { "size": "xs", "type": "div-separator-block" },
+            {
+              "type": "div-image-block",
+              "image": {
+                "image_url": "{{ image|get_item('src') }}",
+                "type": "div-image-element",
+                "ratio": 1
+              }
+            },
+            {
+              "size": "xs",
+              "type": "div-separator-block",
+              "has_delimiter": 0
+            },
+            {
+              "title": "{{ font_color('#000000', title|html_escape) }}",
+              "title_style": "title_s",
+              "text": "{{ font_color('#7F7F7F', text|html_escape) }}",
+              "text_style": "text_s",
+              "type": "div-universal-block"
+            },
+        {% if footer %}
+              {
+                "type": "div-universal-block",
+                "text": "{{ font_color('#7F7F7F', footer|html_escape) }}"
+              },
+        {% endif %}
+        {% if has_audio %}
+              {
+                "rows": [
+                    {
+                            "cells": [
+                                {
+                                        "image": {
+                                                 "image_url": "http://avatars.mds.yandex.net/get-alice/4080372/headphones.png/orig",
+                                                 "type": "div-image-element"
+                                        },
+                                        "image_position": "left",
+                                        "image_size": "xs",
+                                        "vertical_alignment": "top"
+                                },
+                                {
+                                        "text": "Включите звук",
+                                        "text_style": "text_s",
+                                        "vertical_alignment": "top"
+                                }
+                            ],
+                            "type": "row_element",
+                            "top_padding": "zero"
+                    }
+                ],
+                "columns": [
+                    {
+                        "left_padding": "zero",
+                        "right_padding": "zero"
+                    },
+                    {
+                        "right_padding": "zero"
+                    }
+                ],
+                "type": "div-table-block"
+              }
+        {% endif %}
+        {% if search_url %}
+            ,{
+              "size": "xs",
+              "type": "div-separator-block",
+              "has_delimiter": 1
+            },
+            {
+              "text": "{{ font_color('#0A4DC3', search_button) }}",
+              "type": "div-footer-block",
+              "action": {
+                "url": "{{ open_uri_action(search_url, card_prefix ~ '_open_serp__button') }}",
+                "log_id": "{{ search_logging }}"
+              }
+            }
+        {% endif %}
+        {% if promo_url %}
+            ,{
+              "size": "xxs",
+              "type": "div-separator-block",
+              "has_delimiter": 1
+            },
+            {
+              "text": "{{ font_color('#0A4DC3', goto_button) }}",
+              "type": "div-footer-block",
+              "action": {
+                "url": "{{ open_uri_action(promo_url, card_prefix ~ '_open_promo__button') }}",
+                "log_id": "{{ goto_logging }}"
+              }
+            }
+        {% else %}
+            ,{
+              "size": "xxs",
+              "type": "div-separator-block",
+              "has_delimiter": 0
+            }
+        {% endif %}
+          ],
+          "action": {
+            "url": "{{ open_uri_action(card_url, card_prefix ~ '_whole_card') }}",
+            "log_id": "whole_card"
+          }
+        }
+      ],
+      "background": [
+        {
+          "color": "{{ '#FFFFFF' }}",
+          "type": "div-solid-background"
+        }
+      ]
+    }
+  {% endwith %}
+{% endmacro %}
+
+{% card museum_object %}
+  {{ common_object(context.data, 'НАЙТИ В ЯНДЕКСЕ', 'museum_search', 'НАЙТИ ПОХОЖИЕ', 'museum_search_similar', 'museum', 'card_url') }}
+{% endcard %}
+
+
+{% card new_image_search_object %}
+  {% with source_type = context.data|get_item('serp_data.source'),
+          phone_uri = context.data|get_item('phone_uri'),
+          title = context.data|get_item('title'),
+          text = context.data|get_item('text'),
+          image = context.data|get_item('image'),
+          action_url = context.data|get_item('serp_url'),
+          search_url = context.data|get_item("serp_url"),
+          image_search_url = context.data|get_item('image_serp_url'),
+          source_url = context.data|get_item('url'),
+          market_url = context.data|get_item('market_deals') %}
+  {
+      "states": [
+          {
+              "state_id": 1,
+              "blocks": [
+                  {% if image|get_item('src') %}
+                    {
+                      "type": "div-image-block",
+                      "image": {
+                        "image_url": "{{ image|get_item('src') }}",
+                        "ratio": 1.5,
+                        "type": "div-image-element"
+                      }
+                    },
+                  {% endif %}
+                  {
+                    {% if not title %}
+                      {% set title, text = text, '' %}
+                    {% endif %}
+
+                    "title": "{{ font_color('#000000', title|html_escape) }}",
+                    {% if title|length < 18 %}
+                      "title_style": "numbers_s",
+                    {% elif not text and title|length > 50 %}
+                      "title_style": "text_s",
+                    {% else %}
+                      "title_style": "title_s",
+                    {% endif %}
+                    {% if text %}
+                        "text": "{{ font_color('#333333', text|html_escape) }}",
+                        "text_style": "text_s",
+                        "type": "div-universal-block",
+                    {% endif %}
+                    "type": "div-universal-block"
+                  }
+                  {% if source_url %}
+                    {% set action_url = source_url %}
+                    ,
+                    {
+                      "title": "{{ font_color('#7F7F7F', source_url|hostname) }}",
+                      "title_style": "text_s",
+                      "type": "div-universal-block"
+                    }
+                  {% endif %}
+                  {% if phone_uri %}
+                    {% set action_url = phone_uri %}
+                    ,
+                    {
+                      "size": "xs",
+                      "type": "div-separator-block",
+                      "has_delimiter": 1
+                    },
+                    {
+                      "text": "{{ font_color('#0A4DC3', 'ПОЗВОНИТЬ') }}",
+                      "type": "div-footer-block",
+                      "action": {
+                          "url": "{{ open_uri_action(phone_uri, 'phone_call__button') }}",
+                          "log_id": "whole_card"
+                      }
+                    }
+                  {% elif search_url %}
+                    ,
+                    {
+                      "size": "xs",
+                      "type": "div-separator-block",
+                      "has_delimiter": 1
+                    },
+                    {
+                      "text": "{{ font_color('#0A4DC3', 'ОТКРЫТЬ В ПОИСКЕ') }}",
+                      "type": "div-footer-block",
+                      "action": {
+                          "url": "{{ open_uri_action(search_url, 'open_serp__button', 'open_search_button') }}",
+                          "log_id": "whole_card"
+                      }
+                    }
+                  {% endif %}
+                  {% if image_search_url %}
+                    ,
+                    {
+                      "size": "xs",
+                      "type": "div-separator-block",
+                      "has_delimiter": 1
+                    },
+                    {
+                      "text": "{{ font_color('#0A4DC3', 'ПОСМОТРЕТЬ ПОХОЖИЕ КАРТИНКИ') }}",
+                      "type": "div-footer-block",
+                      "action": {
+                          "url": "{{ open_uri_action(image_search_url, 'open_serp__button', 'open_search_similar_pictures_button') }}",
+                          "log_id": "whole_card"
+                      }
+                    }
+                  {% endif %}
+                  {% if market_url %}
+                    ,
+                    {
+                      "size": "xs",
+                      "type": "div-separator-block",
+                      "has_delimiter": 1
+                    },
+                    {
+                      "text": "{{ font_color('#0A4DC3', 'ИСКАТЬ НА ЯНДЕКС.МАРКЕТЕ') }}",
+                      "type": "div-footer-block",
+                      "action": {
+                          "url": "{{ open_uri_action(market_url, 'open_serp__button', 'open_search_in_market_button') }}",
+                          "log_id": "whole_card"
+                      }
+                    }
+                  {% endif %}
+          ],
+          "action": {
+              "url": "{{ open_uri_action(action_url, 'whole_card', 'image_search_whole_card') }}",
+              "log_id": "whole_card"
+          }
+        }
+      ],
+      "background": [
+        {
+          "color": "{{ '#FFFFFF' }}",
+          "type": "div-solid-background"
+        }
+      ]
+  }
+  {% endwith %}
+{% endcard %}
+
+{% card similar_people %}
+  {% with source_url = context.data|get_item("source_url"),
+          title = context.data|get_item("title"),
+          text = context.data|get_item("text"),
+          image = context.data|get_item("image"),
+          source_image = form.answer|get_item('query_url'),
+          image_url = context.data|get_item("image_url"),
+          search_url = context.data|get_item("search_url"),
+          similarity = "Похожи на " ~ context.data|get_item("similarity") ~ "%",
+          width = 320,
+          halfwidth = 160 %}
+    {
+      "states": [
+        {
+          "state_id": 1,
+          "blocks": [
+            {
+              "type": "div-container-block",
+              "direction": "horizontal",
+              "width": {
+                "type": "numeric",
+                "value": {{ width }}
+              },
+              "height": {
+                "type": "numeric",
+                "value": {{ halfwidth }}
+              },
+              "children": [
+                {
+                  "type": "div-container-block",
+                  "height": {
+                    "type": "predefined",
+                    "value": "match_parent"
+                  },
+                  "width": {
+                    "type": "numeric",
+                    "value": {{ halfwidth }}
+                  },
+                  "children": [
+                    {
+                      "type": "div-image-block",
+                      "image": {
+                        "type": "div-image-element",
+                        "image_url": "{{ image }}",
+                        "ratio": 1
+                      },
+                      "action": {
+                          "url": "{{ open_uri_action(image_url, 'open_image') }}",
+                          "log_id": "open_image"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "div-container-block",
+                  "height": {
+                    "type": "predefined",
+                    "value": "match_parent"
+                  },
+                  "width": {
+                    "type": "numeric",
+                    "value": {{ halfwidth }}
+                  },
+                  "children": [
+                    {
+                      "type": "div-image-block",
+                      "image": {
+                        "type": "div-image-element",
+                        "image_url": "{{ source_image }}",
+                        "ratio": 1
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "div-container-block",
+              "height": {
+                "type": "predefined",
+                "value": "wrap_content"
+              },
+              "width": {
+                "type": "numeric",
+                "value": {{ width }}
+              },
+              "children": [
+                {
+                  "type": "div-separator-block",
+                  "size": "xxs"
+                },
+                {
+                  "title": "{{ font_color('#73BD60', similarity) }}",
+                  "title_style": "text_m_medium",
+                  "type": "div-universal-block"
+                },
+                {
+                  {% if not title %}
+                    {% set title, text = text, '' %}
+                  {% endif %}
+
+                  "title": "{{ font_color('#000000', title|html_escape) }}",
+                  "title_style": "title_s",
+                  {% if text %}
+                      "text": "{{ font_color('#333333', text|html_escape) }}",
+                      "text_style": "text_s",
+                      "text_max_lines": 2,
+                  {% endif %}
+                  "type": "div-universal-block"
+                },
+                {% if source_url %}
+                  {
+                    "title": "{{ font_color('#7F7F7F', source_url|hostname) }}",
+                    "title_style": "text_s",
+                    "type": "div-universal-block"
+                  },
+                {% endif %}
+                {
+                    "type": "div-separator-block"
+                }
+              ]
+            }
+          ]
+          {% if source_url %}
+            ,
+            "action": {
+                "url": "{{ open_uri_action(source_url, 'whole_card', 'similar_people_image_whole_card') }}",
+                "log_id": "whole_card"
+            }
+          {% endif %}
+        }
+      ],
+      "background": [
+        {
+          "color": "{{ '#ffffff' }}",
+          "type": "div-solid-background"
+        }
+      ],
+      "width": {
+        "type": "predefined",
+        "value": "wrap_content"
+      }
+    }
+  {% endwith %}
+{% endcard %}
+
+
+{% macro update_intent_form_action(intent_id, answer_context, item_number) -%}
+  {% set payload = dict() %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {{ logged_action_url(
+        [
+          server_action_directive(
+            'update_form',
+            {
+              'form_update': {
+                'name': "personal_assistant.scenarios." + intent_id,
+                'slots': [
+                  {
+                    'name': 'answer',
+                    'type': 'image_result',
+                    'value': answer_context,
+                    'optional': True
+                  }
+                ]
+              },
+              'resubmit': True
+            }
+          )
+        ], payload)
+  }}
+{%- endmacro %}
+
+{% macro camera_open_intent_action(data, intent_id) -%}
+  {% set payload = dict() %}
+  {%- if item_number is defined -%}
+    {% do payload.update(dict(item_number=item_number)) %}
+  {%- endif -%}
+  {% set query_url = data.get("query_url") %}
+  {% set crop_coordinates = data.get("crop_coordinates") %}
+  {% set image_search_mode = data.get("image_search_mode") %}
+  {% set image_search_mode_name = data.get("image_search_mode_name") %}
+  {{ logged_action_url(
+    [
+      client_action_directive(
+        name='start_image_recognizer',
+        payload={
+          "image_url": query_url,
+          "crop_coordinates": crop_coordinates,
+          "image_search_mode": image_search_mode,
+          "image_search_mode_name": image_search_mode_name
+        }
+      )
+    ], payload)
+  }}
+{%- endmacro %}
+
+{% macro render_button(data, item_number) %}
+{% set intent_id = data.get('id') %}
+{% set answer_context = data.get('context') %}
+{% set external_url = data.get('external_url') %}
+{% set camera_open = data.get('camera_open') %}
+{% set icon = '' %}
+{% if intent_id == "image_what_is_this__similar" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/40186/icon-similar/orig' %}
+{% elif intent_id == "image_what_is_this__clothes_forced" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/38061/icon-clothes/orig' %}
+{% elif intent_id == "image_what_is_this__market" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/15681/icon-market/orig' %}
+{% elif intent_id == "image_what_is_this__ocr" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/40186/icon-ocr/orig' %}
+{% elif intent_id == "image_what_is_this__details" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/13615/icon-what/orig' %}
+{% elif intent_id == "image_what_is_this__info" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/15681/icon-info/orig' %}
+{% elif intent_id == "image_what_is_this__ocr_voice_suggest" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/13615/icon-ocr_voice/orig' %}
+{% elif intent_id == "image_what_is_this__office_lens" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/39305/icon-office_lens/orig' %}
+{% elif intent_id == "image_what_is_this__all_sizes" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/40560/icon-all_sizes/orig' %}
+{% elif intent_id == "image_what_is_this__office_lens_download" %}
+    {% set icon = 'http://avatars.mds.yandex.net/get-images-similar-mturk/40186/icon-download/orig' %}
+{% elif intent_id == "image_what_is_this__office_lens_disk" %}
+    {% set icon = 'http://avatars.mds.yandex.net/get-images-similar-mturk/13615/icon-disk/orig' %}
+{% elif intent_id == "image_what_is_this__office_lens_crop" %}
+    {% set icon = 'http://avatars.mds.yandex.net/get-images-similar-mturk/13615/crop_icon/orig' %}
+{% elif intent_id == "image_what_is_this__similar_people" %}
+    {% set icon = 'http://avatars.mds.yandex.net/get-images-similar-mturk/13615/icon-similar_people/orig' %}
+{% elif intent_id == "image_what_is_this__similar_artwork" %}
+    {% set icon = 'https://avatars.mds.yandex.net/get-images-similar-mturk/15681/icon-similar_artwork/orig' %}
+{% endif %}
+{
+  "type": "div-container-block",
+  "direction": "vertical",
+  "alignment_horizontal": "center",
+  "alignment_vertical": "center",
+  "background": [
+    {
+      "type": "div-solid-background",
+      "color": "{{ '#F0F0F5' }}"
+    }
+  ],
+  "children": [
+    {
+      "image": {
+        "image_url": "{{ icon }}",
+        "type": "div-image-element"
+      },
+      "type": "div-image-block",
+      "action": {
+        {% if camera_open %}
+           "url": "{{ camera_open_intent_action(answer_context, intent_id) | trim }}",
+        {% elif external_url %}
+          "url": "{{ open_uri_action(external_url, 'whole_card', intent_id) | trim }}",
+        {% else %}
+          "url": "{{ update_intent_form_action(intent_id, answer_context, item_number) | trim }}",
+        {% endif %}
+          "log_id": "{{ intent_id }}"
+      }
+    }
+  ],
+  "width": {
+    "type": "numeric",
+    "value": 35
+  },
+  "height": {
+    "type": "numeric",
+    "value": 35
+  }
+}
+{% endmacro %}
+
+{% macro render_button_caption(data, item_number) %}
+{% set intent_id = data.get('id') %}
+{% set answer_context = data.get('context') %}
+{% set external_url = data.get('external_url') %}
+{% set camera_open = data.get('camera_open') %}
+{% set text_color = '#919CB5' %}
+{% set caption = '' %}
+{% if intent_id == "image_what_is_this__similar" %}
+    {% set caption = 'Похожие картинки' %}
+{% elif intent_id == "image_what_is_this__clothes_forced" %}
+    {% set caption = 'Похожая одежда' %}
+{% elif intent_id == "image_what_is_this__market" %}
+    {% set caption = 'Похожие товары' %}
+{% elif intent_id == "image_what_is_this__ocr" %}
+    {% set caption = 'Текст<br>&nbsp;' %}
+{% elif intent_id == "image_what_is_this__details" %}
+    {% set caption = '&nbsp;Кто это?<br>&nbsp;' if data.get('person') else '&nbsp;Что это?<br>&nbsp;' %}
+{% elif intent_id == "image_what_is_this__info" %}
+    {% set caption = 'Поиск по картинке' %}
+{% elif intent_id == "image_what_is_this__ocr_voice_suggest" %}
+    {% set caption = 'Озвучить<br>&nbsp;' %}
+{% elif intent_id == "image_what_is_this__office_lens" %}
+    {% set caption = 'Сканер<br>&nbsp;' %}
+{% elif intent_id == "image_what_is_this__all_sizes" %}
+    {% set caption = 'Другие размеры' %}
+{% elif intent_id == "image_what_is_this__office_lens_download" %}
+    {% set caption = 'Загрузить<br>&nbsp;' %}
+{% elif intent_id == "image_what_is_this__office_lens_disk" %}
+    {% set caption = 'Сохранить<br>&nbsp;&nbsp;&nbsp;на диск' %}
+{% elif intent_id == "image_what_is_this__office_lens_crop" %}
+    {% set caption = 'Обрезать' %}
+{% elif intent_id == "image_what_is_this__similar_artwork" %}
+    {% set caption = 'Похожая картина' %}
+{% elif intent_id == "image_what_is_this__similar_people" %}
+    {% set caption = 'Похож на звезду' %}
+{% endif %}
+{
+  "horizontal_alignment": "center",
+  "type": "div-universal-block",
+  "text_style": "text_s",
+  "text": "{{ font_color(text_color, caption) }}",
+  "text_max_lines": 2,
+  "action": {
+    {% if camera_open %}
+       "url": "{{ camera_open_intent_action(answer_context, intent_id) | trim }}",
+    {% elif external_url %}
+      "url": "{{ open_uri_action(external_url, 'whole_card', intent_id) | trim }}",
+    {% else %}
+      "url": "{{ update_intent_form_action(intent_id, answer_context, item_number) | trim }}",
+    {% endif %}
+    "log_id": "{{ intent_id }}"
+  }
+}
+{% endmacro %}
+
+{% macro render_alternative_intents_buttons(button_number, button) %}
+{% set intent_id = button.get('id') %}
+{% set item_width = 85 %}
+{% if intent_id == "image_what_is_this__similar" %}
+    {% set item_width = 84 %}
+{% elif intent_id == "image_what_is_this__clothes_forced" %}
+    {% set item_width = 82 %}
+{% elif intent_id == "image_what_is_this__market" %}
+    {% set item_width = 82 %}
+{% elif intent_id == "image_what_is_this__ocr" %}
+    {% set item_width = 60 %}
+{% elif intent_id == "image_what_is_this__details" %}
+    {% set item_width = 82 %}
+{% elif intent_id == "image_what_is_this__info" %}
+    {% set item_width = 84 %}
+{% elif intent_id == "image_what_is_this__ocr_voice_suggest" %}
+    {% set item_width = 85 %}
+{% elif intent_id == "image_what_is_this__office_lens" %}
+    {% set item_width = 70 %}
+{% elif intent_id == "image_what_is_this__office_lens_download" %}
+    {% set item_width = 90 %}
+{% elif intent_id == "image_what_is_this__office_lens_disk" %}
+    {% set item_width = 90 %}
+{% elif intent_id == "image_what_is_this__office_lens_crop" %}
+    {% set item_width = 90 %}
+{% elif intent_id == "image_what_is_this__all_sizes" %}
+    {% set item_width = 82 %}
+{% endif %}
+{
+  "type": "div-container-block",
+  "direction": "vertical",
+  "alignment_horizontal": "center",
+  "alignment_vertical": "center",
+  "children": [
+    {{ render_button(button, button_number) }},
+    {
+      "type": "div-separator-block",
+      "size": "xxs"
+    },
+    {{ render_button_caption(button, button_number) }}
+  ],
+  "width": {
+    "type": "numeric",
+    "value": {{ item_width }}
+  },
+  "height": {
+    "type": "predefined",
+    "value": "wrap_content"
+  }
+}
+{% endmacro %}
+
+{% card image__alternative_intents %}
+{% set text_color = '#7F7F7F' %}
+{% set caption = 'Ещё информация по этой картинке' %}
+{
+"states": [
+  {
+    "state_id": 1,
+    "blocks": [
+    {
+      "type": "div-container-block",
+      "direction": "vertical",
+      "children": [
+        {
+          "type": "div-separator-block",
+          "size": "xs"
+        },
+        {% if not context.data.disable_title %}
+          {
+            "type": "div-universal-block",
+            "title_style": "text_s",
+            "title": "{{ font_color(text_color, caption) }}"
+          },
+        {% endif %}
+        {
+          "type": "div-gallery-block",
+          "background": [
+            {
+              "type": "div-solid-background",
+              "color": "{{ '#FFFFFF' }}"
+             }
+          ],
+          "items": [
+            {% call(button_number, button) json_enumerate_items(context.data.buttons) %}
+              {{ render_alternative_intents_buttons(button_number, button) }}
+            {% endcall %}
+          ],
+          "padding_between_items": {
+            "type":"numeric",
+            "value": 1,
+            "unit": "dp"
+          },
+          "padding_top": {
+            "type": "numeric",
+            "unit": "dp",
+            "value": 4
+          },
+          "padding_bottom": {
+             "type": "numeric",
+             "unit": "dp",
+             "value": 4
+          }
+        }
+      ],
+      "width": {
+        "type": "predefined",
+        "value": "match_parent"
+      },
+      "height": {
+        "type": "predefined",
+        "value": "wrap_content"
+      }
+    }
+    ]
+  }
+],
+"width": {
+  "type": "predefined",
+  "value": "match_parent"
+}
+}
+{% endcard %}
+
+{% card ocr_contact %}
+  {% with contacts = context.data|get_item("contacts") %}
+    {
+      "states": [
+        {
+          "state_id": 1,
+          "blocks": [
+            {
+              "type": "div-table-block",
+              "rows": [
+                {% for contact in contacts %}
+                  {% if not loop.first %}
+                    ,
+                    {
+                      "type": "separator_element"
+                    },
+                  {% endif %}
+                  {
+                    "type": "row_element",
+                    "top_padding": "xs",
+                    "cells": [
+                      {
+                        "text": "{{ font_color('#805DD9', contact.value) }}",
+                        "text_style": "title_s",
+                        "image": {
+                          {% if contact.type == 'email' %}
+                            "image_url": "http://avatars.mds.yandex.net/get-alice/4303059/email.png/orig",
+                          {% elif contact.type == 'phone' %}
+                            "image_url": "http://avatars.mds.yandex.net/get-alice/4080310/phone.png/orig",
+                          {% else %}
+                            "image_url": "http://avatars.mds.yandex.net/get-alice/4407644/site.png/orig",
+                          {% endif %}
+                          "type": "div-image-element"
+                        },
+                        "image_position": "left",
+                        "image_size": "xl",
+                        "action": {
+                          "url": "{{ open_uri_action_for_item_in_list(contact.uri, 'open_contact', loop.index) }}",
+                          "log_id": "whole_card"
+                        }
+                      }
+                    ]
+                    {% if loop.last %}
+                      ,
+                      "bottom_padding": "xs"
+                    {% endif %}
+                  }
+                {% endfor %}
+              ],
+              "columns": [
+                {
+                  "left_padding": "zero",
+                  "right_padding": "zero",
+                  "weight": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  {% endwith %}
+{% endcard %}
+
+{% card market_card %}
+  {% with image = context.data|get_item("image"),
+          title = context.data|get_item("title"),
+          model_rating = context.data|get_item("model_rating"),
+          model_opinions_count = context.data|get_item("model_opinions_count"),
+          fill_icon = context.data|get_item("FillIcon"),
+          half_icon = context.data|get_item("HalfIcon"),
+          none_icon = context.data|get_item("NoneIcon") %}
+    {
+      "states": [
+        {
+          "state_id": 1,
+          "blocks": [
+                {
+                  "type": "div-image-block",
+                  "image": {
+                    "type": "div-image-element",
+                    "image_url": "{{ image }}",
+                    "ratio": 1
+                  }
+                },
+                {
+                  "type": "div-separator-block"
+                },
+                {
+                  "type": "div-universal-block",
+                  {% if context.data.get('is_offer') %}
+                    "title": "{{ render_cost(context.data.get('price'), context.data.get('currency')) }}",
+                    "text": "{{ context.data.get('title') | html_escape }}",
+                  {% else %}
+                    {% if context.data.get('min_model_price') is not none %}
+                      "title": "{{ render_cost(context.data.get('min_model_price'), context.data.get('currency')) }}",
+                    {% else %}
+                      "title": "Нет в продаже",
+                    {% endif %}
+                    "text": "{{ context.data.get('title') | html_escape }}",
+                  {% endif %}
+                  "text_style": "title_m"
+                },
+                {% if context.data.get('is_offer') %}
+                  {
+                    "type": "div-universal-block",
+                    "text": "{{ font_color('#106D1F', context.data.get('green_url') | html_escape) }}"
+                  },
+                {% endif %}
+                {{ render_market_rating_opinions(model_rating, model_opinions_count, fill_icon, half_icon, none_icon) }},
+                {
+                  "type": "div-separator-block"
+                }
+          ],
+          "action": {
+            "url": "{{ open_uri_action(context.data.get('link'), 'market_gallery__card') }}",
+            "log_id": "image_recognizer"
+          }
+        }
+      ]
+    }
+  {% endwith %}
+{% endcard %}
+
+{% card office_lens %}
+  {% with download_image = context.data|get_item("download_image"),
+          preview_image = context.data|get_item("preview_image"),
+          full_image = context.data|get_item("full_image")
+  %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-container-block",
+            "background": [
+              {
+                "type": "div-image-background",
+                "image_url": "{{ preview_image }}"
+              }
+            ],
+            "width": {
+              "type": "numeric",
+              "value": 168
+            },
+            "height": {
+              "type": "numeric",
+              "value": 220
+            },
+            "alignment_vertical": "bottom",
+            "children": [
+              {
+                "type": "div-container-block",
+                "background": [
+                  {
+                    "type": "div-solid-background",
+                    "color": "{{ '#80000000' }}"
+                  }
+                ],
+                "alignment_vertical": "center",
+                "alignment_horizontal": "center",
+                "frame": {
+                  "style": "border"
+                },
+                "children": [
+                  {
+                    "type": "div-table-block",
+                    "rows": [
+                      {
+                        "cells": [
+                          {
+                            "image": 
+                              {
+                                "image_url": "http://avatars.mds.yandex.net/get-alice/4334267/icon_download/orig",
+                                "type": "div-image-element"
+                              }
+                          },
+                          {
+                            "text": "{{ font_color('#FFFFFF', 'СОХРАНИТЬ') }} "
+                          }
+                        ],
+                        "type": "row_element"
+                      }
+                    ],
+                    "columns": [
+                      {
+                        "left_padding": "zero",
+                        "right_padding": "xxs"
+                      }
+                      {% if download_image %}
+                        ,
+                        {
+                          "left_padding": "xxs",
+                          "right_padding": "zero"
+                        }
+                      {% endif %}
+                    ]
+                  }
+                ],
+                "height": {
+                  "type": "numeric",
+                  "value": 40
+                },
+                "width": {
+                  "type": "numeric",
+                  "value": 168
+                },
+                "action": {
+                  "url": "{{ open_uri_action(download_image, 'office_lens__card') }}",
+                  "log_id": "image_recognizer"
+                }
+              }
+            ]
+            {% if full_image %}
+            ,
+            "action": {
+              "url": "{{ open_uri_action(full_image, 'office_lens__show') | trim }}",
+              "log_id": "image_recognizer"
+            }
+            {% endif %}
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ],
+    "width": {
+      "type": "predefined",
+      "value": "wrap_content"
+    }
+  }
+  {% endwith %}
+{% endcard %}
+
+
+{% card new_office_lens %}
+  {% with preview_image = context.data|get_item("preview_image"),
+          full_image = context.data|get_item("full_image") %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-container-block",
+            "width": {
+              "type": "numeric",
+              "value": 168
+            },
+            "height": {
+              "type": "numeric",
+              "value": 220
+            },
+            "alignment_vertical": "bottom",
+            "children": [
+              {
+                "type": "div-image-block",
+                "image": {
+                  "type": "div-image-element",
+                  "image_url": "{{ preview_image }}",
+                  "ratio": 0.7
+                }
+              }
+            ]
+            {% if full_image %}
+            ,
+            "action": {
+              "url": "{{ open_uri_action(full_image, 'office_lens__show') | trim }}",
+              "log_id": "image_recognizer"
+            }
+            {% endif %}
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ],
+    "width": {
+      "type": "predefined",
+      "value": "wrap_content"
+    }
+  }
+  {% endwith %}
+{% endcard %}
+
+
+{% card similar_artwork %}
+  {% with preview_image = context.data|get_item("preview_image"),
+          url_image = context.data|get_item("url_image"),
+          url_source = context.data|get_item("url_source"),
+          source_image = context.data|get_item("source_image"),
+          title = context.data|get_item("title"),
+          author = context.data|get_item("author"),
+          source = context.data|get_item("source"),
+          ratio = context.data|get_item("ratio"),
+          height = context.data|get_item("height"),
+          share_icon = context.data|get_item("share_icon"),
+          halfwidth = 160,
+          width = 320 %}
+    {
+      "states": [
+        {
+          "state_id": 1,
+          "blocks": [
+            {
+              "type": "div-container-block",
+              "direction": "horizontal",
+              "width": {
+                "type": "numeric",
+                "value": {{ width }}
+              },
+              "height": {
+                "type": "numeric",
+                "value": {{ height }}
+              },
+              "children": [
+                {
+                  "type": "div-container-block",
+                  "height": {
+                    "type": "predefined",
+                    "value": "match_parent"
+                  },
+                  "width": {
+                    "type": "numeric",
+                    "value": {{ halfwidth }}
+                  },
+                  "children": [
+                    {
+                      "type": "div-image-block",
+                      "image": {
+                        "type": "div-image-element",
+                        "image_url": "{{ source_image }}",
+                        "ratio": {{ ratio }}
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "div-container-block",
+                  "height": {
+                    "type": "predefined",
+                    "value": "match_parent"
+                  },
+                  "width": {
+                    "type": "numeric",
+                    "value": {{ halfwidth }}
+                  },
+                  "children": [
+                    {
+                      "type": "div-image-block",
+                      "image": {
+                        "type": "div-image-element",
+                        "image_url": "{{ preview_image }}",
+                        "ratio": {{ ratio }}
+                      },
+                      "action": {
+                          "url": "{{ open_uri_action(url_image, 'open_image') }}",
+                          "log_id": "open_image"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "div-container-block",
+              "height": {
+                "type": "predefined",
+                "value": "wrap_content"
+              },
+              "width": {
+                "type": "numeric",
+                "value": {{ width }}
+              },
+              "children": [
+                {
+                  "type": "div-separator-block",
+                  "size": "xxs"
+                },
+                {
+                  "title": "{{ title|html_escape }}",
+                  "title_style": "title_m",
+                  {% if author is not none %}
+                      "text": "{{ author|html_escape }}",
+                      "text_style": "text_s",
+                      "text_max_lines": 2,
+                  {% endif %}
+                  "type": "div-universal-block"
+                },
+                {
+                  "type": "div-table-block",
+                  "rows": [
+                    {
+                      "type": "row_element",
+                      "cells": [
+                        {
+                          {% if source is not none %}
+                            "text": "{{ source|html_escape }}",
+                          {% else %}
+                             "text": " ",
+                          {% endif %}
+                          "text_style": "text_s"
+                        },
+                        {
+                          "image": {
+                            "image_url": "{{ share_icon }}",
+                            "ratio": 1,
+                            "type": "div-image-element"
+                          },
+                          "image_position": "right",
+                          "action": {
+                            "url": "{{ logged_action_url([client_action_directive(name='take_screenshot')], dict()) }}",
+                            "log_id": "similar_artwork_screenshot"
+                          },
+                          "horizontal_alignment": "right"
+                        }
+                      ]
+                    }
+                  ],
+                  "columns": [
+                    {
+                      "weight": 1,
+                      "left_padding": "zero"
+                    },
+                    {
+                      "weight": 0,
+                      "right_padding": "zero"
+                    }
+                  ]
+                },
+                {
+                  "type": "div-separator-block",
+                  "size": "xs"
+                }
+              ]
+            }
+          ]
+          {% if url_source %}
+            ,
+            "action": {
+                "url": "{{ open_uri_action(url_source, 'whole_card', 'similar_people_image_whole_card') }}",
+                "log_id": "whole_card"
+            }
+          {% endif %}
+        }
+      ],
+      "background": [
+        {
+          "color": "{{ '#ffffff' }}",
+          "type": "div-solid-background"
+        }
+      ],
+      "width": {
+        "type": "predefined",
+        "value": "wrap_content"
+      }
+    }
+  {% endwith %}
+{% endcard %}

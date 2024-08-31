@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package NEvoParserData;
+
+message TEvoParserRequest {
+    string ArcanumToken = 1; // for http requests
+    int64 SandboxTaskId = 2;  // sandbox task id of ALICE_EVO_INTEGRATION_TESTS_WRAPPER
+    bool OnlyRelease = 3;  // return only release fails
+}
+
+message TEvoParserResponse {
+    message TAuthor {
+        string StaffLogin = 1;
+        string TelegramLogin = 2;
+        string Link = 3; // URL to staff or group for this user
+        string AbsenseType = 4; // optional. Special values: "Уволился", "Дежурство", and so on (отпуск, отсутствие, болезнь и т.д.) from Staff API
+    }
+
+    message TTest {
+        string Name = 1; // for example "music.search.py::TestPalmMusicSearch::test_entity_search[playlist_popular-включи-loudspeaker]"
+        string SetraceLink = 2;
+        string LogLink = 3;
+        string LogsdirLink = 4;
+        string Snippet = 5;
+    }
+
+    message TTestsPack {
+        bool IsRelease = 1; // is it release failure or not
+        repeated TAuthor Authors = 2; // empty list if authors unknown
+        repeated TTest Tests = 3;
+    }
+
+    repeated TTestsPack FailedTestsPacks = 1;
+}

@@ -1,0 +1,117 @@
+experiments: [enable_timers_alarms]
+
+labels:
+  simple_set: '.*на (завтра|сегодня) в 8 часов утра.*'
+  set_repeated: '.*по будням в 06:30.*'
+  time1: '13:24'
+  time2: '20:43'
+  cancel: 'Хорошо, выключила будильник по понедельникам в {time1}.'
+  cancel2: 'Хорошо, выключила будильник по средам в {time2}.'
+  list: 'У вас установлен будильник по понедельникам в {time1}.'
+  alarms_list: '1. по понедельникам в {time1}\n2. по средам в {time2}'
+  list_long: 'У вас установлены следующие будильники:\n{alarms_list}'
+  list_cancel: 'Сейчас установлено несколько будильников:\n{alarms_list}\nКакой из них вы хотите выключить\?'
+  no_alarms: '.*(нет включенных будильников|Будильников не обнаружено).*'
+  alarms_not_implemented: "(Я вас обязательно разбужу. Когда научусь.|Меня ещё этому не научили.|Здесь пока не умею.|Ещё не время. Шутка, пока не умею.|Я этому научусь. Пока времени нет.)"
+  alarms_unsupported: 'К сожалению, у меня нет доступа к будильникам на данном устройстве.'
+  what_sound_level_is_set: 'Громкость будильника'
+
+
+app_info:
+  app_id: 'ru.yandex.quasar.vins_test'
+  app_version: '1.0'
+  os_version: '6.0.1'
+  platform: 'android'
+
+test_simple:
+  device_state:
+    alarms_state: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Yandex LTD//NONSGML Quasar//EN\r\nBEGIN:VEVENT\r\nDTSTART:20180604T102400Z\r\nDTEND:20180604T102400Z\r\nRRULE:FREQ=WEEKLY;BYDAY=MO\r\nBEGIN:VALARM\r\nTRIGGER:P0D\r\nACTION:AUDIO\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+  test_set:
+    поставь будильник на восемь утра: '{simple_set}'
+
+  test_set_ellipsis:
+    заведи будильник: 'На какое время поставить будильник?'
+    на 8 утра: '{simple_set}'
+
+  test_repeated:
+    поставь будильник по будням на шесть тридцать: '{set_repeated}'
+
+  test_cancel:
+    выключи будильник: '{cancel}'
+    отмени будильник в двенадцать: 'Сейчас установлен только один будильник по понедельникам в {time1}, выключить его?'
+
+  test_show_list:
+    список будильников: '{list}'
+
+
+test_multiple_alarms:
+  device_state:
+    alarms_state: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Yandex LTD//NONSGML Quasar//EN\r\nBEGIN:VEVENT\r\nDTSTART:20180604T102400Z\r\nDTEND:20180604T102400Z\r\nRRULE:FREQ=WEEKLY;BYDAY=MO\r\nBEGIN:VALARM\r\nTRIGGER:P0D\r\nACTION:AUDIO\r\nEND:VALARM\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nDTSTART:20180606T174300Z\r\nDTEND:20180606T174300Z\r\nRRULE:FREQ=WEEKLY;BYDAY=WE\r\nBEGIN:VALARM\r\nTRIGGER:P0D\r\nACTION:AUDIO\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+  test_show_list:
+    список будильников: '{list_long}'
+
+  test_show_list_cancel:
+    список будильников: '{list_long}'
+    удали первый: '{cancel}'
+
+  test_cancel:
+    отмени будильник: '{list_cancel}'
+    второй: '{cancel2}'
+
+  test_cancel_target:
+    отмени будильник по понедельникам: '{cancel}'
+    отмени будильник в двадцать сорок три: 'Сейчас установлен только один будильник по средам в {time2}, выключить его?'
+    отмени будильник по вторникам: '{list_cancel}'
+    отмени будильник в двадцать два часа двадцать две минуты: '{list_cancel}'
+
+  test_show_target:
+    во сколько будильник в понедельник: '{list}'
+    во сколько будильник по вторникам: 'У вас нет установленных будильников на эту дату.'
+    покажи будильники на двадцать два часа двадцать две минуты: 'У вас нет установленных будильников на это время.'
+
+test_cancel_none:
+  device_state:
+    alarms_state:
+
+  dialog:
+    отмени будильник: '{no_alarms}'
+
+test_unsupported:
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '7.0'
+    os_version: '6.0'
+    platform: 'android'
+
+  dialog:
+    поставь будильник: '{alarms_not_implemented}'
+    отмени будильник: 'Я не умею отключать будильник на этом устройстве.'
+    покажи список будильников: '{alarms_unsupported}'
+
+test_sound_level_unsupported:
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '7.0'
+    os_version: '6.0'
+    platform: 'android'
+
+  dialog:
+    какая громкость будильника: '{alarms_unsupported}'
+
+test_sound_level_default:
+  device_state:
+    alarms_state: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Yandex LTD//NONSGML Quasar//EN\r\nBEGIN:VEVENT\r\nDTSTART:20180604T102400Z\r\nDTEND:20180604T102400Z\r\nRRULE:FREQ=WEEKLY;BYDAY=MO\r\nBEGIN:VALARM\r\nTRIGGER:P0D\r\nACTION:AUDIO\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
+  dialog:
+    какая громкость будильника: '{what_sound_level_is_set} - 7.'
+
+test_sound_level_custom:
+  device_state:
+    alarms_state: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Yandex LTD//NONSGML Quasar//EN\r\nBEGIN:VEVENT\r\nDTSTART:20180604T102400Z\r\nDTEND:20180604T102400Z\r\nRRULE:FREQ=WEEKLY;BYDAY=MO\r\nBEGIN:VALARM\r\nTRIGGER:P0D\r\nACTION:AUDIO\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    alarm_state:
+      max_sound_level: 5
+
+  dialog:
+    какая громкость будильника: '{what_sound_level_is_set} - 5.'

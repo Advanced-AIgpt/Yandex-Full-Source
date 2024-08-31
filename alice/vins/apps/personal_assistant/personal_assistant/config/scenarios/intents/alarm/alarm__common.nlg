@@ -1,0 +1,153 @@
+{% macro render_alarm_time(date, time, time_preposition='на') -%}
+  {% if date %}
+    {% if date.weekdays %}
+      {{ date | render_weekday_type }}
+    {% elif date.days == 1 and date.days_relative and time and not time.get('hours') and not time.get('minutes') %}
+      на сегодня
+    {% else %}
+      {% set d = date | render_datetime_raw %}
+      на {% vc %}{{ d.voice }}{% evc %}{% tx %}{{ d.text }}{% etx %}
+    {% endif %}
+    {% if time %}
+      {% set t = time | alarm_time_format(case='acc') %}
+      в {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+    {% endif %}
+  {% elif time %}
+    {% set t = time | alarm_time_format(case='acc') %}
+    {{ time_preposition }} {% vc %}{{ t.voice }}{% evc %}{% tx %}{{ t.text }}{% etx %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_alarm_list(alarm_list) %}
+  {% for alarm in alarm_list %}
+    {% vc %}номер {{ loop.index }}{% evc %}{% tx %}{{ loop.index }}{% etx %}.
+    {{ render_alarm_time(alarm.date, alarm.time) }}
+    {% if not loop.last %}
+      \n{% vc %}-{% evc %}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro set_sound_phrase() %}
+  {% chooseline %}
+    "Алиса, поставь энергичную музыку на будильник"
+    "Алиса, разбуди меня песней Show Must Go On"
+    "Алиса, поставь Beatles на будильник"
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro stoit() %}
+  {% vc %}сто+ит{% evc %}
+  {% tx %}стоит{% etx %}
+{% endmacro %}
+
+{% macro stoyat() %}
+  {% vc %}сто+ят{% evc %}
+  {% tx %}стоят{% etx %}
+{% endmacro %}
+
+{% macro alarm_stoit() %}
+  {% chooseitem %}
+    На будильнике {{ stoit() }}
+  {% or %}
+    Вас разбудит
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro alarm_stoyat() %}
+  {% chooseitem %}
+    На будильнике {{ stoyat() }}
+  {% or %}
+    Вас разбудят
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro elari_watch_not_supported() %}
+  {% chooseline %}
+    Пока я не умею заводить будильник в этих часах. Смешно, да. Скоро научусь.
+    Я скоро научусь заводить будильник в этих часах. Обещаю!
+    Я пока не умею. Можно попросить маму или папу громко петь с утра. {% tx %}Ха-ха{% etx %}{% vc %}ха ха{% evc %}!
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_error(code, date=None, time=None) -%}
+  {% if code == 'no_alarms_available' %}
+    {% if date %}
+      У вас нет установленных будильников на эту дату.
+    {% elif time %}
+      У вас нет установленных будильников на это время.
+    {% else %}
+      {% chooseline %}
+        У вас нет установленных будильников.
+        Вы меня не просили вас разбудить.
+      {% endchooseline %}
+    {% endif %}
+  {% elif code == 'unsupported_operation' %}
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      К сожалению, у меня нет доступа к будильникам на данном устройстве.
+    {% endif %}
+  {% elif code == 'too_many_alarms' %}
+    Сейчас уже установлено 25 будильников, я больше не могу.
+  {% else %}
+    Что-то пошло не так, давайте попробуем позже?
+  {% endif %}
+{%- endmacro %}
+
+{% macro ask_time() %}
+  На какое время поставить будильник?
+{% endmacro %}
+
+{# used for music tags and radio error rendering #}
+{% macro is_one_of_specified_intents(form_names) -%}
+  {% if form.raw_form.name in form_names -%}
+    True
+  {%- endif %}
+{%- endmacro %}
+{% macro is_specified_intent(form_name) -%}
+  {{ is_one_of_specified_intents([form_name]) }}
+{%- endmacro %}
+
+{% macro is_alarm_what_sound_is_set_intent() -%}
+  {{ is_specified_intent('personal_assistant.scenarios.alarm_what_sound_is_set') }}
+{%- endmacro %}
+
+{% macro is_alarm_set_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_sound',
+                                  'personal_assistant.scenarios.alarm_ask_sound']) }}
+{%- endmacro %}
+
+{% macro is_alarm_set_with_sound_intent() -%}
+  {{ is_one_of_specified_intents(['personal_assistant.scenarios.alarm_set_with_sound',
+                                  'personal_assistant.scenarios.alarm_set_with_sound__ellipsis']) }}
+{%- endmacro %}
+
+{% phrase render_error__alarmerror %}
+  {{ render_error(context.error.data.code, date=form.date, time=form.time) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__set_alarm %}
+  Поставить будильник на {{ (context.alarm__set_alarm.data.time | alarm_time_format(case='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__alarm__set_alarm %}
+  Поставить будильник на {{ (context.alarm__set_alarm.data.time | alarm_time_format(case='acc')).text }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__alarm__show_alarms %}
+  Посмотреть все будильники
+{% endphrase %}
+
+{% phrase render_suggest_uri__alarm__show_alarms %}
+  {{ context.alarm__show_alarms.data.uri }}
+{% endphrase %}
+
+{% phrase ask__time %}
+  {% set ask_time_for_day_part = get_attention('alarm__ask_time_for_day_part') %}
+  {% if ask_time_for_day_part and ask_time_for_day_part.data and ask_time_for_day_part.data.day_part_name %}
+    {{ ask_time_for_day_part.data.day_part_name | capitalize_first }} - это во сколько?
+  {% else %}
+    {{ ask_time() }}
+  {% endif %}
+{% endphrase %}

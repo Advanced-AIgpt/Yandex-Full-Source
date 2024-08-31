@@ -1,0 +1,4 @@
+OWNER(
+    atsepeleva
+    g:smarttv
+)

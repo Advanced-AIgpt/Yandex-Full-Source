@@ -1,0 +1,35 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import base_error_handle, no_active_orders, can_not_cancel,
+                                     redirect_to_login_page, redirect_to_add_phone_page with context %}
+{% from "show_route/show_route_common.nlg" import render_location %}
+{% from "common/macros.nlg" import inability %}
+
+{% phrase render_error__taxierror %}
+  {{ base_error_handle() }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__taxi_redirect_to_passport_action %}
+  {% if is_active_attention('redirect_to_login_page') %}
+    Войти
+  {% else %}
+    Добавить телефон
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_redirect_to_passport_action %}
+  {{ context.taxi_redirect_to_passport_action.data.uri }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention('redirect_to_login_page') %}
+    {{ redirect_to_login_page() }}
+  {% elif is_active_attention('redirect_to_add_phone_page') %}
+    {{ redirect_to_add_phone_page() }}
+  {% elif form.is_active_order and form.cancel_disabled %}
+    {{ can_not_cancel() }}
+  {% else %}
+    {{ no_active_orders() }}
+  {% endif %}
+{% endphrase %}

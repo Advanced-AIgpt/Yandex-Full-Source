@@ -1,0 +1,162 @@
+{% from "cards/common.nlg" import font_color, logged_action_url, simple_open_uri_action  with context %}
+{% from "cards/market/common.nlg" import render_picture %}
+
+{% card shopping_list__fact %}
+{
+  {% set fact = context.data | get_item('fact', '') | capitalize() %}
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "text": "{{- fact -}}",
+          "title_style": "title_s",
+          "type": "div-universal-block",
+          "title": "{{- font_color("#919CB5", "A вы знаете?") -}}",
+          "text_style": "text_m"
+        }
+      ]
+    }
+  ],
+  "background": [
+    {
+      "color": "{{- '#FFFFFF' -}}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endcard %}
+
+{% macro render_common_entry(entry, idx) %}
+  {
+    "direction": "horizontal",
+    "height": {
+      "type": "predefined",
+      "value": "wrap_content"
+    },
+    "width": {
+      "type": "predefined",
+      "value": "match_parent"
+    },
+    "type": "div-container-block",
+    "children": [
+      {
+        "alignment_horizontal": "right",
+        "height": {
+          "type": "predefined",
+          "value": "wrap_content"
+        },
+        "width": {
+          "type": "numeric",
+          "value": 45,
+          "unit": "dp"
+        },
+        "type": "div-container-block",
+        "children": [
+          {
+            "title": "{{ font_color("#919CB5", idx) }}",
+            "text_style": "title_s",
+            "type": "div-universal-block",
+            "title_style": "title_s"
+          }
+        ]
+      },
+      {
+        {% if entry.get("beru") %}
+        {% set beru = entry.beru %}
+          "side_element": {
+            {% if beru.get("picture") and not entry.get("has_fact") %}
+              "element": {{ render_picture(beru.picture) }},
+            {% else %}
+              "element": {
+                "type": "date_element",
+                "date_day": " "
+              },
+            {% endif %}
+            "position": "right"
+          },
+          "action": {
+            "url": "{{- beru.url -}}",
+            "log_id": "shopping_list__entry_beru_offers"
+          },
+          "text_max_lines": 1,
+          "text": "{{ font_color("#919CB5", '%d %s'|format(beru.total, 'предложение'|pluralize(beru.total))) }}",
+          "text_style": "text_s",
+        {% endif %}
+        "title": "{{- entry.text -}}",
+        "title_max_lines": 2,
+        "title_style": "title_s",
+        "type": "div-universal-block"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card shopping_list__list %}
+  {% set entries = context.data | get_item('entries', []) %}
+  {% set has_beru_offers = context.data | get_item('has_beru_offers', false) %}
+  {
+    "background": [
+      {
+        "type": "div-solid-background",
+        "color": "{{- '#FFFFFF' -}}"
+      }
+    ],
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "s"
+          },
+          {% for entry in entries %}
+            {{ render_common_entry(entry, loop.index) }},
+          {% endfor %}
+          {
+            "type": "div-separator-block",
+            "size": "s"
+          },
+          {
+            "type": "div-table-block",
+            "columns": [
+              {
+                "left_padding": "zero",
+                "weight": 1
+              },
+              {
+                "weight": 1
+              }
+            ],
+            "rows": [
+              {
+                "type": "row_element",
+                "cells": [
+                  {
+                    {% if has_beru_offers %}
+                      "image": {
+                        "ratio": 3.25,
+                        "type": "div-image-element",
+                        "image_url": "https://avatars.mds.yandex.net/get-mpic/1888674/orig-5.png/orig"
+                      },
+                      "action":  {
+                        "url": "{{ simple_open_uri_action("https://pokupki.market.yandex.ru/?clid=1250", "shopping_list__beru") }}",
+                        "log_id": "shopping_list__beru"
+                      },
+                      "image_size": "l",
+                    {% endif %}
+                    "horizontal_alignment": "left"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "div-separator-block",
+            "size": "xxs"
+          }
+        ]
+      }
+    ]
+  }
+{% endcard %}

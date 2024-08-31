@@ -1,0 +1,99 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import no_active_orders, no_driver_yet with context %}
+
+{% macro driver_info() %}
+  {% if form.order_data.drivers_name %}
+    Ваш водитель: {{ form.order_data.drivers_name }}.\n
+  {% endif %}
+  {% if form.order_data.car_model %}
+    Марка машины: {{ form.order_data.car_model }}.\n
+  {% endif %}
+  {% if form.order_data.car_color %}
+    Цвет: {{ form.order_data.car_color }}.\n
+  {% endif %}
+  {% if form.order_data.car_number %}
+    Номер:
+    {% tx %}{{ form.order_data.car_number }}{% etx %}
+    {% vc %}{{ form.order_data.car_number | insert_comas_between_chars }}{% evc %}.\n
+  {% endif %}
+{% endmacro %}
+
+{% macro partner_and_carrier_info_text() %}
+  {% tx %}
+    {% if form.order_data.partner %}
+      \n Информация о партнёре.\n
+      Название: {{ form.order_data.partner }}.\n
+      {% if form.order_data.partner_ogrn %}
+        Регистрационный номер {{ form.order_data.partner_ogrn }}.\n
+      {% endif %}
+      {% if form.order_data.partner_adress %}
+        Адрес: {{ form.order_data.partner_adress }}.\n
+      {% endif %}
+    {% endif %}
+    {% if form.order_data.carrier %}
+      \n Информация о перевозчике.\n
+      Название: {{ form.order_data.carrier }}.\n
+      {% if form.order_data.carrier_ogrn %}
+        Регистрационный номер
+        {{ form.order_data.carrier_ogrn }}.\n
+      {% endif %}
+      {% if form.order_data.carrier_adress %}
+        Адрес: {{ form.order_data.carrier_adress }}.\n
+      {% endif %}
+      {% if form.order_data.carrier_schedule %}
+        {{ form.order_data.carrier_schedule }}.\n
+      {% endif %}
+    {% endif %}
+  {% etx %}
+{% endmacro %}
+
+{% macro partner_and_carrier_info_voice() %}
+  {% vc %}
+    {% if form.order_data.partner %}
+      \n Информация о партнёре.\n
+      Название: {{ form.order_data.partner }}.\n
+      {% if form.order_data.partner_ogrn %}
+        Регистрационный номер {{ form.order_data.partner_ogrn | split_long_numbers }}.\n
+      {% endif %}
+      {% if form.order_data.partner_adress %}
+        Адрес: {{ form.order_data.partner_adress | split_long_numbers }}.\n
+      {% endif %}
+    {% endif %}
+    {% if form.order_data.carrier %}
+      \n Информация о перевозчике.\n
+      Название: {{ form.order_data.carrier }}.\n
+      {% if form.order_data.carrier_ogrn %}
+        Регистрационный номер {{ form.order_data.carrier_ogrn | split_long_numbers }}.\n
+      {% endif %}
+      {% if form.order_data.carrier_adress %}
+        Адрес:{{ form.order_data.carrier_adress | split_long_numbers }}.\n
+      {% endif %}
+      {% if form.order_data.carrier_schedule %}
+        {{ form.order_data.carrier_schedule }}.\n
+      {% endif %}
+    {% endif %}
+  {% evc %}
+{% endmacro %}
+
+
+{% phrase render_result %}
+  {% if is_active_attention("no_driver_yet") %}
+    {{ no_driver_yet() }}
+  {% elif is_active_attention("no_active_orders") %}
+    {{ no_active_orders() }}
+  {% else %}
+    {% if form.order_data %}
+      {{ driver_info() }}
+      {% if is_smart_speaker() %}
+        {{ partner_and_carrier_info_voice() }}
+      {% endif %}
+      {{ partner_and_carrier_info_text() }}
+    {% else %}
+      Что-то сломалось.
+      {% vc %}Повторите пожалуйста запрос через минутку.{% evc %}
+      {% tx %}Повторите, пожалуйста запрос, через минутку.{% etx %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

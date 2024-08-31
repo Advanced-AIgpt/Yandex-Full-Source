@@ -1,0 +1,75 @@
+{% set consider_time = (form.search_response | get_item('time')) or (context.onto[form.source] and context.onto[form.source].is_derived_from('conv_source_exchange')) %}
+
+{% macro when_with_na(parsed_dt, tz) -%}
+  на
+  {% if consider_time %}
+    {% voice %}{{ '#acc' }}{% endvoice %}
+    {{ parsed_dt | human_time(tz=tz) }}
+  {% endif %}
+
+  {{ parsed_dt | human_date(tz=tz) }}
+{%- endmacro %}
+
+{% macro when(parsed_dt, tz) -%}
+  {{ parsed_dt | human_date(tz=tz) }}
+  {% if consider_time %}
+    в
+    {% voice %}{{ '#acc' }}{% endvoice %}
+    {{ parsed_dt | human_time(tz=tz) }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_instance(ent_instance) -%}
+  {{ context.onto_synth.random_phrase(ent_instance) }}
+{%- endmacro %}
+
+{% macro render_sum(amount, currency_name, case, amount_base=None) %}
+  {% set sub_currency = context.onto[currency_name].sub_currency %}
+  {% set sum = amount if amount else amount_base %}
+
+  {% if sum %}
+    {% voice %}
+      {{ sum | inflect_amount_of_money(render_instance(currency_name),
+        render_instance(sub_currency) if sub_currency else None, case, speech_hints=True) }}
+    {% endvoice %}
+    {% text %}
+      {{ sum | inflect_amount_of_money(render_instance(currency_name),
+        render_instance(sub_currency) if sub_currency else None, case) }}
+    {% endtext %}
+  {% else %}
+    очень очень много
+  {% endif %}
+{% endmacro %}
+
+{% macro copula(parsed_dt, tz) %}
+  {% set tense = parsed_dt | choose_tense(consider_time) %}
+
+  {% if tense == -1 %}
+    было
+  {% elif tense == 0 %}
+  {% else %}
+    будет
+  {% endif %}
+{% endmacro %}
+
+{% macro inflect_source(case) %}
+  {% set source_phrase = (form.search_response | get_item('source') | get_item('name')) or context.onto_synth.random_phrase(form.source) %}
+  {{ source_phrase | inflect(case) }}
+{% endmacro %}
+
+{% macro source_abl() %}
+  {% if consider_time %}
+    на
+  {% else %}
+    в
+  {% endif %}
+  {{ inflect_source('abl') }}
+{% endmacro %}
+
+{% macro source_gen() %}
+  {{ inflect_source('gen') }}
+{% endmacro %}
+
+{% macro source_nom() %}
+  {{ inflect_source('nom') }}
+{% endmacro %}

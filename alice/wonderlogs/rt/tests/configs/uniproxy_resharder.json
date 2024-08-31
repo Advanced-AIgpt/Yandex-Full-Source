@@ -1,0 +1,50 @@
+{
+    "ShardingConfig": {
+        "ShardingAlgorithm": "by_uuid",
+        "Splitter": {
+            "LogfellerSplitter": "\n"
+        },
+        "SkipUsersPercent": 0,
+        "OutputCodec": "zstd_6",
+        "OutputQueue": "//home/alice/test/uniproxy-resharder/qyt/uniproxy-events",
+        "ShardsCount": 1
+    },
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "./current-uniproxy-resharder.log",
+                "MinLevel": "Debug"
+            }
+        ]
+    },
+    "HttpServer": {
+        "Port": 3444
+    },
+    "Suppliers": [
+        {
+            "Alias": "alice-production-uniproxy",
+            "YtSupplier": {
+                "QueuePath": "//home/alice/test/uniproxy-resharder/input/uniproxy-events",
+                "QueueConsumer": "uniproxy-resharder",
+                "ChunkSize": 100,
+                "CommitPeriodMs": 1000,
+                "DelayAfterEmptyReadMs": 50,
+                "FlushChunkIntervalMs": 100
+            }
+        }
+    ],
+    "ConsumingSystem": {
+        "MainPath": "//home/alice/test/uniproxy-resharder/cs/main",
+        "OffsetsTable": "//home/alice/test/uniproxy-resharder/cs/offsets",
+        "LaunchShardProcessorInFiber": true,
+        "MasterBalancing": {
+            "MasterPath": "//home/alice/test/uniproxy-resharder/cs/master"
+        },
+        "MaxShards": 1,
+        "MaxShardsToCheck": 1
+    },
+    "StatelessShardProcessorConfig": {
+        "CommitPeriodMs": 300
+    },
+    "MaxInflightBytes": 10000000
+}

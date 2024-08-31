@@ -1,0 +1,43 @@
+{
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "/logs/current-static-wonderlogs-creator.log"
+            }
+        ]
+    },
+    "ProcessorConfig": {
+        "OutputDir": "//home/alice/wonder/small-logs",
+        "Cluster": "hahn",
+        "GranularityMinutes": 15
+    },
+    "Suppliers": [
+        {
+            "YtSupplier": {
+                "QueueConsumer": "static-wonderlogs-creator",
+                "QueuePath": "//home/alice/test/big-rt/qyt/wonderlogs-creator/wonderlogs",
+                "ChunkSize": 500,
+                "Cluster": "markov",
+                "DelayAfterEmptyReadMs": 100,
+                "FlushChunkIntervalMs": 100
+            },
+            "Alias": "wonderlogs-creator"
+        }
+    ],
+    "ConsumingSystem": {
+        "MaxShards": 64,
+        "MaxShardsToCheck": 16,
+        "Shards": {
+            "Range": {
+                "Begin": 0,
+                "End": 64
+            }
+        },
+        "MainPath": "//home/alice/test/big-rt/cs/static-wonderlogs-creator/main",
+        "Cluster": "markov"
+    },
+    "HttpServer": {
+        "Port": 3444
+    },
+    "MaxInflightBytes": 1000000
+}

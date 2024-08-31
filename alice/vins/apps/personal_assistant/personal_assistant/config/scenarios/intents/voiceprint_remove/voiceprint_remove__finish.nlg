@@ -1,0 +1,47 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "common/error.nlg" import render_error %}
+{% from "common/macros.nlg" import get_alice_name with context %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention('server_error') %}
+    {{ render_error() }}
+  {% else %}
+      {% if form.is_no_users %}
+        {% chooseitem %}
+          Мне не знаком ваш голос.
+        {% or %}
+          Не {% tx %}узнаю{% etx %}{% vc %}узна+ю{% evc %} ваш голос.
+        {% or %}
+          Напрягла память, но не смогла вспомнить ваш голос.
+        {% or %}
+          Я очень старалась, но ваш голос вспомнить не смогла.
+        {% or %}
+          Я не {% tx %}узнаю{% etx %}{% vc %}узна+ю{% evc %} вас, человек.
+        {% or %}
+          Извините, но я вас не знаю.
+        {% or %}
+          Кажется, мы не знакомы.
+        {% endchooseitem %}
+      {% else %}
+        {% if form.is_removed %}
+            {% chooseitem %}
+              Всё, забыла. Если что, мы можем познакомиться снова в любой момент. Просто скажите: «{{ get_alice_name() }}, запомни мой голос».
+            {% or %}
+              Готово, выкинула из головы. Но если что — познакомиться снова можно в любой момент. Просто скажите: «{{ get_alice_name() }}, запомни мой голос».
+            {% endchooseitem %}
+        {% else %}
+            {% chooseitem %}
+              Хорошо-хорошо. Ничего не трогаем.
+            {% or %}
+              Окей, оставляем как есть.
+            {% or %}
+              Ладно, не буду удалять.
+            {% endchooseitem %}
+        {% endif %}
+      {% endif %}
+  {% endif %}
+{% endphrase %}

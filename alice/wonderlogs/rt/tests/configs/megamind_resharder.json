@@ -1,0 +1,50 @@
+{
+    "ShardingConfig": {
+        "ShardingAlgorithm": "by_uuid",
+        "Splitter": {
+            "LogfellerSplitter": "\n"
+        },
+        "SkipUsersPercent": 0,
+        "OutputCodec": "zstd_6",
+        "OutputQueue": "//home/alice/test/megamind-resharder/qyt/megamind-request-response",
+        "ShardsCount": 1
+    },
+    "HttpServer": {
+        "Port": 3446
+    },
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "./current-megamind-resharder.log",
+                "MinLevel": "Debug"
+            }
+        ]
+    },
+    "Suppliers": [
+        {
+            "Alias": "megamind-analytics-log",
+            "YtSupplier": {
+                "QueuePath": "//home/alice/test/megamind-resharder/input/megamind-request-responses",
+                "QueueConsumer": "megamind-resharder",
+                "ChunkSize": 100,
+                "CommitPeriodMs": 1000,
+                "DelayAfterEmptyReadMs": 50,
+                "FlushChunkIntervalMs": 100
+            }
+        }
+    ],
+    "ConsumingSystem": {
+        "MainPath": "//home/alice/test/megamind-resharder/cs/main",
+        "OffsetsTable": "//home/alice/test/megamind-resharder/cs/offsets",
+        "LaunchShardProcessorInFiber": true,
+        "MasterBalancing": {
+            "MasterPath": "//home/alice/test/megamind-resharder/cs/master"
+        },
+        "MaxShards": 1,
+        "MaxShardsToCheck": 1
+    },
+    "StatelessShardProcessorConfig": {
+        "CommitPeriodMs": 300
+    },
+    "MaxInflightBytes": 10000000
+}

@@ -1,0 +1,31 @@
+{% from "todo/list_todo.nlg" import build_voice_answer, print_todos, build_voice_empty_list_answer with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention("cancel_all") %}
+    Хорошо, отменила все дела.
+  {% elif is_active_attention("empty_todo_list") %}
+    У вас пустой список дел.
+  {% elif is_active_attention("no_todo_for_date") %}
+    {{ build_voice_empty_list_answer(form.cancel_when) }}
+  {% elif is_active_attention("single_todo") %}
+    Отменила задачу {{ form.answer.todo[0].what }}.
+  {% else %}
+    {% chooseline %}
+      Окей, отменила.
+      Хорошо, отменила.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase ask__id %}
+  {% if is_active_attention("invalid_id") %}
+    Задачи с таким номером нет в списке. Повторите еще раз, пожалуйста.
+  {% else %}
+    {{ build_voice_answer(form.answer.total_todo_count, form.answer.todo, form.offset, form.date, form.answer.total_todo_count) }}
+      {% chooseline %}
+        Назовите номер задачи, которую хотите удалить.
+        Задачу с каким номером отменить?
+        Скажите номер дела, пожалуйста.
+      {% endchooseline %}
+  {% endif %}
+{% endphrase %}

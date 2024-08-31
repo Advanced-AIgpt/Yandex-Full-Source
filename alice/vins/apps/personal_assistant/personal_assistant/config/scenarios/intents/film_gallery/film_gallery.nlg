@@ -1,0 +1,70 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% set type_to_content_name = {
+  'film': 'такой фильм',
+  'series': 'такой сериал',
+  'anim': 'такой мультфильм',
+  'anim-series': 'такой мультфильм'
+} %}
+
+{% macro render_titles(items) %}
+{% set titles = [] %}
+  {% for item in items %}
+    {% do titles.append(item|get_item('title')) %}
+  {% endfor %}
+  {{ ', '.join(titles[:-1]) }}
+  {% if titles|length > 1 %}
+    {% if titles|length > 2 %}
+      {% voice %} - {% endvoice %}
+    {% endif %}
+    и
+  {% endif %}
+  {{ titles[-1] }}
+{% endmacro %}
+
+{% macro get_content_name(items) %}
+{% set candidate_type = items[0]|get_item('ugc_type') if items|length > 0 else "" %}
+{% set ns = namespace(match_candidate=True) %}
+  {% for item in items %}
+    {% if item|get_item('ugc_type') != candidate_type %}
+      {% set ns.match_candidate = False %}
+    {% endif %}
+  {% endfor %}
+  {% if ns.match_candidate and candidate_type %}
+    {{ type_to_content_name|get_item(candidate_type, '') }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+{% set all_items = form.answer|get_item('gallery_items', []) %}
+{% set start_index = form.answer|get_item('idx', 0) %}
+{% set page_size = form.answer|get_item('page_size', 3) %}
+{% set items = all_items[start_index:start_index + page_size] %}
+{% set content_name = get_content_name(items).strip() %}
+{% set has_no_more = form.answer|get_item('has_no_more') %}
+  {% if items %}
+    {% if content_name %}
+      {% if items|length > 1 %}
+        Нашлись {{ content_name|inflect('pl') }}:
+      {% else %}
+        Нашелся {{ content_name }}:
+      {% endif %}
+    {% else %}
+      Глядите, что нашлось. Есть
+    {% endif %}
+    {{ render_titles(items) }}.
+    {% if not has_no_more %}
+      {% chooseline %}
+        Есть ещё много. Назвать другие?
+        Но есть ещё. Нужно?
+        Хотите продолжить поиск?
+      {% endchooseline %}
+    {% endif %}
+  {% elif start_index > 0 %}
+    {% chooseline %}
+      Больше ничего не помню. Можно поискать в Яндексе.
+      Увы, это всё. Но если что, у нас есть Яндекс — можно поискать там.
+      Больше ничего нет. Можно поискать в Яндексе.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

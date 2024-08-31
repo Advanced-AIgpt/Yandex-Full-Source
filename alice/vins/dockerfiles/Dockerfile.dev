@@ -1,0 +1,32 @@
+FROM registry.yandex.net/ubuntu:trusty
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+WORKDIR /vins-dm/
+
+COPY env_scripts/setup-env.sh .
+RUN ./setup-env.sh \
+    && apt-get install -y --force-yes language-pack-ru \
+    && rm ./setup-env.sh
+ENV LD_PRELOAD /usr/lib/libtcmalloc_minimal.so.4
+
+COPY test-requirements.txt .
+COPY dev-requirements.txt .
+COPY conftest.py .
+COPY setup.cfg .
+COPY env_scripts/setup-venv.sh .
+
+COPY env_scripts/ env_scripts/
+COPY cit_configs/ cit_configs/
+COPY core/ core/
+COPY sdk/ sdk/
+COPY api/ api/
+COPY apps/ apps/
+COPY test_bot/ test_bot/
+COPY div2html/ div2html/
+COPY tools/ tools/
+
+RUN ./setup-venv.sh --no-resources \
+    && rm ./setup-venv.sh

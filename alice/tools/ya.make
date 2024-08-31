@@ -1,0 +1,21 @@
+OWNER(g:alice)
+
+RECURSE(
+    conjugator_client
+    jinja2_compiler
+    launch
+    logs
+    metrics_aggregator
+    nanny_tool
+    print_megamind_session
+    sessions_purger
+    sessions_tool
+    solomon
+    yasm
+    qloud_format
+    quota_monitor
+    rivals_e2e
+    infra
+    telegram
+    version_alerts
+)

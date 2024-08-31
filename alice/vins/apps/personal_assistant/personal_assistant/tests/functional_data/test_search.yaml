@@ -1,0 +1,335 @@
+labels:
+  no_answer: ".*(нет( хорошего)? ответа|не умею отвечать|не знаю что ответить|не могу\
+    \ на это ответить).*"
+  source_before_tts: "(На яндекс есть такой ответ:|Нашла ответ на яндекс. Слушайте:|Ответ есть на яндекс. Читаю:|Сайт яндекс даёт такой ответ:)"
+  source_after_tts: "(Если что, это не моё. Читала с сайта яндекс.| Это с сайта яндекс, если что.| Это на яндекс написано.| Ответ нашла на яндекс.)"
+  untrusted_factoid_source: "(Нашла в интернете:|Вот, что нашла в сети:|Нашлось в интернете:|Ответ из интернета:|В интернете пишут:)"
+
+test_search_call_disamb:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    телефон скорой:
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                tts: '103'
+                text: '103'
+                url: 'http://minsvyaz.ru/ru/documents/4115/'
+                phone_uri: 'call://103'
+              serp:
+                url: 'https://yandex.ru/search/'
+      voice: '103'
+
+    позвони:
+      voice: 'Минуточку.'
+      directives:
+      - name: open_uri
+        sub_name: personal_assistant.scenarios.search__factoid_call
+        type: client_action
+        payload:
+          uri: 'call://103'
+
+    позвони маме:
+      voice: 'Пока что я умею звонить только в экстренные службы.'
+  app_info:
+    ignore:
+    - auto
+    - speaker
+    - dexp
+    - watch
+    - irbis
+
+test_call_no_number:
+  dialog:
+    кто такой трамп:
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                tts: 'никто'
+                text: 'никто'
+              serp:
+                url: 'https://yandex.ru/search/'
+      vins_form:
+        slots:
+          query:
+            value: 'кто такой трамп'
+
+      voice: 'никто'
+
+    позвони:
+      voice: 'Я не понимаю, куда позвонить.'
+      directives:
+        exact_match: true
+        data: []
+  app_info:
+    ignore:
+    - watch
+
+test_nothing_found:
+  найди непристойные фото:
+    bass:
+      form:
+        search_results:
+          value: null
+      blocks:
+      - type: attention
+        attention_type: search__nothing_found
+
+    voice: 'По вашему запросу ничего найти не получилось.'
+    text: 'По вашему запросу ничего найти не получилось.'
+    directives:
+      exact_match: true
+      data: []
+
+test_calculator:
+  500000 * 500000:
+    vins_form:
+      slots:
+        query:
+          value: 500000 * 500000
+    bass:
+      form:
+        search_results:
+          value:
+            calculator: "2.5e+11"
+            serp:
+              url: 'https://yandex.ru/search/'
+
+    voice: 'Вот ответ'
+    text: '2.5e+11'
+
+  pi / 2:
+    vins_form:
+      slots:
+        query:
+          value: pi / 2
+    bass:
+      form:
+        search_results:
+          value:
+            calculator: '1.570796327'
+            serp:
+              url: 'https://yandex.ru/search/'
+
+    voice: 'примерно 1.5708'
+    text: '1.570796327'
+
+  1 делить на 0:
+    vins_form:
+      slots:
+        query:
+          value: 1 делить на 0
+    bass:
+      form:
+        search_results:
+          value:
+            calculator: inf
+            serp:
+              url: 'https://yandex.ru/search/'
+
+    voice: 'Бесконечность.'
+    text: 'Бесконечность.'
+
+  -1 делить на 0:
+    vins_form:
+      slots:
+        query:
+          value: -1 делить на 0
+    bass:
+      form:
+        search_results:
+          value:
+            calculator: -inf
+            serp:
+              url: 'https://yandex.ru/search/'
+
+    voice: 'Минус бесконечность.'
+    text: 'Минус бесконечность.'
+
+test_search_elari_watch_fact_wo_tts:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    кто такой василий пупкин:
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                text: 'К сожалению, информацию о нем нельзя произносить вслух.'
+      voice: '{no_answer}'
+
+test_search_for_station:
+  яндекс станция:
+    vins_form:
+      slots:
+        query:
+          value: 'яндекс станция'
+  яндекс станция стоит ли покупать:
+    vins_form:
+      slots:
+        query:
+          value: 'яндекс станция стоит ли покупать'
+
+test_long_factoid_with_source:
+  dialog:
+    кто такой трамп:
+      vins_form:
+        slots:
+          query:
+            value: 'кто такой трамп'
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                text: 'Длинный факт'
+                voice_info:
+                  text: 'Длинный факт'
+                  source: "яндекс"
+                  read_source_before_text: True
+              serp:
+                url: 'https://yandex.ru/search/'
+      voice: '{source_before_tts} Длинный факт'
+
+test_long_factoid_with_source_2:
+  dialog:
+    кто такой трамп:
+      vins_form:
+        slots:
+          query:
+            value: 'кто такой трамп'
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                text: 'Длинный факт'
+                voice_info:
+                  text: 'Длинный факт'
+                  source: "яндекс"
+              serp:
+                url: 'https://yandex.ru/search/'
+      voice: '{source_before_tts} Длинный факт'
+
+test_short_factoid_with_source:
+  dialog:
+    кто такой трамп:
+      vins_form:
+        slots:
+          query:
+            value: 'кто такой трамп'
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                text: 'Короткий факт'
+                voice_info:
+                  text: 'Короткий факт'
+                  source: "яндекс"
+                  read_source_before_text: False
+              serp:
+                url: 'https://yandex.ru/search/'
+      voice: 'Короткий факт. {source_after_tts}'
+
+test_untrusted_factoid:
+  dialog:
+    кто такой трамп:
+      vins_form:
+        slots:
+          query:
+            value: 'кто такой трамп'
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                text: 'Короткий факт'
+                voice_info:
+                  text: 'Короткий факт'
+                  trusted_source: False
+              serp:
+                url: 'https://yandex.ru/search/'
+      voice: '{untrusted_factoid_source} Короткий факт'
+
+test_search_synonyms:
+  фьорд синоним:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  синоним слова приоритет:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  беспечный синонимы:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+
+test_search_keyboard_language:
+  как включается английский язык на клавиатуре ноутбука:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  как поменять язык клавиатуры с русского на английский:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  как переключить клавиатуру на английский язык:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+
+search_time_difference:
+  какая разница во времени между москвой и новосибирском:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+
+search_holidays:
+  2019 год выходные дни:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  выходной день в ноябре 2019:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+  как отдыхаем в феврале 23:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+
+test_anaphora_resolve_flag:
+  dialog:
+    кто такой путин:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+        slots:
+          anaphora_resolved_flag:
+            value: null
+    сколько ему лет:
+      vins_form:
+        name: 'personal_assistant.scenarios.search_anaphoric'
+        slots:
+          anaphora_resolved_flag:
+            value: True
+
+test_themed_search_suggest:
+  experiments: [themed_search_internet_fallback_suggest]
+  test:
+    у меня есть стол:
+      bass:
+        blocks:
+        - type: suggest
+          suggest_type: search_internet_fallback
+          data:
+            theme:
+              image_url: avatar_url
+      suggests:
+      - caption: 'Искать в Яндексе'
+        type: themed_action
+        theme:
+          image_url: avatar_url

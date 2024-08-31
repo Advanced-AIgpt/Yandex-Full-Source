@@ -1,0 +1,1368 @@
+test_top5news:
+  experiments: [news_no_voice_switch]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      покажи последние новости:
+        bass:
+          form:
+            news:
+              value:
+                news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+                - text: Новость 5
+                  url: url5
+                url: some.news.url
+          blocks:
+          - type: suggest
+            suggest_type: get_news__details
+
+        text: |-
+          ОК, вот какие есть новости на текущий момент:
+
+          Новость 1.
+
+          Новость 2.
+
+          Новость 3.
+
+          Новость 4.
+
+          Новость 5.
+
+        voice: |-
+          ОК, вот какие есть новости на текущий момент:
+
+          .sil<[1000]> Новость 1
+
+          .sil<[1000]> Новость 2
+
+          .sil<[1000]> Новость 3
+
+          .sil<[1000]> Новость 4
+
+          .sil<[1000]> Новость 5.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+        button_actions:
+        - name: open_uri
+          title: Открыть Новости
+          payload:
+            uri: some.news.url
+
+    app_info:
+      ignore:
+      - navigator_ios
+      - watch
+      - navigator_android
+      - speaker
+      - dexp
+      - irbis
+
+test_details:
+  experiments: [alice_news_no_promo]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    bass:
+      form:
+        news:
+          value:
+            news:
+            - text: Новость 1
+              url: url1
+            url: some.news.url
+
+      blocks:
+      - type: suggest
+        suggest_type: get_news__details
+
+    dialog:
+      покажи новости:
+        text: |-
+          Новость 1.
+
+        button_actions:
+        - name: open_uri
+          title: Открыть Новости
+          payload:
+            uri: some.news.url
+
+      подробнее:
+        text: Открываю Яндекс.Новости...
+        voice: Открываю Яндекс Новости...
+        directives:
+        - name: open_uri
+          sub_name: personal_assistant.scenarios.get_news__details
+          type: client_action
+          payload:
+            uri: some.news.url
+
+    app_info:
+      ignore:
+      - auto
+      - watch
+      - navigator_android
+      - irbis
+      - dexp
+      - navigator_ios
+      - speaker
+
+test_error_nonews:
+  experiments: [alice_news_no_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости которых нет:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: nonews
+            msg: errormsg
+
+      text: К сожалению, я не смогла найти новостей по данному запросу.
+
+  app_info:
+    ignore:
+    - watch
+
+test_error_system:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: system
+            msg: errormsg
+
+      text: К сожалению, я не смогла найти новостей по данному запросу.
+
+  app_info:
+    ignore:
+    - watch
+
+test_suggests:
+  experiments: [alice_news_no_promo]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    bass:
+      form:
+        news:
+          value:
+            news:
+            - text: Новость 1
+              url: url1
+            url: some.news.url
+
+      blocks:
+      - type: suggest
+        suggest_type: get_news__rubric
+        data:
+          alias: index
+          caption: 'Главное'
+          utterance: 'Главные новости'
+        form_update:
+          resubmit: true
+          name: personal_assistant.scenarios.get_news
+          slots:
+          - name: topic
+            value: index
+            optional: true
+            type: news_topic
+      - type: suggest
+        suggest_type: get_news__rubric
+        data:
+          alias: hockey
+          caption: 'Хоккей'
+          utterance: 'Новости хоккея'
+        form_update:
+          resubmit: true
+          name: personal_assistant.scenarios.get_news
+          slots:
+          - name: topic
+            value: hockey
+            optional: true
+            type: news_topic
+      - type: suggest
+        suggest_type: get_news__rubric
+        data:
+          alias: basketball
+          caption: 'Баскетбол'
+          utterance: 'Новости баскетбола'
+        form_update:
+          resubmit: true
+          name: personal_assistant.scenarios.get_news
+          slots:
+          - name: topic
+            value: basketball
+            optional: true
+            type: news_topic
+      - type: suggest
+        suggest_type: get_news__rubric
+        data:
+          alias: tennis
+          caption: 'Теннис'
+          utterance: 'Новости тенниса'
+        form_update:
+          resubmit: true
+          name: personal_assistant.scenarios.get_news
+          slots:
+          - name: topic
+            value: tennis
+            optional: true
+            type: news_topic
+      - type: suggest
+        suggest_type: get_news__rubric
+        data:
+          alias: auto_racing
+          caption: 'Автоспорт'
+          utterance: 'Новости автоспорта'
+        form_update:
+          resubmit: true
+          name: personal_assistant.scenarios.get_news
+          slots:
+          - name: topic
+            value: auto_racing
+            optional: true
+            type: news_topic
+
+    dialog:
+      покажи новости:
+        text: |-
+          Новость 1.
+
+        suggests:
+        - caption: Главное
+          user_utterance: "Главные новости"
+          directive: update_form
+          payload:
+            resubmit: true
+            form_update:
+              name: personal_assistant.scenarios.get_news
+              slots:
+              - name: topic
+                value: index
+                optional: true
+                type: news_topic
+        - caption: Хоккей
+          user_utterance: "Новости хоккея"
+          directive: update_form
+          payload:
+            resubmit: true
+            form_update:
+              name: personal_assistant.scenarios.get_news
+              slots:
+              - name: topic
+                value: hockey
+                optional: true
+                type: news_topic
+        - caption: Баскетбол
+          user_utterance: "Новости баскетбола"
+          directive: update_form
+          payload:
+            resubmit: true
+            form_update:
+              name: personal_assistant.scenarios.get_news
+              slots:
+              - name: topic
+                value: basketball
+                optional: true
+                type: news_topic
+        - caption: Теннис
+          user_utterance: "Новости тенниса"
+          directive: update_form
+          payload:
+            resubmit: true
+            form_update:
+              name: personal_assistant.scenarios.get_news
+              slots:
+              - name: topic
+                value: tennis
+                optional: true
+                type: news_topic
+        - caption: Автоспорт
+          user_utterance: "Новости автоспорта"
+          directive: update_form
+          payload:
+            resubmit: true
+            form_update:
+              name: personal_assistant.scenarios.get_news
+              slots:
+              - name: topic
+                value: auto_racing
+                optional: true
+                type: news_topic
+
+    app_info:
+      ignore:
+      - watch
+
+test_ellipsis1:
+  experiments: [news_no_voice_switch]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      покажи новости:
+        bass:
+          form:
+            news:
+              value:
+                news:
+                - text: Новость 1
+                  url: url1
+                url: some.news.url
+        text: |-
+          ОК, вот какие есть новости на текущий момент:
+
+          Новость 1.
+      а футбола?:
+        bass:
+          form:
+            news:
+              value:
+                news:
+                - text: Новость футбола 1
+                  url: url1
+                url: some.football.news.url
+            topic: football
+        vins_form:
+          slots:
+            topic:
+              value: football
+        text: |-
+          Вот главные новости в настоящий момент:
+
+          Новость футбола 1.
+
+      а про навального?:
+        vins_form:
+          slots:
+            topic:
+              value: навального
+        bass:
+          form:
+            news:
+              value:
+                news:
+                - text: Новость про навального 1
+                  url: url1
+        text: |-
+          Посмотрим, что сейчас есть в Яндекс Новостях:
+
+          Новость про навального 1.
+
+      происшествия в москве:
+        bass:
+          form:
+            topic:
+              value: incident
+            where:
+              value: в москве
+            resolved_where:
+              value:
+                city: Москва
+                city_cases:
+                  dative: Москве
+                  genitive: Москвы
+                  nominative: Москва
+                  preposition: в
+                  prepositional: Москве
+                city_prepcase: в Москве
+                geoid: 213
+            news:
+              value:
+                news:
+                - text: Проиcшествие в Москве 1
+                  url: url1
+                url: some.news.url
+        vins_form:
+          slots:
+            topic:
+              value: incident
+            where:
+              value: в москве
+
+        text: |-
+          Вот главные новости в Москве в настоящий момент:
+
+          Проиcшествие в Москве 1.
+
+    app_info:
+      ignore:
+      - watch
+      - speaker
+      - dexp
+      - irbis
+
+test_full_snippets_experiment:
+  experiments: [alice_news_no_promo,news_full_snippet, news_no_voice_switch]
+  test_simple:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      покажи новости про футбол:
+        vins_form:
+          slots:
+            topic:
+              value: football
+        bass:
+          form:
+            news:
+              value:
+                url: some.news.url
+                news:
+                - text: Это не сниппет
+                  snippet: Это сниппет
+                  url: url1
+                - text: Это тоже не сниппет
+                  snippet: И еще один сниппет
+                  url: url2
+                - text: А тут нет сниппета
+                  url: url3
+                - text: А это новость | с вертикальной палочкой
+                  snippet: А это сниппет | с вертикальной палочкой
+                  url: url4
+
+        text: |-
+          ОК, вот какие есть новости на текущий момент:
+
+          Это не сниппет.
+
+          Это тоже не сниппет.
+
+          А тут нет сниппета.
+
+          А это новость | с вертикальной палочкой.
+
+        voice: |-
+          ОК, вот какие есть новости на текущий момент:
+
+          .sil<[1000]> Это не сниппет.sil<[500]> Это сниппет
+
+          .sil<[1000]> Это тоже не сниппет.sil<[500]> И еще один сниппет
+
+          .sil<[1000]> А тут нет сниппета
+
+          .sil<[1000]> А это новость, с вертикальной палочкой.sil<[500]> А это сниппет, с вертикальной палочкой.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+    app_info:
+      ignore:
+      - watch
+      - speaker
+      - dexp
+      - irbis
+
+test_voice_switch_full_snippet_new:
+  experiments: [alice_news_no_promo,news_read_only_text_or_snippet]
+  test_common:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      покажи новости про футбол:
+        vins_form:
+          slots:
+            topic:
+              value: football
+        bass:
+          form:
+            news:
+              value:
+                url: some.news.url
+                news:
+                - text: Это не сниппет
+                  snippet: Это сниппет
+                  url: url1
+                - text: Это тоже не сниппет
+                  snippet: И еще один сниппет
+                  url: url2
+                - text: А тут нет сниппета
+                  url: url3
+                - text: А это новость | с вертикальной палочкой
+                  snippet: А это сниппет | с вертикальной палочкой
+                  url: url4
+
+        text: |-
+          Это не сниппет.
+
+          Это тоже не сниппет.
+
+          А тут нет сниппета.
+
+          А это новость | с вертикальной палочкой.
+
+        voice: |-
+          Вот последние новости..sil<[1000]> Это сниппет
+
+          .sil<[1000]> И еще один сниппет
+
+          .sil<[1000]> А тут нет сниппета
+
+          .sil<[1000]> А это сниппет, с вертикальной палочкой.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+    app_info:
+      ignore:
+      - watch
+      - speaker
+      - dexp
+      - irbis
+
+  test_speaker:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      покажи новости про футбол:
+        vins_form:
+          slots:
+            topic:
+              value: football
+        bass:
+          form:
+            news:
+              value:
+                url: some.news.url
+                news:
+                - text: Это не сниппет
+                  snippet: Это сниппет
+                  url: url1
+                - text: Это тоже не сниппет
+                  snippet: И еще один сниппет
+                  url: url2
+                - text: А тут нет сниппета
+                  url: url3
+                - text: А это новость | с вертикальной палочкой
+                  snippet: А это сниппет | с вертикальной палочкой
+                  url: url4
+
+        text: |-
+          Это не сниппет.
+
+          Это тоже не сниппет.
+
+          А тут нет сниппета.
+
+          А это новость | с вертикальной палочкой.
+
+        voice: |-
+          Вот последние новости..sil<[1000]> Это сниппет
+
+          .sil<[1000]> И еще один сниппет
+
+          .sil<[1000]> А тут нет сниппета
+
+          .sil<[1000]> А это сниппет, с вертикальной палочкой.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+      - desktop_alice
+      - auto
+      - navigator_android
+      - navigator_ios
+      - watch
+
+test_voice_switch_full_snippet_old:
+  experiments: [alice_news_no_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости про футбол:
+      vins_form:
+        slots:
+          topic:
+            value: football
+      bass:
+        form:
+          news:
+            value:
+              url: some.news.url
+              news:
+              - text: Это не сниппет
+                snippet: А это сниппет
+                url: url1
+              - text: Это тоже не сниппет
+                snippet: И еще один сниппет
+                url: url2
+              - text: А тут нет сниппета
+                url: url3
+              - text: А это новость | с вертикальной палочкой
+                snippet: И сниппет | тоже
+                url: url4
+
+      text: |-
+        Это не сниппет.
+
+        Это тоже не сниппет.
+
+        А тут нет сниппета.
+
+        А это новость | с вертикальной палочкой.
+
+      voice: |-
+        Вот последние новости..sil<[1000]> Это не сниппет.sil<[500]> А это сниппет
+
+        .sil<[1000]> Это тоже не сниппет.sil<[500]> И еще один сниппет
+
+        .sil<[1000]> А тут нет сниппета
+
+        .sil<[1000]> А это новость, с вертикальной палочкой.sil<[500]> И сниппет, тоже.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+    - speaker
+    - dexp
+    - irbis
+
+test_covid:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  bass:
+    form:
+      news:
+        value:
+          url: some.news.url
+          news:
+          - text: Это не сниппет
+            snippet: А это сниппет
+
+  dialog:
+    новости коронавирус:
+      vins_form:
+        slots:
+          topic:
+            value: koronavirus
+          where:
+            value: null
+
+      text: Это не сниппет.
+
+    новости о корана вирусе:
+      vins_form:
+        slots:
+          topic:
+            value: koronavirus
+          where:
+            value: null
+
+      text: Это не сниппет.
+
+    какие новости про корона вирус в россии:
+      vins_form:
+        slots:
+          topic:
+            value: koronavirus
+          where:
+            value: в россии
+
+      text: Это не сниппет.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice:
+  experiments: [alice_news_no_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+              - text: Новость 1
+                url: url1
+              - text: Новость 2
+                url: url2
+              - text: Новость 3
+                url: url3
+              - text: Новость 4
+                url: url4
+              - text: Новость 5
+                url: url5
+              url: some.news.url
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+        Новость 5.
+
+      voice: |-
+        Вот последние новости..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+        .sil<[1000]> Новость 5.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_short_news:
+  experiments: [alice_news_no_promo,alice_station_short_news]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+              - text: Заголовок 1
+                snippet: Тело новости 1
+                url: url1
+              - text: Заголовок 2
+                snippet: Тело новости 2
+                url: url2
+              - text: Заголовок 3
+                url: url3
+              - text: Заголовок 4
+                snippet: Тело новости 4
+                url: url4
+
+      text: |-
+        Заголовок 1.
+
+        Заголовок 2.
+
+        Заголовок 3.
+
+        Заголовок 4.
+
+      voice: |-
+        Вот последние новости..sil<[1000]> Заголовок 1
+
+        .sil<[1500]> Заголовок 2
+
+        .sil<[1500]> Заголовок 3
+
+        .sil<[1500]> Заголовок 4.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_news_rubric_promo:
+  experiments: [alice_station_news_rubric_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+                - text: Новость 5
+                  url: url5
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+        Новость 5.
+
+      voice: |-
+        Вот последние новости. Если попадутся неинтересные — смело пропускайте..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+        .sil<[1000]> Новость 5.sil<[1000]> На этом все. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - desktop_alice
+    - auto
+    - navigator_android
+    - navigator_ios
+    - watch
+
+test_error_nonews_voice_rubric_promo:
+  experiments: [alice_station_news_rubric_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости которых нет:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: nonews
+            msg: errormsg
+
+      text: |-
+        К сожалению, я не смогла найти новостей по данному запросу.
+
+      voice: |-
+        К сожалению, я не смогла найти новостей по данному запросу..sil<[1000]> Слышала тут новости шоу бизнеса. Только спросите — всё расскажу.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_more_news_promo:
+  experiments: [alice_more_news_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+      voice: |-
+        Вот последние новости. Если попадутся неинтересные — смело пропускайте..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3.sil<[1000]> На этом все. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_more_news_and_rubric_promo:
+  experiments: [alice_more_news_promo,alice_station_news_rubric_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+      voice: |-
+        Вот последние новости. Если попадутся неинтересные — смело пропускайте..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3.sil<[1000]> На этом все. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - desktop_alice
+    - auto
+    - navigator_android
+    - navigator_ios
+    - watch
+
+test_voice_more_news_continious:
+  experiments: [alice_more_news_promo,alice_station_news_rubric_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 5
+                  url: url5
+                - text: Новость 6
+                  url: url6
+                - text: Новость 7
+                  url: url7
+                - text: Новость 8
+                  url: url8
+        blocks:
+        - type: attention
+          attention_type: news_continuous_request
+
+      text: |-
+        Новость 5.
+
+        Новость 6.
+
+        Новость 7.
+
+        Новость 8.
+
+      voice: |-
+        Вот последние новости..sil<[1000]> Новость 5
+
+        .sil<[1000]> Новость 6
+
+        .sil<[1000]> Новость 7
+
+        .sil<[1000]> Новость 8.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_skip_intro_and_ending:
+  experiments: [alice_news_skip_intro_and_ending]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+      voice: |-
+        Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_skip_intro_and_ending_with_promo:
+  experiments: [alice_news_skip_intro_and_ending,alice_more_news_promo,alice_station_news_rubric_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+      voice: |-
+        Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+  app_info:
+    ignore:
+    - watch
+
+test_error_news_ended:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    ещё новости:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: nonews
+            msg: errormsg
+
+        - type: attention
+          attention_type: news_ended
+
+      text: |-
+        Вот и все новости по этой теме.
+
+      voice: |-
+        Вот и все новости по этой теме.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_speaker_speed_11:
+  experiments: [alice_news_no_promo,alice_news_speaker_speed=1.1]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+              speaker_speed: 1.1
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+      voice: |-
+        <speaker speed="1.1"> Вот последние новости..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_voice_speaker_speed_15_only_news:
+  experiments: [alice_news_skip_intro_and_ending,alice_news_speaker_speed=1.5]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость 1
+                  url: url1
+                - text: Новость 2
+                  url: url2
+                - text: Новость 3
+                  url: url3
+                - text: Новость 4
+                  url: url4
+              speaker_speed: 1.5
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+      voice: |-
+        <speaker speed="1.5"> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+  app_info:
+    ignore:
+    - watch
+
+test_top5_skip_titles:
+  experiments: [alice_news_no_promo,alice_news_remove_title_threshold=0.5]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+    dialog:
+      главные новости:
+        bass:
+          form:
+            news:
+              value:
+                news:
+                - text: Новость 1
+                  snippet: Сниппет
+                  url: url1
+                - text: Новость 2
+                  snippet: Только сниппет
+                  skip_title: true
+                  url: url2
+                - text: Новость 3
+                  snippet: Другой сниппет
+                  url: url3
+                - text: Новость 4
+                  snippet: Ещё один только сниппет
+                  skip_title: true
+                  url: url4
+                - text: Новость 5 без сниппета
+                  url: url5
+                url: some.news.url
+        text: |-
+          Новость 1.
+
+          Новость 2.
+
+          Новость 3.
+
+          Новость 4.
+
+          Новость 5 без сниппета.
+        voice: |-
+          Вот последние новости..sil<[1000]> Новость 1.sil<[500]> Сниппет
+
+          .sil<[1000]> Только сниппет
+
+          .sil<[1000]> Новость 3.sil<[500]> Другой сниппет
+
+          .sil<[1000]> Ещё один только сниппет
+
+          .sil<[1000]> Новость 5 без сниппета.sil<[1000]> С вами были Новости. Следующий выпуск хоть сейчас.
+    app_info:
+      ignore:
+      - watch
+
+test_voice_personal_news:
+  experiments: [alice_news_no_promo,alice_news_personal_rubric]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи интересные новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+              - text: Новость 1
+                url: url1
+              - text: Новость 2
+                url: url2
+              - text: Новость 3
+                url: url3
+              - text: Новость 4
+                url: url4
+              - text: Новость 5
+                url: url5
+              url: some.news.url
+        blocks:
+        - type: attention
+          attention_type: personal_news
+
+      text: |-
+        Новость 1.
+
+        Новость 2.
+
+        Новость 3.
+
+        Новость 4.
+
+        Новость 5.
+
+      voice: |-
+        В эфире интересные новости..sil<[1000]> Новость 1
+
+        .sil<[1000]> Новость 2
+
+        .sil<[1000]> Новость 3
+
+        .sil<[1000]> Новость 4
+
+        .sil<[1000]> Новость 5.sil<[1000]> На этом всё. Следующий выпуск хоть сейчас.
+
+  app_info:
+    ignore:
+    - watch
+
+test_news_different_intro:
+  experiments: [alice_more_news_promo]
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    покажи новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость
+                  url: url
+        blocks:
+        - type: attention
+          attention_type: top_news
+
+      text: |-
+        Новость.
+
+      voice: |-
+        Вот последние новости. Если попадутся неинтересные — смело пропускайте..sil<[1000]> Новость.sil<[1000]> Рассказала о главном, хотя могу ещё.
+
+    мои новости:
+      bass:
+        form:
+          news:
+            value:
+              news:
+                - text: Новость
+                  url: url
+        blocks:
+        - type: attention
+          attention_type: personal_news
+
+      text: |-
+        Новость.
+
+      voice: |-
+        Вот новости по интересам..sil<[1000]> Новость.sil<[1000]> Рассказала о самом интересном, спасибо за внимание.
+
+  app_info:
+    ignore:
+    - watch

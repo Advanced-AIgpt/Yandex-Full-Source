@@ -1,0 +1,132 @@
+service: wsproxy
+title: Alice
+
+arcanum:
+  auto_merge:
+    requirements:
+      - system: CI
+        type: 'alice: Tests of YT options and flags in proto files'
+        disabling_policy: need_reason
+      # https://wiki.yandex-team.ru/arcadia/tier1/#zapuskprekommitnyxproverokvteamcity
+      # keep Monorepo_TV_PrInspection_Sandbox in the following files in sync
+      # - https://a.yandex-team.ru/arc_vcs/smart_devices/android/a.yaml
+      # - https://a.yandex-team.ru/arc_vcs/yandex_io/a.yaml
+      # - https://a.yandex-team.ru/arc_vcs/alice/a.yaml
+      - system: teamcity-common
+        type: Monorepo_TV_PrInspection_Sandbox
+        alias: TV:PrInspection_Sandbox
+        restartable: true
+        disabling_policy: allowed
+        data:
+          branch_prefix: tv-android
+          strategy: merge-head
+        filters:
+          paths:
+            included:
+              - protos/data/**
+              - gproxy/library/protos/**
+              # - /smart_devices/android/tv/
+              # - /smart_devices/android/quasar-rcu/
+              # - /smart_devices/android/quasar-common/
+              # - /yandex_io/
+      # https://wiki.yandex-team.ru/arcadia/tier1/#zapuskprekommitnyxproverokvteamcity
+      # keep YandexTvHome_AcceptanceTests in the following files in sync
+      # - https://a.yandex-team.ru/arc_vcs/smart_devices/android/a.yaml
+      # - https://a.yandex-team.ru/arc_vcs/yandex_io/a.yaml
+      # - https://a.yandex-team.ru/arc_vcs/alice/a.yaml
+      - system: teamcity-common
+        type: YandexTvHome_AcceptanceTests
+        alias: TV:Home:AcceptanceTests
+        restartable: true
+        disabling_policy: allowed
+        data:
+          branch_prefix: tv-home
+          strategy: merge-pin
+        filters:
+          paths:
+            included:
+              - protos/data/**
+              - gproxy/library/protos/**
+              # - /smart_devices/android/tv/
+              # - /smart_devices/android/quasar-rcu/
+              # - /smart_devices/android/quasar-common/
+              # - /yandex_io/
+
+ci:
+  release-title-source: flow
+  secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+  runtime:
+    sandbox:
+      owner: VOICESERV_RELEASERS
+      tags:
+        - ARCADIA-CI-TASK
+
+  triggers:
+    - on: pr
+      flow: check-wonderlogs-protos
+      required: true
+
+    - on: pr
+      flow: proto-image-build-test
+      required: true
+
+    - on: pr
+      flow: proto-breaking-change-test
+      required: true
+
+  flows:
+    check-wonderlogs-protos:
+      title: Tests of YT options and flags in proto files
+      jobs:
+        run-sandbox-task:
+          task: projects/alice/wonderlogs/proto_tests
+
+          attempts:
+            max: 3
+
+    proto-image-build-test:
+      title: Run protobuf image build
+      jobs:
+        proto-image-build:
+          title: Run ya buf build over alice
+          task: common/misc/run_command
+          attempts:
+            max: 3
+
+          input:
+            config:
+              cmd_line: |
+                ./ya buf build --do-not-use-build-graph --output image.bin alice
+              arc_mount_config:
+                enabled: true
+
+    proto-breaking-change-test:
+      title: Run breaking changes protobuf tests
+      jobs:
+        breaking-change-test:
+          title: Build trunk image and test it vs pr protos
+          task: common/misc/run_command
+          attempts:
+            max: 3
+
+          input:
+            config:
+              arc_mount_config:
+                enabled: true
+              cmd_line: |
+                # build trunk image
+                $ARC_BIN checkout trunk
+                ./ya buf build --do-not-use-build-graph --output $RESULT_RESOURCES_PATH/buf_image.bin alice
+
+                # test current sources against trunk image
+                $ARC_BIN pr checkout ${context.launch_pull_request_info.pull_request.id}
+                $ARC_BIN rebase trunk
+                ./ya buf check --against-input $RESULT_RESOURCES_PATH/buf_image.bin --do-not-use-build-graph alice
+
+
+              result_resources:
+                - path: buf_image.bin
+                  description: Protobuf image from trunk
+                  type: OTHER_RESOURCE
+                  attributes:
+                    ttl: "7"

@@ -1,0 +1,163 @@
+labels:
+  found: '.*(Посмотрела на Маркете|Заглянула на Маркет|Это средняя цена по данным
+    Яндекс Маркета|Нашла на Маркете).*'
+  not_found: '.*(Я не изучала спрос на это|Открываю Яндекс|Интересный вопрос\. Сейчас
+    найдём|Даже не знаю\. Спросим Яндекс\?|Давайте поищем в Яндексе|Ищу ответ).*'
+  how_much__vulgar_query_result: '.*(Не стоит|Не хочу|Нет настроения|что-нибудь другое).*'
+  open_serp: '.*([Ии]щу|[Нн]айд(у|ётся)|[Нн]айдём|Одну секунду|поиск|поищем|[Оо]ткрываю).*'
+
+# default client does not supports div cards
+test_market_how_much_without_div:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test_popular_goods:
+    # popular_goods
+    сколько стоит лего:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'лего'
+      text: '{found}'
+      cards:
+      - simple_text
+      suggest:
+      - caption: 'сколько стоит лего'
+
+  test_model:
+    сколько стоит Xiaomi Mijia Electric Scooter:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'xiaomi mijia electric scooter'
+      text: '{found}'
+      cards:
+      - simple_text
+      suggest:
+      - caption: 'сколько стоит Xiaomi Mijia Electric Scooter'
+
+# this client can render div cards
+# https://a.yandex-team.ru/arc/trunk/arcadia/quality/functionality/cards_service/bass/client_info.cpp?rev=3662675#L161
+test_market_how_much_with_div:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  app_info:
+    app_id: 'com.yandex.dialog_assistant.sample'
+    app_version: '1.0'
+    os_version: '7.0.0'
+    platform: 'android'
+  test_popular_goods:
+    сколько стоит лего:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'лего'
+      text: '{found}'
+      cards:
+      - simple_text
+      - div_card
+      suggest:
+      - caption: 'сколько стоит лего'
+  test_model:
+    сколько стоит Xiaomi Mijia Electric Scooter:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'xiaomi mijia electric scooter'
+      text: '{found}'
+      cards:
+      - simple_text
+      - div_card
+      suggest:
+      - caption: 'сколько стоит Xiaomi Mijia Electric Scooter'
+
+
+test_market_how_much_not_found:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  app_info:
+    ignore:
+    - watch
+    - navigator_ios
+    - navigator_android
+    - auto
+  test_crazy_request:
+    dialog:
+      сколько стоит ывдлоарывлдо:
+        vins_form:
+          name: 'personal_assistant.scenarios.how_much'
+          slots:
+            request:
+              value: 'ывдлоарывлдо'
+        text: '{not_found}'
+        cards:
+        - text_with_button
+        buttons:
+          type: 'text_with_button'
+          title: 'Найти в Яндексе'
+        suggests:
+        - type: how_much__yandex_search
+
+# https://st.yandex-team.ru/DIALOG-2018
+# actually can change behaviour
+# check https://market.yandex.ua/product/38304772?hid=91491&rt=4&suggest_text=HTC%20Desire%2012%2B&suggest=1&suggest_type=model&was_redir=1 in case of fails
+test_market_how_much_without_offers:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  geo:
+    lon: 34.7981
+    lat: 50.9077
+  dialog:
+    сколько стоит HTC Desire 12+:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'htc desire 12 +'
+      text: '{not_found}'
+      cards:
+      - text_with_button
+      buttons:
+        type: 'text_with_button'
+        title: 'Найти в Яндексе'
+      suggest:
+      - type: how_much__yandex_search
+
+  app_info:
+    ignore:
+    - auto
+    - navigator_android
+    - navigator_ios
+    - watch
+
+test_market_how_much_dont_want_to_answer:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    # some disputable inquiries of erotic or illegal character
+    почем рабы:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'рабы'
+      text: '{how_much__vulgar_query_result}'
+      cards:
+      - simple_text
+
+test_market_how_much_no_experiment:
+  experiments: ['how_much_disable', 'mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    dialog:
+      сколько стоит лего:
+        vins_form:
+          name: 'personal_assistant.scenarios.search'
+          slots:
+            query:
+              value: 'сколько стоит лего'
+        text: '{open_serp}'
+    app_info:
+      ignore:
+      - irbis
+      - dexp
+      - auto
+      - watch
+      - speaker

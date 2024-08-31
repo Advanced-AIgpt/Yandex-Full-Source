@@ -1,0 +1,257 @@
+Channel {
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "vins"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "uniproxy"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "notificator"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "bass"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "megamind"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "hollywood"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "asrgpu"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "ttsgpu"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "dialog-search"
+            LogType: "serp-summarizer-runtime-logs"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alisa-skills-rec"
+            LogType: "alice-skill-rec-bin-log"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alice-production"
+            LogType: "cuttlefish"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@prod"
+            LogType: "begemot-megamind"
+            Client: "alicelogs@prod@rthub"
+            BatchSize: 110
+            Timeout: 30000
+            MaxPartitions: 5
+        }
+    }
+    Yql {
+        Path: "Parse"
+        InputProto: "NRobot.TSerializedMessage"
+        OutputProto: "NRTLog.TRecord"
+    }
+    Output {
+        Name: "events"
+        Yql: {
+            Path: "SelectEventItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TEventItem"
+        }
+        Ydb: {
+            Endpoint: "$(YDB_ENDPOINT)"
+            Database: "$(YDB_DB)"
+            MaxBatchSize: 1700
+            MaxBatchSizeInBytes: 1024000
+            MaxActiveSessionsCount: 75
+            BatchDelayMillis: 10000
+            YdbClientTimeout: "20s"
+            RotatingTable: {
+                Prefix: "$(YDB_DB)/events_"
+                RecreateAfter: "8h"
+                DropAfter: "48h"
+                PresetName: "log_lz4"
+                PreservePartitions: true
+            }
+            DropFailedBatches: true
+        }
+    }
+    Output {
+        Name: "events_index"
+        Yql: {
+            Path: "SelectEventIndexItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TEventIndexItem"
+        }
+        Ydb: {
+            Endpoint: "$(YDB_ENDPOINT)"
+            Database: "$(YDB_DB)"
+            MaxBatchSize: 1700
+            MaxBatchSizeInBytes: 1024000
+            MaxActiveSessionsCount: 75
+            BatchDelayMillis: 10000
+            YdbClientTimeout: "20s"
+            RotatingTable: {
+                Prefix: "$(YDB_DB)/events_index_"
+                RecreateAfter: "8h"
+                DropAfter: "240h"
+                PreservePartitions: true
+            }
+            DropFailedBatches: true
+        }
+    }
+    Output {
+        Name: "special_events"
+        Yql: {
+            Path: "SelectSpecialEventItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TSpecialEventItem"
+        }
+        Ydb: {
+            Endpoint: "$(YDB_ENDPOINT)"
+            Database: "$(YDB_DB)"
+            MaxBatchSize: 1700
+            MaxBatchSizeInBytes: 1024000
+            MaxActiveSessionsCount: 75
+            BatchDelayMillis: 10000
+            YdbClientTimeout: "20s"
+            RotatingTable: {
+                Prefix: "$(YDB_DB)/special_events_"
+                RecreateAfter: "8h"
+                DropAfter: "240h"
+            }
+            DropFailedBatches: true
+        }
+    }
+    Output {
+        Name: "megamind_errors"
+        Yql: {
+            Path: "SelectErrorEventItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TErrorEventItem"
+        }
+        Queue: {
+            Ident: "megamind"
+            LogType: "error-log"
+            MaxPartitions: 5
+            ProducerCodec: GZIP
+        }
+        Compress: false
+    }
+}
+Limits {
+    WorkerThreadsCount: 6
+    InputInflightLimit {
+        ItemsSizeInBytes: 170000000
+    }
+    MaxOutputMessageSize: 12000000
+    MaxMessageSize: 100000000
+}
+LogBroker: "iva.logbroker.yandex.net"
+LogBroker: "man.logbroker.yandex.net"
+LogBroker: "myt.logbroker.yandex.net"
+LogBroker: "sas.logbroker.yandex.net"
+LogBroker: "vla.logbroker.yandex.net"
+InstanceStateFilePath: "/db/bsconfig/webcache/rthub-alicelogs-prod/instance"
+UseProcesses: true
+RecyclePeriodMinutes: 40
+HeatupMessagesCount: 0
+LogbrokerBalancerUrl: "http://lb-balancer-alice-1.vla.yp-c.yandex.net"
+LogbrokerBalancerUrl: "http://lb-balancer-alice-1.sas.yp-c.yandex.net"
+LogbrokerBalancerUrl: "http://lb-balancer-alice-1.man.yp-c.yandex.net"
+
+UseNewPQLib: true
+
+RthubTvmClientId: 2000464
+Environment {
+    Variable {
+        Name: "YDB_ENDPOINT"
+        Value: "ydb-ru.yandex.net:2135"
+    }
+    Variable {
+        Name: "YDB_DB"
+        Value: "/ru/alice/prod/alicelogs"
+    }
+}
+
+DeadLetterQueue {
+    Queue: {
+        Ident: "alicelogs@prod"
+        LogType: "dead-letter-queue"
+        MaxPartitions: 5
+        PartitionsPerDc: 1
+    }
+}

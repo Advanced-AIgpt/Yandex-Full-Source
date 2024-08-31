@@ -1,0 +1,200 @@
+//
+// Note this is just an example for TInterfaces scenario
+//
+
+syntax = "proto3";
+
+package NAlice.NScenarios;
+
+import "google/protobuf/descriptor.proto";
+import "alice/protos/extensions/extensions.proto";
+
+option go_package = "a.yandex-team.ru/alice/tools/codegen/proto";
+option java_package = "ru.yandex.alice.tools.codegen.proto";
+option java_outer_classname = "RequestProto";
+
+/*
+constexpr TStringBuf CLOUD_PUSH_FEATURE = "cloud_push_implementation";
+constexpr TStringBuf MUSIC_PLAYER_ALLOW_SHOTS = "music_player_allow_shots";
+constexpr TStringBuf OPEN_PASSWORD_MANAGER = "pwd_app_manager";
+constexpr TStringBuf READER_APP = "reader_app";
+constexpr TStringBuf SYNC_PUSH_FEATURE = "synchronized_push_implementation";
+constexpr TStringBuf TV_OPEN_STORE = "tv_open_store";
+constexpr TStringBuf VIDEO_TRANSLATION_ONBOARDING = "can_open_videotranslation_onboarding";
+constexpr TStringBuf HANDLE_ANDROID_APP_INTENT = "handle_android_app_intent";
+
+// known legacy client features: SK-4350
+constexpr TStringBuf NO_BLUETOOTH = "no_bluetooth";
+constexpr TStringBuf NO_MICROPHONE = "no_microphone";
+
+// experimental flags, should be removed
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_ALARMS = "enable_alarms";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_BOOKS_LIBRARY_FIXLIST = "enable_books_library_fixlist";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_REMINDERS_AND_TODOS = "enable_reminders_todos";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_REMINDERS_AND_TODOS_IOS_YABRO = "enable_reminders_todos_for_ios_yabro";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_REMINDERS_AND_TODOS_NAVIGATOR_HIDDEN = "enable_reminders_todos_for_navigator";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_SOUND_ALARMS = "change_alarm_sound";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_TIMERS = "enable_timers";
+constexpr TStringBuf EXPERIMENTAL_FLAG_ENABLE_TIMERS_AND_ALARMS = "enable_timers_alarms";
+constexpr TStringBuf EXPERIMENTAL_FLAG_INTERNAL_MUSIC_PLAYER = "internal_music_player";
+constexpr TStringBuf EXPERIMENTAL_FLAG_MESSAGING = "messaging";
+constexpr TStringBuf EXPERIMENTAL_FLAG_MULTI_TABS = "multi_tabs";
+constexpr TStringBuf EXPERIMENTAL_FLAG_RADIO_PLAY_IN_QUASAR = "radio_play_in_quasar";
+constexpr TStringBuf EXPERIMENTAL_FLAG_RADIO_PLAY_IN_SEARCH = "radio_play_in_search";
+constexpr TStringBuf EXPERIMENTAL_FLAG_TURN_ON_COVID_QR_FEATURE = "turn_on_covid_qr_feature";
+constexpr TStringBuf EXPERIMENTAL_FLAG_VIDEO_ENABLE_YABRO = "video_enable_yabro";
+*/
+
+
+// List of surface capabilities available to the app that the user
+// sent the utterance through.
+message TInterfacesExample {
+    // True if the app can display the response from Alice (as opposed to
+    // smart speakers, for example).
+    //
+    // Relies on data from the app. Please, look for alternatives if possible.
+    bool HasScreen = 1 [json_name = "has_screen"];
+
+    // True if the session started with voice activation (as opposed to typing).
+    bool VoiceSession = 2 [json_name = "voice_session"];
+
+    // True if the app has access to speakers (false for Module, for example).
+    //
+    // The flag is not reliable due to wrong default value.
+    bool HasReliableSpeakers = 3 [json_name = "has_reliable_speakers", (feature) = "no_reliable_speakers", (feature_type) = SimpleSupport]; // (BASS: !no_reliable_speakers) динамики "надежные" (используется для напоминаний и будильников)
+
+    // True if the app has access to Bluetooth.
+    bool HasBluetooth = 4 [json_name = "has_bluetooth"]; // not reliable due to wrong default value
+
+    // True if the app has access to the state of the battery on the device.
+    bool HasAccessToBatteryPowerState = 5 [json_name = "has_access_to_battery_power_state", (feature) = "battery_power_state", (feature_type) = SupportUnsupportFalse]; // клиент может имеет доступ к заряду батареи
+
+    // True if the app can turn off a screen connected to the device through
+    // HDMI.
+    bool HasCEC = 6 [json_name = "has_cec", (feature) = "cec_available", (feature_type) = SupportUnsupportFalse]; // клиент может выключать экран через HDMI
+
+    // True if the app can change the sound that the device uses for alarms.
+    bool CanChangeAlarmSound = 7 [json_name = "can_change_alarm_sound", (feature) = "change_alarm_sound", (feature_type) = SupportUnsupportFalse]; // клиент поддерживает изменение звука будильника
+
+    // True if the app has access to the microphone on the device.
+    bool HasMicrophone = 8 [json_name = "has_microphone"]; // not reliable due to wrong default value
+
+    // The device firmware supports Music "shots".
+    //
+    // TODO: clarify with Music
+    bool HasMusicPlayerShots = 9 [json_name = "has_music_player_shots"]; // клиент (музыкальный плеер) поддерживает шоты
+
+    // True if there's a TV currently plugged into the device.
+    bool IsTvPlugged = 10 [json_name = "is_tv_plugged"];
+
+    bool CanSetAlarm = 11 [json_name = "can_set_alarm", (feature) = "set_alarm", (feature_type) = CustomCode];
+    bool CanSetTimer = 12 [json_name = "can_set_timer", (feature) = "set_timer", (feature_type) = CustomCode];
+    bool CanOpenLink = 13 [json_name = "can_open_link", (feature) = "open_link", (feature_type) = CustomCode]; // client can open link in internal browser
+    bool CanOpenLinkTurboApp = 20 [json_name = "can_open_link_turboapp", (feature) = "open_link_turboapp", (feature_type) = CustomCode]; // client can open turbo app
+    bool HasSynchronizedPush = 14 [json_name = "has_synchronized_push"]; // client implements pushes without races
+    bool SupportsVideoProtocol = 15 [json_name = "supports_video_protocol", (feature) = "video_protocol", (feature_type) = CustomCode]; // client supports video protocol (knows how to handle video directives)
+    bool CanShowGif = 16 [json_name = "can_show_gif"]; // subset of clients supporting div2 cards
+    bool HasLedDisplay = 17 [json_name = "has_led_display", (feature) = "led_display", (feature_type) = SupportUnsupportFalse]; // client supports led display to show animation
+    bool TtsPlayPlaceholder = 18 [json_name = "tts_play_placeholder", (feature) = "tts_play_placeholder", (feature_type) = SupportUnsupportFalse]; // client can voice tts (tts_play_placeholder directive) in arbitrary place among directives
+    bool Multiroom = 19 [json_name = "multiroom", (feature) = "multiroom", (feature_type) = SimpleSupport]; // True if device has multiroom support
+    bool HasAudioClient = 21 [json_name = "has_audio_client", (feature) = "audio_client", (feature_type) = SupportUnsupportFalse]; // client supports thin audio player
+    bool IsPubliclyAvailable = 22 [json_name = "is_publicly_available", (feature) = "publicly_available", (feature_type) = SupportUnsupportFalse]; // client is publicly available (risky client due to some legal reasons)
+    bool HasNotifications = 23 [json_name = "has_notifications", (feature) = "notifications", (feature_type) = SupportUnsupportFalse]; // client supports push notifications via alice notificator
+    bool HasBluetoothPlayer = 24 [json_name = "has_bluetooth_player", (feature) = "bluetooth_player", (feature_type) = SupportUnsupportFalse];
+    bool CanChangeAlarmSoundLevel = 25 [json_name = "can_change_alarm_sound_level", (feature) = "change_alarm_sound_level", (feature_type) = SupportUnsupportFalse];
+    bool CanServerAction = 26 [json_name = "can_server_action", (feature) = "server_action", (feature_type) = CustomCode]; // client implements server actions (special alice backend requests)
+    bool CanRecognizeMusic = 27 [json_name = "can_recognize_music", (feature) = "music_recognizer", (feature_type) = CustomCode]; // client supports music recognition with music request
+    bool HasMordoviaWebView = 28 [json_name = "has_mordovia_webview", (feature) = "mordovia_webview", (feature_type) = CustomCode]; // client supports mordovia directives
+    bool IncomingMessengerCalls = 29 [json_name = "incoming_messenger_calls", (feature) = "incoming_messenger_calls", (feature_type) = SimpleSupport]; // client supports incoming messenger calls
+    bool SupportsBluetoothRCU = 30 [json_name = "bluetooth_rcu", (feature) = "bluetooth_rcu", (feature_type) = SupportUnsupportFalse]; // client supports pairing to a remote control unit via bluetooth
+
+    // True if client supports live-tv scheme urls (publishes own url list based on internal channel db state
+    // to backend and knows how to handle such urls after receiving)
+    bool LiveTvScheme = 31 [json_name = "live_tv_scheme", (feature) = "live_tv_scheme", (feature_type) = SimpleSupport];
+    bool CanOpenQuasarScreen = 32 [json_name = "can_open_quasar_screen", (feature) = "quasar_screen", (feature_type) = CustomCode]; // client can open quasar screen
+
+    //Video codecs
+    bool VideoCodecAVC = 33 [json_name = "video_codec_AVC", (feature) = "video_codec_AVC", (feature_type) = SimpleSupport];
+    bool VideoCodecHEVC = 34 [json_name = "video_codec_HEVC", (feature) = "video_codec_HEVC", (feature_type) = SimpleSupport];
+    bool VideoCodecVP9 = 35 [json_name = "video_codec_VP9", (feature) = "video_codec_VP9", (feature_type) = SimpleSupport];
+    bool AudioCodecDD = 36 [json_name = "audio_codec_DD", deprecated = true];
+    bool AudioCodecDTS = 37 [json_name = "audio_codec_DTS", deprecated = true];
+    bool AudioCodecAAC = 38 [json_name = "audio_codec_AAC", (feature) = "audio_codec_AAC", (feature_type) = SimpleSupport];
+    bool AudioCodecEC3 = 39 [json_name = "audio_codec_EC3", deprecated = true];
+    bool CurrentHDCPLevelNone = 40 [json_name = "current_HDCP_level_none"];
+    bool CurrentHDCPLevel1X = 41 [json_name = "current_HDCP_level_1X"];
+    bool CurrentHDCPLevel2X = 42 [json_name = "current_HDCP_level_2X"];
+    bool DynamicRangeSDR = 43 [json_name = "dynamic_range_SDR", (feature) = "dynamic_range_SDR", (feature_type) = SimpleSupport];
+    bool DynamicRangeHDR10 = 44 [json_name = "dynamic_range_HDR10", (feature) = "dynamic_range_HDR10", (feature_type) = SimpleSupport];
+    bool DynamicRangeHDR10Plus = 45 [json_name = "dynamic_range_HDR10Plus", (feature) = "dynamic_range_HDR10Plus", (feature_type) = SimpleSupport];
+    bool DynamicRangeDV = 46 [json_name = "dynamic_range_DV", (feature) = "dynamic_range_DV", (feature_type) = SimpleSupport];
+    bool DynamicRangeHLG = 47 [json_name = "dynamic_range_HLG", (feature) = "dynamic_range_HLG", (feature_type) = SimpleSupport];
+    bool VideoFormatSD = 48 [json_name = "video_format_SD"];
+    bool VideoFormatHD = 49 [json_name = "video_format_HD"];
+    bool VideoFormatUHD = 50 [json_name = "video_format_UHD"];
+
+    bool CanOpenWhocalls = 51 [json_name = "can_open_whocalls", (feature) = "whocalls", (feature_type) = CustomCode]; // client can open whocalls onboarding
+
+    bool AudioCodecEAC3 = 52 [json_name = "audio_codec_EAC3", (feature) = "audio_codec_EAC3", (feature_type) = SimpleSupport];
+    bool AudioCodecAC3 = 53 [json_name = "audio_codec_AC3", (feature) = "audio_codec_AC3", (feature_type) = SimpleSupport];
+    bool AudioCodecVORBIS = 54 [json_name = "audio_codec_VORBIS", (feature) = "audio_codec_VORBIS", (feature_type) = SimpleSupport];
+    bool AudioCodecOPUS = 55 [json_name = "audio_codec_OPUS", (feature) = "audio_codec_OPUS", (feature_type) = SimpleSupport];
+
+    bool HasMusicSdkClient = 56 [json_name = "has_music_sdk_client", (feature) = "music_sdk_client", (feature_type) = CustomCode];
+    bool CanRecognizeImage = 57 [json_name = "can_recognize_image", (feature) = "image_recognizer", (feature_type) = CustomCode];
+    bool CanRenderDivCards = 58 [json_name = "can_render_div_cards", (feature) = "div_cards", (feature_type) = CustomCode];
+    bool CanOpenLinkIntent = 59 [json_name = "can_open_link_intent", (feature) = "open_link_intent", (feature_type) = CustomCode];
+
+    bool MultiroomCluster = 60 [json_name = "multiroom_cluster", (feature) = "multiroom_cluster", (feature_type) = SimpleSupport]; // True if device has multiroom cluster support
+    bool CanRenderDiv2Cards = 61 [json_name = "can_render_div2_cards", (feature) = "div2_cards", (feature_type) = CustomCode]; // Actually tells that this is PP that can render div2 card from response.layout.card; Consider as Deprecated in Clients other than PP
+    bool CanOpenDialogsInTabs = 62 [json_name = "can_open_dialogs_in_tabs", (feature) = "open_dialogs_in_tabs", (feature_type) = CustomCode]; // client can open external skills in separate tabs
+    bool CanOpenLinkSearchViewport = 63 [json_name = "can_open_link_search_viewport", (feature) = "open_link_search_viewport", (feature_type) = CustomCode]; // client can open serp with viewport:// url
+    bool HasDirectiveSequencer = 64 [json_name = "has_directive_sequencer", (feature) = "directive_sequencer", (feature_type) = SupportUnsupportFalse]; // client supports sequential directive execution
+    bool CanOpenKeyboard = 65 [json_name = "can_open_keyboard", (feature) = "keyboard", (feature_type) = SupportUnsupportFalse]; // client can open keyboard onboarding/settings
+    bool HasCloudPush = 66 [json_name = "has_cloud_push"]; // client implements cloud-based pushes
+
+    bool CanOpenYandexAuth = 67 [json_name = "can_open_yandex_auth", (feature) = "open_yandex_auth", (feature_type) = CustomCode]; // True if device can open "yandex-auth://" links for authorization
+    bool HasMusicQuasarClient = 68 [json_name = "has_music_quasar_client", (feature) = "music_quasar_client", (feature_type) = SupportUnsupportFalse]; // client supports legacy quasar music player
+    bool CanSetAlarmSemanticFrame = 69 [json_name = "can_set_alarm_semantic_frame"];
+    bool HasNavigator = 70 [json_name = "has_navigator", (feature) = "navigator", (feature_type) = CustomCode]; // supports navigator protocol
+    bool CanOpenLinkYellowskin = 71 [json_name = "can_open_link_yellowskin", (feature) = "open_link_yellowskin", (feature_type) = CustomCode]; // client supports yellowskin js-api
+    bool SupportsShowView = 72 [json_name = "supports_show_view", (feature) = "show_view", (feature_type) = SupportUnsupportFalse]; // client supports show_view directive
+    bool SupportsFMRadio = 73 [json_name = "supports_fm_radio"]; // client supports listening to FM radio
+    bool OutgoingPhoneCalls = 74 [json_name = "outgoing_phone_calls", (feature) = "outgoing_phone_calls", (feature_type) = CustomCode]; // client supports outgoing phone calls
+    bool CanOpenIBroSettings = 75 [json_name = "can_open_ibro_settings", (feature) = "open_ibro_settings", (feature_type) = SupportUnsupportFalse]; // client can open system browser settings screen with custom push
+    bool SupportsHDMIOutput = 76 [json_name = "supports_hdmi_output"]; // client supports streaming video data through hdmi
+    bool SupportsAudioBitrate192Kbps = 77 [json_name = "supports_audio_bitrate_192_kpbs", (feature) = "audio_bitrate192", (feature_type) = SimpleSupport]; // client's audio player supports middle-level sound bitrate
+    bool SupportsAudioBitrate320Kbps = 78 [json_name = "supports_audio_bitrate_320_kpbs", (feature) = "audio_bitrate320", (feature_type) = SimpleSupport]; // client's audio player supports the highest sound bitrate
+    bool SupportsVideoPlayDirective = 79 [json_name = "supports_video_play_directive", (feature) = "video_play_directive", (feature_type) = CustomCode]; // client supports video_play directive
+    bool CanOpenReader = 80 [json_name = "can_open_reader"]; // client can open reader app
+    bool SupportsUnauthorizedMusicDirectives = 81 [json_name = "supports_unauthorized_music_directives", (feature) = "unauthorized_music_directives", (feature_type) = SupportUnsupportFalse]; // client supports music directives for unauthorized user
+    bool SupportsTvOpenCollectionScreenDirective = 82 [json_name = "supports_tv_open_collection_screen_directive", (feature) = "tv_open_collection_screen_directive", (feature_type) = SupportUnsupportFalse]; // client supports tv_open_collection_screen directive
+    bool SupportsTvOpenDetailsScreenDirective = 83 [json_name = "supports_tv_open_details_screen_directive", (feature) = "tv_open_details_screen_directive", (feature_type) = SupportUnsupportFalse]; // client supports tv_open_details_screen directive
+    bool SupportsTvOpenPersonScreenDirective = 84 [json_name = "supports_tv_open_person_screen_directive", (feature) = "tv_open_person_screen_directive", (feature_type) = SupportUnsupportFalse]; // client supports tv_open_person_screen directive
+    bool SupportsTvOpenSearchScreenDirective = 85 [json_name = "supports_tv_open_search_screen_directive", (feature) = "tv_open_search_screen_directive", (feature_type) = SupportUnsupportFalse]; // client supports tv_open_search_screen directive
+    bool SupportsTvOpenSeriesScreenDirective = 86 [json_name = "supports_tv_open_series_screen_directive", (feature) = "tv_open_series_screen_directive", (feature_type) = SupportUnsupportFalse]; // client supports tv_open_series_screen directive
+    bool SupportsCloudUi = 87 [json_name = "supports_cloud_ui", (feature) = "cloud_ui", (feature_type) = SupportUnsupportFalse]; // client supports Alice-cloud https://st.yandex-team.ru/IBRO-24652
+    bool MultiroomAudioClient = 88 [json_name = "multiroom_audio_client", (feature) = "multiroom_audio_client", (feature_type) = SimpleSupport]; // client supports multiroom on audio client
+    bool SupportsDivCardsRendering  = 89 [json_name = "supports_div_cards_rendering", (feature_type) = CustomCode]; // proxy interface for client support one of div cards (CanRenderDivCards or CanRenderDiv2Cards)
+    bool CanOpenCovidQrCode = 90 [json_name = "can_open_covid_qr_code", (feature) = "covid_qr", (feature_type) = CustomCode]; // can open covid qr code in app
+    bool HasAudioClientHls = 91 [json_name = "has_audio_client_hls", (feature) = "audio_client_hls", (feature_type) = SupportUnsupportFalse]; // client supports hls in thin audio player
+    bool CanOpenPedometer = 92 [json_name = "can_open_pedometer", (feature) = "pedometer", (feature_type) = SimpleSupport]; // client can open pedometer app
+    bool SupportsVerticalScreenNavigation = 93 [json_name = "supports_vertical_screen_navigation", (feature) = "vertical_screen_navigation", (feature_type) = CustomCode]; // client supports vertical screen navigation directives (go_up/go_down)
+    bool CanOpenWhocallsBlocking = 94 [json_name = "can_open_whocalls_blocking", (feature) = "whocalls_call_blocking", (feature_type) = SimpleSupport]; // client can open whocalls blocking settings
+    bool SupportsMapsDownloadOffline = 95 [json_name = "maps_download_offline", (feature) = "maps_download_offline", (feature_type) = SupportUnsupportFalse]; // client can download offline maps https://st.yandex-team.ru/MAPSPRODUCT-1623
+    bool CanOpenPasswordManager = 96 [json_name = "can_open_password_manager"]; // client can open password manager via deeplink
+    bool SupportsGoHomeDirective = 97 [json_name = "supports_go_home_directive", (feature) = "go_home", (feature_type) = SupportUnsupportFalse]; // // client supports go_home directive
+    bool CanOpenBonusCardsCamera = 98 [json_name = "can_open_bonus_cards_camera", (feature) = "bonus_cards_camera", (feature_type) = SimpleSupport]; // client supports smart camera in bonus cards mode
+    bool CanOpenBonusCardsList = 99 [json_name = "can_open_bonus_cards_list", (feature) = "bonus_cards_list", (feature_type) = SimpleSupport]; // client can open bonus cards list
+    bool CanShowTimer = 100 [json_name = "can_show_timer", (feature) = "show_timer", (feature_type) = CustomCode]; // client supports timer_show directive
+    bool HasMusicPlayer = 101 [json_name = "has_music_player"]; // client has internal music player
+    bool SupportsDeviceLocalReminders = 102 [json_name = "supports_device_local_reminders", (feature) = "supports_device_local_reminders", (feature_type) = SimpleSupport]; // client supports device local reminders
+    bool CanOpenWhocallsMessageFiltering = 103 [json_name = "can_open_whocalls_message_filtering", (feature) = "whocalls_message_filtering", (feature_type) = SimpleSupport]; // client can open message filtering
+    bool HasScledDisplay = 104 [json_name = "has_scled_display", (feature) = "scled_display", (feature_type) = SimpleSupport]; // client supports 7-segment-led display to show animation (Mini 2)
+    bool PhoneAddressBook = 105 [json_name = "phone_address_book", (feature) = "phone_address_book", (feature_type) = SimpleSupport]; // client can send the address book
+    bool SupportsAbsoluteVolumeChange = 106 [json_name = "supports_absolute_volume_change", (feature) = "absolute_volume_change", (feature_type) = SupportUnsupportTrue]; // client supports sound_set_level directive
+    bool SupportsRelativeVolumeChange = 107 [json_name = "supports_relative_volume_change", (feature) = "relative_volume_change", (feature_type) = SupportUnsupportFalse]; // client supports sound_louder/sound_quiter directive
+    bool CanOpenVideotranslationOnboarding = 108 [json_name = "can_open_videotranslation_onboarding"]; // client can open videotranslation onboarding
+    bool OpenAddressBook = 109 [json_name = "open_address_book", (feature) = "open_address_book", (feature_type) = CustomCode]; // client can open the address book
+    bool HasClockDisplay = 110 [json_name = "has_clock_display", (feature) = "clock_display", (feature_type) = SupportUnsupportFalse]; // client shows clock on its display
+}

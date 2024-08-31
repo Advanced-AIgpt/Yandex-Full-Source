@@ -1,0 +1,90 @@
+action: scenario
+name: smarthome.turnoff
+
+token: 51ae06cc-5c8f-48dc-93ae-7214517679e6
+app_id: aliced
+app_version: "1.0"
+vins_device_id: 24638f140fbb2f80a2ac2209fae66431
+device_manufacturer: Irbis
+device_model: linkplay_a98
+
+platform: Linux
+os_version: "1.0"
+topic: quasar-general-gpu
+
+
+steps:
+  - action: proxy.session
+    steps:
+      - action: proxycli.sleep
+        value: 0.2
+
+      - action: proxy.synchronize_state
+
+        description: System.SynchronizeState
+
+        enable_local_experiments: True
+
+        experiments:
+            - smart_home_asr_help
+
+        custom_payload:
+            device_id: 24638f140fbb2f80a2ac2209fae66431
+            device: Irbis linkplay_a98
+            accept_invalid_auth: true
+            biometry_score: true
+            vins_scoring: true
+            vins_partials: true
+            device_model: linkplay_a98
+            device_manufacturer: Irbis
+            enable_realtime_streamer: true
+            platform_info: Linux
+            biometry_classify: gender,child,under35
+
+      - action: proxy.vins.voice_input
+        description: Vins.VoiceInput
+        stream:
+          - resource: /scenarios/data/spotter.opus
+            chunk_size: 8000
+            chunk_duration: 0.2
+            flush: true
+
+          - resource: /scenarios/data/turnoff.opus
+            chunk_size: 800
+            chunk_duration: 0.05
+
+        spotter_validation:
+          phrase: алиса
+          spotter_back: 450
+          request_front: 800
+
+      - action: proxy.aggregate_replies
+        timeout: 12.0
+        messages:
+          - message: Spotter.Validation
+            checks:
+              - check: proxy.check.event_payload
+                key: result
+                value: 1
+                warning: true
+
+              - check: proxy.check.event_payload
+                key: valid
+                value: 1
+                warning: true
+
+          - message: Biometry.Classification
+            checks:
+              - check: proxy.check.event_payload
+                key: status
+                value: ok
+
+          - message: Vins.VinsResponse
+            checks:
+              - check: proxy.check.event_payload
+                key: voice_response.should_listen
+                value: true
+
+              - check: proxy.check.event_payload
+                key: voice_response.output_speech.type
+                value: simple

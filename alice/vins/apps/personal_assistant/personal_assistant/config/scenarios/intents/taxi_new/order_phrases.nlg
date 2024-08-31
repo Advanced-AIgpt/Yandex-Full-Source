@@ -1,0 +1,151 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% from "show_route/show_route_common.nlg" import render_location, render_nogeo with context %}
+
+{% from "taxi_new/macros.nlg" import greetings, have_not_options, location_not_supported,
+                                     confused, payment_method with context %}
+
+{% phrase render_error__nogeo %}
+  {{ render_nogeo(form, context.error) }}
+{% endphrase %}
+
+{% macro phrase_for_taxi_route() %}
+  {% chooseline %}
+    Едем
+    Поедем
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro taxi_route() %}
+  {% if not form.option_changed %}
+    {{ phrase_for_taxi_route() }}
+    {% if not form.deep_link %}
+      от {{ render_location(form.resolved_location_from) }}
+    {% endif %}
+    до {{ render_location(form.resolved_location_to) }}
+  {% endif %}
+
+  {% if not form.deep_link %}
+    {% if form.price %}
+      {% if not form.option_changed %}
+        {% vc %}sil <[ 50 ]>{% evc %}
+        за
+      {% else %}
+        Стоимость
+      {% endif %}
+      {{ form.price }}
+    {% else %}
+      . Не могу построить маршрут. Поездка будет рассчитана по таксометру.
+    {% endif %}
+
+    {% if form.checked_tariff and form.checked_tariff.name %}
+      {% set tariff_name = form.checked_tariff.name %}
+    {% else %}
+      {% set tariff_name = "Эконом" %}
+    {% endif %}
+
+    {% vc %}sil <[ 200 ]>{% evc %}
+    {% if not form.checked_payment_method
+          or not form.checked_payment_method.type
+          or form.checked_payment_method.type == "cash" %}
+      Тариф — «{{ tariff_name }}», оплата {{ payment_method(form.checked_payment_method.type) }}
+    {% elif form.checked_payment_method.type == "card" %}
+      Тариф — «{{ tariff_name }}», оплата {{ payment_method(form.checked_payment_method.type) }}
+      {% if form.card_number %}
+        {% vc %}{{ form.card_number | insert_spaces_between_chars }}{% evc %}
+        {% tx %}{{ form.card_number }}{% etx %}
+      {% endif %}
+    {% elif form.checked_payment_method.type == "corp" %}
+      Тариф — «{{ tariff_name }}», оплата {{ payment_method(form.checked_payment_method.type) }}
+    {% endif %}
+    .\n
+
+    {% if form.waiting_time_minutes %}
+      Машина будет через {{ form.waiting_time_minutes }} мин.\n
+    {% endif %}
+    {% if form.estimate_route_time_minutes %}
+      Ехать {{ form.estimate_route_time_minutes }} мин.\n
+    {% endif %}
+
+    {% vc %}sil <[ 200 ]>{% evc %}
+    {% chooseline %}
+      Подтвердите, пожалуйста.
+      Всё ли верно?
+    {% endchooseline %}
+  {% else %}
+    {% if form.option_changed %}
+      Этому я пока не научилась. Открою для вас приложение.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase ask__where_from %}
+  {% set entry_intent = 'personal_assistant.scenarios.taxi_new_order' %}
+  {% if form.raw_form.name == entry_intent %}
+    {{ greetings() }}
+  {% endif %}
+
+  {% set error = context.error %}
+  {% if error and error.error_type == 'nogeo'%}
+     {{ render_nogeo(form, error) }}
+  {% else %}
+    {% if form.raw_form.name == entry_intent and form.stop_options %}
+      {{ have_not_options() }}
+    {% endif %}
+
+    {% if is_active_attention("location_is_not_supported") %}
+      {{ location_not_supported() }}
+    {% elif is_active_attention("from_incomplete") %}
+      Пожалуйста, назовите точный адрес или организацию.
+    {% elif is_active_attention("confirm_confused") %}
+      {{ confused() }}
+    {% endif %}
+
+    {% chooseline %}
+      Откуда вы поедете?
+      Откуда вас нужно забрать?
+      Откуда поедем?
+      Скажите, где вы находитесь.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase ask__where_to %}
+  {% set entry_intent = 'personal_assistant.scenarios.taxi_new_order' %}
+  {% if form.raw_form.name == entry_intent %}
+    {{ greetings() }}
+  {% endif %}
+
+  {% set error = context.error %}
+  {% if error and error.error_type == 'nogeo'%}
+     {{ render_nogeo(form, error) }}
+  {% else %}
+    {% if form.raw_form.name == entry_intent and form.stop_options %}
+      {{ have_not_options() }}
+    {% endif %}
+
+    {% if is_active_attention("to_incomplete") %}
+      Пожалуйста, скажите точный адрес или название организации.
+    {% elif is_active_attention("confirm_confused") %}
+      {{ confused() }}
+    {% endif %}
+
+    {% chooseline %}
+        Куда нужно добраться?
+        Куда нужно ехать?
+        Куда поедем?
+        Куда хотите поехать?
+        Куда вас нужно довезти?
+        В какое место вам нужно добраться?
+        Куда нужно доехать?
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_order__open_app %}
+  {{ context.taxi_order__open_app.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__taxi_order__open_app %}
+  Открыть Яндекс Go
+{% endphrase %}

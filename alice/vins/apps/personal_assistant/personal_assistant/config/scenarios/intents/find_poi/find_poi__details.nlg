@@ -1,0 +1,52 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "find_poi/find_poi__ask.nlg" %}
+
+{% from "find_poi/find_poi_common.nlg" import nothing_found, show_on_map %}
+{% from "scenarios/intents/common.nlg" import showing_map_not_supported %}
+
+{% phrase render_uri %}
+  {% if not is_smart_speaker() and not is_elari_watch() %}
+    {% set poi_or_geo = form.last_found_poi %}
+    {% if poi_or_geo and 'geo' in poi_or_geo %}
+      {{ poi_or_geo.object_uri }}
+    {% else %}
+      {{ poi_or_geo.geo_uri }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.last_found_poi %}
+    {% if form.last_found_poi.object_uri %}
+      {% if is_smart_speaker() or is_auto() or is_elari_watch() %}
+        {% chooseline %}
+          Подробнее в двух словах не расскажешь. Попробуйте спросить в Яндексе.
+          Я справлюсь с этим лучше на мобильном.
+          Спросите меня об этом на телефоне.
+          Попросите меня об этом на телефоне.
+          Спросите меня на телефоне, там как-то привычнее.
+        {% endchooseline %}
+      {% else %}
+        {% chooseline %}
+          Открываю подробную информацию.
+          Открываю карточку с подробной информацией.
+          Сейчас мы про эту организацию всё узнаем.
+          Давайте узнаем всё подробно.
+        {% endchooseline %}
+      {% endif %}
+    {% elif form.last_found_poi.geo_uri %}
+      {% if is_smart_speaker() or is_elari_watch() %}
+        {{ showing_map_not_supported() }}
+      {% else %}
+        {{ show_on_map() }}
+      {% endif %}
+    {% else %}
+      {% chooseline %}
+        У меня нет более подробной информации об этом месте.
+        У меня отсутствует подробная информация об этом месте.
+      {% endchooseline %}
+    {% endif %}
+  {% else %}
+    {{ nothing_found(form) }}
+  {% endif %}
+{% endphrase %}

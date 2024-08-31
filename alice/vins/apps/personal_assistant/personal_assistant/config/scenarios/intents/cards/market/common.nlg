@@ -1,0 +1,174 @@
+{% from "cards/common.nlg" import font_color, logged_action_url with context %}
+{% from "market/common.nlg" import market_short_name, pretty_date, currency_sign %}
+
+{% set REASON_TO_BUY_COLOR = "#29AD2E" %}
+{% set SHOP_COLOR = "#007700" %}
+{% set FADED_COLOR = "#999999" %}
+{% set VIOLET_COLOR = "#6839CF" %}
+{% set BOARDER_COLOR = "#E6E8EB" %}
+
+{% set REASON_TO_BUY_ICON = "https://avatars.mds.yandex.net/get-mpic/1884605/icon02.png/orig" %}
+{% set ADVISER_PERCENTAGE_ICON = "https://avatars.mds.yandex.net/get-mpic/1603927/icon01.png/orig" %}
+
+{% macro get_log_id() %}
+  {% if intent_name.startswith("personal_assistant.scenarios.how_much") %}
+    "market_how_much"
+  {% else %}
+    "market_choice"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_block(prepend_comma=False, append_comma=False) %}
+  {% set block = caller().strip() %}
+  {% if block %}
+    {% if prepend_comma %}
+      ,
+    {% endif %}
+    {{ block }}
+    {% if append_comma %}
+      ,
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro bold(text) -%}
+  <b>{{- text -}}</b>
+{%- endmacro %}
+
+{% macro render_review_count_text(count) -%}
+  {%- if count -%}
+    {{- count }} {{ "отзыв" | pluralize(count) -}}
+  {%- else -%}
+    Отзывов нет
+  {%- endif -%}
+{% endmacro %}
+
+{% macro render_price(value, currency) -%}
+  {{- value | int }} {{ currency_sign(currency) -}}
+{%- endmacro %}
+
+{% macro render_model_price(prices, currency) -%}
+  {%- if prices.default is defined -%}
+    {{- render_price(prices.default, currency) -}}
+  {%- else -%}
+    от {{ render_price(prices.min, currency) -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_offer_price(prices, currency) -%}
+  {%- if prices.value -%}
+    {{- render_price(prices.value, currency) -}}
+  {%- else -%}
+    от {{ render_price(prices.min, currency) -}}
+  {%- endif -%}
+{%- endmacro -%}
+
+{% macro render_item_price(item, currency) -%}
+  {%- if item.type == "offer" -%}
+    {{- render_offer_price(item.prices, currency).strip() -}}
+  {%- else -%}
+    {{- render_model_price(item.prices, currency).strip() -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_sale_price(doc, currency) -%}
+  {{- font_color("#A0A0A0", "было " + render_price(doc.prices.before_discount, currency)) -}}
+{%- endmacro %}
+
+{% macro render_filters(filters) %}
+  {% for filter in filters %}
+    {% if loop.index0 %}
+      <br/>
+    {% endif %}
+    {% if "values" in filter %}
+      {{ filter["name"] | html_escape -}}:
+      {% for value in filter["values"] %}
+        {%- if loop.index0 -%}
+          ,
+        {% endif %}
+        {% if "value" in value %}
+          {{ value["value"] | html_escape -}}
+        {% else %}
+          {{ value["min"] }} - {{ value["max"] -}}
+        {%- endif -%}
+      {% endfor %}
+      {% if "unit" in filter %}
+        {{ filter["unit"] | html_escape }}
+      {% endif %}
+    {% else %}
+      {{ filter["name"] | html_escape }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro reduce_text(text, max_len) -%}
+  {%- if text | length <= max_len -%}
+    {{- text -}}
+  {%- else -%}
+    {{- text[: max_len - 3] -}}...
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_white_courier_delivery_text(delivery) -%}
+  {% set has_date = "date" in delivery %}
+  {% set has_price = "price" in delivery %}
+  {% if has_date %}
+    {{ pretty_date(delivery.date, req_info, dayfirst=False) }}
+    {% if has_price %}
+      -
+      {% if delivery.price.value != "0" %}
+        {{ render_price(**delivery.price) }}
+      {% else %}
+        бесплатно
+      {% endif %}
+    {% endif %}
+  {% else %}
+    {% if has_price %}
+      {%- if delivery.price.value != "0" -%}
+        {{ render_price(**delivery.price) -}}
+      {%- else -%}
+        бесплатно
+      {%- endif -%}
+      ,
+    {% endif %}
+    на заказ
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_blue_delivery_text(delivery, req_info) -%}
+  {%- if delivery.get("courier") -%}
+    {%- set courier = delivery.courier -%}
+    {{- pretty_date(courier['date'], req_info, dayfirst=False) }} -
+    {% if courier.price.value != "0" %}
+      {{ render_price(**courier.price) -}}
+    {%- else -%}
+      бесплатно
+    {%- endif -%}
+    {%- if delivery.get("promotion") %}
+      ({{- delivery.promotion.description | html_escape -}})
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro calc_ratio(picture) -%}
+  {% if picture.height > 0 %}
+    {{- picture.width / picture.height -}}
+  {% else %}
+    1.0
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_picture(picture, box_ratio = 0.0) %}
+  {
+    "type": "div-image-element",
+    "ratio": {{- [calc_ratio(picture)|float, box_ratio]|max -}},
+    "image_url": "{{- picture.url -}}"
+  }
+{% endmacro %}
+
+{% macro render_action(url) %}
+  "action": {
+    "url": "{{- url -}}",
+    "log_id": {{ get_log_id() }}
+  }
+{% endmacro %}

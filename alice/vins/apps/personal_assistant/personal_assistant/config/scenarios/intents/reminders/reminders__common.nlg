@@ -1,0 +1,181 @@
+{% from "common/error.nlg" import render_error %}
+
+{% macro format_how_long(time, aggressive=True, case='acc') %}
+  {% set v = time | normalize_time_units() | ceil_seconds(aggressive) | render_units_time(case=case) %}
+  {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+{% endmacro %}
+
+{% macro elari_watch_unsupported() %}
+  {% chooseline %}
+    Запомню, что надо этому научиться.
+    Я этому скоро научусь. Не забыть бы.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro reminders_unsupported_device() %}
+  {% if is_elari_watch() %}
+    {{ elari_watch_unsupported() }}
+  {% else %}
+    {% chooseline %}
+      Я этого пока не умею, но обязательно научусь.
+      Этого я пока не умею, но я способная, я научусь.
+      Ох, это я пока не умею. Эту функцию я отложила для будущих версий.
+      Программист Алексей обещал запрограммировать это к осени. Но не сказал, к какой.
+      Этого я пока не умею. Но это временно.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_error__remindererror %}
+  {% if context.error.data.code == 'unsupported_device' %}
+    {{ reminders_unsupported_device() }}
+  {% elif context.error.data.code == 'list_failed' %}
+    {{ render_error() }}
+  {% elif context.error.data.code == 'alarm_reminders_failed' %}
+    {{ render_error() }}
+  {% elif context.error.data.code == 'creating_failed' %}
+    {% chooseline %}
+      Не получилось поставить напоминание, попробуем позже?
+      Что-то не получилось, давайте ещё разок.
+      Что-то пошло не так.
+      Ой, у меня не получилось. Я исправлюсь.
+      Я что-то нажала — и всё исчезло. Извините. Давайте попробуем ещё раз.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'canceling_failed' %}
+    Не получилось отменить напоминание.
+  {% elif context.error.data.code == 'invalid_datetime' %}
+    Я не поняла на какую дату и время нужно поставить напоминание.
+  {% elif context.error.data.code == 'past_datetime' %}
+    {% chooseline %}
+      Время, на которое вы {% voice %} пр+осите {% endvoice %} {% text %} просите {% endtext %} поставить напоминание, уже прошло.
+      Я не могу поставить напоминание в прошлом.
+      Вы пытаетесь поставить напоминание в прошлом. У меня аж нейроны заскрипели.
+    {% endchooseline %}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__authorization %}
+  Авторизация
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__authorization %}
+  {{ context.reminders__authorization.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__open_uri %}
+  Список напоминаний
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__open_uri %}
+  {{ context.reminders__open_uri.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel %}
+  Отмени напоминание
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__reminders__cancel %}
+  Отмени напоминание
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__show_reminders_list %}
+  Показать список напоминаний
+{% endphrase %}
+
+{% phrase render_suggest_uri__reminders__show_reminders_list %}
+  {{ context.reminders__show_reminders_list.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__reminders_list_quasar %}
+  Покажи напоминания
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__reminders_list_quasar %}
+  Покажи напоминания
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_quasar %}
+  Добавить напоминание
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_quasar %}
+  Добавить напоминание
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_for_today %}
+  Добавить напоминание на сегодня
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_for_today %}
+  Добавить напоминание на сегодня
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__add_reminder_for_tomorrow %}
+  Добавить напоминание на завтра
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__add_reminder_for_tomorrow %}
+  Добавить напоминание на завтра
+{% endphrase %}
+
+{% macro render_scroll_next_suggest(num_reminders_to_show_next) %}
+  {% if num_reminders_to_show_next == 1 %}
+    Покажи следующее
+  {% elif num_reminders_to_show_next > 1 %}
+    Покажи следующие {{ num_reminders_to_show_next | number_to_word() | inflect('nom', 'n') }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__reminders__scroll_next %}
+  {{ render_scroll_next_suggest(context.reminders__scroll_next.data.num_reminders_to_show_next) }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__scroll_next %}
+  {{ render_scroll_next_suggest(context.reminders__scroll_next.data.num_reminders_to_show_next) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_by_id %}
+  Удали напоминание {{ context.reminders__cancel_by_id.data.id }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_by_id %}
+  Удали напоминание {{ context.reminders__cancel_by_id.data.id }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_all %}
+  Удали все напоминания
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_all %}
+  Удали все напоминания
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__cancel_single %}
+  Удали это напоминание
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__cancel_single %}
+  Удали это напоминание
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__list_for_today %}
+  Покажи напоминания на сегодня
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__list_for_today %}
+  Покажи напоминания на сегодня
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__list_for_tomorrow %}
+  Покажи напоминания на завтра
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reminders__list_for_tomorrow %}
+  Покажи напоминания на завтра
+{% endphrase %}
+
+{% phrase render_suggest_caption__reminders__grant_permission %}
+  Предоставить разрешение
+{% endphrase %}

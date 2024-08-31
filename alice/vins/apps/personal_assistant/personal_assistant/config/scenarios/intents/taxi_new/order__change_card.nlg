@@ -1,0 +1,25 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import not_supported, not_understood, in_ya_pasport with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention("unknown_location_from") %}
+    Для начала мне нужно понять, откуда вы хотите поехать.
+  {% elif is_active_attention("no_payment_methods_available") %}
+    Не нашла у вас подходящих способов оплаты для этого тарифа.
+    Вы можете привязать карту для оплаты {{ in_ya_pasport() }}.
+  {% elif form.allowed_cards %}
+    {% if is_active_attention("card_not_selected") %}
+      Не удалось выбрать карту. Доступные карты:
+    {% else %}
+      Выберите одну из привязанных карт по последним четырём цифрам:
+    {% endif %}
+    \n
+    {% for card in form.allowed_cards %}
+      {{ card.card_number }} {% vc %} , {% evc %} \n
+    {% endfor %}
+  {% else %}
+    У вас нет привязанных карт, но вы можете это исправить {{ in_ya_pasport() }}.
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,63 @@
+labels:
+  operator_redirect: '.*OPERATOR_REDIRECT.*'
+  operator_redirect_with_warning: '.*Сейчас у нас больше обращений, чем обычно, поэтому мы можем отвечать дольше.*OPERATOR_REDIRECT.*'
+
+
+test_operator_redirect:
+  позови человека:
+    vins_form:
+      name: crm_bot.scenarios.operator_redirect
+    text: '{operator_redirect}'
+
+
+test_operator_redirect_with_warning:
+  experiments: [increased_response_time]
+  dialog:
+    позови человека:
+      vins_form:
+        name: crm_bot.scenarios.operator_redirect
+      text: '{operator_redirect_with_warning}'
+
+
+test_verbose_redirect:
+  dialog:
+    привет:
+      vins_form:
+        name: crm_bot.scenarios.hello
+    а теперь тут белиберда какая-то:
+      vins_form:
+        name: crm_bot.scenarios.garbage
+      suggests:
+        - type: redirect_me_button
+          caption: '{}Нет, переключи меня на оператора'
+        - type: help_bot_button
+          caption: 'Да, давай продолжим'
+    Да, давай продолжим:
+      vins_form:
+        name: crm_bot.scenarios.operator_redirect_verbose_continuation
+        slots:
+          confirmation:
+            value: "yes"
+      text: 'Хорошо, задайте ваш вопрос, пожалуйста.'
+
+
+test_verbose_redirect_no:
+  dialog:
+    привет:
+      vins_form:
+        name: crm_bot.scenarios.hello
+    а теперь тут белиберда какая-то:
+      vins_form:
+        name: crm_bot.scenarios.garbage
+      suggests:
+        - type: redirect_me_button
+          caption: '{}Нет, переключи меня на оператора'
+        - type: help_bot_button
+          caption: 'Да, давай продолжим'
+    Нет:
+      vins_form:
+        name: crm_bot.scenarios.operator_redirect_verbose_continuation
+        slots:
+          confirmation:
+            value: "no"
+      text: '{operator_redirect}'

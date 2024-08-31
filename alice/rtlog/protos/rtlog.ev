@@ -1,0 +1,80 @@
+syntax = "proto2";
+
+option optimize_for = SPEED;
+option go_package = "a.yandex-team.ru/alice/rtlog/protos;rtlog";
+option java_package = "ru.yandex.alice.library.rtlog";
+
+import "library/cpp/eventlog/proto/events_extension.proto";
+
+package NRTLogEvents;
+
+message InstanceDescriptor {
+    option (message_id) = 5001;
+
+    optional string ServiceName = 1;
+    optional string HostName = 2;
+}
+
+message ActivationStarted {
+    option (message_id) = 5002;
+
+    oneof Instance {
+        uint32 InstanceId = 1;
+        InstanceDescriptor InstanceDescriptor = 2;
+    }
+    optional uint64 ReqTimestamp = 3;
+    optional string ReqId = 4;
+    optional string ActivationId = 5;
+    optional uint32 Pid = 6;
+    optional bool Session = 7;
+    optional bool Continue = 8;
+    optional uint32 ContinueId = 9;
+}
+
+message ActivationFinished {
+    option (message_id) = 5003;
+}
+
+message CreateRequestContext {
+    option (message_id) = 5004;
+
+    map<string, string> Fields = 1;
+}
+
+message ChildActivationStarted {
+    option (message_id) = 5005;
+
+    optional uint64 ReqTimestamp = 1;
+    optional string ReqId = 2;
+    optional string ActivationId = 3;
+    optional string Description = 4;
+}
+
+message ChildActivationFinished {
+    option (message_id) = 5006;
+
+    optional string ActivationId = 1;
+    optional bool Ok = 2;
+    optional string ErrorMessage = 3;
+}
+
+enum ESeverity {
+    RTLOG_SEVERITY_INFO = 1;
+    RTLOG_SEVERITY_ERROR = 2;
+}
+
+message LogEvent {
+    option (message_id) = 5007;
+
+    optional ESeverity Severity = 1;
+    optional string Backtrace = 2;
+    optional string Message = 3;
+    map<string, string> Fields = 4;
+}
+
+message SearchRequest {
+    option (message_id) = 5008;
+
+    optional string ReqId = 1;
+    optional string ActivationId = 2;
+}

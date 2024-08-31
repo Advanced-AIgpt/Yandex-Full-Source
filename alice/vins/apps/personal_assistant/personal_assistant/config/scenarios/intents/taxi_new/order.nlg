@@ -1,0 +1,24 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/order_phrases.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/order_phrases.nlg" import taxi_route with context %}
+{% from "taxi_new/macros.nlg" import have_not_options, greetings with context %}
+
+{% from "show_route/show_route_common.nlg" import render_nogeo with context %}
+
+{% phrase render_result %}
+  {% if form.status == "ok" or form.deep_link %}
+    {% if form.stop_options %}
+      {{ have_not_options() }}
+    {% endif %}
+    {% if is_active_attention("taxi_search_failed") %}
+      К сожалению, мне не удалось найти машину. Давайте попробуем сделать заказ ещё раз. Куда поедем?
+    {% else %}
+      {{ greetings() }}
+      {{ taxi_route() }}
+    {% endif %}
+  {% else %}
+    Что-то сломалось...
+  {% endif %}
+{% endphrase %}

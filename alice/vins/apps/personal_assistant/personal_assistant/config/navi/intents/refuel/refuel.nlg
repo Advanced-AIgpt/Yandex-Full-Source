@@ -1,0 +1,127 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% phrase render_result %}
+    {% if is_active_attention("no_gas_station") %}
+        {% chooseline %}
+            Здесь заправиться не выйдет. Эх!
+            Что-то не так. Здесь нет автозаправки или я ещё не научилась с ней работать.
+        {% endchooseline %}
+    {% elif is_active_attention("not_authorized") %}
+        {% chooseline %}
+           Чтобы оплатить топливо, нужно авторизоваться в приложении.
+           Авторизуйтесь в приложении, чтобы оплатить топливо.
+        {% endchooseline %}
+    {% elif is_active_attention("no_credit_card") %}
+        {% chooseline %}
+            Почти всё. Осталось привязать карту к приложению {%tx%}Яндекс.Навигатор{%etx%}{%vc%}Яндекс Навигатор{%evc%}.
+            Осталось немного — нужны данные вашей карты, чтобы я смогла оплатить топливо.
+        {% endchooseline %}
+    {% elif form.confirmation == 'no' %}
+        Поправьте меня пожалуйста!
+    {% else %}
+        {% chooseline %}
+            Супер, сейчас заправимся!
+            Отлично. Начинаем.
+            Хорошо. Сейчас всё будет.
+        {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+{% phrase ask__column %}
+    {% if is_active_attention("invalid_column") %}
+        {% chooseline %}
+            Неверный номер колонки. Попробуйте ещё раз, пожалуйста.
+            Кажется на этой заправке нет такой колонки. Скажите номер колонки ещё раз, пожалуйста.
+        {% endchooseline %}
+    {% else %}
+        {% chooseline %}
+            Назовите номер колонки.
+            Выберите колонку.
+            Скажите номер колонки, пожалуйста.
+        {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__refuel__column %}
+    {{ context.refuel__column.data.value }}
+{% endphrase %}
+
+{% phrase ask__fuel_type %}
+  {% if is_active_attention("invalid_fuel") %}
+      {% chooseline %}
+          Такого здесь не наливают! Выберите другое топливо.
+          Кажется на этой колонке нет такого топлива. Выберите другое, пожалуйста.
+      {% endchooseline %}
+  {% else %}
+      {% chooseline %}
+          Выберите топливо.
+          Что заливаем?
+          Какое топливо будем заливать?
+      {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__refuel__fuel %}
+    {{ context.refuel__fuel.data.value }}
+{% endphrase %}
+
+{% phrase ask__volume %}
+    {% if is_active_attention("full_tank_not_supported") %}
+        Ох, я пока не умею заправлять до полного бака, назовите сумму или объём.
+    {% elif is_active_attention("invalid_volume") %}
+        Я не могу залить вам столько топлива. Попробуйте ещё раз, пожалуйста.
+    {% else %}
+        {% chooseline %}
+            Назовите сумму или объём.
+            Скажите, сколько нужно литров или на какую сумму будем заправляться.
+        {% endchooseline %}
+    {% endif %}
+{% endphrase %}
+
+{% macro say_volume(volume, volume_type) %}
+    {% if volume_type == 'tank' %}
+        {{ context.onto_synth.random_phrase('full') }} {{ context.onto_synth.random_phrase(volume_type) }}
+    {% elif volume_type == 'rub' %}
+        на {{ volume }} {{ context.onto_synth.random_phrase(volume_type) | pluralize(volume, 'gen') }}
+    {% else %}
+        {{ volume }} {{ context.onto_synth.random_phrase(volume_type) | pluralize(volume, 'nomn') }}
+    {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__refuel__volume %}
+    {{ say_volume(context.refuel__volume.data.volume, context.refuel__volume.data.volume_type) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__refuel__cancel %}
+    Закончить
+{% endphrase %}
+{% phrase render_suggest_utterance__refuel__cancel %}
+    Хватит
+{% endphrase %}
+
+{% phrase ask__confirmation %}
+    {% chooseline %}
+        Так.
+        Почти готово.
+    {% endchooseline %}
+    {% if form.station_name %}
+        {%tx%}{{ form.station_name }}.{%etx%}
+    {% endif %}
+    Колонка {{ form.column }},
+    топливо — {{ context.onto_synth.random_phrase(form.fuel_type) }},
+    {{ say_volume(form.volume, form.volume_type) }}.
+    Если всё верно, скажите да.
+{% endphrase %}
+
+{% phrase render_suggest_caption__refuel__confirm %}
+    Да
+{% endphrase %}
+{% phrase render_suggest_utterance__refuel__confirm %}
+    Да
+{% endphrase %}
+{% phrase render_suggest_caption__refuel__decline %}
+    Нет
+{% endphrase %}
+{% phrase render_suggest_utterance__refuel__decline %}
+    Нет
+{% endphrase %}

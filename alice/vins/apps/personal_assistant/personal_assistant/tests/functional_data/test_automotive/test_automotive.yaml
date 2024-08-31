@@ -1,0 +1,257 @@
+app_info:
+  app_id: 'yandex.auto'
+  app_version: '1.2.3'
+  os_version: '4.4'
+  platform: 'android'
+
+labels:
+  hi:  '(Ура, вы снова с нами|Привет|Здравствуйте|Рада вас видеть|С возвращением|Устраивайтесь поудобнее|Наконец-то вы здесь).*'
+  drive_hi:   '(Привет|Здравствуйте|Салют|Хеллоу|Моё почтение|Почёт и уважение|Рада вас видеть|Наконец-то вы здесь|Здорово, что вы здесь|Вот вы и в Драйве|Устраивайтесь поудобнее|С возвращением).*'
+  weather_intro:  '(Сейчас|За бортом|За окном|О погоде).*'
+  traffic_intro:  '(На дорогах|В пробках|Пробки|Оцениваем дороги на).*'
+  music_promo:    '.*(музык|Музык|Звук).*'
+
+greeting:
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            traffic_info:
+              value:
+                level: 10
+            weather_type_current:
+              value: пламя заволокло горизонт
+            weather_temp_current:
+              value: 666
+        text: '{hi}{weather_intro} +666, пламя заволокло горизонт. {traffic_intro} 10 баллов.'
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            weather_type_current:
+              value: пламя заволокло горизонт
+            weather_temp_current:
+              value: 666
+        text: '{hi}{weather_intro} +666, пламя заволокло горизонт.'
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        text: '{hi}'
+
+greeting_drive:
+    device_state:
+      car_options:
+        type: carsharing
+        model: rio
+        vendor: kia
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            traffic_info:
+              value:
+                level: 10
+            weather_type_current:
+              value: пламя заволокло горизонт
+            weather_temp_current:
+              value: 666
+        text: '{drive_hi}{traffic_intro} 10 баллов.'
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            weather_type_current:
+              value: пламя заволокло горизонт
+            weather_temp_current:
+              value: 666
+        text: '{drive_hi}'
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        text: '{drive_hi}'
+
+greeting_music_promo_experiment:
+    device_state:
+      car_options:
+        type: carsharing
+    experiments: ['auto_music_promo']
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            promo:
+              value: music
+        text: '{drive_hi}. {music_promo}'
+
+greeting_music_promo_no_promo_from_bass:
+    device_state:
+      car_options:
+        type: carsharing
+    experiments: ['auto_music_promo']
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            promo:
+              value: null
+        text: '{drive_hi}.'
+
+greeting_music_promo_experiment_autostart:
+    device_state:
+      car_options:
+        type: carsharing
+    experiments: ['auto_music_promo_without_music_start']
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            promo:
+              value: music
+        text: '{drive_hi}. {music_promo}'
+
+greeting_name:
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+          first_name: 'Василий'
+      response:
+        bass:
+          form:
+            traffic_info:
+              value:
+                level: 10
+            weather_type_current:
+              value: пламя заволокло горизонт
+            weather_temp_current:
+              value: 666
+        text: '{hi} Василий. {weather_intro} +666, пламя заволокло горизонт. {traffic_intro} 10 баллов.'
+
+greeting_phrase:
+    dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        bass:
+          form:
+            phrase:
+              value: привет, привет.
+            traffic_info:
+              value:
+                level: 10
+        text: 'привет, привет. {traffic_intro} 10 баллов.'
+
+no_gc_no_listening_block:
+  bass:
+    blocks:
+    - type: stop_listening
+  dialog:
+    пойдем рубить дрова:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: notsupported
+            msg: notsupported
+      voice: 'Извините, вас не поняла.'
+      text: 'Извините, вас не поняла.'
+      should_listen: false
+
+    спасибо:
+      should_listen: false
+      text: '{}'
+
+navigator_go:
+  dialog:
+    поехали на ленинский проспект:
+      bass:
+        form:
+          confirmation:
+            optional: false
+      text: 'Маршрут построен. Поехали?'
+    поехали:
+      vins_form:
+        name: personal_assistant.scenarios.show_route__ellipsis
+        slots:
+          confirmation:
+            value: 'yes'
+
+navigator_yes:
+  dialog:
+    поехали на ленинский проспект:
+      bass:
+        form:
+          confirmation:
+            optional: false
+      text: 'Маршрут построен. Поехали?'
+    да:
+      vins_form:
+        slots:
+          confirmation:
+            value: 'yes'
+
+navigator_no:
+  dialog:
+    поехали на ленинский проспект:
+      bass:
+        form:
+          confirmation:
+            optional: false
+      text: 'Маршрут построен. Поехали?'
+    нет:
+      vins_form:
+        slots:
+          confirmation:
+            value: 'no'
+
+lets_drive:
+  dialog:
+    поехали:
+      vins_form:
+        slots:
+          route_type:
+            value: 'non_pedestrian'

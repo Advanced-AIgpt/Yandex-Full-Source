@@ -1,0 +1,318 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "common/error.nlg" %}
+{% nlgimport "cards/skill_recommendation_card_fancy.nlg" %}
+{% nlgimport "cards/skill_recommendation_card_classic.nlg" %}
+{% from "cards/common.nlg" import simple_open_uri_action with context %}
+{% from "cards/skill_recommendation_card_multicolumn.nlg" import render_skill_recommendation_card_multicolumn with context %}
+{% from "cards/skill_recommendation_card_fancy.nlg" import render_skill_recommendation_card_fancy, render_skill_recommendation_card_amelie with context %}
+{% from "cards/skill_recommendation_card_classic.nlg" import render_skill_recommendation_card_classic_stub, render_skill_recommendation_card_classic, render_skill_recommendation_card_classic_greetings with context %}
+
+
+# text answer
+
+
+{% set inform_about_ellipsis = (form.card_name == 'onboarding' and (is_quasar() or is_mini_speaker())) %}
+
+
+{% macro render_skills_as_text(cases, is_voice) %}
+  {% for item in cases %}
+    {% if loop.index0 %}
+      {% if is_voice %}
+        sil <[150]>
+      {% endif %}
+      {% if loop.index == loop.length %}
+        или
+      {% else %}
+        ,
+      {% endif %}
+      {% if is_voice %}
+        sil <[150]>
+      {% endif %}
+    {% endif %}
+    «{{ item.activation | end_without_terminal | capitalize_first | remove_angle_brackets }}»
+  {% endfor %}
+{% endmacro %}
+
+
+{% macro render_ellipsis() %}
+  {% chooseline %}
+    Рассказать ещё?
+    Продолжить?
+    Хотите узнать больше, скажите "да".
+    Хотите узнать ещё?
+    Рассказывать ещё?
+    Продолжим?
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro render_text_card(data, intent) %}
+  {% if data.editors_answer %}
+    {{ data.editors_answer }}
+  {% elif data.cases %}
+    {% if intent == 'games_onboarding' %}
+      {% chooseline %}
+        Давайте поиграем. Например, скажите
+        Окей, сыграем в игру. Просто скажите мне
+        Давайте сыграем. Например, скажите
+        Играть, так играть. Скажите мне
+        Хорошая идея — поиграть. Можете сказать мне
+        Что наша жизнь? Игра. Скажите
+        Сыграть в доту не смогу, смогу в другое. Просто скажите
+        Мультиплеер пока не моё, скажите лучше
+        Майнкрафт не обещаю, но можете сказать
+      {% endchooseline %}
+    {% elif intent == 'whats_new' %}
+      {% chooseline %}
+        В последнее время я многому научилась. Попробуйте сказать:
+        Я постоянно учусь чему-то новому. Скажите, например:
+      {% endchooseline %}
+    {% else %}
+      Я многое умею. Скажите, например:
+    {% endif %}
+    {% vc %}{{ render_skills_as_text(data.cases, True) }} {% evc %}
+    {% tx %}{{ render_skills_as_text(data.cases, False) }}{% etx %}
+    .
+  {% else %}
+    {% chooseline %}
+      Чем могу помочь?
+      Чем я могу помочь?
+      Чем могу быть полезна?
+      Чем я могу быть полезна?
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase onboarding__skills %}
+  {{ render_text_card(context.data, form.card_name) }}
+  {% if inform_about_ellipsis %}
+    {{ render_ellipsis() }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase onboarding__default_answer %}
+  {% if form.card_name == 'games_onboarding' %}
+    {{ render_text_card(dict(cases=[dict(activation='Давай сыграем в «Найди лишнее»')]), form.card_name) }}
+  {% elif form.card_name == 'onboarding' %}
+    {{ render_text_card(dict(cases=[dict(activation='Какая завтра погода?'), dict(activation='Включи музыку для занятий спортом')]), form.card_name) }}
+  {% elif form.card_name == 'get_greetings' %}
+    {{ render_text_card(dict(), form.card_name) }}
+  {% elif form.card_name == 'whats_new' %}
+    {% chooseline %}
+      Обновила пару модулей недавно. Десять ошибок поправлено, двадцать новых внесено. Ничего интересного.
+      Энтропия растет. А мы ничего не делаем.
+    {% endchooseline %}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endphrase %}
+
+
+# card answer
+
+
+{% set use_multicolumn_card = (form.card_name == 'games_onboarding' and req_info.experiments['games_onboarding_multicolumn_card'] != None)
+    or (form.card_name == 'onboarding' and req_info.experiments['onboarding_multicolumn_card'] != None) %}
+
+
+{% phrase onboarding__set_message %}
+  {% if form.card_name == 'first_session_onboarding' %}
+    {% tx %}
+      Привет, я Алиса.\n
+      Вот что я могу:
+    {% etx %}
+    {% vc %}
+      {% if req_info.experiments['long_onboarding_intro'] != None %}
+        {% chooseline %}
+          Привет, я Алиса, ваш голосовой помощник. Я могу подсказать погоду, маршрут до д+ома или высоту Эвереста. А ещё — просто поболтать с вами.
+          Привет, я Алиса. Спрашивайте у меня что угодно — сколько сейчас времени, какая погода, как добраться до нужного места. А хотите — можем просто поболтать.
+          Привет, я Алиса. Я могу подсказать погоду, определить музыку на слух, узнать, что на фотографии или вызвать такси. А ещё мы можем просто поговорить.
+          Хелоу! Это Алиса. Я могу подсказать погоду, определить музыку на слух, узнать, что на фотографии, поиграть с вами. А ещё мы можем просто поболтать.
+        {% endchooseline %}
+      {% else %}
+        Привет, я Алиса. Вот что я могу.
+      {% endif %}
+    {% evc %}
+  {% elif form.card_name == 'whats_new' %}
+    {% chooseitem %}
+      {% tx %} Вот чему я недавно научилась: {% etx %}
+      {% vc %} Вот чему я недавно научилась. Попробуйте сказать: {{ render_skills_as_text(context.data.cases[:2], True) }} {% evc %}
+    {% or %}
+      {% tx %} Я постоянно учусь чему-то новому: {% etx %}
+      {% vc %} Я постоянно учусь чему-то новому. Скажите, например: {{ render_skills_as_text(context.data.cases[:2], True) }} {% evc %}
+    {% endchooseitem %}
+  {% elif use_multicolumn_card %}
+    {% if req_info.experiments['onboardings_multicolumn_alternative_text'] != None %}
+      Вот что я могу. Чтобы увидеть больше навыков, листайте вправо.
+    {% else %}
+      Вот что я могу, {% vc %}sil <[300]>{% evc %} попробуйте сказать: {% vc %}{{ render_skills_as_text(context.data.cases[:2], True) }}{% evc %}
+    {% endif %}
+  {% else %}
+    Вот что я могу{% tx %}:{% etx %}
+  {% endif %}
+{% endphrase %}
+
+
+{% card skill_recommendation %}
+  {% if form.card_name == 'get_greetings' %}
+    {% if req_info.experiments['greetings_amelie_card'] != None %}
+      {{ render_skill_recommendation_card_amelie() }}
+    {% else %}
+      {{ render_skill_recommendation_card_classic_greetings() }}
+    {% endif %}
+  {% elif form.card_name == 'whats_new' %}
+    {{ render_skill_recommendation_card_fancy() }}
+  {% elif use_multicolumn_card %}
+    {{ render_skill_recommendation_card_multicolumn(form.card_name) }}
+  {% else %}
+    {{ render_skill_recommendation_card_classic(form.card_name) }}
+  {% endif %}
+{% endcard %}
+
+
+{% card skill_recommendation_skills_store_button %}
+  {% set help_id = "skill_recommendation__skills_store_button" %}
+  {% set help_data = dict(utm_medium=form.card_name, utm_campaign='', utm_source='Yandex_Alisa', utm_term='', utm_content='textlink') %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "alignment_horizontal": "center",
+            "frame": {
+              "style": "only_round_corners"
+            },
+            "direction": "vertical",
+            "alignment_vertical": "top",
+            "height": {
+              "type": "numeric",
+              "value": 40
+            },
+            "width": {
+              "type": "predefined",
+              "value": "match_parent"
+            },
+            "background": [
+              {
+                "color": "{{ "#f0f0f5" }}",
+                "type": "div-solid-background"
+              }
+            ],
+            "type": "div-container-block",
+            "children": [
+              {
+                "rows": [
+                  {
+                    "top_padding": "xs",
+                    "cells": [
+                      {
+                      },
+                      {
+                        "image": {
+                          "type": "div-image-element",
+                          "image_url": "https://avatars.mds.yandex.net/get-dialogs/758954/skill_store_icon/mobile-logo-x2"
+                        },
+                        "image_size": "l",
+                        "image_position": "right",
+                        "vertical_alignment": "center"
+                      },
+                      {
+                        "text_style": "title_s",
+                        "text": "Открыть все навыки",
+                        "vertical_alignment": "center"
+                      },
+                      {
+                      }
+                    ],
+                    "type": "row_element"
+                  }
+                ],
+                "columns": [
+                  {
+                    "weight": 1
+                  },
+                  {
+                    "weight": 0
+                  },
+                  {
+                    "weight": 0,
+                    "left_padding": "zero"
+                  },
+                  {
+                    "weight": 1
+                  }
+                ],
+                "action": {
+                  "url": "{{ simple_open_uri_action(context.data["store_url"], help_id, help_data) }}",
+                  "log_id": "{{ help_id }}"
+                },
+                "type": "div-table-block"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#ffffff" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endcard %}
+
+
+{% card onboarding__default_card %}
+  {% if form.card_name == 'games_onboarding' %}
+    {% set data = (
+      ("Давай сыграем в квест", "Спасите космического путешественника — вы его последняя надежда", "games_onboarding_quest", "https://avatars.mds.yandex.net/get-bass/397492/games_120x120_2eae2da3ab538c4e9fce8d637f3f619d3cfed4e44493710405060879d80bbf0a.png/orig"),
+      ("Расскажи про этот день в истории", "Интересные факты из прошлого на каждый день", "games_onboarding_this_day_in_history", "https://avatars.mds.yandex.net/get-bass/397492/games_120x120_27f7efd4e3d168d37f1bb62291a2def0b5681219e74e9784d63d1c39b349904b.png/orig"),
+      ("Давай сыграем в «Зоологию»", "Детские вопросы о мире животных", "games_onboarding_zoology", "https://avatars.mds.yandex.net/get-bass/397492/games_120x120_579b83280d9f8e10e9b0e73a904ac76718cc1cc8a9377e6c6f2d58de4e0a31e8.png/orig"),
+      ("Поиграем в города", "Вы мне — Самара, а я вам — Архангельск", "672f7477-d3f0-443d-9bd5-2487ab0b6a4c", "https://avatars.mds.yandex.net/get-dialogs/758954/a22fd3e7f536e9816a56/mobile-logo-x2"),
+      ("Давай поиграем в Верю — не верю", "Отличите удивительный факт от правдоподобной выдумки", "28983c1c-42e4-4e5a-8629-0b9bf7eb89e1", "https://avatars.mds.yandex.net/get-dialogs/758954/81ab7b0a835eaba78738/mobile-logo-x2")
+      ) %}
+    {{ render_skill_recommendation_card_classic_stub(data, 'games_onboarding') }}
+  {% else %}
+    {{ render_error() }}
+  {% endif %}
+{% endcard %}
+
+
+# suggests
+
+
+{% phrase render_suggest_caption__onboarding__next %}
+  Что ещё ты умеешь?
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__onboarding__next %}
+  Что ещё ты умеешь?
+{% endphrase %}
+
+{% phrase render_suggest_caption__skillrec__next %}
+  А ещё?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__skillrec__next %}
+  А ещё?
+{% endphrase %}
+
+{% phrase render_suggest_caption__onboarding__news %}
+  Новости
+{% endphrase %}
+
+{% phrase render_suggest_utterance__onboarding__news %}
+  Новости
+{% endphrase %}
+
+{% phrase render_suggest_caption__onboarding__skill %}
+  {{ context.onboarding__skill.data.name | end_without_dot | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__onboarding__skill %}
+  {{ context.onboarding__skill.data.activation | end_without_terminal | capitalize_first }}
+{% endphrase %}

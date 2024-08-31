@@ -1,0 +1,39 @@
+{% nlgimport "player/player__common.nlg" %}
+{% from "player/player__common.nlg" import do_authorized with context %}
+
+{% macro like_confirm() %}
+  {% if is_active_attention('unknown_music') %}
+    {% chooseline %}
+      Не могу понять какую песню лайкать.
+      Я бы с радостью, но не знаю какую песню лайкать.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Буду включать такое чаще.
+      {%vc%}Запомню что вам такое по душе.{%evc%}{%tx%}Запомню, что вам такое по душе.{%etx%}
+      {%vc%}Рада что вы оценили.{%evc%}{%tx%}Рада, что вы оценили.{%etx%}
+      Поставила лайк.
+      Круто! Ставлю лайк.
+      Уже поставила лайк.
+      Поставила лайк за вас.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('biometry_guest') %}
+     {% if form.user_name is not none %}
+        {% chooseitem 1 %}
+          Извините, но главный диджей тут — {{ form.user_name | capitalize }}.
+        {% or 1 %}
+          Рада, что нравится. Я бы даже лайк поставила, но только если  {{ form.user_name | capitalize }} попросит.
+        {% or 1 %}
+          Воспитанный бот принимает лайки только от своего человека. Извините.
+        {% endchooseitem %}
+     {% else %}
+        Воспитанный бот принимает лайки только от своего человека. Извините.
+     {% endif %}
+  {% else %}
+    {{ do_authorized(like_confirm()) }}
+  {% endif %}
+{% endphrase %}

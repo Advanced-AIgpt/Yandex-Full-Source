@@ -1,0 +1,342 @@
+labels:
+  operator_redirect: '.*OPERATOR_REDIRECT.*'
+  feedback_addon: '.*Скажите, пожалуйста, смог ли я ответить на ваш вопрос\?'
+
+test_order_cancel_thanks:
+  dialog:
+    как отменить заказ:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel
+      suggests:
+        - type: order_cancel_thanks
+          caption: "Спасибо!"
+        - type: order_cancel_for_me
+          caption: "Отмени заказ ты"
+    Спасибо:
+      vins_form:
+        name: crm_bot.scenarios.bye_narrow
+
+test_order_cancel_for_me:
+  dialog:
+    как отменить заказ:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel
+      suggests:
+        - type: order_cancel_thanks
+          caption: "Спасибо!"
+        - type: order_cancel_for_me
+          caption: "Отмени заказ ты"
+    Отмени заказ ты:
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_for_me
+        blocks:
+          - type: text_card
+            phrase_id: need_order_id_and_phone_or_email
+      text: 'Чтобы я мог отменить ваш заказ, мне нужно знать его номер, а также номер телефона или адрес электронной почты, на которые этот заказ был оформлен.'
+
+test_order_cancel_accident:
+  dialog:
+    я отменил заказ случайно:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_accident
+      suggests:
+        - type: order_cancel_accident_already_paid
+          caption: Заказ уже оплачен онлайн
+      text: '{feedback_addon}'
+    Заказ уже оплачен онлайн:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_accident__already_paid
+      text: '{feedback_addon}'
+
+test_order_cancel_accident_activations:
+  я отменил заказ случайно:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_accident
+  отмените отмену:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_accident
+  верните заказ на доставку:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_accident
+
+test_order_cancel_deadline:
+  сколько ждать отмены заказа:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_deadline
+  сколько занимает отмена заказа:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_deadline
+  как долго отменяется заказ:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_deadline
+  сколько еще будут отменять заказ:
+    vins_form:
+      name: crm_bot.scenarios.order_cancel_deadline
+
+test_order_cancel_deadline_redirect:
+  dialog:
+    сколько ждать отмены заказа:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_deadline
+      suggests:
+        - type: two_days_passed
+          caption: '{} Прошло больше 48 часов'
+    Прошло больше 48 часов:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_deadline__redirect
+      text: '{operator_redirect}'
+
+test_order_cancel_for_me_full:
+  dialog:
+    отмени заказ 12345678:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_for_me
+        slots:
+          order_id_neuro:
+            value: "12345678"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_for_me
+        blocks:
+          - type: text_card
+            phrase_id: need_phone_or_email
+        form:
+          order_id:
+            value: "12345678"
+      text: 'Чтобы я мог отменить этот заказ (12345678), мне нужно быть уверенным, что это действительно ваш заказ{}'
+    "user.name@hostname.com":
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_for_me__data
+        slots:
+          order_id:
+            value: "12345678"
+          email_neuro:
+            value: "user name hostname com"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_for_me
+        blocks:
+          - type: text_card
+            phrase_id: ask_reason
+          - type: suggest
+            suggest_type: reason_USER_CHANGED_MIND
+          - type: suggest
+            suggest_type: reason_USER_BOUGHT_CHEAPER
+          - type: suggest
+            suggest_type: reason_USER_PLACED_OTHER_ORDER
+          - type: suggest
+            suggest_type: reason_USER_REFUSED_DELIVERY
+          - type: suggest
+            suggest_type: reason_CUSTOM
+        form:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "ASKED_FOR_REASON"
+      suggests:
+        - type: reason_USER_CHANGED_MIND
+          caption: "Передумал(а) покупать"
+        - type: reason_USER_BOUGHT_CHEAPER
+          caption: "Нашёл(ла) товар дешевле"
+        - type: reason_USER_PLACED_OTHER_ORDER
+          caption: "Есть другой заказ на Маркете"
+        - type: reason_USER_REFUSED_DELIVERY
+          caption: "Не устраивают условия доставки"
+        - type: reason_CUSTOM
+          caption: "Другое"
+      text: "Скажите пожалуйста, почему вы хотите отменить этот заказ?"
+    Другое:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_for_me__reason
+        slots:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "ASKED_FOR_REASON"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_for_me__reason
+        blocks:
+          - type: text_card
+            phrase_id: thanks_for_feedback
+            data:
+              orderId: "12345678"
+          - type: text_card
+            phrase_id: ask_confirmation
+            data:
+              orderId: "12345678"
+          - type: suggest
+            suggest_type: yes_cancel
+          - type: suggest
+            suggest_type: no_cancel
+        form:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "REASON_SELECTED"
+          reason:
+            value: "CUSTOM"
+      suggests:
+        - type: yes_cancel
+          caption: "Да, отменяй заказ"
+        - type: no_cancel
+          caption: "Нет, не нужно отменять"
+      text: "Спасибо, что поделились! Эти данные помогут нам улучшить сервис{}Должен предупредить: после отмены восстановить заказ не получится. Вы уверены, что хотите отменить заказ 12345678?"
+    "Да, отменяй заказ":
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_for_me_finish
+        slots:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "REASON_SELECTED"
+          reason:
+            value: "CUSTOM"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_for_me_finish
+        blocks:
+          - type: text_card
+            phrase_id: cancel_successful
+            data:
+              orderId: "12345678"
+              status: "PROCESSING"
+              paymentMethod: "CASH_ON_DELIVERY"
+              paidWithThankyou: "1"
+          - type: text_card
+            phrase_id: feedback_addon
+          - type: suggest
+            suggest_type: feedback_yes
+          - type: suggest
+            suggest_type: feedback_no
+            data:
+              nobr: "1"
+        form:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "CANCELLED"
+          reason:
+            value: "CUSTOM"
+      text: 'Создан запрос на отмену заказа 12345678{feedback_addon}'
+
+test_order_cancel_we_did_full_feedback:
+  dialog:
+    Почему отменили мой заказ 12345678:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_we_did
+        slots:
+          order_id_neuro:
+            value: "12345678"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_we_did
+        slots:
+          order_id:
+            value: "12345678"
+        blocks:
+          - type: text_card
+            phrase_id: need_phone_or_email
+        form:
+          order_id:
+            value: "12345678"
+      text: 'Чтобы я мог посмотреть причину отмены вашего заказа (12345678), мне нужно быть уверенным, что это действительно ваш заказ{}'
+    "user.name@hostname.com":
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_we_did__data
+        slots:
+          order_id:
+            value: "12345678"
+          email_neuro:
+            value: "user name hostname com"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_we_did
+        blocks:
+          - type: text_card
+            phrase_id: reason_BROKEN_ITEM
+          - type: text_card
+            phrase_id: feedback_addon
+          - type: suggest
+            suggest_type: feedback_yes
+          - type: suggest
+            suggest_type: feedback_no
+            data:
+              nobr: "1"
+        form:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "REASON_STATED"
+      suggests:
+        - type: feedback_yes
+          caption: Да, помог
+        - type: feedback_yes
+          caption: Нет, не помог
+      text: "Я вижу, что служба доставки отменила заказ, так как при заказе товар был повреждён.{feedback_addon}"
+    Да:
+      vins_form:
+        name: crm_bot.scenarios.feedback_positive
+
+test_order_cancel_we_did_full_redirect:
+  dialog:
+    Почему отменили мой заказ 12345678:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_we_did
+        slots:
+          order_id_neuro:
+            value: "12345678"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_we_did
+        blocks:
+          - type: text_card
+            phrase_id: need_phone_or_email
+        form:
+          order_id:
+            value: "12345678"
+      text: 'Чтобы я мог посмотреть причину отмены вашего заказа (12345678), мне нужно быть уверенным, что это действительно ваш заказ{}'
+    "user.name@hostname.com":
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_we_did__data
+        slots:
+          order_id:
+            value: "12345678"
+          email_neuro:
+            value: "user name hostname com"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_we_did
+        blocks:
+          - type: text_card
+            phrase_id: reason_USER_FRAUD
+          - type: text_card
+            phrase_id: feedback_addon
+          - type: suggest
+            suggest_type: feedback_yes
+          - type: suggest
+            suggest_type: feedback_no
+            data:
+              nobr: "1"
+        form:
+          order_id:
+            value: "12345678"
+          email:
+            value: "user.name@hostname.com"
+          scenario_status:
+            value: "REDIRECTED_TO_OPERATOR"
+    Нет:
+      vins_form:
+        name: crm_bot.scenarios.order_cancel_we_did__continuation
+        slots:
+          confirmation:
+            value: "no"
+      bass:
+        form_name: crm_bot.scenarios.order_cancel_we_did__continuation
+        blocks:
+          - type: text_card
+            phrase_id: cancel_operator_redirect

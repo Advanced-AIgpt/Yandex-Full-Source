@@ -1,0 +1,223 @@
+labels:
+  hello_text: 'Привет.|Привет-привет!|Хеллоу.|Я здесь.|Здравствуйте.|Бонжур.|Ку!|Категорически приветствую.|Приветствую вас, человек.|Ага, и вам доброго. Чего-нибудь.|Хай.|Я тут.|Кто меня звал\?'
+  hello_voice: 'Привет.|Привет-привет!|Хеллоу.|Я здесь.|Здравствуйте.|Бон-ж\+ур.|К\+уу!|Категорически приветствую.|Приветствую вас - человек.|Ага, и вам доброго. Чего-нибудь.|Хай.|Я тут.|Кто меня звал\?'
+
+test_pre_rendered_card_validation_failed:
+  dialog:
+    привет:
+      bass:
+        blocks:
+        - type: div_card
+          card_layout: 'blablabla'
+
+      text: '{hello_text}'
+      voice: '{hello_voice}'
+
+      cards:
+      - simple_text
+
+  app_info:
+    ignore:
+    - watch
+
+test_listening_after_question:
+  построй маршрут:
+    bass:
+      form:
+        where_to:
+          optional: false
+
+    text: Куда нужно добраться?
+    should_listen: true
+
+
+test_suggests_when_an_error_block_is_present:
+  dialog:
+    любая фраза:
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: nousergeo
+            msg: nousergeo
+
+        - type: suggest
+          suggest_type: search_internet_fallback
+
+      text: Чтобы ответить на этот вопрос мне нужно знать ваше местоположение. Но
+        мне не удалось его определить.
+      suggests:
+      - caption: "\U0001F44D"
+      - caption: "\U0001F44E"
+      - caption: "\U0001F50D \"любая фраза\""
+
+  app_info:
+    ignore:
+    - pa_android
+    - desktop_alice
+    - irbis
+    - dexp
+    - navigator_android
+    - auto
+    - watch
+    - speaker
+    - pa_ios
+    - navigator_ios
+
+
+# See S3 mocks in conftest.py
+test_hardcoded_response:
+  dialog:
+    ответь заготовленной репликой!:
+      text: Ок, отвечаю!
+
+    погода в кандалакше:
+      text: Я понимаю вопрос, но тема не моя. Это нормально.
+
+    любая фраза, в которой есть слово "собаченька":
+      text: Гав!
+
+    мне нужен ответ текстом и голосом:
+      text: держи текст
+      voice: держи голос
+
+    мне нужны ссылки:
+      text: вот ответ
+      voice: вот ответ
+
+  app_info:
+    ignore:
+    - watch
+
+
+test_hardcoded_responses_request_from_quasar:
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  dialog:
+    отвечай, только если ты станция!:
+      voice: привет я станция
+      text: Привет, я станция!
+
+
+test_hardcoded_responses_request_not_from_quasar:
+  dialog:
+    отвечай, только если ты станция!:
+      voice: Интересная мысль, чтобы обсудить её не со мной.
+      text: Интересная мысль, чтобы обсудить её не со мной.
+
+  app_info:
+    ignore:
+    - speaker
+
+
+test_silent_response_block:
+  dialog:
+    который час?:
+      bass:
+        form:
+          time_location:
+            value:
+              city_cases:
+                preposition: в
+                prepositional: Москве
+          time_result:
+            value:
+              year: 2017
+              month: 6
+              day: 5
+              hour: 12
+              min: 0
+        blocks:
+        - type: silent_response
+        - type: suggest
+          suggest_type: search_internet_fallback
+      text: ''
+      voice: ''
+      suggests:
+      - caption: "\U0001F50D \"который час?\""
+
+  app_info:
+    ignore:
+    - navigator_ios
+    - pa_android
+    - speaker
+    - irbis
+    - navigator_android
+    - dexp
+    - pa_ios
+    - watch
+    - auto
+    - desktop_alice
+
+
+
+test_stop_listening_block:
+  dialog:
+    # always listening intent
+    отправь багрепорт:
+      bass:
+        blocks:
+        - type: stop_listening
+      text: '{}'
+      should_listen: false
+
+  app_info:
+    ignore:
+    - watch
+
+
+test_client_features_block:
+  experiments: [builtin_feedback]
+  dialog:
+    любая фраза:
+      bass:
+        blocks:
+        - type: client_features
+          data:
+            features:
+              builtin_feedback:
+                enabled: true
+
+      text: '{}'
+      special_buttons:
+      - text: 'Нравится'
+      - text: 'Не нравится'
+        sub_list:
+        - 'Не нравится: ответ не соответствует запросу'
+        - 'Не нравится: моя речь не распозналась'
+        - 'Не нравится: неверно озвучен текст'
+        - 'Не нравится: ответ обидный или оскорбительный'
+        - 'Не нравится: проблема в другом'
+
+  app_info:
+    ignore:
+    - irbis
+    - navigator_android
+    - dexp
+    - navigator_ios
+    - speaker
+    - auto
+
+
+test_client_features_block_builtin_feedback_not_supported:
+  experiments: [builtin_feedback]
+  dialog:
+    любая фраза:
+      bass:
+        blocks:
+        - type: client_features
+          data:
+            features:
+              builtin_feedback:
+                enabled: false
+
+      text: '{}'
+      special_buttons: []
+
+test_vizhu_is_not_find_poi:
+  вижу:
+    vins_form:
+      name: personal_assistant.general_conversation.general_conversation

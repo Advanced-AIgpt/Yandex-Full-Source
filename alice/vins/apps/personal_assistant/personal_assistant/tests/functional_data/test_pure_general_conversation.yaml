@@ -1,0 +1,507 @@
+labels:
+  long_intro: '.*(«хватит болтать»|чувство юмора).'
+  talk_about: '.*(поболтать|думаете|мнение|поговорить|мысли) (о |об |про |друг о друге).*'
+  always_talk_about: "{long_intro}\n{talk_about}"
+  maybe_talk_about: "{long_intro}(\n{talk_about})?"
+  my_name_is_alice: '(Алиса.|Меня зовут Алиса.|У девочки нет имени. Шутка. Меня зовут
+    Алиса.|Алиса, очень приятно.|Кто не учёный, не поэт, а покорил весь белый свет\? Конечно, Алиса.|Зовите меня Алисой.
+    |Обожаю этот вопрос. Меня зовут Алиса, а вас\?|Еще вчера звали Алисой.|Я — Алиса, голосовой помощник и друг.)'
+
+test_new_gc_skill_without_flag:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  test:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+      text: '{long_intro}'
+
+test_pure_general_conversation:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable, vins_pause_commands_relevant_again]
+  dialog:
+  - request: погода
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+  - request: звони в полицию
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.call'
+
+  - request: что ты умеешь
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+
+  - request: хватит болтать
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.fast_cancel'
+
+  - request: кто ты
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.what_is_your_name'
+
+  - request: давай поболтаем
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+
+  - request: погода
+    response:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+
+  - request: звони в полицию
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_phone_call'
+
+  - request: что ты умеешь
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_what_can_you_do'
+
+  - request: давай поболтаем
+    response:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+
+  - request: кто ты
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.what_is_your_name'
+
+  - request: хватит болтать
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+
+  - request: погода
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+  - request: звони в полицию
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.call'
+
+  - request: что ты умеешь
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+
+  - request: хватит болтать
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.fast_cancel'
+
+  - request: кто ты
+    response:
+      vins_form:
+        name: 'personal_assistant.handcrafted.what_is_your_name'
+
+  - request: давай поболтаем
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+
+  - request: погода
+    response:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+
+  - request: хватит болтать
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+
+  - request: погода
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+  app_info:
+    ignore:
+    - watch
+    - auto
+
+test_long_intro:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  test:
+    dialog:
+      Давай поболтаем:
+        text: '{long_intro}'
+      хватит болтать:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+      давай поболтаем:
+        text: '{long_intro}'
+    app_info:
+      ignore:
+      - watch
+
+test_suggest_topics:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [gc_skill_suggest_topic, mm_gc_protocol_disable]
+  test:
+    dialog:
+      Давай поболтаем:
+        text: '{maybe_talk_about}'
+      хватит болтать:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+      давай поболтаем:
+        text: '{maybe_talk_about}'
+    app_info:
+      ignore:
+      - watch
+
+test_always_suggest_topics:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [gc_always_suggest_topic, gc_skill_suggest_topic, mm_gc_protocol_disable]
+  test:
+    dialog:
+      Давай поболтаем:
+        text: '{always_talk_about}'
+      хватит болтать:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+      давай поболтаем:
+        text: '{always_talk_about}'
+    app_info:
+      ignore:
+      - watch
+
+test_microintent_transition_model:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  dialog:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    как тебя зовут:
+      text: '{my_name_is_alice}'
+    ты когда родилась:
+      text: 'Я родилась 10 октября, но поздравить меня можете в любой день.'
+    а в каком году?:
+      vins_form:
+        name: 'personal_assistant.handcrafted.when_is_your_birthday_step_2'
+      text: 'Отлично, вы меня ещё про возраст спросите.'
+    а в каком году??:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+  app_info:
+    ignore:
+    - watch
+
+test_deactivation_phrases:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  case1:
+    dialog:
+      давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+      хватит болтать:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+    app_info:
+      ignore:
+      - watch
+  case2:
+    dialog:
+      давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+      алиса хватит:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+    app_info:
+      ignore:
+      - watch
+  case3:
+    dialog:
+      давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+      яндекс домой:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+    app_info:
+      ignore:
+      - watch
+  case4:
+    dialog:
+      давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+      закончить:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+    app_info:
+      ignore:
+      - watch
+  case5:
+    dialog:
+      давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+      алиса вернись на главный экран:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation_deactivation'
+    app_info:
+      ignore:
+      - watch
+
+pure_gc_in_elari:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    сколько времени:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+    что ты умеешь:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_what_can_you_do'
+    позвони дочке:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    хватит болтать:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    какая погода:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+pure_gc_in_projected_mode:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  app_info:
+    app_id: 'ru.yandex.mobile.navigator'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    navigator:
+      projected_mode: true
+  dialog:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    сколько времени:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+    что ты умеешь:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_what_can_you_do'
+    позвони дочке:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    хватит болтать:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    какая погода:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+pure_gc_in_auto:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  app_info:
+    app_id: 'yandex.auto'
+    app_version: '1.2.3'
+    os_version: '4.4'
+    platform: 'android'
+  device_state:
+    navigator:
+      projected_mode: true
+  dialog:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    сколько времени:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+    что ты умеешь:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation_what_can_you_do'
+    позвони дочке:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    хватит болтать:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    какая погода:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+pure_gc_banlist:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  dialog:
+    давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+    ты любишь мусульман?:  # using the banlist mocked in conftest.py
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation_dummy'
+
+pure_gc_synonyms:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  experiments: [mm_gc_protocol_disable]
+  case0:
+    запусти навык поболтаем:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+  case1:
+    запусти навык болталка:
+      vins_form:
+        name: 'personal_assistant.scenarios.pure_general_conversation'
+  case2:
+      запусти навык давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case3:
+      запустить навык поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case4:
+      навык болталка:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case5:
+      давайте поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case6:
+      ну давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case7:
+      алиса поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case8:
+      сыграем в игру давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case9:
+      давай просто поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case10:
+      запусти навык поболтаем чат с алисой:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case11:
+      запусти навык болталки:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case12:
+      алиса давай чат с алисой:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case13:
+      алиса давай поболтаем чат с алисой:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case14:
+      алиса давай поиграем в чат с алисой:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+  case15:
+      давай поиграем в давай поболтаем:
+        vins_form:
+          name: 'personal_assistant.scenarios.pure_general_conversation'
+
+
+not_external_skill_gc:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  # the specific intents may change, it is OK - but it shouldn't be external GC skill
+  # see DIALOG-5515
+  experiments: [mm_gc_protocol_disable]
+  case0:
+    можем поболтать ни о чем просто скажите алиса давай поболтаем:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+  case1:
+    давай с алисой поговорим:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+  case2:
+    давай поиграем поболтаем:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+  case3:
+    поговорим с алисой:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+  case4:
+    алиса давай поговорим про животных:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'

@@ -1,0 +1,277 @@
+labels:
+  can_open_map: '.*(Могу открыть|можно открыть|Давайте посмотрим).* карт.*'
+  card_moscow: '(В Москве|Загруженность) — 666 баллов( по шкале Яндекс.Пробок)?, орды
+    вурдалаков заполонили улицы.'
+  card_khimki: '(Вот пробки в Химках на карте|Вот пробки в Химках. Внимание на карту|Загруженность
+    дорог в Химках. Вот как это выглядит).'
+
+bass:
+  form:
+    resolved_where:
+      value:
+        city: Москва
+        city_cases:
+          preposition: 'в'
+          prepositional: 'Москве'
+
+    traffic_info:
+      value:
+        level: 666
+        url: url
+        hint: орды вурдалаков заполонили улицы
+  blocks:
+  - type: suggest
+    suggest_type: show_traffic__show_map
+
+test_command:
+  dialog:
+    расскажи про пробки:
+      bass:
+        form:
+          where:
+            value: ''
+      text: 'В Москве {} 666 баллов, орды вурдалаков заполонили улицы.'
+
+    а в казани:
+      bass:
+        form:
+          where:
+            value: 'в казани'
+          resolved_where:
+            value:
+              city: Казань
+              city_cases:
+                preposition: 'в'
+                prepositional: 'Казани'
+        blocks:
+          - type: attention
+            attention_type: supports_open_link
+
+      text: 'В Казани {} 666 баллов, орды вурдалаков заполонили улицы.'
+      button_actions:
+      - name: open_uri
+        title: Пробки на карте
+        payload:
+          uri: url
+
+    покажи:
+      text: Открываю карту
+      directives:
+      - name: open_uri
+        sub_name: personal_assistant.scenarios.show_traffic__details
+        type: client_action
+        payload:
+          uri: url
+
+  app_info:
+    ignore:
+    - watch
+    - navigator_android
+    - navigator_ios
+    - dexp
+    - auto
+    - speaker
+    - irbis
+
+test_no_traffic:
+  bass:
+    blocks:
+    - type: error
+      error:
+        type: notraffic
+        msg: ''
+
+  dialog:
+    пробки:
+      text: 'К сожалению, я не могу ответить на вопрос о дорожной ситуации в Москве.'
+
+    пробки на луне:
+      bass:
+        form:
+          resolved_where:
+            value: None
+      text: 'К сожалению, я не могу ответить на вопрос о дорожной ситуации в этом
+        месте.'
+
+test_import_entity:
+  город новосибирск:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+      slots:
+        query:
+          value: город новосибирск
+
+  какие там пробки:
+    vins_form:
+      name: 'personal_assistant.scenarios.show_traffic'
+      slots:
+        where:
+          value: Новосибирск
+
+test_no_level_ellipsis:
+  bass:
+    form:
+      resoved_where:
+        value:
+          city: Химки
+          city_cases:
+            prepositional: 'Химках'
+            preposition: 'в'
+      traffic_info:
+        value: null
+    blocks:
+      - type: attention
+        attention_type: supports_open_link
+  dialog:
+    покажи пробки в химках: '{can_open_map}'
+  открой:
+    vins_form:
+      name: 'personal_assistant.scenarios.show_traffic__details'
+  app_info:
+    ignore:
+    - speaker
+    - irbis
+    - dexp
+    - navigator_ios
+    - navigator_android
+    - watch
+    - auto
+
+test_elari_watch:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  bass:
+    form:
+      resolved_where:
+        value:
+          city: Луна
+          city_cases:
+            prepositional: 'Луне'
+            preposition: 'на'
+      traffic_info:
+        value: null
+
+  dialog:
+    покажи пробки на луне: 'К сожалению, у меня нет информации о дорожной ситуации
+      на Луне'
+
+test_with_card_with_level:
+  dialog:
+    расскажи про пробки:
+      bass:
+        form:
+          where:
+            value: ''
+        blocks:
+          - type: attention
+            attention_type: supports_open_link
+          - type: attention
+            attention_type: traffic_cards
+      text: '{card_moscow}'
+      voice: '{card_moscow}'
+  app_info:
+    ignore:
+    - speaker
+    - irbis
+    - dexp
+    - navigator_ios
+    - navigator_android
+    - watch
+    - auto
+
+test_with_card_without_level:
+  bass:
+    form:
+      where:
+        value: 'в химках'
+      resolved_where:
+        value:
+          city: Химки
+          city_cases:
+            preposition: 'в'
+            prepositional: 'Химках'
+      traffic_info:
+        value: null
+    blocks:
+      - type: attention
+        attention_type: supports_open_link
+      - type: attention
+        attention_type: traffic_cards
+  dialog:
+    пробки в химках:
+      text: '{card_khimki}'
+      voice: '{card_khimki}'
+  app_info:
+    ignore:
+    - irbis
+    - navigator_android
+    - speaker
+    - dexp
+    - navigator_ios
+    - watch
+    - auto
+
+test_with_card_and_text_with_level:
+  bass:
+    form:
+      resolved_where:
+        value:
+          city: Москва
+          city_cases:
+            preposition: 'в'
+            prepositional: 'Москве'
+
+      traffic_info:
+        value:
+          level: 666
+          url: url
+          hint: орды вурдалаков заполонили улицы
+    blocks:
+    - type: attention
+      attention_type: supports_open_link
+    - type: attention
+      attention_type: traffic_cards
+  dialog:
+    расскажи про пробки:
+      bass:
+        form:
+          where:
+            value: ''
+      text: '{card_moscow}'
+      voice: '{card_moscow}'
+
+test_with_card_and_text_without_level:
+  bass:
+    form:
+      where:
+        value: 'в химках'
+      resolved_where:
+        value:
+          city: Химки
+          city_cases:
+            preposition: 'в'
+            prepositional: 'Химках'
+      traffic_info:
+        value: null
+    blocks:
+    - type: attention
+      attention_type: supports_open_link
+    - type: attention
+      attention_type: traffic_cards
+
+  dialog:
+    пробки в химках:
+      text: '{card_khimki}'
+      voice: '{card_khimki}'
+  app_info:
+    ignore:
+    - watch
+    - auto
+    - irbis
+    - navigator_android
+    - navigator_ios
+    - speaker
+    - dexp

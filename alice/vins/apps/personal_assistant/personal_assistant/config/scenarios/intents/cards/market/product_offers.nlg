@@ -1,0 +1,665 @@
+{% from "cards/common.nlg" import font_color, logged_action_url with context %}
+{% from "cards/market/common.nlg" import
+    REASON_TO_BUY_ICON, ADVISER_PERCENTAGE_ICON,
+    SHOP_COLOR, REASON_TO_BUY_COLOR, FADED_COLOR, VIOLET_COLOR,
+    render_action, render_white_courier_delivery_text, render_blue_delivery_text, reduce_text, render_price, bold,
+    render_picture, render_review_count_text, get_log_id with context %}
+{% from "market/common.nlg" import pretty_date %}
+
+{% macro render_warnings_text(warnings) -%}
+  {%- for warning in warnings -%}
+    {%- if loop.index0 -%}
+      <br/>
+    {% endif -%}
+    {{- warning.value | html_escape -}}
+  {%- endfor -%}
+{%- endmacro %}
+
+{% macro render_color_symbol(color_code) -%}
+  {%- if color_code|lower == "#ffffff" -%}
+    {{- '&#9633;' -}} {#- для белого цвета отображаем '□', так как фон и так белый -#}
+  {%- else -%}
+    {{- font_color(color_code, '&#9632;') -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_model_info_blocks(data) %}
+  {
+    "side_element": {
+      "element": {{ render_picture(data.picture) }},
+      "size": "m",
+      "position": "right"
+    },
+    "title": "{{- data.title | html_escape -}}",
+    "title_style": "title_s",
+    "type": "div-universal-block",
+    {% if data.prices|get_item("avg") %}
+      "text": "{{- render_price(data.prices.avg, data.prices.currency) }} средняя цена",
+    {% endif %}
+    "text_style": "text_m"
+  }
+  {% if data.prices.min is defined and data.prices.max is defined %}
+    ,
+    {
+      "text_style": "text_s",
+      "type": "div-universal-block",
+      "text": "
+        {{- font_color(FADED_COLOR, 'от {} до {}'.format(
+            render_price(data.prices.min, data.prices.currency),
+            render_price(data.prices.max, data.prices.currency)
+          ))
+        -}}"
+    }
+  {% endif %}
+  {% if data|get_item("rating_icon") %}
+    ,
+    {
+      {{ render_action(data.urls.reviews) }},
+      "columns": [
+        {
+          "left_padding": "zero",
+          "right_padding": "zero",
+          "weight": 0
+        }
+      ],
+      "type": "div-table-block",
+      "rows": [
+        {
+          "cells": [
+            {
+              "image": {
+                "type": "div-image-element",
+                "image_url": "{{- data.rating_icon -}}"
+              },
+              "image_size": "l",
+              "text_style": "text_s",
+              "text": "{{- font_color(FADED_COLOR, render_review_count_text(data|get_item("review_count", 0))) -}}"
+            }
+          ],
+          "top_padding": "xxs",
+          "bottom_padding": "zero",
+          "type": "row_element"
+        }
+      ]
+    }
+  {% endif %}
+  {% if data|get_item("adviser_percentage") %}
+    ,
+    {
+      {{ render_action(data.urls.reviews) }},
+      "columns": [
+        {
+          "right_padding": "zero",
+          "left_padding": "zero",
+          "weight": 0
+        }
+      ],
+      "type": "div-table-block",
+      "rows": [
+        {
+          "cells": [
+            {
+              "image_size": "l",
+              "text_style": "text_s",
+              "image": {
+                "type": "div-image-element",
+                "ratio": 1,
+                "image_url": "{{- ADVISER_PERCENTAGE_ICON -}}"
+              },
+              "image_position": "left",
+              "text": "{{- font_color(REASON_TO_BUY_COLOR, '{}% рекомендуют'.format(data.adviser_percentage)) -}}"
+            }
+          ],
+          "top_padding": "zero",
+          "bottom_padding": "zero",
+          "type": "row_element"
+        }
+      ]
+    }
+  {% endif %}
+  {% if data | get_item("reasons_to_buy") %}
+    ,
+    {
+      {{ render_action(data.urls.reviews) }},
+      "columns": [
+        {
+          "right_padding": "zero",
+          "left_padding": "zero",
+          "weight": 0
+        }
+      ],
+      "type": "div-table-block",
+      "rows": [
+        {
+          "cells": [
+            {
+              "text_style": "text_s",
+              "image": {
+                "type": "div-image-element",
+                "ratio": 1,
+                "image_url": "{{- REASON_TO_BUY_ICON -}}"
+              },
+              "image_size": "l",
+              "text": "{{- font_color(REASON_TO_BUY_COLOR, data.reasons_to_buy[0]) -}}"
+            }
+          ],
+          "top_padding": "zero",
+          "bottom_padding": "zero",
+          "type": "row_element"
+        }
+      ]
+    }
+  {% endif %}
+  {% if data|get_item("warnings", []) %}
+    ,
+    {
+      "type": "div-universal-block",
+      "text": "{{- font_color(FADED_COLOR, render_warnings_text(data.warnings)) -}}"
+    }
+  {% endif %}
+{% endmacro %}
+
+{% macro render_offer_color_and_discount_block(offer, append_comma) %}
+  {% set color = offer.get("color") %}
+  {% set discount = offer.get("price_before_discount") %}
+  {% if color or discount %}
+    {
+      "columns": [
+        {% if color %}
+          {
+            "left_padding": "zero",
+            "right_padding": "zero"
+          },
+          {
+            "left_padding": "xxs",
+            "right_padding": "zero"
+          }
+        {% endif %}
+        {% if color and discount %}
+          ,
+        {% endif %}
+        {% if discount %}
+          {
+            "weight": 1,
+            "left_padding": "zero",
+            "right_padding": "zero"
+          }
+        {% endif %}
+      ],
+      "rows": [
+        {
+          "cells": [
+            {% if color %}
+              {
+                "vertical_alignment": "center",
+                "text_style": "text_s",
+                "horizontal_alignment": "center",
+                "text": "{{- font_color(FADED_COLOR, "Цвет:") -}}"
+              },
+              {
+                "vertical_alignment": "center",
+                "horizontal_alignment": "center",
+                "text": "{{- render_color_symbol(color) -}}"
+              }
+            {% endif %}
+            {% if color and discount %}
+              ,
+            {% endif %}
+            {% if discount %}
+              {
+                "text": "{{- font_color(FADED_COLOR, "Было {}".format(render_price(**discount))) -}}",
+                "text_style": "text_s",
+                "horizontal_alignment": "right"
+              }
+            {% endif %}
+          ],
+          "type": "row_element"
+        }
+      ],
+      "type": "div-table-block"
+    }
+    {% if append_comma %}
+      ,
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_offer_delivery_block(append_comma=True) %}
+  {% set text = caller().strip() %}
+  {% if text %}
+    {
+      "columns": [
+        {
+          "left_padding": "zero",
+          "right_padding": "zero"
+        }
+      ],
+      "rows": [
+        {
+          "cells": [
+            {
+              "vertical_alignment": "center",
+              "text_style": "text_s",
+              "text": "{{- font_color(FADED_COLOR, text) -}}"
+            }
+          ],
+          "type": "row_element"
+        }
+      ],
+      "type": "div-table-block"
+    }
+    {% if append_comma %}
+      ,
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_offer_shop_block(shop, rating_icons) %}
+  {
+    "columns": [
+      {
+        "left_padding": "zero",
+        "right_padding": "zero"
+      },
+      {
+        "left_padding": "zero",
+        "right_padding": "zero"
+      },
+      {
+        "left_padding": "zero",
+        "right_padding": "zero"
+      },
+      {
+        "left_padding": "zero",
+        "right_padding": "zero"
+      },
+      {
+        "left_padding": "zero",
+        "right_padding": "zero"
+      },
+      {
+        "left_padding": "xs"
+      }
+    ],
+    "rows": [
+      {
+        "cells": [
+          {% for i in range(1, 6) %}
+            {
+              "image": {
+                "type": "div-image-element",
+                "ratio": 1,
+                "image_url":
+                  {% if i <= shop.rating %}  {# full star #}
+                    "{{ rating_icons|get_item("Fill", "") }}"
+                  {% elif i - 1 < shop.rating %}  {# half star #}
+                    "{{ rating_icons|get_item("Half", "") }}"
+                  {% else %}  {# empty star #}
+                    "{{ rating_icons|get_item("None", "") }}"
+                  {% endif %}
+              },
+              "horizontal_alignment": "center",
+              "image_size": "xs",
+              "vertical_alignment": "center"
+            },
+          {% endfor %}
+          {
+            "vertical_alignment": "bottom",
+            "text_style": "text_s",
+            "horizontal_alignment": "right",
+            "text": "{{- font_color(FADED_COLOR, render_review_count_text(shop|get_item("rating_count", 0))) -}}"
+          }
+        ],
+        "type": "row_element"
+      }
+    ],
+    "type": "div-table-block"
+  }
+{% endmacro %}
+
+{% macro render_beru_offer_block(offer, rating_icons, opts, add_bottom_delimiter=False) %}
+  {
+    "height": {
+      "value": "wrap_content",
+      "type": "predefined"
+    },
+    "width": {
+      "value": "match_parent",
+      "type": "predefined"
+    },
+    "type": "div-container-block",
+    "children": [
+      {
+        "columns": [
+          {
+            "left_padding": "zero",
+            "right_padding": "zero"
+          },
+          {% if opts.enable_voice_purchase %}
+            {
+              "left_padding": "xs",
+              "right_padding": "xs"
+            },
+          {% endif %}
+          {
+            "weight": 1,
+            "left_padding": "zero",
+            "right_padding": "zero"
+          }
+        ],
+        "rows": [
+          {
+            "top_padding": "xs",
+            "cells": [
+              {
+                {% if opts.offer_action == "MARKET" %}
+                  {{ render_action(offer.urls.market) }},
+                {% elif opts.offer_action == "SHOP" %}
+                  {{ render_action(offer.urls.model) }},
+                {% endif %}
+                "text_style": "text_s",
+                "text": "{{- font_color(SHOP_COLOR, bold('Яндекс.Маркет')) -}}"
+              },
+              {% if opts.enable_voice_purchase %}
+                {
+                  "image_size": "xs",
+                  "image": {
+                    "type": "div-image-element",
+                    "ratio": 5.75,
+                    "image_url": "http://avatars.yandex.net/get-mpic/1937077/Btn_xhdpi.png/orig"
+                  },
+                  "horizontal_alignment": "center",
+                  "vertical_alignment": "center"
+                },
+              {% endif %}
+              {
+                "text_style": "text_s",
+                "horizontal_alignment": "right",
+                "image_size": "xs",
+                "text": "{{- bold(render_price(**offer.price)) -}}"
+              }
+            ],
+            "type": "row_element"
+          }
+        ],
+        "type": "div-table-block"
+      },
+      {{ render_offer_color_and_discount_block(offer, append_comma=True) }}
+      {% call render_offer_delivery_block() -%}
+        {%- set delivery_text = render_blue_delivery_text(offer.delivery, req_info) -%}
+        {%- if delivery_text.strip() -%}
+          Доставка: {{ delivery_text -}}
+        {%- endif -%}
+      {%- endcall %}
+      {% if offer.get("shop") %}
+        {{ render_offer_shop_block(offer.shop, rating_icons) }},
+      {% endif %}
+      {
+        {% if add_bottom_delimiter %}
+          "has_delimiter": 1,
+        {% endif %}
+        "type": "div-separator-block"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_offer_block(offer, rating_icons, opts, add_bottom_delimiter=False) %}
+  {
+    "height": {
+      "value": "wrap_content",
+      "type": "predefined"
+    },
+    "width": {
+      "value": "match_parent",
+      "type": "predefined"
+    },
+    "type": "div-container-block",
+    "children": [
+      {
+        "columns": [
+          {
+            "left_padding": "zero",
+            "right_padding": "zero"
+          },
+          {
+            "weight": 1,
+            "left_padding": "zero",
+            "right_padding": "zero"
+          }
+        ],
+        "rows": [
+          {
+            "top_padding": "xs",
+            "cells": [
+              {
+                {% if opts.offer_action == "MARKET" %}
+                  {{ render_action(offer.urls.market) }},
+                {% elif opts.offer_action == "SHOP" %}
+                  {{ render_action(offer.urls.shop) }},
+                {% endif %}
+                "text_style": "text_s",
+                "text": "{{- font_color(SHOP_COLOR, bold(reduce_text(offer.shop.name, 30) | html_escape)) -}}"
+              },
+              {
+                "text_style": "text_s",
+                "horizontal_alignment": "right",
+                "image_size": "xs",
+                "text": "{{- bold(render_price(**offer.price)) -}}"
+              }
+            ],
+            "type": "row_element"
+          }
+        ],
+        "type": "div-table-block"
+      },
+      {{ render_offer_color_and_discount_block(offer, append_comma=True) }}
+      {% call render_offer_delivery_block() -%}
+        {%- set delivery = offer.get("delivery") -%}
+        {%- if delivery | get_item("courier") -%}
+          Доставка: {{ render_white_courier_delivery_text(delivery.courier) -}}
+        {%- elif delivery | get_item("has_pickup") -%}
+          Есть самовывоз
+        {%- endif -%}
+      {%- endcall %}
+      {% if offer.get("shop") %}
+        {{ render_offer_shop_block(offer.shop, rating_icons) }},
+      {% endif %}
+      {
+        {% if add_bottom_delimiter %}
+          "has_delimiter": 1,
+        {% endif %}
+        "type": "div-separator-block"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_total_button(total_info) %}
+  {
+    "type": "div-buttons-block",
+    "is_fullwidth": 1,
+    "items": [
+      {
+        "text": "{{- total_info.count }} {{ "предложение"|pluralize(total_info.count) }} на Маркете",
+        "action": {
+          "url": "{{- total_info.url -}}",
+          "log_id": {{ get_log_id() }}
+        }
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_beru_buttons(beru_offer) %}
+  {
+    "alignment": "center",
+    "is_fullwidth": 1,
+    "items": [
+      {
+        {% set start_order_title = "Заказать с Алисой" %}
+        "background_color": "{{- VIOLET_COLOR -}}",
+        "action": {
+          "url": "{{-
+            logged_action_url([
+              client_action_directive(
+                name="type_silent",
+                sub_name="beru_type_silent_start_order",
+                payload={
+                  "text": start_order_title
+                }
+              ),
+              server_action_directive(
+                "update_form",
+                {
+                  "form_update": beru_offer.beru_order.form_update,
+                  "resubmit": true
+                }
+              )
+            ])
+          -}}",
+          "log_id": {{ get_log_id() }}
+        },
+        "text": "{{- font_color('#ffffff', start_order_title) -}}"
+      }
+    ],
+    "type": "div-buttons-block"
+  }
+  {% if beru_offer.get("add_to_cart") %}
+    ,
+    {
+      "alignment": "center",
+      "is_fullwidth": 1,
+      "items": [
+        {
+          {% set add_to_cart_title = "Добавить в корзину на Беру" %}
+          "background_color": "{{- VIOLET_COLOR -}}",
+          "action": {
+            "url": "{{-
+              logged_action_url([
+                client_action_directive(
+                  name="type_silent",
+                  sub_name="beru_type_silent_add_to_cart",
+                  payload={
+                    "text": add_to_cart_title
+                  }
+                ),
+                server_action_directive(
+                  "update_form",
+                  {
+                    "form_update": beru_offer.add_to_cart.form_update,
+                    "resubmit": true
+                  }
+                )
+              ])
+            -}}",
+            "log_id": {{ get_log_id() }}
+          },
+          "text": "{{- font_color('#ffffff', add_to_cart_title) -}}"
+        }
+      ],
+      "type": "div-buttons-block"
+    }
+  {% endif %}
+{% endmacro %}
+
+{% macro render_beru_urls_footer(beru_urls) %}
+  {
+    "type": "div-table-block",
+    "rows": [
+      {
+        "cells": [
+          {
+            "text_style": "text_s",
+            "text": "О продавце",
+            "action": {
+              "url": "{{- beru_urls.supplier or "https://pokupki.market.yandex.ru" -}}",
+              "log_id": {{ get_log_id() }}
+            }
+          },
+          {
+            "text_style": "text_s",
+            "text": "О товаре",
+            "action": {
+              "url": "{{- beru_urls.model -}}",
+              "log_id": {{ get_log_id() }}
+            }
+          },
+          {
+            "text_style": "text_s",
+            "text": "Условия покупки",
+            "action": {
+              "url": "{{- beru_urls.terms_of_use -}}",
+              "log_id": {{ get_log_id() }}
+            }
+          }
+        ],
+        "top_padding": "xs",
+        "bottom_padding": "xs",
+        "type": "row_element"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% macro render_product_offers_card(data, opts) %}
+  {
+    "background": [
+      {
+        "color": "{{- '#FFFFFF' -}}",
+        "type": "div-solid-background"
+      }
+    ],
+    "states": [
+      {
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs"
+          },
+          {{ render_model_info_blocks(data) }},
+          {% set other_offers = data|get_item("offers.other") or [] %}
+          {% set has_other_offers = other_offers|length > 0 %}
+          {% if data.offers | get_item("beru") %}
+            {{ render_beru_offer_block(data.offers.beru, data.rating_icons, opts, add_bottom_delimiter=has_other_offers) }},
+          {% endif %}
+          {% if has_other_offers %}
+            {
+              {% if data.offers | get_item("beru") %}
+                "title": "Предложения других магазинов:",
+              {% else %}
+                "title": "Предложения магазинов:",
+              {% endif %}
+              "type": "div-universal-block",
+              "title_style": "text_m"
+            },
+            {% for offer in other_offers %}
+              {{ render_offer_block(offer, data.rating_icons, opts, add_bottom_delimiter=not loop.last) }},
+            {% endfor %}
+          {% endif %}
+          {
+            "type": "div-separator-block",
+            "size": "xxs"
+          },
+          {{ render_total_button(data.offers.total) }},
+          {% if opts.enable_voice_purchase and data.offers.get("beru") %}
+            {{ render_beru_buttons(data.offers.beru) }},
+            {
+              "type": "div-separator-block",
+              "has_delimiter": 1
+            },
+            {{ render_beru_urls_footer(data.offers.beru.urls) }},
+          {% endif %}
+          {
+            "type": "div-separator-block"
+          }
+        ],
+        "state_id": 1
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card market_product_offers %}
+  {{ render_product_offers_card(context.data, context.data.opts) }}
+{% endcard %}

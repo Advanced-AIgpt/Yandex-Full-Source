@@ -1,0 +1,129 @@
+{% macro render_instance(ent_instance) -%}
+  {{ ent_instance }}
+{%- endmacro %}
+
+{% macro polite() %}
+  {% maybe %}
+    {% chooseline %}
+      пожалуйста
+      если не трудно
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro utterance() -%}
+  '{{ form.utterance }}'(request)
+{%- endmacro %}
+
+{% macro skill(case=None) -%}
+  {% if case %}
+    '{{ render_instance(form.skill) | inflect(case) }}'(skill_id)
+  {% else %}
+    '{{ render_instance(form.skill) }}'(skill_id)
+  {% endif %}
+{%- endmacro %}
+
+{% macro launch_verb_pf() -%}
+  {% chooseitem 2 %}
+    {% chooseline %}
+      включить
+      запустить
+    {% endchooseline %}
+  {% or 1 %}
+    {% chooseline %}
+      стартануть
+      стартовать
+      вызвать
+      активировать
+    {% endchooseline %}
+  {% endchooseitem %}
+{%- endmacro %}
+
+{% macro launch_verb_ipf() -%}
+  {% chooseitem 2 %}
+    {% chooseline %}
+      включать
+      запускать
+    {% endchooseline %}
+  {% or 1 %}
+    {% chooseline %}
+      показывать
+      стартануть
+      стартовать
+      вызывать
+      активировать
+    {% endchooseline %}
+  {% endchooseitem %}
+{%- endmacro %}
+
+
+{% macro transfer_utterance() %}
+  {% maybe 0.3 %}
+    и
+    {% set say %}
+      {% chooseline %}
+        скажи
+        передай
+      {% endchooseline %}
+    {% endset %}
+    {% set pronoun %}
+      {% chooseline %}
+        ему
+        ей
+      {% endchooseline %}
+    {% endset %}
+    {% set target %}
+      туда
+    {% endset %}
+    {{ [say] | shuffle([pronoun,target]) | join }}
+    {{ utterance() }}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro query1() %}
+  # пример: запусти Квест пожалуйста
+
+  {% set command %}
+    {{ launch_verb_pf() | trim | inflect('imper','sg') }}
+    {% maybe 0.1 %}
+      ка
+    {% endmaybe %}
+  {% endset %}
+
+  {% set skill = skill() %}
+  {% set polite_phrase = polite() %}
+
+  {% maybe 0.2 %}
+    а
+  {% endmaybe %}
+  {{ [command] | shuffle([polite_phrase], [skill]) | join }}
+  {{ transfer_utterance() }}
+{% endmacro %}
+
+{% macro query2() %}
+  # пример: запускай Квест
+
+  {% set command %}
+    {{ launch_verb_ipf() | trim | inflect('imper','sg') }}
+  {% endset %}
+
+  {% set skill = skill() %}
+
+  {{ [command] | shuffle([], [skill]) | join }}
+  {{ transfer_utterance() }}
+{% endmacro %}
+
+{% macro query3() %}
+  # скажи уберу прислать машину
+  скажи {{ skill('datv') }} {{ utterance() }}
+{% endmacro %}
+
+{% phrase render_query %}
+  {% chooseitem 1 %}
+    {{ query1() }}
+  {% or 0.6 %}
+    {{ query2() }}
+  {% or 0.25 %}
+    {{ query3() }}
+  {% endchooseitem %}
+{% endphrase %}

@@ -1,0 +1,289 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "convert/convert__ask.nlg" %}
+
+{% from "convert/convert_common.nlg" import
+    when_with_na,
+    when,
+    render_instance,
+    render_sum,
+    copula,
+    inflect_source,
+    source_abl,
+    source_gen,
+    source_nom
+with context %}
+
+{% set tz = form.source_timezone or (form.search_response | get_item('timezone') | get_item('name')) or (context.onto[form.source] and context.onto[form.source].timezone) or 'UTC' %}
+{% set consider_time = (form.search_response | get_item('time')) or (context.onto[form.source] and context.onto[form.source].is_derived_from('conv_source_exchange')) %}
+{% set parsed_dt = parse_dt(form.source_date) if form.source_date else None %}
+
+{% macro rate_buy_sell_full(source_first) %}
+  {% if source_first %}
+    {{ source_abl() }} {{ when(parsed_dt, tz) }}
+  {% else %}
+    {{ when(parsed_dt, tz) }} {{ source_abl() }}
+  {% endif %}
+
+  {{ render_sum(form.amount_from, form.type_from, 'acc', form.amount_base) }}
+  можно {{ copula(parsed_dt, tz) }} купить за
+  {{ render_sum(form.amount_to.buy, form.type_to, 'acc') }}, а продать за
+  {{ render_sum(form.amount_to.sell, form.type_to, 'acc') }}
+{% endmacro %}
+
+{% macro rate_with_base_sum(source_first) %}
+  {% set eq_verb_info = parsed_dt | choose_tense(consider_time, True, tz=tz) | choose_equal_verb('m') %}
+
+  {% set source_info %}
+    курс {{ source_gen() }}
+  {% endset %}
+  {% if source_first %}
+    {{ source_info }} {{ when(parsed_dt, tz) }}
+  {% else %}
+    {{ when(parsed_dt, tz) }} {{ source_info }}
+  {% endif %}
+
+  {{ eq_verb_info.wordform }}
+  {{ render_sum(form.amount_to, form.type_to, eq_verb_info.gov_case) }} за
+  {{ render_sum(form.amount_from, form.type_from, 'acc', form.amount_base) }}
+{% endmacro %}
+
+{% macro full_answer_anaphoric(source_first) %}
+  {% set eq_verb_info = parsed_dt | choose_tense(consider_time, True, tz=tz) | choose_equal_verb('f') %}
+
+  {% set source_info %}
+    по курсу {{ source_gen() }}
+  {% endset %}
+  {% if source_first %}
+    {{ source_info }} {{ when_with_na(parsed_dt, tz) }}
+  {% else %}
+    {{ when(parsed_dt, tz) }} {{ source_info }}
+  {% endif %}
+  эта сумма {{ eq_verb_info.wordform }} {{ render_sum(form.amount_to, form.type_to, eq_verb_info.gov_case ) }}
+{% endmacro %}
+
+{% macro full_answer_1(source_first) %}
+  {% set eq_verb_info = parsed_dt | choose_tense(consider_time, True, tz=tz) | choose_equal_verb('f') %}
+
+  {% set source_info %}
+    по курсу {{ source_gen() }}
+  {% endset %}
+  {% if source_first %}
+    {{ source_info }} {{ when_with_na(parsed_dt, tz) }}
+  {% else %}
+    {{ when(parsed_dt, tz) }} {{ source_info }}
+  {% endif %}
+  цена за {{ render_sum(form.amount_from, form.type_from, 'acc', form.amount_base) }} {{ eq_verb_info.wordform }}
+  {{ render_sum(form.amount_to, form.type_to, eq_verb_info.gov_case ) }}
+{% endmacro %}
+
+{% macro full_answer_2(source_first) %}
+  {% set rate_info %}
+    по курсу {{ source_gen() }} {{ when_with_na(parsed_dt, tz) }}
+  {% endset %}
+
+  {% if source_first %}
+    {{ rate_info }}
+  {% endif %}
+  {{ render_sum(form.amount_from, form.type_from, 'nom', form.amount_base) }} это
+  {{ render_sum(form.amount_to, form.type_to, 'nom') }}
+  {% if not source_first %}
+    {{ rate_info }}
+  {% endif %}
+{% endmacro %}
+
+{% macro connective() %}
+  {% chooseline %}
+    , но могу сказать, что
+    , но
+    , зато могу сказать, что
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro approximate_preambula() %}
+  {% chooseline %}
+    в точности такой информацией я не владею
+    точного ответа я не знаю
+    в точности на ваш вопрос я не могу ответить
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_normal_answer() %}
+  {% set source_first = False %}
+
+  {% set attention = get_attention("removed_slots") or get_attention("converter_removed_slots") %}
+  {% if attention %}
+    {% chooseline %}
+      Сожалею,
+      К сожалению,
+    {% endchooseline %}
+
+    {% if 'when' in attention.data.slots %}
+      {% if 'source' in attention.data.slots %}
+        {{ approximate_preambula() }}
+      {% else %}
+        {% set attention_when = attention.data.slots.when | parse_dt | human_date %}
+        {% chooseline %}
+          у меня нет информации на {{ attention_when }}
+          я не знаю курса на {{ attention_when }}
+          курс на {{ attention_when }} мне неизвестен
+        {% endchooseline %}
+      {% endif %}
+    {% else %}
+      {% if 'source' in attention.data.slots %}
+        {% set source_first = True %}
+        {% set source_gen = context.onto_synth.random_phrase(attention.data.slots.source) | inflect('gen') %}
+        {% chooseline %}
+          курса {{ source_gen }} я не знаю
+          я не знаю курса {{ source_gen }}
+          курс {{ source_gen }} мне неизвестен
+        {% endchooseline %}
+      {% else %}
+        {{ approximate_preambula() }}
+      {% endif %}
+    {% endif %}
+    {{ connective() }}
+  {% endif %}
+
+  {% set answer %}
+    {% if form.source == 'EXCHANGE_POINT' %}
+      # пример: 24 апреля в пунктах обмена 1 доллар можно купить за 26.73 гривны, а продать за 26.46 гривны
+      {{ rate_buy_sell_full(source_first) }}
+    {% else %}
+      {% if form.amount_from %}
+        {% chooseitem %}
+          # пример: 24 апреля по курсу банка Казахстана эта сумма составляет 9998.25 тенге
+          {{ full_answer_anaphoric(source_first) }}
+        {% or %}
+          # пример: 24 апреля в 21:52 по курсу ММВБ цена за 300 долларов – 16750 рублей 50 копеек
+          {{ full_answer_1(source_first) }}
+        {% or %}
+          # пример: 100 долларов это 10980.9 йены по курсу биржи Форекс на 00:00 24 апреля
+          {{ full_answer_2(source_first) }}
+        {% endchooseitem %}
+      {% else %}
+         # пример: 24 апреля в 21:52 курс ММВБ равен 55 рублям 84 копейкам за 1 доллар
+         {{ rate_with_base_sum(source_first) }}
+      {% endif %}
+    {% endif %}
+  {% endset %}
+
+  {% if is_active_attention("removed_slots") or is_active_attention("converter_removed_slots") %}
+    {{ answer }}.
+  {% else %}
+    {{ answer.lstrip() | capitalize_first }}.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_short_answer() %}
+  {% if form.source == 'EXCHANGE_POINT' %}
+    Покупка: {{ render_sum(form.amount_to.buy, form.type_to, 'nom') }},
+    продажа: {{ render_sum(form.amount_to.sell, form.type_to, 'nom') }}.
+    {% if not form.amount_from and form.amount_base != 1 %}
+      Это цены за {{ render_sum(form.amount_from, form.type_from, 'acc', form.amount_base) }}.
+    {% endif %}
+    {% text %}
+      \n{{ source_nom() | capitalize_first }}
+      {% if form.resolved_where %}
+        {{ form.resolved_where | city_prepcase }}
+      {% endif %}
+      , {{ when(parsed_dt, tz) }}.
+    {% endtext %}
+  {% else %}
+    {{ render_sum(form.amount_to, form.type_to, 'nom') }}
+    {% if not form.amount_from and form.amount_base != 1 %}
+      за {{ render_sum(form.amount_from, form.type_from, 'acc', form.amount_base) }}
+    {% endif %}.
+    {% text %}
+      \n
+      {% if form.amount_from %}
+        По курсу {{ source_gen() }} {{ when_with_na(parsed_dt, tz) }}
+      {% else %}
+        {% if form.source %}
+          {{ source_nom() | capitalize_first }}, {{ when(parsed_dt, tz) }}
+        {% endif %}
+      {% endif %}.
+    {% endtext %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if form.amount_from and form.amount_from < 0.01 or form.amount_to and form.amount_to < 0.01 %}
+    Давайте не будем мелочиться.
+  {% elif not form.amount_to %}
+    Такая сумма не помещается в моей памяти.
+  {% elif is_active_attention("removed_slots") or is_active_attention("converter_removed_slots") %}
+    {{ render_normal_answer() }}
+  {% else %}
+    {{ render_short_answer() }}
+  {% endif %}
+{% endphrase %}
+
+# error
+
+{% phrase render_error__invalidparam %}
+  {% if context.error.data.code == 'non_positive_amount_from' %}
+    Денежная сумма должна быть больше нуля.
+  {% elif context.error.data.code == 'bad_date' %}
+    Не могу разобраться, что за дата такая. Спросите еще раз, пожалуйста.
+  {% else %}
+    Что-то я запуталась. Спросите по-другому, пожалуйста.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__converterror %}
+  {% if context.error.data.code == 'no_rate_in_region' %}
+    {% if form.resolved_where %}
+      К сожалению, у меня нет информации о курсах валют {{ form.resolved_where | city_prepcase }}.
+    {% else %}
+      К сожалению, у меня нет информации о курсах валют в этом месте.
+    {% endif %}
+  {% elif context.error.data.code == 'no_rate_for_source' %}
+    К сожалению, у меня нет информации о курсах валют
+    {% if form.source %}
+      {{ source_abl() }}
+    {% elif form.resolved_where %}
+      {{ form.resolved_where.city_prepcase }}
+    {% else %}
+      в этом месте
+    {% endif %}.
+  {% elif context.error.data.code == 'no_rate_for_date' %}
+    К сожалению, у меня нет информации на указанную дату.
+  {% else %}
+    К сожалению, у меня нет такой информации.
+  {% endif %}
+{% endphrase %}
+
+# suggest
+
+{% phrase render_suggest_caption__convert__from %}
+  {{ render_instance(context.convert__from.data.value) | capitalize_first }} к {{ render_instance(form.type_to) | inflect('dat') }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__convert__from %}
+  Курс {{ render_instance(context.convert__from.data.value) | inflect('gen') }} к
+  {{ render_instance(form.type_to) | inflect('dat') }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__convert__source %}
+  Курс {{ render_instance(context.convert__source.data.value) | inflect('gen') }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__convert__source %}
+  А {{ render_instance(context.convert__source.data.value) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__convert__describe_rate %}
+  {% if form.amount_from %}
+    Это по какому курсу?
+  {% else %}
+    Что это за курс?
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__convert__describe_rate %}
+  {% if form.amount_from %}
+    Это по какому курсу?
+  {% else %}
+    Что это за курс?
+  {% endif %}
+{% endphrase %}

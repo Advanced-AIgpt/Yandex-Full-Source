@@ -1,0 +1,61 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import not_supported, not_understood, in_ya_pasport with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention("unknown_location_from") %}
+    Для начала мне нужно понять, откуда вы хотите поехать.
+  {% elif is_active_attention("not_implemented") %}
+    {{ not_supported() }}
+  {% elif is_active_attention("not_understood") %}
+    {{ not_understood() }}
+  {% else %}
+    {% if form.what_change == "payment" %}
+      {% if is_active_attention("no_payment_methods_available") %}
+        Не нашла у вас подходящих способов оплаты для этого тарифа.
+        Вы можете привязать карту для оплаты {{ in_ya_pasport() }}.
+      {% else %}
+        {% if is_active_attention("payment_method_not_available") %}
+            Этот способ оплаты недоступен. Выберите другой. Вот варианты:
+        {% elif is_active_attention("payment_method_not_exists") %}
+            Не нашла такого способа оплаты. Выберите другой:
+            Не нашла такого способа оплаты. Вот все доступные:
+        {% else %}
+          {% chooseline %}
+            Вы можете оплатить поездку:
+            Вот как вы можете оплатить поездку:
+            Вот доступные способы оплаты:
+            Доступные способы оплаты:
+          {% endchooseline %}
+        {% endif %}
+         \n
+        {% if form.available_payment_methods.cash %}
+          Наличными \n
+        {% endif %}
+        {% if form.available_payment_methods.card %}
+          По карте \n
+        {% endif %}
+        {% if form.available_payment_methods.corp %}
+          Корпоративным счётом \n
+        {% endif %}
+      {% endif %}
+    {% elif form.what_change == "tariff" %}
+      {% if form.available_tariffs %}
+        {% if is_active_attention("tariff_not_available") %}
+          Выбранный тариф тут недоступен. Выберите другой. Вот варианты:
+        {% else %}
+          Доступные тарифы:
+        {% endif %}
+        \n
+        {% for tariff in form.available_tariffs %}
+          {{ tariff }}\n
+        {% endfor %}
+      {% else %}
+        Не нашла доступных тарифов для этой точки начала маршрута.
+      {% endif %}
+    {% else  %}
+      {{ not_supported() }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

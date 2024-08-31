@@ -1,0 +1,102 @@
+{% from "cards/common.nlg" import simple_open_uri_action, logged_action_url with context %}
+{% from "cards/onboarding_consts.nlg" import onboarding_cases_data, onboarding_games_data %}
+
+{% macro separator(size="xxs", delimiter=False) %}
+  {
+    "size": "{{ size }}",
+    "type": "div-separator-block"
+  {% if delimiter %}
+    , "has_delimiter": 1
+  {% endif %}
+  },
+{% endmacro %}
+
+{% macro get_click_action(case_name, case_number, text, utm_medium='onboarding') -%}
+  {% set logged_payload = dict(case_name=case_name) %}
+  {%- if case_number is defined -%}
+    {% do logged_payload.update(dict(item_number=case_number)) %}
+  {%- endif -%}
+  {{ logged_action_url([
+        client_action_directive(name='type', sub_name='onboarding_type', payload={'text': text}),
+     ], logged_payload,
+     dict(utm_medium=utm_medium, utm_campaign='', utm_term='', utm_content='textlink'))
+  }}
+{%- endmacro %}
+
+
+{% macro render_case(case_name, case_number, icon, type, utm_medium='onboarding') %}
+  {% if type == "games" %}
+    {% set obj = onboarding_games_data[case_name] %}
+  {% else %}
+    {% set obj = onboarding_cases_data[case_name] %}
+  {% endif %}
+  {% set action_url = get_click_action(case_name, case_number, obj.title, utm_medium) %}
+
+  {
+    "title": "{{ obj.title }}",
+    "text": "{{ obj.text }}",
+    "type": "div-universal-block",
+    "action": {
+      "url": "{{ action_url }}",
+      "log_id": "{{ case_name }}_skill"
+    },
+    "side_element": {
+      "element": {
+        "image_url": "{{ icon }}",
+        "ratio": 1,
+        "type": "div-image-element"
+      },
+      "size": "s",
+      "position": "left"
+    }
+  },
+{% endmacro %}
+
+{% macro onboarding(type) %}
+  {% set help_text="ВСЕ НАВЫКИ" %}
+  {%- if type == "games" -%}
+    {% set utm_medium = "onboarding_games" %}
+  {%- else -%}
+    {% set utm_medium = "onboarding_skills" %}
+  {%- endif -%}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {{ separator("xs") }}
+          {% for case in context.data.cases %}
+            {{ render_case(case, loop.index, context.data.icons[loop.index0], type, utm_medium) }}
+          {%- endfor %}
+          {{ separator("xs", True) }}
+          {
+            "text": "<font color=\"{{ "#0A4DC3" }}\">{{ help_text }}<\/font>",
+            "type": "div-footer-block",
+            "action": {
+              {% if type == "games" %}
+                "url": "{{ simple_open_uri_action('https://alice.yandex.ru/help#games', 'all_games_footer', dict(utm_medium=utm_medium, utm_campaign='', utm_term='', utm_content='textlink')) }}",
+                "log_id": "all_games_footer"
+              {% else  %}
+                "url": "{{ simple_open_uri_action('https://alice.yandex.ru/help', 'all_skills_footer', dict(utm_medium=utm_medium, utm_campaign='', utm_term='', utm_content='textlink')) }}",
+                "log_id": "all_skills_footer"
+              {% endif %}
+            }
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ "#FFFFFF" }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card onboarding %}
+  {{ onboarding(type="onboarding") }}
+{% endcard %}
+{% card games_onboarding %}
+  {{ onboarding(type="games") }}
+{% endcard %}

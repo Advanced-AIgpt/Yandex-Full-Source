@@ -1,0 +1,45 @@
+{% nlgimport "market/common.nlg" %}
+{% nlgimport "market/market_login.nlg" %}
+
+{% phrase market_beru_my_bonuses_list__yes_answer %}
+
+    {% chooseline %}
+        Вот такие бонусы мне удалось у вас найти:
+        Вот такие у вас сейчас бонусы:
+        В данный момент у вас такие бонусы:
+        Вот список бонусов, доступных вам:
+        У вас сейчас такие бонусы:
+        Вот, что мне удалось у вас найти:
+    {% endchooseline %}
+
+    {% set pronouncedCount = 2 %}
+    {% set unpronouncedCount = context.data.coins|length - pronouncedCount %}
+
+    {% for coin in context.data.coins %}
+        \n-
+
+        {% if loop.index0 >= pronouncedCount and not is_smart_speaker() %}
+            {% text %} {{ coin.name }} ({{ coin.subname }}) {% endtext %}
+        {% else %}
+            {{ coin.name }} ({{ coin.subname }})
+        {% endif %}
+    {% endfor %}
+
+    {% if not is_smart_speaker() and unpronouncedCount > 0 %}
+        {% voice %}
+            И еще {{ unpronouncedCount }} {{ 'бонус'|pluralize(unpronouncedCount) }}, вывела на экран
+        {% endvoice %}
+    {% endif %}
+
+{% endphrase %}
+
+{% phrase market_beru_my_bonuses_list__no_answer %}
+
+    {% chooseline %}
+        К сожалению, у вас сейчас нет бонусов
+        Мне не удалось найти у вас бонусы
+        Очень жаль, но у вас сейчас нет бонусов
+        В данный момент у вас нет бонусов
+    {% endchooseline %}
+
+{% endphrase %}

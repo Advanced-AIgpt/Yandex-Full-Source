@@ -1,0 +1,49 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "find_poi/find_poi__ask.nlg" %}
+{% from "common.nlg" import opening_sites_or_apps_not_supported %}
+
+{% phrase render_uri %}
+  {% if not (is_smart_speaker() or is_auto()) %}
+    {% if form.last_found_poi and form.last_found_poi.url %}
+      {{ form.last_found_poi.url }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.last_found_poi %}
+    {% if form.last_found_poi.url %}
+      {% if is_smart_speaker() or is_auto() or is_elari_watch() %}
+        {{ opening_sites_or_apps_not_supported() }}
+      {% else %}
+        {% chooseline %}
+          Открываю сайт.
+          Открываю сайт организации.
+          Открываю страницу.
+          Открываю страницу организации.
+        {% endchooseline %}
+      {% endif %}
+    {% else %}
+      {% chooseline %}
+        Я не знаю, какой у них сайт.
+        Я не знаю сайт этой организации.
+        У меня нет адреса этого сайта.
+        Кажется, у этой организации просто нет сайта.
+      {% endchooseline %}
+    {% endif %}
+  {% else %}
+    {% if form.result_index == 1 %}
+      {% chooseline %}
+        В смысле? Я же ничего не нашла.
+        Я же не нашла ни одного места.
+        Вообще-то я не нашла ничего.
+        Простите, но я ничего не нашла.
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Эмм, вообще-то я больше ничего не нашла.
+        Так я же больше ничего не нашла.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

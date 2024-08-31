@@ -1,0 +1,148 @@
+labels:
+  reminders_unsupported_device: '.*(не умею|обещал запрограммировать).*'
+  reminders_forbidden: 'Простите, напоминания доступны только на Станциях и колонках, в которых я живу..*'
+  past_time: '(Я не могу поставить напоминание в прошлом|Время.*уже прошло|.*напоминание
+    в прошлом).*'
+  invalid_time: 'Я не поняла на какую дату и время.*'
+  ask_what: '(О чём|Что).* напомнить.*'
+
+test_create_reminder_dialog_speaker:
+  dialog:
+    создай напоминание помыть полы:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: помыть полы
+          date:
+            value: null
+          time:
+            value: null
+      text: '{reminders_unsupported_device}'
+  app_info:
+    ignore:
+    - watch
+    - desktop_alice
+    - navigator_android
+    - navigator_ios
+    - auto
+    - pa_ios
+    - pa_android
+
+test_create_reminder_dialog_mobile:
+  dialog:
+    создай напоминание помыть полы:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: помыть полы
+          date:
+            value: null
+          time:
+            value: null
+      text: '{reminders_forbidden}'
+  app_info:
+    ignore:
+      - speaker
+      - irbis
+      - dexp
+
+test_create_reminder_simple_speaker:
+  dialog:
+    напомни мне подписать заявление 20 января:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: подписать заявление
+          date:
+            month: 1
+            day: 20
+          time:
+            value: null
+      text: '{reminders_unsupported_device}'
+  app_info:
+    ignore:
+    - watch
+    - desktop_alice
+    - navigator_android
+    - navigator_ios
+    - auto
+    - pa_ios
+    - pa_android
+
+test_create_reminder_simple_mobile:
+  dialog:
+    напомни мне подписать заявление 20 января:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: подписать заявление
+          date:
+            month: 1
+            day: 20
+          time:
+            value: null
+      text: '{reminders_forbidden}'
+  app_info:
+    ignore:
+      - speaker
+      - irbis
+      - dexp
+
+test_list_reminders:
+  dialog:
+    покажи список напоминаний:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          answer:
+            value: null
+      text: '{reminders_unsupported_device}'
+
+    открой мои напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          answer:
+            value: null
+      text: '{reminders_unsupported_device}'
+  app_info:
+    ignore:
+    - watch
+
+test_quasar:
+  experiments: [enable_reminders_todos]
+  test_user_info:
+    tags:
+    - oauth
+    - reminder
+  app_info:
+    app_id: 'ru.yandex.quasar.services'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+
+  invalid:
+    flags:
+      xfail:
+        value: true
+        reason: 'If the date is invalid, it is not parsed and the slots are not filled at all. This should be fixed'
+    dialog:
+      поставь напоминание на сорок первое августа помыть полы: '{invalid_time}'
+  past:
+    поставь напоминание на вчера в 10 утра о невыносимой тяжести бытия: '{past_time}'

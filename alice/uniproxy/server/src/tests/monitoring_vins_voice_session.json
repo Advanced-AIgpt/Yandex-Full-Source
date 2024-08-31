@@ -1,0 +1,196 @@
+[
+    {
+        "action": "set_timeout",
+        "action_ref": "timelimit",
+        "timelimit": 10
+    },
+    {
+        "action": "send_message",
+        "name": "send_synchronize_state_vins",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "System",
+                    "name": "SynchronizeState"
+                },
+                "payload": {
+                    "vins": {
+                        "application": {
+                            "app_id": "com.yandex.vins.shooting",
+                            "app_version": "1.2.3",
+                            "os_version": "5.0",
+                            "platform": "android",
+                            "uuid": "",
+                            "lang": "ru-RU"
+                        }
+                    },
+                    "voice": "shitova.us"
+                }
+            }
+        },
+        "apply_to_message": [
+            "auth_token",
+            "new_message_id",
+            "new_uuid",
+            "new_vins_application_uuid"
+        ]
+    },
+    {
+        "action": "send_message",
+        "action_ref": "vins_request",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "VINS",
+                    "name": "VoiceInput"
+                },
+                "payload": {
+                    "header": {
+                        "request_id": ""
+                    },
+                    "request": {
+                        "event": {
+                            "type": "voice_input",
+                            "voice_session": true
+                        }
+                    },
+                    "application": {
+                        "timezone": "Europe/Moscow"
+                    },
+                    "lang": "ru-RU",
+                    "topic": "dialogeneral",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key"
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_message_id",
+            "new_request_id",
+            "new_stream_id",
+            "application_client_time",
+            "application_timestamp",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_recv_message",
+        "id": 0,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Result",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "endOfUtt": false,
+                    "responseCode": "OK"
+                }
+            }
+        }
+    },
+    {
+        "action": "async_recv_message",
+        "id": 1,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Classification",
+                    "namespace": "Biometry"
+                }
+            }
+        }
+    },
+    {
+        "action": "async_send_data",
+        "action_ref": "send_audio_file",
+        "filename": "data/school.opus",
+        "chunk_size": 2000,
+        "chunk_duration": 0.2,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "recv_message",
+        "action_ref": "asr_result",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Result"
+                },
+                "payload": {
+                    "responseCode": "OK",
+                    "endOfUtt": true
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "streamcontrol": {
+                "reason": 0,
+                "action": 0,
+                "streamId": 1
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "action_ref": "vins_response",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "Vins",
+                    "name": "VinsResponse"
+                },
+                "payload": {
+                    "response": {
+                    }
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "TTS",
+                    "name": "Speak"
+                },
+                "payload": {
+                    "format": "audio/opus"
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "streamcontrol": {
+                "action": 0,
+                "reason": 0,
+                "streamId": 2
+            }
+        }
+    },
+    {
+        "action": "check_received_data",
+        "action_ref": "check_received_data",
+        "stream_id": 2,
+        "min_binary_data_size": -1
+    }
+]

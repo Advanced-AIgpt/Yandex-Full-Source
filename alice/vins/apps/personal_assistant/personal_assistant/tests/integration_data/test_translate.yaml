@@ -1,0 +1,582 @@
+labels:
+  failed_to_process_text: 'Не поняла\. Давайте снова\. Пример: «переведи слово \"кошка\" на испанский»\.|Не поняла\. Повторите, пожалуйста\. Пример: «переведи слово \"собака\" на немецкий»\.|А что именно перевести\? Попробуйте спросить по-другому\. Например: «как будет \"стол\" по-английски\?»'
+  failed_to_process_voice: 'Не поняла\. Давайте снова\. Пример: переведи слово кошка на испанский\.|Не поняла\. Повторите, пожалуйста\. Пример: переведи слово собака на немецкий\.|А что именно перевести\? Попробуйте спросить по-другому\. Например: как будет стол по-английски\?'
+  wrong_language_translate: 'Это и есть нужный вам язык, русский\.|Если я не ошибаюсь, это уже русский\.|Сдаётся мне, это и есть русский\.|Погодите\. Эта фраза уже на русском\.'
+  not_supported_language_text: 'Я не знаю ни абхазского, ни древнегреческого\. Когда-нибудь изучу\.|У меня тут 95 языков, но ни абхазского, ни древнегреческого среди них нет\. Увы\.|Мне не знаком ни абхазский, ни древнегреческий\. Такое бывает\.'
+  not_supported_language_voice: 'Я не знаю ни абхазского, ни древнегреческого\. Когда-нибудь изучу\.|У меня тут 95 языков, но ни абхазского, ни древнегреческого среди них нет\. Увы\.|Мне не знак\+ом ни абхазский, ни древнегреческий\. Такое бывает\.'
+  foreign_src_language_card: 'Сдаётся мне, перевод такой:|Подозреваю, что вот так:|Вроде так:|Кажется, вот так:'
+  foreign_src_language_nocard: "Сдаётся мне, .* - это|Подозреваю, что .* - это|Кажется, что .* - это"
+  start_foreign_answer: 'Перевела на .*:|.* - это|.* на .* -'
+  swear_unlimited: 'Вот вам не видно, а я покраснела\. Держите перевод:|Ну ладно, тоже язык\. Перевод такой:'
+  swear_children_text: 'Я бы с радостью это перевела, но вам нужно включить режим поиска без ограничений\.|Вот когда включите режим поиска без ограничений, тогда и переведу\.'
+  swear_children_voice: 'Я бы с радостью это перевела, но вам нужно включить режим поиска без ограничений\.|Вот когда вкл\+ючите режим поиска без ограничений, тогда и переведу\.'
+  swear_children_watch: 'Есть слова, которые я переводить не буду\. Не буду - и всё\.|Тяга к языкам - это прекрасно, но тебе такое рановато знать\.'
+  swear_children_other: 'Некоторые слова я не перевожу\. Скажите иначе\.|Есть слова, которые я переводить не буду\. Не буду - и всё\.|Я всё поняла, но переводить не стану\. Найдите другие слова\.'
+
+test_dict:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи маму на английский:
+        text: '{start_foreign_answer} mother'
+        voice: '{start_foreign_answer} <speaker voice="oksana" effect="translate_oksana_en" lang="en" speed="0.9">mother'
+
+      быстрее:
+        text: '{start_foreign_answer} mother'
+        voice: '{start_foreign_answer} <speaker voice="oksana" effect="translate_oksana_en" lang="en" speed="1">mother'
+
+      а на португальский:
+        text: '{start_foreign_answer} mamãe'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">mamae <[ m aa m m ]>'
+
+      медленнее:
+        text: '{start_foreign_answer} mamãe'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.8">mamae <[ m aa m m ]>'
+
+test_dict_detect_with_div:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - watch
+    - speaker
+    - irbis
+    - dexp
+    - navigator_android
+    - navigator_ios
+    - auto
+    - desktop_alice
+
+  test_dict_detect:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      перевод энимал:
+        voice: '{foreign_src_language_card} животное'
+        cards:
+        - div_card
+        blocks:
+        - type: text_card
+          phrase_id: foreign_translate
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+
+      а на украинский:
+        voice: '{foreign_src_language_card} <speaker voice="oksana" effect="translate_oksana_uk" lang="uk" speed="0.9">тварина'
+        cards:
+        - div_card
+        blocks:
+        - type: text_card
+          phrase_id: foreign_translate
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          pyalod:
+            text: Быстрее
+
+      медленнее:
+        voice: '{foreign_src_language_card} <speaker voice="oksana" effect="translate_oksana_uk" lang="uk" speed="0.8">тварина'
+        cards:
+        - div_card
+        blocks:
+        - type: text_card
+          phrase_id: foreign_translate
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          pyalod:
+            text: Быстрее
+
+test_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      перевод с русского на английский кто ты:
+        text: '{start_foreign_answer} who are you'
+        voice: '{start_foreign_answer} <speaker voice="oksana" effect="translate_oksana_en" lang="en" speed="0.9">who are you'
+
+      быстрее:
+        text: '{start_foreign_answer} who are you'
+        voice: '{start_foreign_answer} <speaker voice="oksana" effect="translate_oksana_en" lang="en" speed="1">who are you'
+
+      а на испанский:
+        text: '{start_foreign_answer} quién eres'
+        voice": '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">quien <[ kk i ee n ]> eres <[ ee r e s ]>'
+
+      медленнее:
+        text: '{start_foreign_answer} quién eres'
+        voice": '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.8">quien <[ kk i ee n ]> eres <[ ee r e s ]>'
+
+test_two_stage_translit:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      как будет привет на иврите:
+        text: '{start_foreign_answer} היי.'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">хейвай'
+
+      медленнее:
+        text: '{start_foreign_answer} היי.'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.8">хейвай'
+
+      а на арабский:
+        text: '{start_foreign_answer} مرحبًا'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">мрхаба'
+
+      быстрее:
+        text: '{start_foreign_answer} مرحبًا'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="1">мрхаба'
+
+test_no_lang:
+  experiments: [translate]
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      как будет стол по русски:
+        text: '{wrong_language_translate}'
+        voice: '{wrong_language_translate}'
+
+test_nothing_to_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи перевод на немецкий:
+        text: '{failed_to_process_text}'
+        voice: '{failed_to_process_voice}'
+
+test_phoneme_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      как будет молоко на итальянском:
+        text: '{start_foreign_answer} latte'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">latte <[ l aa t t e ]>'
+
+      быстрее:
+        text: '{start_foreign_answer} latte'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="1">latte <[ l aa t t e ]>'
+
+      а по испански:
+        text: '{start_foreign_answer} leche'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">leche <[ ll ee ch e ]>'
+
+      медленнее:
+        text: '{start_foreign_answer} leche'
+        voice: '{start_foreign_answer} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.8">leche <[ ll ee ch e ]>'
+
+test_translate_eng:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - desktop_alice
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи table:
+        text: '{foreign_src_language_nocard} стол'
+        voice: '{foreign_src_language_nocard} стол'
+
+      а на немецкий:
+        text: '{foreign_src_language_nocard} Tabelle'
+        voice: '{foreign_src_language_nocard} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">tabelle <[ t aa p ee l schwa ]>'
+
+      быстрее:
+        text: '{foreign_src_language_nocard} Tabelle'
+        voice: '{foreign_src_language_nocard} <speaker voice="alyss" effect="translate_alyss_omni" speed="1">tabelle <[ t aa p ee l schwa ]>'
+
+test_translate_mixed:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - desktop_alice
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи russian репаблик:
+        text: '{foreign_src_language_nocard} Российская Республика'
+        voice: '{foreign_src_language_nocard} российская республика'
+
+      а на македонский:
+        text: '{foreign_src_language_nocard} руската република'
+        voice: '{foreign_src_language_nocard} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">руската република'
+
+      медленнее:
+        text: '{foreign_src_language_nocard} руската република'
+        voice: '{foreign_src_language_nocard} <speaker voice="alyss" effect="translate_alyss_omni" speed="0.8">руската република'
+
+test_unsupported_language:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи стол с абхазского на древнегреческий:
+        text: '{not_supported_language_text}'
+        voice: '{not_supported_language_voice}'
+
+test_yandex_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - navigator_ios
+    - navigator_android
+    - speaker
+    - auto
+    - desktop_alice
+    - irbis
+    - dexp
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      яндекс переводчик с немецкого на английский:
+        voice: 'Открываю Переводчик'
+        cards:
+        - div_card
+        suggests:
+        - caption: Открой Переводчик
+          utterance: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_yandex
+          type: client_action
+          payload:
+            uri: "intent:?url=yandextranslate%3A%2F%2F%3Flang%3Dde-en%26text%3D&fallback_url=browser%3A%2F%2F%3Furl%3Dhttps%253A%252F%252Ftranslate.yandex.ru%252F%253Flang%253Dde-en%2526text%253D"
+
+test_google_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - watch
+    - pa_ios
+    - navigator_android
+    - navigator_ios
+    - speaker
+    - auto
+    - desktop_alice
+    - irbis
+    - dexp
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переводчик гугл перевод кошку на французский:
+        voice: 'Открываю Переводчик'
+        cards:
+        - div_card
+        suggests:
+        - caption: Открой Переводчик
+          utterance: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_google
+          type: client_action
+          payload:
+            uri: "https://translate.google.ru/#ru/fr/%D0%BA%D0%BE%D1%88%D0%BA%D1%83"
+
+test_empty_query:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      перевод скажи мне:
+        text: '{failed_to_process_text}'
+        voice: '{failed_to_process_voice}'
+
+test_empty_query_pa_android:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_ios
+    - watch
+    - navigator_ios
+    - navigator_android
+    - speaker
+    - auto
+    - desktop_alice
+    - irbis
+    - dexp
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      перевод скажи мне:
+        voice: 'Открываю Переводчик'
+        cards:
+        - div_card
+        suggests:
+        - caption: Открой Переводчик
+          utterance: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_yandex
+          type: client_action
+          payload:
+            uri: "https://translate.yandex.ru/?lang=ru-en&text=&searchapp_from_source=alice"
+
+test_empty_query_pa_ios:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - watch
+    - navigator_ios
+    - navigator_android
+    - speaker
+    - auto
+    - desktop_alice
+    - irbis
+    - dexp
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      перевод скажи мне:
+        voice: 'Открываю Переводчик'
+        cards:
+        - div_card
+        suggests:
+        - caption: Открой Переводчик
+          utterance: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_yandex
+          type: client_action
+          payload:
+            uri: "intent:?url=yandextranslate%3A%2F%2F%3Flang%3Dru-en%26text%3D&fallback_url=browser%3A%2F%2F%3Furl%3Dhttps%253A%252F%252Ftranslate.yandex.ru%252F%253Flang%253Dru-en%2526text%253D"
+
+test_empty_not_supported_yandex_translate:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - desktop_alice
+    - watch
+    - irbis
+    - dexp
+    - speaker
+    - navigator_android
+    - navigator_ios
+    - auto
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      яндекс переводчик с абхазского на древнегреческий:
+        voice: '{not_supported_language_voice} Давайте поищем в Яндексе'
+        blocks:
+        - type: text_card
+          phrase_id: unsupported_lang
+        cards:
+        - div_card
+        directives:
+        - name: open_uri
+          sub_name: translate_search
+          type: client_action
+          payload:
+            uri: "viewport://?l10n=ru-RU&lr=213&noreask=1&text=%D1%8F%D0%BD%D0%B4%D0%B5%D0%BA%D1%81%20%D0%BF%D0%B5%D1%80%D0%B5%D0%B2%D0%BE%D0%B4%D1%87%D0%B8%D0%BA%20%D1%81%20%D0%B0%D0%B1%D1%85%D0%B0%D0%B7%D1%81%D0%BA%D0%BE%D0%B3%D0%BE%20%D0%BD%D0%B0%20%D0%B4%D1%80%D0%B5%D0%B2%D0%BD%D0%B5%D0%B3%D1%80%D0%B5%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9&viewport_id=serp"
+
+test_same_langs_google_translate:
+  experiments: [translate]
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      гугл переводчик с русского на русский:
+        text: '{wrong_language_translate}'
+        voice: '{wrong_language_translate}'
+
+test_swear_children:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - navigator_android
+    - navigator_ios
+    - desktop_alice
+    - watch
+    - auto
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи пиздец на английский:
+        text: '{swear_children_text}'
+        voice: '{swear_children_voice}'
+
+test_swear_children_watch:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - navigator_android
+    - navigator_ios
+    - desktop_alice
+    - speaker
+    - dexp
+    - irbis
+    - auto
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи жопу на английский:
+        text: '{swear_children_watch}'
+        voice: '{swear_children_watch}'
+
+test_swear_children_other:
+  experiments: [translate]
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - speaker
+    - dexp
+    - irbis
+    - watch
+
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    dialog:
+      переведи иди в жопу на английский:
+        text: '{swear_children_other}'
+        voice: '{swear_children_other}'

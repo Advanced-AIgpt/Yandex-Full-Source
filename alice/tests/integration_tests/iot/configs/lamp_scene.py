@@ -1,0 +1,113 @@
+from alice.megamind.protos.common.iot_pb2 import TIoTUserInfo
+from alice.protos.data.device.info_pb2 import EUserDeviceType
+from alice.protos.data.location.room_pb2 import TUserRoom
+
+TCapability = TIoTUserInfo.TCapability
+TProperty = TIoTUserInfo.TProperty
+ECapabilityType = TCapability.ECapabilityType
+
+lamp_scene = TIoTUserInfo(
+    RawUserInfo='{}',
+    Scenarios=[],
+    Colors=[],
+    Rooms=[
+        TUserRoom(
+            Id='room-test-id-1',
+            Name='Спальня',
+            HouseholdId='evo-test-household-id-1',
+        )
+    ],
+    Groups=[],
+    Devices=[
+        TIoTUserInfo.TDevice(
+            Id='evo-test-lamp-id-1',
+            ExternalId='evo-test-lamp-external-id-1',
+            Name='Светильник',
+            RoomId='room-test-id-1',
+            Aliases=[],
+            SkillId='QUALITY',
+            Type=EUserDeviceType.LightDeviceType,
+            OriginalType=EUserDeviceType.LightDeviceType,
+            AnalyticsType='devices.types.light',
+            HouseholdId='evo-test-household-id-1',
+            Capabilities=[
+                TCapability(
+                    Type=ECapabilityType.OnOffCapabilityType,
+                    OnOffCapabilityParameters=TCapability.TOnOffCapabilityParameters(),
+                    OnOffCapabilityState=TCapability.TOnOffCapabilityState(
+                        Instance='on',
+                        Value=True,
+                    ),
+                    AnalyticsType='devices.capabilities.on_off',
+                    Retrievable=True,
+                    Reportable=True,
+                ),
+                TCapability(
+                    Type=ECapabilityType.ColorSettingCapabilityType,
+                    ColorSettingCapabilityParameters=TCapability.TColorSettingCapabilityParameters(
+                        ColorModel=TCapability.TColorSettingCapabilityParameters.TColorModel(
+                            Type=TCapability.TColorSettingCapabilityParameters.TColorModel.EColorModelType.HsvColorModel,
+                        ),
+                        TemperatureK=TCapability.TColorSettingCapabilityParameters.TTemperatureKCapabilityParameters(
+                            Min=2700,
+                            Max=6500,
+                        ),
+                        ColorSceneParameters=TCapability.TColorSettingCapabilityParameters.TColorSceneParameters(
+                            Scenes=[
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='candle',
+                                    Name='Свеча',
+                                ),
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='party',
+                                    Name='Вечеринка',
+                                ),
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='alice',
+                                    Name='Алиса',
+                                ),
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='ocean',
+                                    Name='Океан',
+                                ),
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='reading',
+                                    Name='Чтение',
+                                ),
+                                TCapability.TColorSettingCapabilityParameters.TColorScene(
+                                    ID='alarm',
+                                    Name='Тревога',
+                                ),
+                            ],
+                        ),
+                    ),
+                    ColorSettingCapabilityState=TCapability.TColorSettingCapabilityState(),
+                    AnalyticsType='devices.capabilities.color_setting',
+                    Retrievable=True,
+                ),
+            ]
+        ),
+        TIoTUserInfo.TDevice(
+            Id='evo-test-lamp-id-2',
+            ExternalId='evo-test-lamp-external-id-2',
+            Name='Лампочка',
+            RoomId='room-test-id-1',
+            Aliases=[],
+            SkillId='QUALITY',
+            Type=EUserDeviceType.LightDeviceType,
+            OriginalType=EUserDeviceType.LightDeviceType,
+            AnalyticsType='devices.types.light',
+            HouseholdId='evo-test-household-id-1',
+            Capabilities=[
+                TCapability(
+                    Type=ECapabilityType.OnOffCapabilityType,
+                    OnOffCapabilityParameters=TCapability.TOnOffCapabilityParameters(),
+                    OnOffCapabilityState=TCapability.TOnOffCapabilityState(),
+                    AnalyticsType='devices.capabilities.on_off',
+                    Retrievable=True,
+                    Reportable=True,
+                ),
+            ]
+        ),
+    ]
+)

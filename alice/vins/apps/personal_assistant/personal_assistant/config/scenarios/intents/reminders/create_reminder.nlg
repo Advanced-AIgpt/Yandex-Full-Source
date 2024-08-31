@@ -1,0 +1,75 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "reminders/reminders__common.nlg" import reminders_unsupported_device with context %}
+{% nlgimport "reminders/reminders__common.nlg" %}
+
+{% macro ask_time() %}
+  На какое время поставить напоминание?
+{% endmacro %}
+
+{% phrase ask__time %}
+  {{ ask_time() }}
+{% endphrase %}
+
+{% phrase ask__what %}
+  {% chooseline %}
+    О чём
+    Что
+  {% endchooseline %}
+  {% chooseline %}
+    вам
+    нужно
+    вам нужно
+  {% endchooseline %}
+  напомнить?
+{% endphrase %}
+
+{% phrase ask_to_turn_on_pushes %}
+  {% chooseline %}
+    Окей, только не забудьте включить уведомления от приложения Яндекс. Это в настройках вашего айфона, раздел «Уведомления».
+    Хорошо. Надеюсь, у вас включены уведомления от приложения Яндекс. Это в настройках вашего айфона, раздел «Уведомления».
+    Ладно. Только включите уведомления от приложения Яндекс. Это в настройках айфона, раздел «Уведомления».
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.is_forbidden %}
+    Простите, напоминания доступны только на Станциях и колонках, в которых я живу.
+  {% elif is_active_attention('incomplete_datetime') %}
+    Назовите полную дату
+    {% if not form.time %}
+      и время
+    {% endif %}
+    для напоминания.
+  {% elif is_active_attention('no_time') %}
+    {{ ask_time() }}
+  {% elif form.answer.type == 'ok' and not form.answer.silent %}
+    Поставила напоминание "{{ form.what }}"
+    {% tx %} {{ form.date | render_date_with_on_preposition | attr('text') }} {% etx %}
+    {% vc %} {{ form.date | render_date_with_on_preposition | attr('voice') }} {% evc %}
+    в
+    {% tx %} {{ form.time | human_time_raw_text_and_voice(case='acc') | attr('text') }}. {% etx %}
+    {% vc %} {{ form.time | human_time_raw_text_and_voice(case='acc') | attr('voice') }}. {% evc %}
+  {% elif form.answer.type == 'authorization' %}
+    Для работы с напоминаниями нужно авторизоваться, а затем просто повторите мне, что нужно сделать.
+  {% elif is_active_attention('request_push_permission') %}
+    Для установки напоминания сначала нужно разрешить телефону отображать уведомления.
+  {% elif is_active_attention('request_reminders_permission') %}
+    Разрешите мне установить напоминания. Открываю настройки телефона.
+  {% elif form.answer.type == 'cancel' %}
+    {% if form.answer.is_set == 'yes' and not form.answer.silent %}
+      Отменила это напоминание.
+    {% elif form.answer.is_set == 'no' %}
+      Чтобы что-то отменить надо что-то создать.
+    {% elif form.answer.is_set == 'ellipsis' and not form.answer.silent %}
+      Хорошо, отменила.
+    {% endif %}
+  {% elif form.answer.type == 'push' %}
+    Сегодня в
+    {% tx %} {{ form.answer.time | human_time_raw_text_and_voice(case='acc') | attr('text') }} {% etx %}
+    {% vc %} {{ form.answer.time | human_time_raw_text_and_voice(case='acc') | attr('voice') }} {% evc %}
+    вы хотели {{ form.answer.what }}.
+  {% elif form.answer.silent %}
+  {% else %}
+    {{ reminders_unsupported_device() }}
+  {% endif %}
+{% endphrase %}

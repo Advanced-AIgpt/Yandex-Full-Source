@@ -1,0 +1,351 @@
+{
+  "project": {
+    "name": "crm_bot",
+    "includes": [
+      {
+        "path": "crm_bot/config/scenarios/VinsProjectfile.json",
+        "type": "file"
+      }
+    ]
+  },
+  "nlu": {
+    "utterance_tagger": {
+      "model": "combine_scores",
+      "params": {
+        "taggers": [
+          {
+            "model": "rnn_new",
+            "params": {
+              "intent_conditioned": true
+            },
+            "name": "tagger"
+          },
+          {
+            "model": "granet",
+            "params": {
+              "matching_score": 1
+            }
+          }
+        ]
+      },
+      "features": [
+        "alice_requests_emb",
+        "postag",
+        "ner",
+        "wizard"
+      ]
+    },
+    "transition_model": {
+      "priority_boost": 1.000001,
+      "custom_rules": {
+        "path": "crm_bot/config/transition_rules.yaml",
+        "enable": true
+      },
+      "boosts": {
+        "quasar_open_or_continue": 0.99,
+        "quasar_video_mode": 1.03,
+        "autoapp": 1.05,
+        "internal_search": "priority_boost",
+        "quasar_stop_buzzing": 1.03,
+        "chat_tab": 10.0,
+        "quasar_fairy_tale": 1.001,
+        "active_slot_ellipsis": 1.11,
+        "quasar_music": 1.03,
+        "stroka_desktop": "priority_boost",
+        "quasar_tv": 1.03,
+        "navigator": "priority_boost",
+        "internal": 1.05,
+        "anaphora": "priority_boost",
+        "quasar_open_site_or_app": 0.975
+      },
+      "model_name": "crm_bot"
+    },
+    "custom_templates": {
+      "scenario_name": "personal_assistant/config/nlu_templates/scenario_name.txt",
+      "units_time": "personal_assistant/config/nlu_templates/units_time.txt",
+      "int_number": "personal_assistant/config/nlu_templates/int_number.txt",
+      "goods" : "personal_assistant/config/nlu_templates/market/goods.txt",
+      "goods_requests" : "personal_assistant/config/nlu_templates/market/goods_requests.txt",
+      "goods_log_requests" : "personal_assistant/config/nlu_templates/market/log_requests.txt",
+      "goods_yandex" : "personal_assistant/config/nlu_templates/market/yandex_goods.txt",
+      "vendor" : "personal_assistant/config/nlu_templates/market/vendor.txt",
+
+      "bye": "crm_bot/config/nlu_templates/bye.txt",
+      "choose_for_me": "crm_bot/config/nlu_templates/choose_for_me.txt",
+      "city": "crm_bot/config/nlu_templates/cities_ru.txt",
+      "email": "crm_bot/config/nlu_templates/emails.txt",
+      "how_much": "crm_bot/config/nlu_templates/how_much.txt",
+      "order_id": "crm_bot/config/nlu_templates/order_id.txt",
+      "out_of_stock": "crm_bot/config/nlu_templates/out_of_stock.txt",
+      "phone_number": "crm_bot/config/nlu_templates/phone_numbers.txt",
+      "price": "crm_bot/config/nlu_templates/price.txt",
+      "region": "crm_bot/config/nlu_templates/regions_ru.txt",
+      "stock_check": "crm_bot/config/nlu_templates/stock_check.txt",
+      "thanks": "crm_bot/config/nlu_templates/thanks.txt"
+    },
+    "wizard_custom_entities": [
+    ],
+    "feature_extractors": [
+      {
+        "type": "ngrams",
+        "id": "word",
+        "n": 1
+      },
+      {
+        "type": "ngrams",
+        "id": "bigram",
+        "n": 2
+      },
+      {
+        "type": "lemma",
+        "id": "lemma"
+      },
+      {
+        "type": "postag",
+        "id": "postag"
+      },
+      {
+        "type": "case",
+        "id": "case"
+      },
+      {
+        "type": "ner",
+        "id": "ner"
+      },
+      {
+        "use_onto": true,
+        "type": "wizard",
+        "id": "wizard",
+        "use_freebase": true
+      },
+      {
+        "type": "granet",
+        "id": "granet"
+      },
+      {
+        "resource": "resource://req_embeddings",
+        "type": "embeddings",
+        "id": "alice_requests_emb"
+      },
+      {
+        "resource": "resource://embeddings",
+        "type": "embeddings",
+        "id": "emb233342907"
+      },
+      {
+        "resource": "resource://embeddings_ids",
+        "type": "embeddings_ids",
+        "id": "emb_ids",
+        "embeddings_map_key": "metric_learning"
+      },
+      {
+        "resource": "resource://dssm_embeddings/tf_model",
+        "type": "dssm_embeddings",
+        "id": "dssm"
+      }
+    ],
+    "anaphora_resolution": {
+      "matcher": {
+        "border": 0.7587,
+        "border_model_id": "resource://anaphora/anaphora_model/border.bin",
+        "rank_border": 0.3324,
+        "rank_model_id": "resource://anaphora/anaphora_model/rank.bin",
+        "name": "catboost"
+      },
+      "intents": [
+      ],
+      "resolver": {
+        "max_utterances": 2,
+        "with_entitysearch": true
+      }
+    },
+    "fallback_intent_classifiers": [
+      {
+        "fallback_threshold": 0,
+        "model": "file_lookup",
+        "params": {
+          "regexp": false,
+          "source": "crm_bot/config/fixlists/banlist.yaml"
+        },
+        "name": "banlist"
+      }
+    ],
+    "compiled_model": {
+      "path": "resource://crm_bot/crm_bot_model_directory",
+      "archive": "DirectoryView",
+      "chunks": "crm_bot/config/chunks.yaml",
+      "chunks_config": "crm_bot/config/chunks_config.yaml"
+    },
+    "intent_classifiers": [
+      {
+        "fallback_threshold": 0,
+        "model": "utterance_input_source_lookup",
+        "params": {
+          "input_source_to_intent": {
+            "image": "crm_bot.scenarios.file_input"
+          }
+        },
+        "name": "media_recognizer"
+      },
+      {
+        "fallback_threshold": 0.75,
+        "model": "combine_scores",
+        "params": {
+          "method": "best_score",
+          "classifiers": [
+            {
+              "model": "nlu_exact_matching",
+              "params": {
+                "matching_score": 1.0,
+                "fixlist_score": 1.0
+              },
+              "name": "exact_matching"
+            },
+            {
+              "model": "knn",
+              "params": {
+                "verbose": true,
+                "metric_function": "metric_learning",
+                "normalize": false,
+                "convert_to_prob": false,
+                "embeddings_map_key": "metric_learning",
+                "batch_samples_per_class": 10,
+                "class_sampling": "sqrt_freq",
+                "encoder_output_dense_layers": [
+                  {
+                    "dropout": 0,
+                    "num_units": 50,
+                    "relu": false
+                  }
+                ],
+                "lr": 0.001,
+                "model_dir": "resource://crm_bot/crm_bot_model_directory/metric_learning",
+                "num_classes_in_batch": 50,
+                "lr_decay": 0.1,
+                "batch_generator_queue_maxsize": 5,
+                "num_neighbors": 10,
+                "oov": "ignore",
+                "encoder_num_units": 128,
+                "num_updates": 2000,
+                "loss": {
+                  "distance": "cosine",
+                  "name": "margin",
+                  "trainable_threshold": true,
+                  "trash_non_anchors": false,
+                  "threshold": 0.5,
+                  "negative_mining": "hard",
+                  "margin": 0.1,
+                  "positive_mining": "uniform"
+                },
+                "batch_generator_njobs": 5,
+                "fixlist_score": 1.0,
+                "save_weights_mode": "best",
+                "restore_weights_mode": "last",
+                "encoder_num_layers": 1,
+                "save_weights_start": 200,
+                "encoder_pooling": "last",
+                "train_split": 0.95,
+                "model_name": "pokupki",
+                "std_normalize": true,
+                "lr_decay_steps": 1000
+              },
+              "name": "scenarios",
+              "features": [
+                "emb_ids",
+                "serp",
+                "ner",
+                "postag",
+                "dssm",
+                "wizard",
+                "case"
+              ]
+            }
+          ]
+        },
+        "name": "scenarios_combined"
+      }
+    ],
+    "fst": {
+      "parsers": [
+        "units_time",
+        "datetime",
+        "date",
+        "time",
+        "geo",
+        "num",
+        "fio",
+        "datetime_range",
+        "poi_category_ru",
+        "currency",
+        "float",
+        "calc",
+        "weekdays",
+        "soft",
+        "site",
+        "album",
+        "artist",
+        "track",
+        "films_100_750",
+        "films_50_filtered",
+        "swear"
+      ],
+      "resource": "resource://fst"
+    },
+    "samples_extractor": {
+      "pipeline": [
+        {
+          "name": "clip"
+        },
+        {
+          "name": "misspell"
+        },
+        {
+          "normalizer": "normalizer_ru",
+          "name": "normalizer"
+        },
+        {
+          "apply_to_text_input": true,
+          "name": "strip_activation",
+          "custom_back_activations": [
+            "григорий",
+            "гриша"
+          ],
+          "min_tokens_after_short_strip": 2,
+          "custom_front_activations": [
+            "григорий",
+            "гриша",
+            "здравствуйте",
+            "добрый день",
+            "добрый вечер",
+            "доброй ночи",
+            "доброе утро",
+            "вечер добрый",
+            "утро доброе",
+            "день добрый",
+            "ночи доброй"
+          ],
+          "min_tokens_after_long_strip": 1
+        },
+        {
+          "name": "wizard"
+        },
+        {
+          "name": "entitysearch"
+        }
+      ]
+    }
+  },
+  "form_filling": {
+    "max_intents": 20,
+    "feature_updater": "bass_setup"
+  },
+  "nlg": {
+    "global": [
+    ],
+    "includes": [
+      "",
+      "crm_bot/config",
+      "crm_bot/config/scenarios/intents"
+    ]
+  }
+}

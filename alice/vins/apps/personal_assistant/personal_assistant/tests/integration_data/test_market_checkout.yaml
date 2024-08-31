@@ -1,0 +1,501 @@
+labels:
+  found: '.*(С учетом вашего последнего запроса|Могу предложить следующие варианты с Маркета по
+    вашему запросу|Весь Маркет просмотрела, отобрала самое лучшее по запросу|Везде все изучила -
+    вот варианты на Маркете по вашему запросу).*'
+  activation: '.*(Люблю шопинг! Когда надоест, скажите «Алиса, хватит»\. Какой товар
+    вам посоветовать\?|Начнём шопинг\. Не забывайте — когда я увлечена покупками,
+    о другом думать не могу\. В общем, если надоест, просто скажите: «Алиса, хватит»\.
+    Что вам посоветовать?|Начнём покупки\. Но помните — когда я увлечена шопингом,
+    в Яндекс смотреть некогда\. Если передумаете, скажите «Алиса, хватит»\. Какой
+    товар вам нужен?|Начнём! Если шопинг вас утомит, скажите «Алиса, хватит»\. Что
+    вы ищете?).*'
+  ask_items_number: '.*Сколько единиц данного товара будем заказывать\?.*'
+  ask_mail: '.*(Двигаемся к финалу\. Пожалуйста, напишите вашу почту или войдите в личный
+    кабинет в Яндексе\.|Супер\! Теперь введите ваш электронный адрес или войдите в личный
+    кабинет в Яндексе\.).*'
+  ask_phone: '.*(Назовите свой телефонный номер|Теперь мне нужен номер вашего телефона).*'
+  ask_address: '.*(Теперь назовите адрес — город, улицу, номер и корпус дома|Теперь
+    мне нужен адрес доставки — город, улица, номер и корпус дома).*'
+  ask_delivery_intervals: '.*(Выберите удобный день и время доставки\. Вот варианты
+    — назовите номер самого подходящего|Выберите день и время доставки\. Вот варианты
+    — назовите номер самого подходящего|Выберите подходящее время доставки\. Вот разные
+    варианты — вам нужно только назвать номер).*1\).*'
+  confirm: '.*(Готово! Если все верно, скажите — «да», и я начну оформлять заказ\.|Записала!
+    Если все правильно, скажите — «да», и я начну оформлять заказ\.).*'
+  checkout_wait1: 'Отлично, теперь мне нужно убедиться, что товар не закончился, и
+    подтвердить заказ\. Как вам шопинг со мной\?|Почти готово\. Теперь ещё пару секунд
+    — мне надо подтвердить заказ\. Скажите, понравилось ли вам делать покупки вместе
+    со мной\?'
+  checkout_wait2: 'Заказ в стадии подтверждения\. Спросите меня через пару секунд
+    «Как там мой заказ\?»\.'
+  checkout_wait3: 'Ещё не готово\. Спросите через пару секунд\.'
+  complete: '.*(Всё готово\. Номер вашего заказа — .* За ним можно следить в личном
+    кабинете на .*|Заказ оформлен\. Ура! За ним можно следить в личном кабинете на
+    .* Номер заказа — .*).*'
+  failed: 'Что-то пошло не так\. Можем выбрать что-нибудь другое\.|У меня не получилось
+    оформить заказ\. Можем поискать что-нибудь ещё\.|Что-то пошло не так\. Давайте
+    поищем что-то ещё\.'
+  wait1_or_complete: '{checkout_wait1}|{complete}'
+  wait2_or_complete: '{checkout_wait2}|{complete}'
+  garbage: '(Извините, я вас не поняла\. Давайте как-нибудь по-другому\.|Это не похоже
+    на параметры товара\.).*'
+  complete_or_garbage: '{complete}|{garbage}'
+  wait2_or_complete_or_garbage: '{checkout_wait2}|{complete}|{garbage}'
+  wait3_or_complete_or_garbage: '{checkout_wait3}|{complete}|{garbage}'
+  complete_or_failed_or_garbage: '{complete}|{failed}|{garbage}'
+  nologin: '.*К сожалению, покупать могут только зарегистрированные пользователи.*'
+  invalid_phone: 'Извините, не разобрала\. Назовите телефон ещё раз или введите его
+    с клавиатуры\.'
+  invalid_address: 'Извините, не поняла\. Назовите улицу, дом — и корпус, если есть\.'
+  invalid_index: 'Не поняла\. Назовите номер подходящего варианта\.'
+  invalid_yes_or_no: '.*Скажите, пожалуйста, «да» или «нет»\.'
+  manual_checkout: 'Я пока не научилась изменять заказы\. Но вот ссылка, по которой
+    это можно сделать\. Либо можем начать выбирать другой товар.|Менять заказы я ещё
+    не умею\. Держите ссылку на свой заказ — можете изменить его, как вздумается\.
+    Либо давайте выберем какой-нибудь другой товар.'
+  cancel: 'ОК|Хорошо\.|Поняла\.'
+
+
+test_market_checkout_success:
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout'
+        slots:
+          sku:
+            value: 100131945014
+      text: '{ask_mail}'
+
+  - request: 123@yandex.ru
+    response:
+      text: '{ask_phone}'
+
+  - request: '+7 912 345 67 89'
+    response:
+      text: '{ask_address}'
+
+  - request: москва, улица льва толстого, дом 16
+    response:
+      text: '{ask_delivery_intervals}'
+
+  - request: номер 1
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_index'
+      text: '{confirm}'
+
+  - request: да
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_yes_or_no'
+      text: '{wait1_or_complete}'
+
+  - request: да
+    response:
+      text: '{wait2_or_complete_or_garbage}'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_two_checkouts:
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+    response:
+      text: '{ask_items_number}'
+
+  - request: '1'
+    response:
+      text: '{ask_mail}'
+
+  - request: 123@yandex.ru
+    response:
+      text: '{ask_phone}'
+
+  - request: '+7 912 345 67 89'
+    response:
+      text: '{ask_address}'
+
+  - request: екатеринбург, улица хохрякова, дом 10
+    response:
+      text: '{ask_delivery_intervals}'
+
+  - request: номер 1
+    response:
+      text: '{confirm}'
+
+  - request: да
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_yes_or_no'
+      text: '{complete}'
+
+# could be useful if we'll redownload bass stubs in future
+#  - request: ок
+#    response:
+#      text: '{wait2_or_complete_or_garbage}'
+#
+#  - request: хорошо
+#    response:
+#      text: '{wait3_or_complete_or_garbage}'
+#
+#  - request: окей
+#    response:
+#      text: '{complete_or_failed_or_garbage}'
+
+  - request: хочу айфон 7
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__market'
+      text: '{found}'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_cancel:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+
+    response:
+      text: '{ask_mail}'
+
+  - request: Хватит
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__cancel'
+      text: '{cancel}'
+
+  - request: Какая погода?
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_weather'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_checkout_and_cancel:
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+    response:
+      text: '{ask_mail}'
+
+  - request: 123@yandex.ru
+    response:
+      text: '{ask_phone}'
+
+  - request: '+7 912 345 67 89'
+    response:
+      text: '{ask_address}'
+
+  - request: москва, улица льва толстого, дом 16
+    response:
+      text: '{ask_delivery_intervals}'
+
+  - request: номер 1
+    response:
+      text: '{confirm}'
+
+  - request: да
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_yes_or_no'
+      text: '{wait1_or_complete}'
+
+  - request: ок
+    response:
+      text: '{wait2_or_complete_or_garbage}'
+
+  - request: хватит
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__cancel'
+      text: '{cancel}'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_checkout_not_authorized:
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout'
+      text: '{ask_mail}'
+
+  - request: mail@site.com
+    vins_form:
+      name: 'personal_assistant.scenarios.email'
+    response:
+      text: '{ask_phone}'
+
+  - request: '+79285135218'
+    vins_form:
+      name: 'personal_assistant.scenarios.phone'
+    response:
+      text: '{ask_address}'
+
+  - request:
+      москва, улица льва толстого, дом 16
+    vins_form:
+      name: 'personal_assistant.scenarios.address'
+    response:
+      text: '{ask_delivery_intervals}'
+
+  - request: номер 1
+    response:
+      text: '{confirm}'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_checkout_invalid_fields:
+  test_user_info:
+    tags:
+    - 'oauth'
+  dialog:
+  - request: Помоги с покупкой
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__checkout
+          slots:
+          - type: number
+            name: sku
+            value: 100131945014
+            optional: true
+        resubmit: true
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout'
+      text: '{ask_delivery_intervals}'
+
+  - request: да
+    response:
+      text: '{invalid_index}'
+
+  - request: номер 1
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_index'
+      text: '{confirm}'
+
+  - request: '89285269354'
+    response:
+      text: '{invalid_yes_or_no}'
+
+  - request: нет
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout_yes_or_no'
+      text: '{manual_checkout}'
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_market_checkout_blue:
+  dialog:
+  - request: Помоги купить на Беру
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market_beru'
+
+  - request:
+      type: server_action
+      name: update_form
+      payload:
+        form_update:
+          name: personal_assistant.scenarios.market__product_details
+          slots:
+          - type: product
+            name: product
+            value:
+              type: sku
+              id: 100131945014
+            optional: true
+          - type: market_type
+            name: product_market_type
+            value: BLUE
+            optional: true
+        resubmit: true
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__product_details'
+        slots:
+        - sku:
+            value: 100131945014
+
+  - request: Оформить заказ
+    response:
+      vins_form:
+        name: 'personal_assistant.scenarios.market__checkout'
+        slots:
+        - sku:
+            value: 100131945014
+  app_info:
+    ignore:
+    - auto
+    - irbis
+    - speaker
+    - dexp
+    - navigator_ios
+    - navigator_android
+    - watch
+    - pa_ios
+    - pa_android
+    - desktop_alice

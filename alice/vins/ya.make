@@ -1,0 +1,22 @@
+RECURSE(
+    api
+    api/crm_bot
+    api/external_skill
+    api_helper
+    api/pa
+    apps
+    apps/crm_bot
+    apps/navi
+    apps/navi/telegram_bot
+    apps/pa_skills
+    apps/pa_skills/bin
+    apps/personal_assistant
+    apps/personal_assistant/pa_telegram
+    core
+    core/test_lib
+    core/vins_core/nlg
+    packages
+    resources
+    sdk
+    tools
+)

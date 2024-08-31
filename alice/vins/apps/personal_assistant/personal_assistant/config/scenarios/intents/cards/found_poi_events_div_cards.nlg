@@ -1,0 +1,137 @@
+{% from "json_macro.jinja" import json_items %}
+{% from "cards/common.nlg" import open_uri_action, font_color with context %}
+
+{% macro render_found_poi_gallery_item(event_data) %}
+    {% set genre = "&nbsp;" %}
+
+    {% if event_data.event.tags|length > 0 %}
+        {% set first_tag = event_data.event.tags[0] %}
+
+        {% if first_tag.name %}
+            {% set genre = first_tag.name %}
+        {% endif %}
+    {% endif %}
+
+    {% set preview_text = "&nbsp;" %}
+    {% if event_data.scheduleInfo.preview.text %}
+        {% set preview_text = event_data.scheduleInfo.preview.text %}
+    {% endif %}
+{
+    "type":"div-container-block",
+    "alignment_vertical":"top",
+    "alignment_horizontal":"left",
+    "width": {
+        "type":"numeric",
+        "value":213
+    },
+    "height": {
+        "type":"numeric",
+        "value":120
+    },
+    "frame":{
+        "style":"only_round_corners"
+    },
+    "children":[
+        {
+            "type":"div-separator-block",
+            "size":"xxs"
+        },
+        {
+            "type":"div-universal-block",
+            "title":"{{ font_color('#ffffff', genre) }}",
+            "title_max_lines":1,
+            "title_style":"text_s"
+        },
+        {
+            "type":"div-separator-block",
+            "size":"match_parent"
+        },
+        {
+            "type":"div-universal-block",
+            "title":"{{ font_color('#ffffff', event_data.event.title) }}",
+            "title_max_lines":2,
+            "title_style":"text_m",
+            "text":"{{ font_color('#ffffff', preview_text) }}",
+            "text_style":"text_s"
+        },
+        {% if event_data.event.kinopoisk.rating %}
+        {
+            "type":"div-universal-block",
+            "title":"{{ font_color('#cccccc', 'Рейтинг Кинопоиска — ' ~ event_data.event.kinopoisk.rating) }}",
+            "title_max_lines":1,
+            "title_style":"text_s"
+        }
+        {% elif event_data.event.userRating.overall.count > 10 %}
+        {
+            "type":"div-universal-block",
+            "title":"{{ font_color('#cccccc', 'Рейтинг Яндекс.Афиши — ' ~ event_data.event.userRating.overall.value) }}",
+            "title_max_lines":1,
+            "title_style":"text_s"
+        }
+        {% else %}
+        {
+            "type":"div-separator-block",
+            "size":"l"
+        },
+        {
+            "type":"div-separator-block",
+            "size":"xxs"
+        }
+        {% endif %}
+    ],
+    "background":[
+        {% if event_data.event.image %}
+        {
+            "type":"div-image-background",
+            "image_url": "{{ event_data.event.image.image.url }}"
+        },
+        {% endif %}
+        {
+            "type": "div-solid-background",
+            "color": "{{ '#64000000' }}"
+        }
+    ],
+    "action": {
+        {% if is_ios() or is_android() %}
+        "url": "{{- event_data.event.url -}}?appsearch_header=1&utm_source=alice_poi"
+        {% else %}
+        "url": "{{- event_data.event.url -}}?utm_source=alice_poi"
+        {% endif %}
+    }
+}
+{% endmacro %}
+
+
+{% macro render_poi_event_gallery_card(data) %}
+{
+    "vins_log_info": {
+      "card_name": "found_poi_events"
+    },
+    "states":[
+        {
+            "state_id":1,
+            "blocks":[
+                {
+                    "type":"div-gallery-block",
+                    "tail" : {
+                        "text": "Все события",
+                        "icon" : {},
+                        "action": {
+                            "url": "{{ data.place.url }}?utm_source=alice_poi"
+                        }
+                    },
+                    "items":[
+                        {% call(item) json_items(data.events) %}
+                            {{ render_found_poi_gallery_item(item) }}
+                        {% endcall %}
+                    ]
+                }
+            ]
+        }
+    ]
+}
+{% endmacro %}
+
+{% card found_poi_events %}
+    {{ render_poi_event_gallery_card(context.data) }}
+{% endcard %}

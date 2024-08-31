@@ -1,0 +1,98 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% from "common/macros.nlg" import experiment_macro %}
+{% from "show_route/show_route_common.nlg" import render_location, render_nogeo %}
+{% from "common.nlg" import elari_watch_not_supported %}
+
+{% phrase render_error__nogeo %}
+  {{ render_nogeo(form, context.error) }}
+{% endphrase %}
+
+
+{% phrase ask__where_from %}
+  {% call experiment_macro('taxi', req_info) %}
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      {% set error = context.error %}
+      {% if error and error.error_type == 'nogeo'%}
+        {{ render_nogeo(form, error) }}
+      {% else %}
+        {% chooseline %}
+          Откуда нужно добраться?
+          Откуда едем?
+          Откуда поедем?
+          Скажите адрес, откуда едем.
+          Откуда вас забрать?
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% endcall %}
+{% endphrase %}
+
+{% phrase ask__where_to %}
+  {% call experiment_macro('taxi', req_info) %}
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      {% set error = context.error %}
+      {% if error and error.error_type == 'nogeo'%}
+        {{ render_nogeo(form, error) }}
+      {% else %}
+        {% chooseline %}
+          Куда нужно добраться?
+          Куда нужно ехать?
+          По какому адресу поедем?
+          Какой адрес назначения?
+          Куда поедем?
+          Доедем, не вопрос, скажите куда.
+          По какому адресу хотите поехать?
+          В какое место хотите ехать?
+          Куда хотите поехать?
+          Куда вас нужно довезти?
+          В какое место вам нужно добраться?
+          Куда нужно доехать?
+          По какому адресу вас довезти?
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% endcall %}
+{% endphrase %}
+
+{% macro phrase_for_taxi_route() %}
+  {% chooseline %}
+    Едем на такси
+    Поедем на такси
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro taxi_route() %}
+  {{ phrase_for_taxi_route() }}
+  {% if form.what_from or form.where_from %}
+    от {{ render_location(form.resolved_location_from) }}
+  {% endif %}
+  до {{ render_location(form.resolved_location_to) }}
+  .
+{% endmacro %}
+
+{% phrase render_suggest_caption__taxi_order__open_app %}
+  Открыть Яндекс Go
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_order__open_app %}
+  {{ context.taxi_order__open_app.data.uri }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% call experiment_macro('taxi', req_info) %}
+    {% if is_active_attention("taxi_not_supported_on_device") %}
+      {% chooseline %}
+        Я справлюсь с этим лучше на мобильном. Спросите меня там.
+        Я могу вызвать вам такси на мобильном — спросите меня там.
+        Я бы и рада, но словами тут не обойтись. Для этого мне нужно приложение Яндекс Go.
+      {% endchooseline %}
+    {% else %}
+      {{ taxi_route() }}
+    {% endif %}
+  {% endcall %}
+{% endphrase %}

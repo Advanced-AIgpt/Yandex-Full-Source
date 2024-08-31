@@ -1,0 +1,4171 @@
+labels:
+  ask_what: '(О чём|Что).* напомнить.*'
+  ask_time: 'На какое время поставить напоминание.*'
+  empty_reminders_list: '(У вас нет напоминаний|Чтобы что-то показать, нужно).*'
+  no_authorization: 'Для работы с напоминаниями нужно авторизоваться.*'
+  creating_failed: '.*((н|Н)е получилось|пошло не так|нажала — и всё исчезло).*'
+  unsupported_device_error: '(.*пока не умею|обещал запрограммировать это).*'
+  forbidden_device: 'Простите, напоминания доступны только на Станциях и колонках, в которых я живу..*'
+  invalid_time: 'Я не поняла на какую дату и время.*'
+  past_time: '(Я не могу поставить напоминание в прошлом|Время.*уже прошло|.*напоминание
+    в прошлом).*'
+  cancel_reminder: 'Отмени напоминание.*'
+  show_reminders_list: 'Показать список напоминаний'
+  success_cancel: 'Отменила это напоминание.*'
+  fail_cancel: 'Не получилось отменить напоминание.*'
+  elari_watch_not_supported: 'Запомню, что надо этому научиться.|Я этому скоро научусь.
+    Не забыть бы.'
+  optional_will_not_disturb: '(| Они вас не потревожат.)'
+  ask_to_turn_on_pushes: '(Окей, только не забудьте включить уведомления от приложения
+    Яндекс.|Хорошо. Надеюсь, у вас включены уведомления от приложения Яндекс.|Ладно.
+    Только включите уведомления от приложения Яндекс.) Это в настройках(| вашего)
+    айфона, раздел «Уведомления».\n'
+  general_cancel_answer: '(ОК|Хорошо.|Поняла.|Ну, как хотите.|Нормально же общались.|Знаете, у ботов тоже есть чувства.|Хозяин — барин.|\*Алиса покинула чат\*|Ладно-ладно.|Ну и пожалуйста.|Легко.|Ой, всё!|Бе-бе-бе.|Похоже, мне пора.|Окей! Если захочешь поболтать — ты знаешь, где меня найти.|Отключаюсь!|Обнуляюсь!|Пойду посижу в интернете.|Уйду в офлайн.|Всё, пока!|Я уйду, но я всегда рядом.|Фу, как грубо. В следующий раз будем учить хорошие манеры.)'
+
+device_state:
+  sound_muted: false
+  sound_level: 2
+  is_tv_plugged_in: true
+  video:
+    current_screen: "main"
+
+create_reminder_ok_miss_what:
+  dialog:
+    поставь напоминание на 19 часов:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              hours: 19
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    прыгнуть с парашютом:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: прыгнуть с парашютом
+          date:
+            value: null
+          time:
+            value:
+              hours: 19
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: "ok"
+        blocks:
+        - type: suggest
+          suggest_type: reminders__show_reminders_list
+          data:
+            value:
+              url: users/reminders/list
+        - type: suggest
+          suggest_type: reminders__cancel
+      text: 'Поставила напоминание "прыгнуть с парашютом" на сегодня в 19:00.'
+      voice: 'Поставила напоминание "прыгнуть с парашютом" на сегодня в #acc 7 вечера.'
+      buttons:
+        type: text_with_button
+        title: '{show_reminders_list}'
+        payload:
+          uri: users/reminders/list
+      suggests:
+      - title: '{cancel_reminder}'
+        payload:
+          caption: '{cancel_reminder}'
+          utterance: '{cancel_reminder}'
+    на 21 00:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+
+create_with_relative_time:
+  dialog:
+    поставь напоминание через 5 минут:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              minutes: 5
+              minutes_relative: true
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+
+create_with_relative_time2:
+  dialog:
+    напомни поесть через 5 минут:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: поесть
+          date:
+            value: null
+          time:
+            value:
+              minutes: 5
+              minutes_relative: true
+
+create_with_relative_time_ellipsis:
+  dialog:
+    напомни сходить погулять:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: сходить погулять
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          time:
+            optional: false
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    через 5 минут:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: сходить погулять
+          time:
+            value:
+              minutes: 5
+              minutes_relative: true
+      bass:
+        form:
+          what:
+            value: сходить погулять
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 19
+          answer:
+            value:
+              type: "ok"
+      text: 'Поставила напоминание "сходить погулять" на сегодня в 19:00.'
+      voice: 'Поставила напоминание "сходить погулять" на сегодня в #acc 7 вечера.'
+
+
+create_with_absolute_time_ellipsis:
+  experiments: []
+  dialog:
+    напомни сходить погулять:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: сходить погулять
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          time:
+            optional: false
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    на 10 часов:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: сходить погулять
+          time:
+            value:
+              hours: 10
+      bass:
+        form:
+          what:
+            value: сходить погулять
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 10
+              minutes: 0
+          answer:
+            value:
+              type: "ok"
+      text: 'Поставила напоминание "сходить погулять" на сегодня в 10:00.'
+      voice: 'Поставила напоминание "сходить погулять" на сегодня в #acc 10 утра.'
+
+
+create_ok_miss_time:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    8 утра:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value:
+              hours: 8
+              period: am
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          answer:
+            value:
+              type: "ok"
+        blocks:
+        - type: suggest
+          suggest_type: reminders__show_reminders_list
+          data:
+            value:
+              url: users/reminders/list
+        - type: suggest
+          suggest_type: reminders__cancel
+      voice: 'Поставила напоминание "купить хлеба" на завтра в #acc 8 утра.'
+      text: 'Поставила напоминание "купить хлеба" на завтра в 8:00.'
+      buttons:
+        type: text_with_button
+        title: '{show_reminders_list}'
+        payload:
+          uri: users/reminders/list
+      suggests:
+      - title: '{cancel_reminder}'
+        payload:
+          caption: '{cancel_reminder}'
+          utterance: '{cancel_reminder}'
+
+create_ok_miss_time2:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    12 0 5:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value:
+              hours: 12
+              minutes: 5
+
+create_ok_miss_time3:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    двенадцать ноль пять:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value:
+              hours: 12
+              minutes: 5
+
+create_ok_miss_time4:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    завтра в 8 утра:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+
+create_ok_miss_time5:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    23 25:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+
+create_ok_miss_time6:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    3 часа 30 минут:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+
+create_ok_miss_time7:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    3 часа:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+
+create_ok_miss_time8:
+  dialog:
+    запиши напоминание купить хлеба:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить хлеба
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    5 часов:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+
+create_reminder_with_set_reminder_ellipsis:
+  dialog:
+    поставь напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    поставь напоминание на семнадцатое июля на десять утра чтобы я не забыл:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: 'я не забыл'
+
+create_reminder_with_weather_context:
+  dialog:
+    поставь напоминание в 20 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              period: pm
+              hours: 20
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    погода:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: погода
+          date:
+            value: null
+          time:
+            value:
+              period: pm
+              hours: 20
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: "ok"
+      voice: 'Поставила напоминание "погода" на сегодня в #acc 8 вечера.'
+      text: 'Поставила напоминание "погода" на сегодня в 20:00.'
+
+create_reminder_with_weather_context_and_cancel:
+  dialog:
+    поставь напоминание в 20 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              period: pm
+              hours: 20
+      bass:
+        form:
+          what:
+            optional: false
+      voice: '{ask_what}'
+      text: '{ask_what}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__cancel
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              hours: 20
+              period: pm
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      text: '{success_cancel}'
+      voice: '{success_cancel}'
+
+create_reminder_no_authorization:
+  dialog:
+    запиши напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: null
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: 'authorization'
+      voice: '{no_authorization}'
+      text: '{no_authorization}'
+
+create_reminder_create_failed:
+  dialog:
+    поставь напоминание купить игрушку в 16 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: remindererror
+            msg: null
+          data:
+            code: creating_failed
+      voice: '{creating_failed}'
+      text: '{creating_failed}'
+
+create_unknown_error:
+  поставь напоминание сделать прививку:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: сделать прививку
+        date:
+          value: null
+        time:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: remindererror
+          msg: null
+        data:
+          code: some_unknown_error
+    voice: 'Прошу прощения, что-то сломалось. Спросите попозже, пожалуйста.'
+    text: 'Прошу прощения, что-то сломалось. Спросите попозже, пожалуйста.'
+
+create_reminder_unsupported_device_speaker:
+  dialog:
+    поставь напоминание купить игрушку:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: remindererror
+            msg: null
+          data:
+            code: unsupported_device
+      voice: '{unsupported_device_error}'
+      text: '{unsupported_device_error}'
+  app_info:
+    ignore:
+    - watch
+    - desktop_alice
+    - navigator_android
+    - navigator_ios
+    - auto
+    - pa_ios
+    - pa_android
+
+create_reminder_unsupported_device_mobile:
+  dialog:
+    поставь напоминание купить игрушку:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          is_forbidden:
+            value: true
+      voice: '{forbidden_device}'
+      text: '{forbidden_device}'
+  app_info:
+    ignore:
+      - speaker
+      - irbis
+      - dexp
+
+create_reminder_past_time:
+  поставь напоминание на вчера:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: null
+        date:
+          value:
+            days_relative: true
+            days: -1
+        time:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: remindererror
+          msg: null
+        data:
+          code: past_datetime
+    voice: '{past_time}'
+    text: '{past_time}'
+
+create_invalid_datetime:
+  поставь напоминание:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: null
+        date:
+          value: null
+        time:
+          value: null
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: remindererror
+          msg: null
+        data:
+          code: invalid_datetime
+    voice: '{invalid_time}'
+    text: '{invalid_time}'
+
+create_incomplete_datetime:
+  поставь напоминание на 2019 год:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: null
+        date:
+          value:
+            years: 2019
+        time:
+          value: null
+    bass:
+      blocks:
+      - type: attention
+        attention_type: incomplete_datetime
+    voice: 'Назовите полную дату и время для напоминания.'
+    text: 'Назовите полную дату и время для напоминания.'
+
+create_incomplete_datetime2:
+  поставь напоминание на 2019 год в 18 часов:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: null
+        date:
+          value:
+            years: 2019
+        time:
+          value:
+            hours: 18
+    bass:
+      blocks:
+      - type: attention
+        attention_type: incomplete_datetime
+    voice: 'Назовите полную дату для напоминания.'
+    text: 'Назовите полную дату для напоминания.'
+
+create_ok_and_once_cancel:
+  dialog:
+    поставь напоминание купить игрушку в 16 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "купить игрушку" на сегодня в #acc 4 часа дня.'
+      text: 'Поставила напоминание "купить игрушку" на сегодня в 16:00.'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__cancel
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      text: '{success_cancel}'
+      voice: '{success_cancel}'
+    в 22 часа:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+
+create_ok_and_double_cancel:
+  experiments: [vins_pause_commands_relevant_again]
+  dialog:
+    поставь напоминание купить игрушку в 16 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "купить игрушку" на сегодня в #acc 4 часа дня.'
+      text: 'Поставила напоминание "купить игрушку" на сегодня в 16:00.'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__cancel
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        form:
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'yes'
+      text: '{success_cancel}'
+      voice: '{success_cancel}'
+    отмена:
+      vins_form:
+        name: personal_assistant.handcrafted.fast_cancel
+      text: '{general_cancel_answer}'
+  app_info:
+    ignore:
+    - dexp
+    - speaker
+    - irbis
+
+create_double_cancel_into_ellipsis:
+  experiments: [vins_pause_commands_relevant_again]
+  dialog:
+    поставь напоминание купить игрушку:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          date:
+            value:
+              days: 0
+              days_relative: true
+          answer:
+            value: null
+        blocks:
+        - type: attention
+          attention_type: no_time
+      voice: '{ask_time}'
+      text: '{ask_time}'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__cancel
+        slots:
+          date:
+            value:
+              days: 0
+              days_relative: true
+      bass:
+        form:
+          date:
+            value:
+              days: 0
+              days_relative: true
+          answer:
+            value:
+              type: 'cancel'
+              is_set: 'ellipsis'
+      text: 'Хорошо, отменила.'
+      voice: 'Хорошо, отменила.'
+    отмена:
+      vins_form:
+        name: personal_assistant.handcrafted.fast_cancel
+      bass:
+        blocks:
+        - type: command
+          command_type: player_pause
+      text: '{general_cancel_answer}'
+  app_info:
+    ignore:
+    - speaker
+    - dexp
+    - irbis
+
+create_ok_date_time:
+  dialog:
+    поставь напоминание купить игрушку в 16 вечера 27 марта:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value:
+              days: 27
+              months: 3
+          time:
+            value:
+              hours: 16
+              period: pm
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "купить игрушку" на двадцать седьмое марта в #acc
+        4 часа дня.'
+      text: 'Поставила напоминание "купить игрушку" на 27 марта в 16:00.'
+
+create_ok_and_fail_cancel:
+  dialog:
+    поставь напоминание купить игрушку в 19 вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value: null
+          time:
+            value:
+              hours: 19
+              period: pm
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "купить игрушку" на сегодня в #acc 7 вечера.'
+      text: 'Поставила напоминание "купить игрушку" на сегодня в 19:00.'
+    отмени:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__cancel
+        slots:
+          what:
+            value: купить игрушку
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 19
+              period: pm
+      bass:
+        blocks:
+        - type: error
+          error:
+            type: remindererror
+            msg: null
+          data:
+            code: canceling_failed
+      text: '{fail_cancel}'
+      voice: '{fail_cancel}'
+
+create_ok_ios:
+  dialog:
+    напомни позавтракать завтра в 9 часов утра:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: позавтракать
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value:
+              hours: 9
+              period: am
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+        blocks:
+        - type: text_card
+          phrase_id: ask_to_turn_on_pushes
+        - type: suggest
+          suggest_type: reminders__show_reminders_list
+          data:
+            url: "https://calendar.yandex.ru/todo?client=alice&tab=reminders&tz=UTC"
+      voice: '{ask_to_turn_on_pushes}Поставила напоминание "позавтракать" на завтра
+        в #acc 9 утра.'
+      text: '{ask_to_turn_on_pushes}Поставила напоминание "позавтракать" на завтра
+        в 9:00.'
+      cards:
+      - simple_text
+      - text_with_button
+      button_actions:
+      - title: 'Показать список напоминаний'
+        type: action
+        name: open_uri
+        payload:
+          uri: 'https://calendar.yandex.ru/todo?client=alice&tab=reminders&tz=UTC'
+
+  app_info:
+    ignore:
+    - navigator_android
+    - navigator_ios
+
+create_ok_day_part_day:
+  dialog:
+    напомни мне днем зажечь в небе звезды:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: зажечь в небе звезды
+          day_part:
+            value: day
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 13
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "зажечь в небе звезды" на сегодня в #acc 1 час
+        дня.'
+      text: 'Поставила напоминание "зажечь в небе звезды" на сегодня в 13:00.'
+
+create_ok_day_part_evening:
+  dialog:
+    напомни мне вечером пойти погулять в 8:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: пойти погулять
+          day_part:
+            value: evening
+          date:
+            value: null
+          time:
+            value:
+              hours: 8
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value:
+              hours: 20
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "пойти погулять" на сегодня в #acc 8 вечера.'
+      text: 'Поставила напоминание "пойти погулять" на сегодня в 20:00.'
+
+create_ok_day_part_night:
+  dialog:
+    напомни мне ночью завтра зажечь в небе звезды:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: зажечь в небе звезды
+          day_part:
+            value: night
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          time:
+            value:
+              hours: 0
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "зажечь в небе звезды" на завтра в полночь.'
+      text: 'Поставила напоминание "зажечь в небе звезды" на завтра в 0:00.'
+
+create_ok_day_part_morning:
+  dialog:
+    напомни мне завтра утром пойти погулять:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: пойти погулять
+          day_part:
+            value: morning
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          time:
+            value:
+              hours: 8
+          answer:
+            value:
+              type: 'ok'
+      voice: 'Поставила напоминание "пойти погулять" на завтра в #acc 8 утра.'
+      text: 'Поставила напоминание "пойти погулять" на завтра в 8:00.'
+
+create_ok_with_what_containing_in:
+  dialog:
+    напомни в 12 позвонить в беру:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: позвонить в беру
+          time:
+            value:
+              hours: 12
+      bass:
+        form:
+          answer:
+            value:
+              type: 'ok'
+          date:
+            value:
+              days_relative: true
+              days: 1
+      voice: 'Поставила напоминание "позвонить в беру" на завтра в #acc 12 часов дня.'
+      text: 'Поставила напоминание "позвонить в беру" на завтра в 12:00.'
+
+create_ok_with_what_containing_time:
+  dialog:
+    поставь напоминание на 6 вечера что нужно быть дома в восемь вечера:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: быть дома в 8 вечера
+          time:
+            value:
+              hours: 6
+              period: pm
+
+list_ok_empty_tav:
+  открой напоминания:
+    vins_form:
+      name: personal_assistant.scenarios.list_reminders
+      slots:
+        date:
+          value: null
+        time:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: textandvoice
+            total_reminders_count: 0
+    voice: 'Открываю напоминания.'
+    text: 'Открываю напоминания.'
+
+list_ok_empty_with_date_tav:
+  dialog:
+    алиса мои напоминания на завтра:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          date:
+            value:
+              years: 2018
+              months: 3
+              days: 6
+          answer:
+            value:
+              type: textandvoice
+              total_reminders_count: 0
+      voice: 'Открываю напоминания.'
+      text: 'Открываю напоминания.'
+
+list_reminders_ok_empty_with_date_time_tav:
+  dialog:
+    алиса мои напоминания на завтра 19 часов:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value:
+              hours: 19
+          offset:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: textandvoice
+              total_reminders_count: 0
+      voice: 'Открываю напоминания.'
+      text: 'Открываю напоминания.'
+
+list_ok_not_empty_scroll_vc:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено семь напоминаний.{}.sil<[300]> Вот первые три:{}.sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Прочитать следующие три?"
+      text: "Сейчас установлено 7 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nПрочитать следующие три?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+              - what: купить молочко5
+                date:
+                  months: 7
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+              - what: купить молочко6
+                date:
+                  months: 8
+                  days: 11
+                time:
+                  hours: 13
+                  minutes: 50
+      voice: '#gen 8 июня.sil<[500]> номер 1. купить молочко4 в #acc 7:20.sil<[500]>
+        #gen 10 июля.sil<[500]> номер 2. купить молочко5 в #acc 10:04.sil<[500]> #gen
+        11 августа.sil<[500]> номер 3. купить молочко6 в #acc 13:50.sil<[500]> Осталось
+        одно напоминание. Прочитать?'
+      text: "8 июня:\n1. купить молочко4 в 7:20.\n10 июля:\n2. купить молочко5 в 10:04.\n\
+        11 августа:\n3. купить молочко6 в 13:50.\nОсталось 1 напоминание. Прочитать?"
+
+
+list_ok_not_empty_scroll_vc2:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 5
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: "Сейчас установлено пять напоминаний{}.sil<[300]> Вот первые три:{}.sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 10 утра.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 19:20.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 10:04.sil<[500]> Осталось два напоминания.\
+        \ Прочитать?"
+      text: "Сейчас установлено 5 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 10:00.\n2. купить молочко2 в 19:20.\n10 марта:\n3. купить молочко3\
+        \ в 10:04.\nОсталось 2 напоминания. Прочитать?"
+
+list_ok_not_empty_scroll_vc3:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 15
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: 'Сейчас установлено пятнадцать напоминаний.{}.sil<[300]> Вот первые три:{}.sil<[500]>
+        #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 10 утра.sil<[500]>
+        номер 2. купить молочко2 в #acc 19:20.sil<[500]> #gen 10 марта.sil<[500]>
+        номер 3. купить молочко3 в #acc 10:04.sil<[500]> Прочитать следующие три?'
+      text: "Сейчас установлено 15 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 10:00.\n2. купить молочко2 в 19:20.\n10 марта:\n3. купить молочко3\
+        \ в 10:04.\nПрочитать следующие три?"
+    прочитать:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 15
+              reminders:
+              - what: купить молочко6
+                date:
+                  months: 1
+                  days: 16
+                time:
+                  hours: 14
+                  minutes: 30
+              - what: купить молочко7
+                date:
+                  months: 3
+                  days: 20
+                time:
+                  hours: 12
+              - what: купить молочко8
+                date:
+                  months: 12
+                  days: 29
+                time:
+                  hours: 23
+                  minutes: 20
+      voice: "#gen 16 января.sil<[500]> номер 1. купить молочко6 в #acc 14:30.sil<[500]>\
+        \ #gen 20 марта.sil<[500]> номер 2. купить молочко7 в #acc 12 часов дня.sil<[500]>\
+        \ #gen 29 декабря.sil<[500]> номер 3. купить молочко8 в #acc 23:20.sil<[500]>\
+        \ Прочитать следующие три?"
+      text: "16 января:\n1. купить молочко6 в 14:30.\n20 марта:\n2. купить молочко7\
+        \ в 12:00.\n29 декабря:\n3. купить молочко8 в 23:20.\nПрочитать следующие\
+        \ три?"
+
+list_ok_not_empty_scroll_vc4:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 16
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 5
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: "Сейчас установлено шестнадцать напоминаний{}.sil<[300]> Вот первые три{}.sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 10 утра.sil<[500]>\
+        \ #gen 5 марта.sil<[500]> номер 2. купить молочко2 в #acc 19:20.sil<[500]>\
+        \ #gen 10 марта.sil<[500]> номер 3. купить молочко3 в #acc 10:04.sil<[500]>\
+        \ Прочитать следующие три?"
+      text: "Сейчас установлено 16 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 10:00.\n5 марта:\n2. купить молочко2 в 19:20.\n10 марта:\n3. купить\
+        \ молочко3 в 10:04.\nПрочитать следующие три?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 16
+              reminders:
+              - what: купить молочко6
+                date:
+                  months: 3
+                  days: 12
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко7
+                date:
+                  months: 3
+                  days: 15
+                time:
+                  hours: 10
+                  minutes: 4
+              - what: купить молочко8
+                date:
+                  months: 3
+                  days: 15
+                time:
+                  hours: 19
+                  minutes: 20
+      voice: '#gen 12 марта.sil<[500]> номер 1. купить молочко6 в #acc 19:20.sil<[500]>
+        #gen 15 марта.sil<[500]> номер 2. купить молочко7 в #acc 10:04.sil<[500]>
+        номер 3. купить молочко8 в #acc 19:20.sil<[500]> Прочитать следующие три?'
+      text: "12 марта:\n1. купить молочко6 в 19:20.\n15 марта:\n2. купить молочко7\
+        \ в 10:04.\n3. купить молочко8 в 19:20.\nПрочитать следующие три?"
+    давай:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 3
+      bass:
+        form:
+          offset:
+            value: 6
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 16
+              reminders:
+              - what: купить молочко16
+                date:
+                  months: 1
+                  days: 12
+                time:
+                  hours: 4
+                  minutes: 20
+      voice: '#gen 12 января.sil<[500]> номер 1. купить молочко16 в #acc 4:20.sil<[500]>
+        Прочитать следующие три?'
+      text: "12 января:\n1. купить молочко16 в 4:20.\nПрочитать следующие три?"
+    еще:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 6
+      bass:
+        form:
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 16
+              is_finish: 'yes'
+      voice: 'У вас больше нет напоминаний.'
+      text: 'У вас больше нет напоминаний.'
+    давай еще:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+
+  app_info:
+    ignore:
+    - auto
+list_ok_one_reminder_vc5:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 1
+                  minutes: 30
+      text: "Сейчас установлено только одно напоминание:\nкупить молочко на 4 марта\
+        \ в 1:30."
+      voice: "Сейчас установлено только одно напоминание:\nкупить молочко на четвертое\
+        \ марта в #acc 1:30 ночи."
+
+
+list_ok_one_reminder_tav:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: textandvoice
+              total_reminders_count: 1
+      voice: 'Открываю напоминания.'
+      text: 'Открываю напоминания.'
+
+list_ok_not_empty_tav1:
+  алиса покажи напоминания:
+    vins_form:
+      name: personal_assistant.scenarios.list_reminders
+      slots:
+        date:
+          value: null
+        time:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: textandvoice
+            total_reminders_count: 33
+    voice: 'Открываю напоминания.'
+    text: 'Открываю напоминания.'
+
+list_ok_empty_vc:
+  алиса покажи напоминания:
+    vins_form:
+      name: personal_assistant.scenarios.list_reminders
+      slots:
+        date:
+          value: null
+        time:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        answer:
+          value:
+            type: voice
+            total_reminders_count: 0
+    voice: '{empty_reminders_list}'
+    text: '{empty_reminders_list}'
+
+
+list_ok_empty_with_date_vc:
+  dialog:
+    алиса покажи напоминания на завтра:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 0
+      voice: 'Я не нашла напоминаний на завтра.'
+
+list_ok_empty_with_date_time_vc:
+  dialog:
+    алиса покажи напоминания на завтра на 18 часов:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value:
+              hours: 18
+          offset:
+            value: null
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 0
+      voice: 'Я не нашла напоминаний на завтра в #acc 6 вечера.'
+      text: 'Я не нашла напоминаний на завтра в 18:00.'
+
+list_ok_not_empty_with_date_vc1:
+  dialog:
+    алиса покажи напоминания на 25 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              months: 3
+              days: 25
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 423
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 1
+                  days: 5
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 1
+                  days: 7
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 1
+                  days: 7
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: 'Сейчас установлено четыреста двадцать три напоминания на двадцать пятое
+        марта.{}.sil<[300]> Вот первые три:{}.sil<[500]> номер 1. купить молочко в
+        #acc 10 утра.sil<[500]> номер 2. купить молочко2 в #acc 19:20.sil<[500]> номер
+        3. купить молочко3 в #acc 10:04.sil<[500]> Прочитать следующие три?'
+      text: "Сейчас установлено 423 напоминания на 25 марта.\nВот первые три:\n1.\
+        \ купить молочко в 10:00.\n2. купить молочко2 в 19:20.\n3. купить молочко3\
+        \ в 10:04.\nПрочитать следующие три?"
+
+list_ok_not_empty_with_date_vc2:
+  dialog:
+    мои напоминания 1 сентября:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              months: 9
+              days: 1
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 421
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: "Сейчас установлено четыреста двадцать одно напоминание на первое сентября.{}.sil<[300]>\
+        \ Вот первые три:{}.sil<[500]> номер 1. купить молочко в #acc 10 утра.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 19:20.sil<[500]> номер 3. купить молочко3\
+        \ в #acc 10:04.sil<[500]>{}Прочитать следующие три?"
+      text: "Сейчас установлено 421 напоминание на 1 сентября.\nВот первые три:\n\
+        1. купить молочко в 10:00.\n2. купить молочко2 в 19:20.\n3. купить молочко3\
+        \ в 10:04.\nПрочитать следующие три?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value:
+              months: 9
+              days: 1
+          time:
+            value: null
+          offset:
+            value: 0
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 421
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 10
+              - what: купить молочко2
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 19
+                  minutes: 20
+              - what: купить молочко3
+                date:
+                  months: 9
+                  days: 1
+                time:
+                  hours: 10
+      voice: 'номер 1. купить молочко в #acc 10 утра.sil<[500]> номер 2. купить молочко2
+        в #acc 19:20.sil<[500]> номер 3. купить молочко3 в #acc 10 утра.sil<[500]>
+        Прочитать следующие три?'
+      text: "1. купить молочко в 10:00.\n2. купить молочко2 в 19:20.\n3. купить молочко3\
+        \ в 10:00.\nПрочитать следующие три?"
+
+list_ok_not_empty_with_date_scroll_stop_scroll_next_vc:
+  мои напоминания 2 сентября:
+    vins_form:
+      name: personal_assistant.scenarios.list_reminders
+      slots:
+        date:
+          value:
+            months: 9
+            days: 2
+        time:
+          value: null
+        offset:
+          value: null
+    bass:
+      form:
+        offset:
+          value: 0
+        answer:
+          value:
+            type: voice
+            total_reminders_count: 421
+            reminders:
+            - what: купить молочко
+              date:
+                months: 9
+                days: 1
+              time:
+                hours: 10
+            - what: купить молочко2
+              date:
+                months: 9
+                days: 1
+              time:
+                hours: 19
+                minutes: 20
+            - what: купить молочко3
+              date:
+                months: 9
+                days: 1
+              time:
+                hours: 10
+                minutes: 4
+    voice: 'Сейчас установлено четыреста двадцать одно напоминание на второе сентября.{}.sil<[300]>
+      Вот первые три:{}.sil<[500]> номер 1. купить молочко в #acc 10 утра.sil<[500]>
+      номер 2. купить молочко2 в #acc 19:20.sil<[500]> номер 3. купить молочко3 в
+      #acc 10:04.sil<[500]> Прочитать следующие три?'
+    text: "Сейчас установлено 421 напоминание на 2 сентября.\nВот первые три:\n1.\
+      \ купить молочко в 10:00.\n2. купить молочко2 в 19:20.\n3. купить молочко3 в\
+      \ 10:04.\nПрочитать следующие три?"
+  нет:
+    vins_form:
+      name: personal_assistant.scenarios.list_reminders__scroll_stop
+    text: 'Хорошо, не буду.'
+    voice: 'Хорошо, не буду.'
+
+test_elari_watch:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    напомни покормить медведя: '{elari_watch_not_supported}'
+
+cancel_reminder_one_item_all:
+  dialog:
+    алиса удали все напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 1
+              all_cancelation_confirmation: "yes"
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+      voice: "Сейчас установлено только одно напоминание:\nкупить молочко на четвертое\
+        \ марта в #acc 12 часов дня.{}sil<[500]> Вы хотите его удалить?"
+      text: "Сейчас установлено только одно напоминание:\nкупить молочко на 4 марта\
+        \ в 12:00. Вы хотите его удалить?"
+    давай:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          action:
+            value: cancel_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              all_cancelation_confirmation: "yes"
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+      voice: "Хорошо, удалила напоминание \"купить молочко\" на четвертое марта в\
+        \ #acc 12 часов дня."
+      text: "Хорошо, удалила напоминание \"купить молочко\" на 4 марта в 12:00."
+
+
+cancel_reminder_one_item:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+      voice: "Сейчас установлено только одно напоминание:\nкупить молочко на четвертое\
+        \ марта в #acc 12 часов дня.{}sil<[500]> Вы хотите его удалить?"
+      text: "Сейчас установлено только одно напоминание:\nкупить молочко на 4 марта\
+        \ в 12:00. Вы хотите его удалить?"
+    давай:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+        blocks:
+        - type: suggest
+          suggest_type: reminders__list_for_today
+      suggests:
+      - caption: 'Покажи напоминания на сегодня'
+        utterance: 'Покажи напоминания на сегодня'
+      voice: "Хорошо, удалила напоминание \"купить молочко\" на четвертое марта в\
+        \ #acc 12 часов дня."
+      text: "Хорошо, удалила напоминание \"купить молочко\" на 4 марта в 12:00."
+    покажи напоминания на сегодня:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 0
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: null
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          date:
+            value:
+              days_relative: true
+              days: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 2
+              reminders:
+              - what: купить молочко2
+                date:
+                  days_relative: true
+                  days: 0
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  days_relative: true
+                  days: 0
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено два напоминания на сегодня.{}sil<[500]> номер 1.\
+        \ купить молочко2 в #acc 15:01.sil<[500]> номер 2. купить молочко3 в #acc\
+        \ 1:45"
+      text: "Сейчас установлено 2 напоминания на сегодня.\n1. купить молочко2 в 15:01.\n\
+        2. купить молочко3 в 1:45."
+  app_info:
+    ignore:
+    - pa_android
+    - speaker
+    - watch
+    - desktop_alice
+    - navigator_ios
+    - dexp
+    - pa_ios
+    - navigator_android
+    - irbis
+    - auto
+
+cancel_reminder_one_item_for_time_soonest:
+  dialog:
+    алиса удали напоминание на 12 часов:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value:
+              hours: 12
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          date:
+            value:
+              months: 3
+              days: 4
+          time:
+            value:
+              hours: 12
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 1
+              soonest: 'yes'
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+      voice: "Я нашла только одно ближайшее подходящее напоминание:\nкупить молочко\
+        \ на четвертое марта в #acc 12 часов дня.{}sil<[500]> Вы хотите его удалить?"
+      text: "Я нашла только одно ближайшее подходящее напоминание:\nкупить молочко\
+        \ на 4 марта в 12:00. Вы хотите его удалить?"
+
+cancel_reminder_no_item_for_time:
+  dialog:
+    алиса удали напоминание на 12 часов:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value:
+              hours: 12
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: null
+          date:
+            value: null
+          time:
+            value:
+              hours: 12
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 0
+              soonest: 'yes'
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+      voice: "Я не нашла напоминаний в #acc 12 часов дня."
+      text: "Я не нашла напоминаний в 12:00."
+
+cancel_reminder_many_items:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 3
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено три напоминания.{}sil<[500]> #gen 4 марта.sil<[500]>\
+        \ номер 1. купить молочко в #acc 12 часов дня.sil<[500]> номер 2. купить молочко2\
+        \ в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]> номер 3. купить молочко3\
+        \ в #acc 1:45.sil<[500]> Какое напоминание вы хотите удалить?"
+      text: "Сейчас установлено 3 напоминания.\n4 марта:\n1. купить молочко в 12:00.\n\
+        2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3 в 1:45.\nКакое\
+        \ напоминание вы хотите удалить?"
+    удали 3:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: 3
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: 3
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__list_for_tomorrow
+      suggests:
+      - caption: 'Покажи напоминания на завтра'
+        utterance: 'Покажи напоминания на завтра'
+      voice: "Хорошо, удалила напоминание \"купить молочко3\" на десятое марта в #acc\
+        \ 1:45."
+      text: "Хорошо, удалила напоминание \"купить молочко3\" на 10 марта в 1:45."
+    покажи напоминания на завтра:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: null
+          reminder_id:
+            value: null
+      bass:
+        form:
+          date:
+            value:
+              days_relative: true
+              days: 1
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 3
+              reminders:
+              - what: купить молочко4
+                date:
+                  days_relative: true
+                  days: 1
+                time:
+                  hours: 7
+                  minutes: 20
+              - what: купить молочко5
+                date:
+                  days_relative: true
+                  days: 1
+                time:
+                  hours: 10
+                  minutes: 4
+              - what: купить молочко6
+                date:
+                  days_relative: true
+                  days: 1
+                time:
+                  hours: 13
+                  minutes: 50
+      voice: "Сейчас установлено три напоминания на завтра.{}sil<[500]> номер 1. купить\
+        \ молочко4 в #acc 7:20.sil<[500]> номер 2. купить молочко5 в #acc 10:04.sil<[500]>\
+        \ номер 3. купить молочко6 в #acc 13:50"
+      text: "Сейчас установлено 3 напоминания на завтра.\n1. купить молочко4 в 7:20.\n\
+        2. купить молочко5 в 10:04.\n3. купить молочко6 в 13:50."
+  app_info:
+    ignore:
+    - pa_ios
+    - navigator_android
+    - speaker
+    - desktop_alice
+    - navigator_ios
+    - irbis
+    - auto
+    - watch
+    - pa_android
+    - dexp
+
+cancel_reminder_many_items_number:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 3
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено три напоминания.{}sil<[500]> #gen 4 марта.sil<[500]>\
+        \ номер 1. купить молочко в #acc 12 часов дня.sil<[500]> номер 2. купить молочко2\
+        \ в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]> номер 3. купить молочко3\
+        \ в #acc 1:45.sil<[500]> Какое напоминание вы хотите удалить?"
+      text: "Сейчас установлено 3 напоминания.\n4 марта:\n1. купить молочко в 12:00.\n\
+        2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3 в 1:45.\nКакое\
+        \ напоминание вы хотите удалить?"
+    номер 2:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: 2
+
+cancel_reminder_many_items_single:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено четыре напоминания.{}sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 4 напоминания.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+    следующие:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+        blocks:
+        - type: suggest
+          suggest_type: reminders__cancel_single
+      suggests:
+      - caption: 'Удали это напоминание'
+        utterance: 'Удали это напоминание'
+      voice: "Осталось одно напоминание:\nкупить молочко4 на восьмое июня в #acc 7:20."
+      text: "Осталось одно напоминание:\nкупить молочко4 на 8 июня в 7:20."
+    удали это напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 3
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Хорошо, удалила напоминание \"купить молочко4\" на восьмое июня в #acc\
+        \ 7:20."
+      text: "Хорошо, удалила напоминание \"купить молочко4\" на 8 июня в 7:20."
+  app_info:
+    ignore:
+    - dexp
+    - auto
+    - navigator_android
+    - pa_android
+    - speaker
+    - navigator_ios
+    - desktop_alice
+    - pa_ios
+    - watch
+    - irbis
+
+cancel_reminder_many_items_all:
+  dialog:
+    алиса удали все напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              all_cancelation_confirmation: "yes"
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено четыре напоминания.{}sil<[500]> Вы хотите удалить\
+        \ их вс+е?"
+      text: "Сейчас установлено 4 напоминания.\nВы хотите удалить их все?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              all_cancelation_confirmation: "yes"
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Хорошо, удалила четыре напоминания.{optional_will_not_disturb}"
+      text: "Хорошо, удалила 4 напоминания.{optional_will_not_disturb}"
+
+cancel_reminder_many_items_all_with_date:
+  dialog:
+    алиса удали каждое напоминание на 4 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              months: 3
+              days: 4
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 2
+              all_cancelation_confirmation: "yes"
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+      voice: "Сейчас установлено два напоминания на четвертое марта.{}sil<[500]> Вы\
+        \ хотите удалить их вс+е?"
+      text: "Сейчас установлено 2 напоминания на 4 марта.\nВы хотите удалить их все?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value:
+              months: 3
+              days: 4
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              all_cancelation_confirmation: "yes"
+              total_reminders_count: 2
+              reminders:
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Хорошо, удалила два напоминания на четвертое марта.{optional_will_not_disturb}"
+      text: "Хорошо, удалила 2 напоминания на 4 марта.{optional_will_not_disturb}"
+
+cancel_reminder_many_items_all_local_single:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено четыре напоминания.{}sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 4 напоминания.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+    следующие:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Осталось одно напоминание:\nкупить молочко4 на восьмое июня в #acc 7:20."
+      text: "Осталось одно напоминание:\nкупить молочко4 на 8 июня в 7:20."
+    удали все:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 3
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              all_local_cancelation_confirmation: "yes"
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Вы хотите удалить одно напоминание?"
+      text: "Вы хотите удалить 1 напоминание?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 3
+          action:
+            value: cancel_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              all_local_cancelation_confirmation: "yes"
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Хорошо, удалила напоминание \"купить молочко4\" на восьмое июня в #acc\
+        \ 7:20."
+      text: "Хорошо, удалила напоминание \"купить молочко4\" на 8 июня в 7:20."
+
+cancel_reminder_many_items_all_local:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__cancel_by_id
+          data:
+            id: 2
+        - type: suggest
+          suggest_type: reminders__cancel_all
+      suggests:
+      - caption: 'Удали напоминание 2'
+        utterance: 'Удали напоминание 2'
+      - caption: 'Удали все напоминания'
+        utterance: 'Удали все напоминания'
+      voice: "Сейчас установлено четыре напоминания.{}sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 4 напоминания.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+    удали все напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              all_local_cancelation_confirmation: "yes"
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Вы хотите удалить три напоминания?"
+      text: "Вы хотите удалить 3 напоминания?"
+    да:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              all_local_cancelation_confirmation: "yes"
+              total_reminders_count: 3
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Хорошо, удалила три напоминания.{optional_will_not_disturb}"
+      text: "Хорошо, удалила 3 напоминания.{optional_will_not_disturb}"
+  app_info:
+    ignore:
+    - watch
+    - desktop_alice
+    - pa_ios
+    - auto
+    - navigator_android
+    - navigator_ios
+    - pa_android
+    - speaker
+    - irbis
+    - dexp
+
+cancel_reminder_many_items_all_local_no_confirmation:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено четыре напоминания.{}sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 4 напоминания.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+    удали все:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              all_local_cancelation_confirmation: "yes"
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Вы хотите удалить три напоминания?"
+      text: "Вы хотите удалить 3 напоминания?"
+    покажи следующие:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+          reminder_id:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 3
+          reminder_id:
+            value: null
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Осталось одно напоминание:\nкупить молочко4 на восьмое июня в #acc 7:20."
+      text: "Осталось одно напоминание:\nкупить молочко4 на 8 июня в 7:20."
+
+cancel_reminder_many_items_selection_with_date:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 3
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено три напоминания.{}sil<[500]> #gen 4 марта.sil<[500]>\
+        \ номер 1. купить молочко в #acc 12 часов дня.sil<[500]> номер 2. купить молочко2\
+        \ в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]> номер 3. купить молочко3\
+        \ в #acc 1:45.sil<[500]> Какое напоминание вы хотите удалить?"
+      text: "Сейчас установлено 3 напоминания.\n4 марта:\n1. купить молочко в 12:00.\n\
+        2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3 в 1:45.\nКакое\
+        \ напоминание вы хотите удалить?"
+    на 10 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_reset
+        slots:
+          date:
+            value:
+              months: 3
+              days: 10
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Хорошо, удалила напоминание \"купить молочко3\" на десятое марта в #acc\
+        \ 1:45."
+      text: "Хорошо, удалила напоминание \"купить молочко3\" на 10 марта в 1:45."
+  app_info:
+    ignore:
+    - watch
+
+cancel_reminder_many_items_with_user_args:
+  dialog:
+    алиса удали напоминание на 4 марта:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value:
+              months: 3
+              days: 4
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          date:
+            value:
+              months: 3
+              days: 4
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 2
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+      voice: "Сейчас установлено два напоминания на четвертое марта.\n{}sil<[500]>\
+        \ номер 1. купить молочко в #acc 12 часов дня.sil<[500]> номер 2. купить молочко2\
+        \ в #acc 15:01.sil<[500]> Какое напоминание вы хотите удалить?"
+      text: "Сейчас установлено 2 напоминания на 4 марта.\n1. купить молочко в 12:00.\n\
+        2. купить молочко2 в 15:01.\nКакое напоминание вы хотите удалить?"
+    удали 3:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value:
+              months: 3
+              days: 4
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: 3
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: 3
+          answer:
+            value:
+              type: voice
+              invalid_id: 'yes'
+              total_reminders_count: 2
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+      voice: "У меня нет такого напоминания.{}sil<[500]> Сейчас установлено два напоминания\
+        \ на четвертое марта.\n{}sil<[500]> номер 1. купить молочко в #acc 12 часов\
+        \ дня.sil<[500]> номер 2. купить молочко2 в #acc 15:01.sil<[500]> Какое напоминание\
+        \ вы хотите удалить?"
+      text: "У меня нет такого напоминания. Сейчас установлено 2 напоминания на 4\
+        \ марта.\n1. купить молочко в 12:00.\n2. купить молочко2 в 15:01.\nКакое напоминание\
+        \ вы хотите удалить?"
+
+cancel_reminder_very_many_items:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено семь напоминаний.{}.sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 7 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+    удали 3:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: 3
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: 3
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Хорошо, удалила напоминание \"купить молочко3\" на десятое марта в #acc\
+        \ 1:45."
+      text: "Хорошо, удалила напоминание \"купить молочко3\" на 10 марта в 1:45."
+
+cancel_reminder_many_items_scroll_next_with_suggest:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__scroll_next
+          data:
+            num_reminders_to_show_next: 1
+      voice: "Сейчас установлено четыре напоминания.{}.sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 4 напоминания.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+      suggests:
+      - caption: 'Покажи следующее'
+        utterance: 'Покажи следующее'
+    покажи следующее:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 4
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+      voice: "Осталось одно напоминание:\nкупить молочко4 на восьмое июня в #acc 7:20."
+      text: "Осталось одно напоминание:\nкупить молочко4 на 8 июня в 7:20."
+  app_info:
+    ignore:
+    - pa_android
+    - desktop_alice
+    - irbis
+    - dexp
+    - pa_ios
+    - auto
+    - speaker
+    - navigator_android
+    - navigator_ios
+    - watch
+
+cancel_reminder_many_items_scroll_next_with_suggest_2:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 5
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__scroll_next
+          data:
+            num_reminders_to_show_next: 2
+      voice: "Сейчас установлено пять напоминаний.{}.sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 5 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+      suggests:
+      - caption: 'Покажи следующие два'
+        utterance: 'Покажи следующие два'
+    покажи следующие два:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 5
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+              - what: купить молочко5
+                date:
+                  months: 7
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+      voice: '#gen 8 июня.sil<[500]> номер 1. купить молочко4 в #acc 7:20.sil<[500]>
+        #gen 10 июля.sil<[500]> номер 2. купить молочко5 в #acc 10:04'
+      text: "8 июня:\n1. купить молочко4 в 7:20.\n10 июля:\n2. купить молочко5 в 10:04."
+  app_info:
+    ignore:
+    - navigator_android
+    - pa_android
+    - desktop_alice
+    - watch
+    - pa_ios
+    - auto
+    - dexp
+    - navigator_ios
+    - speaker
+    - irbis
+
+cancel_reminder_many_items_scroll_next_with_suggest_3:
+  dialog:
+    алиса удали напоминание:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+          action:
+            value: cancel_action
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__scroll_next
+          data:
+            num_reminders_to_show_next: 3
+      voice: "Сейчас установлено семь напоминаний.{}.sil<[300]> Вот первые три:{}sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Какое напоминание вы хотите\
+        \ удалить?"
+      text: "Сейчас установлено 7 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nКакое напоминание вы хотите удалить?"
+      suggests:
+      - caption: 'Покажи следующие три'
+        utterance: 'Покажи следующие три'
+    покажи следующие три:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: scroll_next_action
+      bass:
+        form:
+          offset:
+            value: 3
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко4
+                date:
+                  months: 6
+                  days: 8
+                time:
+                  hours: 7
+                  minutes: 20
+              - what: купить молочко5
+                date:
+                  months: 7
+                  days: 10
+                time:
+                  hours: 10
+                  minutes: 4
+              - what: купить молочко6
+                date:
+                  months: 8
+                  days: 11
+                time:
+                  hours: 13
+                  minutes: 50
+      voice: '#gen 8 июня.sil<[500]> номер 1. купить молочко4 в #acc 7:20.sil<[500]>
+        #gen 10 июля.sil<[500]> номер 2. купить молочко5 в #acc 10:04.sil<[500]> #gen
+        11 августа.sil<[500]> номер 3. купить молочко6 в #acc 13:50.sil<[500]> Осталось
+        одно напоминание. Прочитать?'
+      text: "8 июня:\n1. купить молочко4 в 7:20.\n10 июля:\n2. купить молочко5 в 10:04.\n\
+        11 августа:\n3. купить молочко6 в 13:50.\nОсталось 1 напоминание. Прочитать?"
+  app_info:
+    ignore:
+    - irbis
+    - desktop_alice
+    - navigator_android
+    - speaker
+    - pa_android
+    - auto
+    - pa_ios
+    - navigator_ios
+    - dexp
+    - watch
+
+list_and_cancel:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+        blocks:
+        - type: suggest
+          suggest_type: reminders__cancel_by_id
+          data:
+            id: 2
+        - type: suggest
+          suggest_type: reminders__cancel_all
+      suggests:
+      - caption: 'Удали напоминание 2'
+        utterance: 'Удали напоминание 2'
+      - caption: 'Удали все напоминания'
+        utterance: 'Удали все напоминания'
+      voice: "Сейчас установлено семь напоминаний.{}.sil<[300]> Вот первые три:{}.sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Прочитать следующие три?"
+      text: "Сейчас установлено 7 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nПрочитать следующие три?"
+    удали напоминание 2:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          action:
+            value: cancel_action
+          reminder_id:
+            value: 2
+      bass:
+        form:
+          offset:
+            value: 0
+          reminder_id:
+            value: 2
+          answer:
+            value:
+              type: voice
+              canceled: 'yes'
+              total_reminders_count: 1
+              reminders:
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+      voice: "Хорошо, удалила напоминание \"купить молочко2\" на четвертое марта в\
+        \ #acc 15:01."
+      text: "Хорошо, удалила напоминание \"купить молочко2\" на 4 марта в 15:01."
+  app_info:
+    ignore:
+    - speaker
+    - watch
+    - pa_android
+    - navigator_android
+    - irbis
+    - navigator_ios
+    - auto
+    - pa_ios
+    - dexp
+    - desktop_alice
+
+list_and_id_without_cancelation:
+  dialog:
+    алиса покажи напоминания:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: null
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Сейчас установлено семь напоминаний.{}.sil<[300]> Вот первые три:{}.sil<[500]>\
+        \ #gen 4 марта.sil<[500]> номер 1. купить молочко в #acc 12 часов дня.sil<[500]>\
+        \ номер 2. купить молочко2 в #acc 15:01.sil<[500]> #gen 10 марта.sil<[500]>\
+        \ номер 3. купить молочко3 в #acc 1:45.sil<[500]> Прочитать следующие три?"
+      text: "Сейчас установлено 7 напоминаний.\nВот первые три:\n4 марта:\n1. купить\
+        \ молочко в 12:00.\n2. купить молочко2 в 15:01.\n10 марта:\n3. купить молочко3\
+        \ в 1:45.\nПрочитать следующие три?"
+    все:
+      vins_form:
+        name: personal_assistant.scenarios.list_reminders__scroll_next
+        slots:
+          date:
+            value: null
+          time:
+            value: null
+          offset:
+            value: 0
+          reminder_id:
+            value: all
+      bass:
+        form:
+          offset:
+            value: 0
+          answer:
+            value:
+              type: voice
+              id_without_cancelation: 'yes'
+              total_reminders_count: 7
+              reminders:
+              - what: купить молочко
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 12
+              - what: купить молочко2
+                date:
+                  months: 3
+                  days: 4
+                time:
+                  hours: 15
+                  minutes: 01
+              - what: купить молочко3
+                date:
+                  months: 3
+                  days: 10
+                time:
+                  hours: 1
+                  minutes: 45
+      voice: "Извините, вас не поняла."
+      text: "Извините, вас не поняла."
+
+test_half_hour_with_space:
+  поставь напоминание через пол часа покушать еду:
+    vins_form:
+      name: personal_assistant.scenarios.create_reminder
+      slots:
+        what:
+          value: покушать еду
+        time:
+          value:
+            minutes: 30
+            minutes_relative: true
+
+
+# ALICE-3109
+test_time_with_inner_word:
+  dialog:
+    напомни сходить погулять:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder
+        slots:
+          what:
+            value: сходить погулять
+          date:
+            value: null
+          time:
+            value: null
+      bass:
+        form:
+          time:
+            optional: false
+      voice: '{ask_time}'
+      text: '{ask_time}'
+
+    завтра в 12 ночи и одну минуту:
+      vins_form:
+        name: personal_assistant.scenarios.create_reminder__ellipsis
+        slots:
+          what:
+            value: сходить погулять
+          time:
+            value:
+              hours: 12
+              minutes: 1
+              period: am
+          date:
+            value:
+              days_relative: true
+              days: 1
+      bass:
+        form:
+          what:
+            value: сходить погулять
+          time:
+            value:
+              hours: 0
+              minutes: 1
+          date:
+            value:
+              days_relative: true
+              days: 1
+          answer:
+            value:
+              type: "ok"
+      text: 'Поставила напоминание "сходить погулять" на завтра в 0:01.'
+      voice: 'Поставила напоминание "сходить погулять" на завтра в #acc 0:01.'

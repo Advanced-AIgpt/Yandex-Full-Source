@@ -1,0 +1,199 @@
+{% from "cards/common.nlg" import font_color, open_uri_action with context %}
+
+{% macro call_card(recipient_info) %}
+  {
+    "states": [
+        {
+            "state_id": 1,
+            "blocks": [
+                { "size": "xs", "type": "div-separator-block" },
+                {
+                    {% if recipient_info.avatar_url -%}
+                    "side_element": {
+                      "element": {
+                        "image_url": "{{recipient_info.avatar_url}}",
+                        "type": "div-image-element"
+                      },
+                      "size": "s"
+                    },
+                    {%- endif %}
+                    "title": "{{ recipient_info['title'] | capitalize_first | html_escape }}",
+                    "title_style": "text_s",
+                    "text": "{{ recipient_info['phone'] | html_escape }}",
+                    "text_style": "numbers_s",
+                    "type": "div-universal-block"
+                }
+    {% if recipient_info.phone_uri %}
+                ,
+                {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                },
+                {
+                    "text": "{{ font_color('#0A4DC3', 'ПОЗВОНИТЬ') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(recipient_info['phone_uri'], 'phone_call__button') }}",
+                        "log_id": "call_action"
+                    }
+                }
+    {% endif %}
+            ]
+    {% if recipient_info.phone_uri %}
+            ,
+            "action": {
+                "url": "{{ open_uri_action(recipient_info['phone_uri'], 'whole_card', 'phone_call_whole_card') }}",
+                "log_id": "whole_card"
+            }
+    {% endif %}
+        }
+    ],
+    "background": [
+        {
+            "color": "{{ '#FFFFFF' }}",
+            "type": "div-solid-background"
+        }
+    ]
+  }
+{% endmacro %}
+
+{% macro find_contacts_request_item(tag, value) %}
+  {
+    "text": "{{ tag }}",
+    "text_style": "text_m"
+  },
+  {
+    "text": "{{ value }}",
+    "text_style": "text_m"
+  }
+{% endmacro %}
+
+{% macro find_contacts_request_card(form, request) %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-footer-block",
+            "text_style": "button",
+            "text": "{{ font_color('#0A4DC3', 'Show debug info (staff only)') }}",
+            "action": {
+                "url": "div-action://set_state?state_id=2",
+                "log_id": "phone_call_show_debug_info"
+            }
+          }
+        ]
+      },
+      {
+        "state_id": 2,
+        "blocks": [
+            {
+              "type": "div-table-block",
+              "rows": [
+                {
+                  "type": "row_element",
+                  "cells": [
+                    {
+                      "text": "{{ form.raw_form.get_slot_by_name('recipient').value_type }}",
+                      "text_style": "text_m"
+                    },
+                    {
+                      "text": "{{ form.recipient }}",
+                      "text_style": "text_m"
+                    }
+                  ],
+                  "top_padding": "xs",
+                  "bottom_padding": "xs"
+                },
+                {
+                  "type": "row_element",
+                  "cells": [
+                    {
+                      "text": "personal asr value:",
+                      "text_style": "text_m"
+                    },
+                    {
+                      "text": "{{ form.personal_asr_value or "None" }}",
+                      "text_style": "text_m"
+                    }
+                  ],
+                  "top_padding": "xs",
+                  "bottom_padding": "xs"
+                }
+              ],
+              "columns": [
+                {
+                  "right_padding": "xs",
+                  "left_padding": "xs",
+                  "weight": 0
+                },
+                {
+                  "right_padding": "xs",
+                  "left_padding": "xs",
+                  "weight": 0
+                }
+              ]
+            },
+          {% for item in request %}
+            {
+              "type": "div-table-block",
+              "rows": [
+                  {% for value in item['values'] %}
+                    {
+                      "type": "row_element",
+                      "cells": [
+                        {{ find_contacts_request_item(item['tag'], value) }}
+                      ],
+                      "top_padding": "xs",
+                      "bottom_padding": "xs"
+                    }
+                    {% if not loop.last %}
+                      ,
+                    {% endif %}
+                  {% endfor %}
+              ],
+              "columns": [
+                {
+                  "right_padding": "xs",
+                  "left_padding": "xs",
+                  "weight": 0
+                },
+                {
+                  "right_padding": "xs",
+                  "left_padding": "xs",
+                  "weight": 0
+                }
+              ]
+            }
+            {% if not loop.last %}
+            ,{
+                "size": "xs",
+                "type": "div-separator-block",
+                "has_delimiter": 1
+              },
+            {% endif %}
+          {% endfor %}
+          ,{
+            "type": "div-footer-block",
+            "text_style": "button",
+            "text": "{{ font_color('#0A4DC3', 'Hide debug info') }}",
+            "action": {
+                "url": "div-action://set_state?state_id=1",
+                "log_id": "phone_call_hide_debug_info"
+            }
+          }
+        ]
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card call__known_phone %}
+  {{ call_card(context.data) }}
+{% endcard %}
+
+{% card call__find_contacts_request_data %}
+  {{ find_contacts_request_card(form, context.data) }}
+{% endcard %}

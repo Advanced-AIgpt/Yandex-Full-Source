@@ -1,0 +1,218 @@
+{% from "cards/market/common.nlg" import get_log_id with context %}
+{% from "market/common.nlg" import pretty_date, pretty_phone, currency_sign, delivery_name %}
+{% from "cards/common.nlg" import font_color, logged_action_url with context %}
+
+{# TODO https://st.yandex-team.ru/MALISA-942 #}
+{% macro render_delivery_interval(delivery_interval, req_info) -%}
+  {%- if delivery_interval.fromDate
+         and delivery_interval.toDate
+         and delivery_interval.fromDate != delivery_interval.toDate -%}
+    {{- pretty_date(delivery_interval.fromDate, req_info, dayfirst=True) }}
+    -
+    {{ pretty_date(delivery_interval.toDate, req_info, dayfirst=True) -}}
+  {%- else -%}
+    {{- pretty_date(delivery_interval.fromDate, req_info, dayfirst=True) -}}
+    {%- if delivery_interval.fromTime and delivery_interval.toTime -%}
+      c {{ delivery_interval.fromTime }} до {{ delivery_interval.toTime -}}
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro get_deliver_price_text(price) -%}
+  {%- if price > 0 -%}
+    {{- price }} ₽
+  {%- else -%}
+    {{- font_color("#15d682", "бесплатно") -}}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro render_order_details_row(title, text, text_alignment="right") %}
+  {
+    "type": "div-container-block",
+    "direction": "horizontal",
+    "width": {
+      "type": "predefined",
+      "value": "match_parent"
+    },
+    "height": {
+      "type": "predefined",
+      "value": "wrap_content"
+    },
+    "children": [
+      {
+        "text_style": "text_s",
+        "text": "{{- title -}}",
+        "title_style": "text_m",
+        "type": "div-universal-block"
+      },
+      {
+        "text_style": "text_m",
+        "type": "div-universal-block",
+        "padding_modifier": {
+          "position": "{{- text_alignment -}}",
+          "size": "xxs"
+        },
+        "text": "{{- text -}}"
+      }
+    ],
+    "alignment_horizontal": "right"
+  }
+{% endmacro %}
+
+{% macro render_order_details_row_separator() %}
+  {
+    "type": "div-separator-block",
+    "has_delimiter": 1
+  },
+  {
+    "type": "div-separator-block"
+  }
+{% endmacro %}
+
+{% macro render_address(details) -%}
+  {%- if details.get("outlet_name") -%}
+    {{- details.outlet_name -}}.
+  {% endif -%}
+  {{- details.address -}}
+{%- endmacro %}
+
+{% macro render_order_details_card(details, req_info) %}
+  {
+    "background": [
+      {
+        "type": "div-solid-background",
+        "color": "{{- '#ffffff' -}}"
+      }
+    ],
+    "states": [
+      {
+        "blocks": [
+          {
+            "width": {
+              "type": "predefined",
+              "value": "match_parent"
+            },
+            "frame": {
+              "style": "border",
+              "color": "{{- '#f0f0f0' -}}"
+            },
+            "height": {
+              "type": "predefined",
+              "value": "wrap_content"
+            },
+            "type": "div-container-block",
+            "children": [
+              {
+                "type": "div-separator-block"
+              },
+              {{ render_order_details_row("Почта", details.email | json_escape) }},
+              {{ render_order_details_row_separator() }},
+              {{ render_order_details_row("Телефон", pretty_phone(details.phone)) }},
+              {% set delivery_type_name = delivery_name(details.get("delivery_type")) %}
+              {% if delivery_type_name %}
+                {{ render_order_details_row_separator() }},
+                {{ render_order_details_row("Способ доставки", delivery_type_name) }},
+              {% endif %}
+              {{ render_order_details_row_separator() }},
+              {{ render_order_details_row("Доставка", render_delivery_interval(details.delivery_interval, req_info)) }},
+              {{ render_order_details_row_separator() }},
+              {{ render_order_details_row("Способ оплаты", "Наличными при получении заказа") }},
+              {{ render_order_details_row_separator() }},
+              {{ render_order_details_row("Адрес", render_address(details) | html_escape) }},
+              {{ render_order_details_row_separator() }},
+              {{ render_order_details_row("Количество", details["items_number"]) }},
+              {{ render_order_details_row_separator() }},
+              {
+                "side_element": {
+                  "element": {
+                    "type": "div-image-element",
+                    "image_url": "{{- details.offer_picture.url | json_escape -}}"
+                  }
+                },
+                "title": "{{- details.offer_price }} ₽",
+                "title_style": "text_l",
+                "text_style": "text_m",
+                "text": "{{- details.offer_title | json_escape -}}",
+                "type": "div-universal-block",
+                "padding_modifier": {
+                  "size": "xs"
+                }
+              },
+              {{ render_order_details_row_separator() }},
+              {
+                "type": "div-container-block",
+                "direction": "horizontal",
+                "width": {
+                  "type": "predefined",
+                  "value": "match_parent"
+                },
+                "height": {
+                  "type": "predefined",
+                  "value": "wrap_content"
+                },
+                "children": [
+                  {
+                    "text_style": "text_s",
+                    "type": "div-universal-block",
+                    "title_style": "text_m",
+                    "text": "Стоимость доставки"
+                  },
+                  {
+                    "text_style": "text_m",
+                    "type": "div-universal-block",
+                    "padding_modifier": {
+                      "position": "left",
+                      "size": "s"
+                    },
+                    "text": "{{- get_deliver_price_text(details.delivery_price) -}}"
+                  }
+                ],
+                "alignment_horizontal": "right"
+              },
+              {{ render_order_details_row_separator() }},
+              {
+                "type": "div-container-block",
+                "direction": "horizontal",
+                "width": {
+                  "type": "predefined",
+                  "value": "match_parent"
+                },
+                "height": {
+                  "type": "predefined",
+                  "value": "wrap_content"
+                },
+                "children": [
+                  {
+                    "text_style": "title_s",
+                    "type": "div-universal-block",
+                    "title_style": "text_m",
+                    "text": "Итого к оплате"
+                  },
+                  {
+                    "text_style": "title_s",
+                    "type": "div-universal-block",
+                    "padding_modifier": {
+                      "position": "left",
+                      "size": "s"
+                    },
+                    "text": "{{- details.total_price }} ₽"
+                  }
+                ],
+                "alignment_horizontal": "right"
+              }
+            ]
+          }
+        ],
+        "state_id": 1
+      }
+    ]
+  }
+{% endmacro %}
+
+{% card market_order_details %}
+  {{ render_order_details_card(context.data, req_info) }}
+{% endcard %}
+
+{% card recurring_purchase__order_details %}
+  {{ render_order_details_card(context.data, req_info) }}
+{% endcard %}

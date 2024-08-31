@@ -1,0 +1,280 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/tv_broadcast.nlg" %}
+
+{% from "common/macros.nlg" import day_part_title %}
+
+{% from "tv_broadcast/tv_broadcast.nlg" import render_schedule_title, render_schedule, render_schedule_text, render_channel_schedule, render_channel_schedule_text, render_program_schedule, render_program_schedule_text, render_genre_schedule, render_genre_schedule_text, add_dot with context %}
+{% from "tv_broadcast/tv_broadcast.nlg" import render_personal_channel_schedule, render_personal_channel_schedule_text with context %}
+{% from "tv_broadcast/play_channel.nlg" import no_stream_for_channel, no_valid_channel with context %}
+
+{% nlgimport "tv_broadcast/tv_broadcast__ask.nlg" %}
+
+{% from "video/video__common.nlg" import video_autoplay, please_connect_tv with context %}
+
+{% from "common/macros.nlg" import inability %}
+
+{% phrase render_error__tverror %}
+  {% chooseline %}
+    Не могу открыть Телепрограмму.
+    Что-то не так — кажется, Телепрограмма недоступна.
+    Что-то не выходит. Извините.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_error__vh_error %}
+  {% chooseitem 1 %}
+    Упс, кажется, что-то пошло не так. Бывает. Сейчас я все исправлю.
+  {% or 1 %}
+    Ой, что-то сломалось. Хорошо, что «Лебединое озеро» не включили. Исправляю.
+  {% or 1 %}
+    {% voice %}
+      Кажется, в Яндекс Эфире какие-то помехи. Чиню.
+    {% endvoice %}
+    {% text %}
+      Кажется, в Яндекс.Эфире какие-то помехи. Чиню.
+    {% endtext %}
+  {% or 1 %}
+    {% voice %}
+      Простите, в Яндекс Эфире что-то сломалось. Работаю над этим.
+    {% endvoice %}
+    {% text %}
+      Простите, в Яндекс.Эфире что-то сломалось. Работаю над этим.
+    {% endtext %}
+  {% endchooseitem %}
+{% endphrase %}
+
+{% phrase render_error__vh_no_licence %}
+  Просмотр через это устройство недоступен. Увы, так решил правообладатель.
+{% endphrase %}
+
+{% phrase tv_broadcast %}
+  {{ render_schedule_title() }}
+{% endphrase %}
+
+{% phrase tv_stream_channel %}
+  {% chooseline %}
+    Вот телеканал {{ add_dot(form.answer.channel.title).strip() }}
+    Нет проблем. Вот телеканал {{ add_dot(form.answer.channel.title).strip() }}
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase tv_stream_gallery %}
+  {% if (form.channel and not form.answer.channel) %}
+    {% chooseline %}
+      Кажется, канала «{{ form.channel }}» нет в вашем регионе. Вот что можно посмотреть.
+      К сожалению, не смогла найти канал «{{ form.channel }}» для вашего региона. Зато нашла другие, смотрите.
+      Такого канала, доступного для вашего региона, я не знаю, но есть другие. Смотрите прямо сейчас.
+    {% endchooseline %}
+  {% else %}
+    {% if is_active_attention('empty_stream_list') %}
+      {% chooseline %}
+        Ой, простите, кажется, я не могу включить то, что вы просите в этом регионе.
+        Я бы хотела помочь вам, но не могу - эфирные каналы недоступны в этом регионе.
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Смотрите прямо сейчас.
+        Вот что можно посмотреть. Выбирайте.
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro show_tv_gallery() %}
+  {% chooseline %}
+    Вот доступные каналы.
+    Вот каналы для вашего региона.
+    Давайте что-нибудь посмотрим.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro add_show_gallery_attention() %}
+  {% chooseline %}
+    Давайте посмотрим что-нибудь ещё.
+    Но есть много других каналов. Смотрите.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro nothing_found() %}
+  К сожалению, не нашлось ни одного доступного канала для вашего региона.
+{% endmacro %}
+
+{% macro cant_find_channel() %}
+  {% chooseline %}
+    К сожалению, не смогла найти этот канал.
+    Такого канала я не знаю, простите.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro no_program_found() %}
+  {% chooseline %}
+    Не удалось найти эту программу.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_smart_speaker() and not form.answer.schedule %}
+    {% set voice_answer %}
+      {% if is_active_attention('empty_search_gallery') %}
+        {{ nothing_found() }}
+      {% elif is_active_attention('no_tv_is_plugged_in') %}
+        {{ please_connect_tv() }}
+      {% elif is_active_attention('no_stream_for_channel') %}
+        {{ no_stream_for_channel() }}
+        {% if is_active_attention('show_tv_gallery') %}
+          {{ add_show_gallery_attention() }}
+        {% endif %}
+      {% elif is_active_attention('cant_find_channel') %}
+        {{ cant_find_channel() }}
+      {% elif is_active_attention('no_channel_found') %}
+        {{ no_valid_channel() }}
+        {% if is_active_attention('show_tv_gallery') %}
+          {{ add_show_gallery_attention() }}
+        {% endif %}
+      {% elif is_active_attention('no_program_found') %}
+        {{ no_program_found() }}
+      {% elif is_active_attention('play_channel') %}
+        {{ video_autoplay() }}
+      {% elif is_active_attention('show_tv_gallery') %}
+        {{ show_tv_gallery() }}
+      {% elif is_active_attention('tv_schedule_not_supported') %}
+        {{ inability() }}
+      {% endif %}
+    {% endset %}
+    {% voice %}
+      {{ voice_answer }}
+    {% endvoice %}
+    {% text %}
+      {{ voice_answer }}
+    {% endtext %}
+  {% elif is_active_attention('personal_tv_channel_in_request') %}
+    {% if is_active_attention('personal_tv_channel_not_supported') %}
+      {% if is_active_attention('cant_find_channel') %}
+        {{ cant_find_channel() }}
+      {% else %}
+        {% voice %}
+          Ваш персональный канал есть в Яндекс Эфире, вот здесь.
+        {% endvoice %}
+        {% text %}
+          Ваш персональный канал есть в Яндекс.Эфире, вот здесь.
+        {% endtext %}
+      {% endif %}
+    {% else %}
+      {% voice %}
+        {{ render_personal_channel_schedule() }}
+      {% endvoice %}
+      {% text %}
+        {{ render_personal_channel_schedule_text() }}
+      {% endtext %}
+    {% endif %}
+  {% elif is_active_attention('nhl_translation_in_request') %}
+    {% if is_active_attention('nhl_translation_not_supported') %}
+      {% voice %}
+        Смотрите НХЛ в Яндекс Эфире.
+      {% endvoice %}
+      {% text %}
+        Смотрите НХЛ в Яндекс.Эфире.
+      {% endtext %}
+    {% endif %}
+  {% elif is_active_attention('no_div_cards') %}
+    {% voice %}
+      {{ render_schedule_title() }}
+      {% if form.answer.schedule %}
+        {% if (form.answer.program) %}
+          {{ render_program_schedule() }}
+        {% elif (form.genre) %}
+          {{ render_genre_schedule() }}
+        {% elif (form.answer.channel and not is_active_attention('ignore_channel')) %}
+          {{ render_channel_schedule() }}
+        {% else %}
+          {{ render_schedule() }}
+        {% endif %}
+      {% endif %}
+    {% endvoice %}
+    {% text %}
+      {% if form.answer.schedule %}
+        {% if (form.answer.program) %}
+          {{ render_program_schedule_text() }}
+        {% elif (form.genre) %}
+          {{ render_genre_schedule_text() }}
+        {% elif (form.answer.channel and not is_active_attention('ignore_channel')) %}
+          {{ render_channel_schedule_text() }}
+        {% else %}
+          {{ render_schedule_text() }}
+        {% endif %}
+      {% endif %}
+    {% endtext %}
+  {% elif is_active_attention('no_program_found') %}
+    {{ no_program_found() }}
+  {% elif is_active_attention('no_stream_for_channel') %}
+    {{ no_stream_for_channel() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__tv_channel %}
+  Канал {{ context.tv_channel.data  }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__tv_channel %}
+  Канал {{ context.tv_channel.data  }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__tv_broadcast %}
+  Телепрограмма
+{% endphrase %}
+
+{% phrase render_suggest_utterance__tv_broadcast %}
+  Телепрограмма
+{% endphrase %}
+
+{% macro day_part_suggest(day_part) %}
+  {% if day_part == "morning" and (form.answer.start_now or (form.answer.start_time and form.answer.user_time and form.answer.user_time[:10] == form.answer.start_time[:10])) %}
+    завтра утром
+  {% else %}
+    {{ day_part_title(day_part).strip() | inflect('ins') }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__tv_day_part %}
+  {{ day_part_suggest(context.tv_day_part.data) | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__tv_day_part %}
+  {% if (form.raw_form.name == "personal_assistant.scenarios.tv_stream" or form.raw_form.name == "personal_assistant.scenarios.tv_stream__ellipsis") %}
+    Телепрограмма {{ day_part_suggest(context.tv_day_part.data) }}
+  {% else %}
+    {{ day_part_suggest(context.tv_day_part.data) | capitalize_first }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__tv_stream %}
+  Смотреть ТВ онлайн
+{% endphrase %}
+
+{% phrase render_suggest_utterance__tv_stream %}
+  Смотреть ТВ онлайн
+{% endphrase %}
+
+{% phrase render_suggest_caption__tv_channel_play %}
+  Канал «{{ context.tv_channel_play.data  }}»
+{% endphrase %}
+
+{% phrase render_suggest_utterance__tv_channel_play %}
+  Включи канал {{ context.tv_channel_play.data  }} прямой эфир
+{% endphrase %}
+
+{% phrase render_suggest_caption__personal_tv_channel_fallback_to_service %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__personal_tv_channel_fallback_to_service %}
+  {{ context.personal_tv_channel_fallback_to_service.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__nhl_fallback_to_service %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__nhl_fallback_to_service %}
+  {{ context.nhl_fallback_to_service.data.uri }}
+{% endphrase %}

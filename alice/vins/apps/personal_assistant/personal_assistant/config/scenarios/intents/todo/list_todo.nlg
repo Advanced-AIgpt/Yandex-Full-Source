@@ -1,0 +1,125 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "todo/todo__common.nlg" import todo_unsupported_device with context %}
+{% nlgimport "todo/todo__common.nlg" %}
+{% nlgimport "reminders/reminders__common.nlg" %}
+{% from "scenarios/intents/common.nlg" import tts_pause %}
+
+{% macro print_todos(todo_arr, max_print_count, is_print_date, offset=0) %}
+  {% set curr_count= [max_print_count, todo_arr|length] | min %}
+  {% set prev_date = {'date': None } %}
+
+  {% for i in range(curr_count) %}
+    {% if prev_date.date != todo_arr[i].date and is_print_date %}
+      {% if prev_date.update({'date': todo_arr[i].date}) %}{% endif %}
+
+      {% if prev_date.date %}
+        {% vc %} {{ prev_date.date | render_datetime_raw | attr('voice') }} {% evc %}
+        {% tx %} {{ prev_date.date | render_datetime_raw | attr('text') }}:\n {% etx %}
+      {% else %}
+        Задачи без даты:\n
+      {% endif %}
+      {{ tts_pause(500) }}
+    {% endif %}
+
+    {{(i + 1 + offset)}}. {{ todo_arr[i].what }}\n
+    {% if i != curr_count - 1 %}
+      {{ tts_pause(500) }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}
+
+{% macro print_todo_list_size(total_count, date, todo_per_page) %}
+  У вас в списке дел
+  {% vc %} {{ total_count | number_to_word() | inflect('nom', 'f') }} {% evc %}
+  {% tx %} {{ total_count }} {% etx %}
+  {{ 'задач'|pluralize(total_count) }}
+  {% if date %}
+    {% vc %} {{ date | render_date_with_on_preposition | attr('voice') }} {% evc %}
+    {% tx %} {{ date | render_date_with_on_preposition | attr('text') }} {% etx %}
+  {% endif %}
+  .\n
+  {% if total_count > todo_per_page %}
+    {{ tts_pause(300) }}
+    Вот первые
+    {{ todo_per_page | number_to_word() }}
+    :\n
+  {% endif %}
+{% endmacro %}
+
+{% macro build_voice_answer(total_count, todo_arr, offset, date, todo_per_page) %}
+  {% if total_count == 1 %}
+    {% if date %}
+      Я нашла только одну подходящую задачу
+      {% vc %} {{ date | render_date_with_on_preposition | attr('voice') }} {% evc %}
+      {% tx %} {{ date | render_date_with_on_preposition | attr('text') }}:\n {% etx %}
+      {{ todo_arr[0].what }}.
+    {% else %}
+      {% if todo_arr[0].date %}
+        У вас в списке дел только одна задача
+        {% vc %} {{ todo_arr[0].date | render_date_with_on_preposition | attr('voice') }} {% evc %}
+        {% tx %} {{ todo_arr[0].date | render_date_with_on_preposition | attr('text') }}:\n {% etx %}
+        {{ todo_arr[0].what }}.
+      {% else %}
+        У вас в списке дел только одна задача:\n {{ todo_arr[0].what }}.
+      {% endif %}
+    {% endif %}
+  {% elif total_count > 1 %}
+    {% if form.offset == 0 %}
+      {{ print_todo_list_size(total_count, date, todo_per_page) }}
+      {{ tts_pause(500) }}
+    {% endif %}
+
+    {% if date %}
+      {% set is_print_date = False %}
+    {% else %}
+      {% set is_print_date = True %}
+    {% endif %}
+
+    {{ print_todos(todo_arr, todo_per_page, is_print_date, offset) }}
+
+    {% if form.offset + todo_per_page < total_count%}
+      {{ tts_pause(500) }}
+      {% if total_count >= form.offset + todo_per_page * 2 %}
+        Прочитать следующие
+        {{ todo_per_page | number_to_word() | inflect('nom', 'n') }}?
+      {% else %}
+        {% set balance= total_count - form.offset - todo_per_page %}
+        Осталось
+        {% vc %} {{ balance | number_to_word() | inflect('nom', 'n') }} {% evc %}
+        {% tx %} {{ balance }} {% etx %}
+        {{ 'дел'|pluralize(balance) }}. Прочитать?
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro build_voice_empty_list_answer(date) %}
+  {% if date %}
+    Я не нашла дел
+    {% vc %} {{ date | render_date_with_on_preposition | attr('voice') }} {% evc %}
+    {% tx %} {{ date | render_date_with_on_preposition | attr('text') }} {% etx %}
+    .
+  {% else %}
+    У вас пустой список дел.
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if form.answer.type == "authorization" %}
+    Для этого вам нужно авторизоваться. Затем повторите, что нужно сделать.
+  {% elif form.answer.type == "voice" %}
+    {% if form.answer.is_finish == "yes" %}
+      Больше задач в списке нет.
+    {% else %}
+      {% if form.answer.total_todo_count > 0 %}
+        {{ build_voice_answer(form.answer.total_todo_count, form.answer.todo, form.offset, form.date, 3) }}
+      {% else %}
+        {{ build_voice_empty_list_answer(form.date) }}
+      {% endif %}
+    {% endif %}
+  {% elif form.answer.type == "textandvoice" %}
+    Открываю список дел.
+  {% else %}
+    {{ todo_unsupported_device() }}
+  {% endif %}
+{% endphrase %}

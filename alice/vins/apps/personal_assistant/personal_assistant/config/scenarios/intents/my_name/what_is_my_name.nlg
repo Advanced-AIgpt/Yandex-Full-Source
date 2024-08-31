@@ -1,0 +1,57 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "common/macros.nlg" import get_alice_name with context %}
+{% from "common/error.nlg" import render_error %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.is_known %}
+    {% if is_active_attention('what_is_my_name__silent_enroll_mode') %}
+      {% chooseline %}
+        Вас зовут 
+        Вы просили называть вас
+        Вы сказали, что вас зовут
+        Кажется, вас зовут
+        Думаю, вас зовут
+      {% endchooseline %}
+      {{ form.user_name|capitalize }}.
+      {% if is_active_attention('what_is_my_name__enroll_requested') %}
+        {% chooseline %}
+          Если вы хотите изменить имя, скажите: «{{ get_alice_name() }}, называй меня…» и представьтесь.
+          Если вы хотите изменить имя, скажите: «Меня зовут…» и представьтесь.
+          Хотите изменить имя? Скажите: «{{ get_alice_name() }}, называй меня…» и добавьте новое имя.
+          Мы уже знакомились, но если вы хотите изменить имя, просто скажите «меня зовут…» и представьтесь.
+        {% endchooseline %}
+      {% endif %}
+    {% else %}
+      {% chooseline %}
+        Думаю, что вас зовут
+        Судя по голосу, вы -
+        Сдаётся мне, вас зовут
+        Ваш голос подсказывает, что вы -
+      {% endchooseline %}
+      {{ form.user_name|capitalize }}.
+    {% endif %}
+  {% else %}
+    {% if is_active_attention('what_is_my_name__silent_enroll_mode') %}
+      {% chooseline %}
+        Я могу запомнить вас на этом устройстве. Просто скажите: «{{ get_alice_name() }}, называй меня…» и представьтесь.
+        Я могу запомнить ваше имя. Просто скажите: «Меня зовут…» и представьтесь.
+        Если хотите, я буду называть вас по имени. Просто скажите: «Меня зовут…» и представьтесь.
+        Я могу называть вас так, как вам нравится. Просто скажите: «Меня зовут…» и представьтесь.
+      {% endchooseline %}
+    {% else %}
+      {% set can_remember_user = not is_active_attention('invalid_region') and not form.is_too_many_enrolled_users %}
+      {% chooseline %}
+        Простите, я вас не {%tx%}узнаю{%etx%}{%vc%}узна+ю{%evc%}. {% if can_remember_user %} Давайте познакомимся! {% endif %}
+        Что-то ваш голос мне не {%tx%}знаком{%etx%}{%vc%}знак+ом{%evc%}. {% if can_remember_user %} Но мы можем это исправить. {% endif %}
+        Я не {%tx%}узнаю{%etx%}{%vc%}узна+ю{%evc%} ваш голос. {% if can_remember_user %} Но я могу его запомнить. {% endif %}
+      {% endchooseline %}
+      {% if can_remember_user %}
+        Просто скажите: «{{ get_alice_name() }}, запомни мой голос»
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

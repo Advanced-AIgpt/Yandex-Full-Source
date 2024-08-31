@@ -1,0 +1,30 @@
+{% nlgimport "player/player__common.nlg" %}
+{% from "player/player__common.nlg" import do_authorized with context %}
+
+{% macro dislike_confirm() %}
+  {% chooseline %}
+    Дизлайк принят.
+    Хорошо, ставлю дизлайк.
+    Окей, не буду такое ставить.
+    Поняла. Больше не включу.
+    Нет проблем, поставила дизлайк.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('biometry_guest') %}
+    {% if form.user_name is not none %}
+      {% chooseitem 1 %}
+        Извините, но главный диджей тут —  {{ form.user_name | capitalize }}.
+      {% or 1 %}
+        Воспитанный бот принимает дизлайки только от своего человека. Извините.
+      {% or 1 %}
+        Я бы поставила дизлайк, но только если {{ form.user_name | capitalize }} попросит.
+      {% endchooseitem %}
+    {% else %}
+          Воспитанный бот принимает дизлайки только от своего человека. Извините.
+    {% endif %}
+  {% else %}
+    {{ do_authorized(dislike_confirm()) }}
+  {% endif %}
+{% endphrase %}

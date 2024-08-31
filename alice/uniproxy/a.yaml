@@ -1,0 +1,1145 @@
+service: wsproxy
+title: Alice WSproxy
+
+ci:
+  release-title-source: flow
+  secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+  runtime:
+    sandbox:
+      owner: VOICESERV_RELEASERS
+      tags:
+        - ARCADIA-CI-TASK
+  releases:
+    trunk-uniproxy:
+      title: Build uniproxy from trunk
+      flow: uniproxy-trunk
+      start-version: 810
+      filters:
+        - abs-paths:
+            - 'alice/uniproxy/**'
+            - 'alice/cuttlefish/**'
+            - 'alice/library/**'
+            - 'alice/protos/**'
+            - 'alice/megamind/protos/**'
+            - 'alice/hollywood/protos/**'
+      auto: true
+      stages:
+        - id: start
+          title: Starting
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+        - id: build
+          title: Building
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+        - id: release
+          title: Releasing
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+
+    test-trunk-uniproxy:
+      title: Regular tests on uniproxy trunk
+      flow: uniproxy-trunk-tests
+      start-version: 189
+      stages:
+        - id: start
+          title: Starting
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+        - id: test
+          title: Testing
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+      filters:
+        - abs-paths:
+            - 'alice/uniproxy/**'
+            - 'alice/cuttlefish/**'
+            - 'alice/library/**'
+            - 'alice/protos/**'
+            - 'alice/megamind/protos/**'
+            - 'alice/hollywood/protos/**'
+      auto:
+        conditions:
+          - min-commits: 1
+            since-last-release: 4h
+            schedule:
+              time: 9:00 - 19:00 MSK
+              day-type: workdays
+
+    ue2e-test-trunk-uniproxy:
+      title: Regular fast UE2E tests on uniproxy trunk
+      flow: uniproxy-trunk-ue2e-tests
+      start-version: 67
+      stages:
+        - id: start
+          title: Starting
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+        - id: test
+          title: Testing
+          displace:
+            on-status:
+              - FAILURE
+              - WAITING_FOR_MANUAL_TRIGGER
+              - WAITING_FOR_STAGE
+      filters:
+        - abs-paths:
+            - 'alice/uniproxy/**'
+            - 'alice/cuttlefish/**'
+            - 'alice/library/**'
+            - 'alice/protos/**'
+            - 'alice/megamind/protos/**'
+            - 'alice/hollywood/protos/**'
+      auto:
+        conditions:
+          - min-commits: 1
+            since-last-release: 1d
+            schedule:
+              time: 9:00 - 19:00 MSK
+              day-type: workdays
+
+    release-uniproxy:
+      title: Release uniproxy
+      flow: run-uniproxy-release
+      start-version: 193
+      filters:
+        - discovery: any
+          abs-paths:
+            - 'alice/uniproxy/**'
+            - 'alice/cuttlefish/**'
+            - 'voicetech/**'
+      branches:
+        pattern: releases/alice/wsproxy-${version}
+        auto: true
+        auto-create: true
+      auto:
+        conditions:
+          - min-commits: 1
+            since-last-release: 4h
+            schedule:
+              time: 20:00 - 22:00 MSK
+              days: MON, THU
+              day-type: not-pre-holidays
+      stages:
+        build:
+          title: Build
+        create-beta:
+          title: Create betas
+        test:
+          title: Test
+        release:
+          title: Release
+  flows:
+    run-uniproxy-release:
+      title: Run uniproxy tests and release
+      jobs:
+        # Build all resources
+        start-build:
+          title: Start build
+          task: dummy
+          stage: build
+
+        build-uniproxy-package:
+          title: Build uniproxy package
+          task: common/arcadia/ya_package_2
+          needs: start-build
+          attempts: 3
+          input:
+            build_type: release
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: VOICETECH_UNIPROXY_PACKAGE
+            packages: alice/uniproxy/rtc/uniproxy-package.json
+            raw_package: True
+            compress_package_archive: False
+            package_type: 'tarball'
+            publish_package: True
+            checkout_mode: 'auto'
+
+        build-uniproxy-experiments:
+          title: Build uniproxy experiments
+          task: projects/alice/wsproxy/BuildUniproxyExperiments
+          needs: start-build
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            skip_pre_build_check_experiments: True
+            resource_type: VOICETECH_UNIPROXY_EXPERIMENTS
+
+        build-cuttlefish:
+          title: Build cuttlefish
+          task: projects/alice/wsproxy/BuildCuttlefishBinary
+          needs: start-build
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            release_type: stable
+
+        spawn-graphs-rm:
+          title: Spawn voice_graphs RM
+          task: projects/alice/wsproxy/CreateNewRmBranch
+          needs: start-build
+          input:
+            config:
+              component_name: voice_graphs
+              resource_name:
+                - APP_HOST_STABLE_BRANCH_VOICE
+                - HORIZON_AGENT_CONFIG_VOICE
+              minor_version: ${to_string(not_null(context.version_info.minor, '0'))}
+              major_version: ${context.version_info.major}
+              retries: 5
+              sleep_time: 600
+              backoff: 1.25
+              svn_revision: ${context.target_revision.number}
+
+        build-marker-tests-exe:
+          title: Build marker tests executables
+          task: projects/alice/wsproxy/marker_tests/BuildMarkerTestsExecutable
+          needs: start-build
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            build_type: release
+            build_system: semi_distbuild
+
+        build-marker-tests-data:
+          title: Build marker tests data
+          needs: start-build
+          task: common/arcadia/ya_package_2
+          attempts: 3
+          input:
+            build_type: testing
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: True
+            run_medium_tests: True
+            run_long_tests: False
+            ignore_fail_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: ALICE_MARKER_TESTS_DATA
+            packages: alice/acceptance/cli/marker_tests/data-package.json
+            raw_package: True
+            compress_package_archive: False
+
+        # Assemble test environments
+        start-prepare:
+          title: Start beta generation
+          task: dummy
+          stage: create-beta
+          needs:
+            - build-uniproxy-package
+            - build-uniproxy-experiments
+            - build-cuttlefish
+            - build-marker-tests-exe
+            - build-marker-tests-data
+            - spawn-graphs-rm
+
+        get-branch:
+          title: Convert CI version to oldschool tags
+          task: projects/alice/wsproxy/ConvertVersionToBranchTag
+          needs:
+            - start-prepare
+
+        create-release-ticket:
+          title: Create ticket in ALICERELEASE
+          task: common/tracker/create_issue
+          needs:
+            - start-prepare
+          input:
+            config:
+              secret:
+                key: st.token
+              link:
+                queues:
+                  - ALICE
+                  - VOICESERV
+                  - VOICESERVMAYBE
+                  - ALICEOPS
+            rules:
+              on_duplicate: UPDATE
+            template:
+              type: Задача
+              summary: Релиз wsproxy, cuttlefish, apphost-graphs ${context.version_info.major}
+              tags:
+                - uniproxy
+              components:
+                - UNIPROXY
+              queue: ALICERELEASE
+              fixVersion: wsproxy, cuttlefish, apphost-graphs ${context.version_info.major}
+              description: |
+                [((${context.ci_url} Release URL))] [((https://wiki.yandex-team.ru/voicetechnology/dev/serverinfr/uniproxy/releases/ Changelogs))]
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+            update_template:
+              comment: |
+                Новые тикеты и коммиты в ((${context.ci_url} ${context.title}))
+                <{Тикеты
+                {{issues}}
+                }>
+                <{Коммиты
+                {{commits}}
+                }>
+
+        create-wiki-changelog:
+          title: Post changelog to wiki
+          task: projects/alice/wsproxy/CreateWikiChangelog
+          needs: create-release-ticket
+          input:
+            config:
+              ticket: ${tasks.create-release-ticket.issue.issue}
+              project: wsproxy
+              wiki_path: voicetechnology/dev/serverinfr/uniproxy/releases
+              resources:
+                - name: cuttlefish
+                  resource_id: ${(tasks.build-cuttlefish.resources[?type == 'VOICETECH_CUTTLEFISH_BINARY'])[0].id}
+                - name: uniproxy-package
+                  resource_id: ${(tasks.build-uniproxy-package.resources[?type == 'VOICETECH_UNIPROXY_PACKAGE'])[0].id}
+                - name: uniproxy-experiments
+                  resource_id: ${(tasks.build-uniproxy-experiments.resources[?type == 'VOICETECH_UNIPROXY_EXPERIMENTS'])[0].id}
+                - name: stable_branch
+                  resource_id: ${tasks.spawn-graphs-rm.resources.resources.APP_HOST_STABLE_BRANCH_VOICE}
+                - name: horizon-agent.nora.yaml
+                  resource_id: ${tasks.spawn-graphs-rm.resources.resources.HORIZON_AGENT_CONFIG_VOICE}
+
+        delete-old-cuttlefish-beta:
+          title: Delete old cuttlefish beta
+          task: projects/alice/wsproxy/RemoveOldBeta
+          needs: start-prepare
+          input:
+            config:
+              wait_for_beta: 60
+              backoff: 1
+              retries: 15
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              current_version: ${context.version_info.major}
+              age_to_delete: 2
+              template_name: alice-cuttlefish-stable
+
+        delete-old-apphost-beta:
+          title: Delete old apphost beta
+          task: projects/alice/wsproxy/RemoveOldBeta
+          needs: start-prepare
+          input:
+            config:
+              wait_for_beta: 60
+              backoff: 1
+              retries: 15
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              current_version: ${context.version_info.major}
+              age_to_delete: 2
+              template_name: alice-apphost-stable
+
+        delete-old-wsproxy-beta:
+          title: Delete old wsproxy beta
+          task: projects/alice/wsproxy/RemoveOldBeta
+          needs: start-prepare
+          input:
+            config:
+              wait_for_beta: 60
+              backoff: 1
+              retries: 15
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              current_version: ${context.version_info.major}
+              age_to_delete: 2
+              template_name: alice-uniproxy-multi-stable
+
+        generate-cuttlefish-yappy-beta:
+          title: Create Cuttlefish Yappy beta
+          task: projects/alice/wsproxy/CreateBetaFromTemplate
+          needs:
+            - start-prepare
+            - delete-old-cuttlefish-beta
+          attempts:
+            max: 3
+            backoff: const
+            initial-backoff: 5m
+          input:
+            config:
+              template_name: alice-cuttlefish-stable
+              patches:
+                - name: cuttlefish
+                  resource_id: ${(tasks.build-cuttlefish.resources[?type == 'VOICETECH_CUTTLEFISH_BINARY'])[0].id}
+                - name: uniproxy-package
+                  resource_id: ${(tasks.build-uniproxy-package.resources[?type == 'VOICETECH_UNIPROXY_PACKAGE'])[0].id}
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              component_id: alice-cuttlefish-stable
+              parent_external_id: cuttlefish-sas
+              suffix: ${context.version_info.major}
+              backoff: 1
+              wait_for_beta: 600
+              retries: 15
+
+        generate-apphost-yappy-beta:
+          title: Create Apphost Yappy beta
+          task: projects/alice/wsproxy/CreateBetaFromTemplate
+          needs:
+            - generate-cuttlefish-yappy-beta
+            - delete-old-apphost-beta
+          attempts:
+            max: 3
+            backoff: const
+            initial-backoff: 5m
+          input:
+            config:
+              template_name: alice-apphost-stable
+              patches:
+                - name: stable_branch
+                  resource_id: ${tasks.spawn-graphs-rm.resources.resources.APP_HOST_STABLE_BRANCH_VOICE}
+                - name: horizon-agent.nora.yaml
+                  resource_id: ${tasks.spawn-graphs-rm.resources.resources.HORIZON_AGENT_CONFIG_VOICE}
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              component_id: alice-apphost-stable
+              parent_external_id: wsproxy-apphost-beta-vla
+              suffix: ${context.version_info.major}
+              backoff: 1
+              wait_for_beta: 600
+              retries: 15
+
+        generate-wsproxy-yappy-beta:
+          title: Create Wsproxy Yappy beta
+          task: projects/alice/wsproxy/CreateBetaFromTemplate
+          needs:
+            - generate-apphost-yappy-beta
+            - delete-old-wsproxy-beta
+          attempts:
+            max: 3
+            backoff: const
+            initial-backoff: 5m
+          input:
+            config:
+              template_name: alice-uniproxy-multi-stable
+              patches:
+                - name: exps_pack
+                  resource_id: ${(tasks.build-uniproxy-experiments.resources[?type == 'VOICETECH_UNIPROXY_EXPERIMENTS'])[0].id}
+                - name: uniproxy-package
+                  resource_id: ${(tasks.build-uniproxy-package.resources[?type == 'VOICETECH_UNIPROXY_PACKAGE'])[0].id}
+              token: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+              component_id: alice-uniproxy-multi-stable
+              parent_external_id: uniproxy2_vla
+              suffix: ${context.version_info.major}
+              backoff: 1
+              wait_for_beta: 900
+              retries: 15
+
+        # hamster+cuttlefish
+        build-url-c:
+          title: URL for hamster+cuttlefish
+          task: projects/alice/wsproxy/GenerateUniproxyUrlWithSrcrwr
+          needs:
+            - generate-cuttlefish-yappy-beta
+          input:
+            data:
+              base_url: wss://beta.uniproxy.alice.yandex.net/alice-uniproxy-hamster/uni.ws
+              srcrwr:
+                - source: VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: SELF__VOICE
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: VOICE__CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: VOICE__CUTTLEFISH
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: APPHOST
+                  destination: yappy-apphost-hamster.in.yandex-team.ru:3001
+
+        # hamster+apphost+cuttlefish
+        build-url-ac:
+          title: URL for hamster+apphost+cuttlefish
+          task: projects/alice/wsproxy/GenerateUniproxyUrlWithSrcrwr
+          needs:
+            - generate-cuttlefish-yappy-beta
+            - generate-apphost-yappy-beta
+          input:
+            data:
+              base_url: wss://beta.uniproxy.alice.yandex.net/alice-uniproxy-hamster/uni.ws
+              srcrwr:
+                - source: VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: SELF__VOICE
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: VOICE__CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: VOICE__CUTTLEFISH
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: APPHOST
+                  destination: ${tasks.generate-apphost-yappy-beta.state.endpoint_set}.in.yandex-team.ru:3001
+
+        # proxy+apphost+cuttlefish
+        build-url-uac:
+          title: URL for uniproxy+apphost+cuttlefish
+          task: projects/alice/wsproxy/GenerateUniproxyUrlWithSrcrwr
+          needs:
+            - generate-wsproxy-yappy-beta
+            - generate-cuttlefish-yappy-beta
+            - generate-apphost-yappy-beta
+          input:
+            data:
+              base_url: wss://beta.uniproxy.alice.yandex.net/${tasks.generate-wsproxy-yappy-beta.state.beta_name}/uni.ws
+              srcrwr:
+                - source: VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: SELF__VOICE
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: VOICE__CUTTLEFISH_BIDIRECTIONAL
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}_BIDIRECTIONAL
+                - source: VOICE__CUTTLEFISH
+                  destination: VOICE__SELF_${tasks.generate-cuttlefish-yappy-beta.state.endpoint_set}
+                - source: APPHOST
+                  destination: ${tasks.generate-apphost-yappy-beta.state.endpoint_set}.in.yandex-team.ru:3001
+
+        build-marker-tests-config-c:
+          title: Build marker tests configuration (cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/BuildMarkerTestsConfigTasklet
+          needs:
+            - build-url-c
+          attempts: 3
+          input:
+            config:
+              checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+              uniproxy_websocket_url: "${tasks.build-url-c.state.generated_url}"
+              use_vins_hamster: False
+
+        build-marker-tests-config-ac:
+          title: Build marker tests configuration (apphost+cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/BuildMarkerTestsConfigTasklet
+          needs:
+            - build-url-ac
+          attempts: 3
+          input:
+            config:
+              checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+              uniproxy_websocket_url: "${tasks.build-url-ac.state.generated_url}"
+              use_vins_hamster: False
+
+        build-marker-tests-config-uac:
+          title: Build marker tests configuration (wsproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/BuildMarkerTestsConfigTasklet
+          needs:
+            - build-url-uac
+          attempts: 3
+          input:
+            config:
+              checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+              uniproxy_websocket_url: "${tasks.build-url-uac.state.generated_url}"
+              use_vins_hamster: False
+
+
+        # Assemble resources and run tests
+        start-test:
+          title: Start tests
+          task: dummy
+          stage: test
+          needs:
+            - build-url-c
+            - build-url-ac
+            - build-url-uac
+            - build-marker-tests-config-c
+            - build-marker-tests-config-c
+            - build-marker-tests-config-ac
+            - build-marker-tests-config-uac
+            - create-release-ticket
+            - get-branch
+            - create-wiki-changelog
+
+        test-build-uniproxy-package:
+          title: Run uniproxy package build tests
+          task: common/arcadia/ya_package_2
+          needs: start-test
+          attempts: 3
+          input:
+            build_type: release
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: True
+            run_medium_tests: True
+            run_long_tests: True
+            ignore_fail_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: VOICETECH_UNIPROXY_PACKAGE
+            packages: alice/uniproxy/rtc/uniproxy-package.json
+            raw_package: True
+            compress_package_archive: False
+            package_type: 'tarball'
+            publish_package: False
+            checkout_mode: 'auto'
+
+        skip-build-uniproxy-tests:
+          title: Skip Build tests
+          task: dummy
+          needs:
+            - start-test
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you totally sure you want to skip build tests? It can lead you straight to LSR"
+
+        uniproxy-build-tests-done:
+          title: Build uniproxy tests done
+          task: dummy
+          needs-type: any
+          needs:
+            - test-build-uniproxy-package
+            - skip-build-uniproxy-tests
+
+        run-integration-tests-c:
+          title: Run integration tests (cuttlefish)
+          task: projects/alice/wsproxy/AliceEvoIntegrationTestsWrapper
+          needs:
+            - start-test
+          input:
+            uniproxy_url: "${tasks.build-url-c.state.generated_url}"
+            checkout_arcadia_from_url: arcadia:/arc/trunk/arcadia
+            fail_threshold: 300
+            branch_number: ${context.version_info.major}
+            tag_number: ${to_string(not_null(context.version_info.minor, '0'))}
+            launch_type: uniproxy
+            beta_name: ${tasks.generate-cuttlefish-yappy-beta.state.beta_name}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+            run_call_owner_subtask: True
+
+        run-integration-tests-ac:
+          title: Run integration tests (apphost+cuttlefish)
+          task: projects/alice/wsproxy/AliceEvoIntegrationTestsWrapper
+          needs:
+            - start-test
+          input:
+            uniproxy_url: "${tasks.build-url-ac.state.generated_url}"
+            checkout_arcadia_from_url: arcadia:/arc/trunk/arcadia
+            fail_threshold: 300
+            branch_number: ${context.version_info.major}
+            tag_number: ${to_string(not_null(context.version_info.minor, '0'))}
+            launch_type: uniproxy
+            beta_name: ${tasks.generate-apphost-yappy-beta.state.beta_name}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+            run_call_owner_subtask: True
+
+        run-integration-tests-uac:
+          title: Run integration tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/AliceEvoIntegrationTestsWrapper
+          needs:
+            - start-test
+          input:
+            uniproxy_url: "${tasks.build-url-uac.state.generated_url}"
+            checkout_arcadia_from_url: arcadia:/arc/trunk/arcadia
+            fail_threshold: 300
+            branch_number: ${context.version_info.major}
+            tag_number: ${to_string(not_null(context.version_info.minor, '0'))}
+            launch_type: uniproxy
+            beta_name: ${tasks.generate-wsproxy-yappy-beta.state.beta_name}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+            run_call_owner_subtask: True
+
+        end-integration-tests:
+          title: Integration tests finished
+          task: dummy
+          needs:
+            - run-integration-tests-c
+            - run-integration-tests-ac
+            - run-integration-tests-uac
+
+        skip-integration-tests:
+          title: Skip Integration tests and summon manual testing
+          task: dummy
+          needs:
+            - start-test
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you totally sure you want to skip tests? It can lead you straight to LSR"
+
+        integration-tests-done:
+          title: Integration tests done
+          task: dummy
+          needs-type: any
+          needs:
+            - end-integration-tests
+            - skip-integration-tests
+
+        run-func-tests-c:
+          title: Run func tests (cuttlefish)
+          task: projects/alice/FuncTestVoiceServer
+          needs:
+            - start-test
+          input:
+            uniproxy_websocket_url: "${tasks.build-url-c.state.generated_url}"
+            tests_group: all
+            component_name: uniproxy
+            release_number: 0
+            fail_on_test_error: True
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        run-func-tests-ac:
+          title: Run func tests (apphost+cuttlefish)
+          task: projects/alice/FuncTestVoiceServer
+          needs:
+            - start-test
+          input:
+            uniproxy_websocket_url: "${tasks.build-url-ac.state.generated_url}"
+            tests_group: all
+            component_name: uniproxy
+            release_number: 0
+            fail_on_test_error: True
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        run-func-tests-uac:
+          title: Run func tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/FuncTestVoiceServer
+          needs:
+            - start-test
+          input:
+            uniproxy_websocket_url: "${tasks.build-url-uac.state.generated_url}"
+            tests_group: all
+            component_name: uniproxy
+            release_number: 0
+            fail_on_test_error: True
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        end-func-tests:
+          title: Func tests finished
+          task: dummy
+          needs:
+            - run-func-tests-c
+            - run-func-tests-ac
+            - run-func-tests-uac
+
+        skip-func-tests:
+          title: Skip Func tests and summon manual testing
+          task: dummy
+          needs:
+            - start-test
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you totally sure you want to skip tests? It can lead you straight to LSR"
+
+        func-tests-done:
+          title: Func tests done
+          task: dummy
+          needs-type: any
+          needs:
+            - end-func-tests
+            - skip-func-tests
+
+        run-marker-tests-c:
+          title: Run marker tests (cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/UniproxyMarkerTests
+          needs:
+            - start-test
+          input:
+            nirvana_token_vault: robot-voice-qa_nirvana_token
+            use_released_stable: False
+            exe_resource_id: ${tasks.build-marker-tests-exe.resources[?type == 'ALICE_MARKER_TESTS_EXE'].id | [0]}
+            config_resource_id: ${tasks.build-marker-tests-config-c.data.resource_id}
+            data_resource_id: ${tasks.build-marker-tests-data.resources[?type == 'ALICE_MARKER_TESTS_DATA'].id | [0]}
+            component_name: uniproxy
+            release_number: ${context.version_info.major}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        run-marker-tests-ac:
+          title: Run marker tests (apphost+cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/UniproxyMarkerTests
+          needs:
+            - start-test
+          input:
+            nirvana_token_vault: robot-voice-qa_nirvana_token
+            use_released_stable: False
+            exe_resource_id: ${tasks.build-marker-tests-exe.resources[?type == 'ALICE_MARKER_TESTS_EXE'].id | [0]}
+            config_resource_id: ${tasks.build-marker-tests-config-ac.data.resource_id}
+            data_resource_id: ${tasks.build-marker-tests-data.resources[?type == 'ALICE_MARKER_TESTS_DATA'].id | [0]}
+            component_name: uniproxy
+            release_number: ${context.version_info.major}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        run-marker-tests-uac:
+          title: Run marker tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/marker_tests/UniproxyMarkerTests
+          needs:
+            - start-test
+          input:
+            nirvana_token_vault: robot-voice-qa_nirvana_token
+            use_released_stable: False
+            exe_resource_id: ${tasks.build-marker-tests-exe.resources[?type == 'ALICE_MARKER_TESTS_EXE'].id | [0]}
+            config_resource_id: ${tasks.build-marker-tests-config-uac.data.resource_id}
+            data_resource_id: ${tasks.build-marker-tests-data.resources[?type == 'ALICE_MARKER_TESTS_DATA'].id | [0]}
+            component_name: uniproxy
+            release_number: ${context.version_info.major}
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        end-marker-tests:
+          title: Marker tests finished
+          task: dummy
+          needs:
+            - run-marker-tests-c
+            - run-marker-tests-ac
+            - run-marker-tests-uac
+
+        skip-marker-tests:
+          title: Skip Marker tests and summon manual testing
+          task: dummy
+          needs:
+            - start-test
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you totally sure you want to skip tests? It can lead you straight to LSR"
+
+        marker-tests-done:
+          title: Marker tests done
+          task: dummy
+          needs-type: any
+          needs:
+            - end-marker-tests
+            - skip-marker-tests
+
+        run-ue2e-tests:
+          title: Run UE2E tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/UniproxyUE2Etests
+          needs:
+            - start-test
+          input:
+            component_name: uniproxy
+            branch_num: ${tasks.get-branch.state.branch}
+            tag_num: ${tasks.get-branch.state.tag}
+            uniproxy_url: "${tasks.build-url-uac.state.generated_url}"
+            release_ticket: ${tasks.create-release-ticket.issue.issue}
+            force_start: ${tasks.get-branch.state.tag == '1'}
+            web_search_request_mode: '0'
+
+        end-ue2e-tests:
+          title: UE2E tests finished
+          task: dummy
+          needs:
+            - run-ue2e-tests
+
+        skip-ue2e-tests:
+          title: Skip UE2E tests and summon manual testing
+          task: dummy
+          needs:
+            - start-test
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you totally sure you want to skip tests? It can lead you straight to LSR"
+
+        ue2e-tests-done:
+          title: UE2E tests done
+          task: dummy
+          needs-type: any
+          needs:
+            - end-ue2e-tests
+            - skip-ue2e-tests
+
+        find-regress-ticket:
+          title: Find existing regress test ticket
+          task: projects/alice/wsproxy/FindStTicket
+          needs:
+            - start-test
+          input:
+            config:
+              queue: "ALICEASSESSORS"
+              ticket_summary_template: "{}"
+              search_key: ${tasks.create-release-ticket.issue.issue}
+
+        run-regress-tests:
+          title: Run regress tests
+          task: projects/alice/wsproxy/UniproxyRegressTests
+          if: ${tasks.find-regress-ticket.state.ticket_id == 'not_found'}
+          needs:
+            - find-regress-ticket
+          input:
+            config:
+              component_name: uniproxy
+              release_number: ${context.version_info.major}
+              uniproxy_websocket_url: "${tasks.build-url-uac.state.generated_url}"
+              testsuite: alice
+              st_ticket: ${tasks.create-release-ticket.issue.issue}
+
+        verify-regress-tests:
+          title: Verify that regress tests are done and OK
+          task: dummy
+          needs: run-regress-tests
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: "Are you sure that regress tests are done and green?"
+
+        end-regress-tests:
+          title: Regress tests finished
+          task: dummy
+          needs-type: any
+          needs:
+            - verify-regress-tests
+
+        end-tests:
+          title: Tests-finished
+          task: dummy
+          needs:
+            - func-tests-done
+            - marker-tests-done
+            - ue2e-tests-done
+            - integration-tests-done
+            - end-regress-tests
+            - uniproxy-build-tests-done
+
+        # Release to production
+        enter-deploy-stage:
+          title: Enter deploy stage
+          task: dummy
+          stage: release
+          needs-type: any
+          needs:
+            - end-tests
+            - end-regress-tests
+
+        start-deploy:
+          title: Start deploy
+          task: dummy
+          needs:
+            - enter-deploy-stage
+          manual:
+            enabled: true
+            #            approvers: SPEECHKIT_OPS
+            prompt: Release everything?
+
+        release-uniproxy:
+          title: Release to stable
+          task: common/releases/simple_releaser
+          needs: start-deploy
+          input:
+            config:
+              deploy_system: NANNY
+              release_token_yav_key: sandbox.token
+              wait_for_deploy: False
+              common_release_data:
+                nanny_common_release_data:
+                  release_stage: stable
+                  release_notes: Release uniproxy and cuttlefish with CI
+                  release_subject: CI release ${context.version_info.full}
+            context:
+              secret_uid: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+            release_items:
+              - sandbox_release_item:
+                  id: ${(tasks.build-uniproxy-package.resources[?type == 'VOICETECH_UNIPROXY_PACKAGE'])[0].id}
+                  type: VOICETECH_UNIPROXY_PACKAGE
+              - sandbox_release_item:
+                  id: ${(tasks.build-uniproxy-experiments.resources[?type == 'VOICETECH_UNIPROXY_EXPERIMENTS'])[0].id}
+                  type: VOICETECH_UNIPROXY_EXPERIMENTS
+              - sandbox_release_item:
+                  id: ${(tasks.build-cuttlefish.resources[?type == 'VOICETECH_CUTTLEFISH_BINARY'])[0].id}
+                  type: VOICETECH_CUTTLEFISH_BINARY
+
+        release-graphs:
+          title: Release Graphs
+          task: projects/alice/wsproxy/ReleaseRmGraphs
+          needs: start-deploy
+          input:
+            config:
+              component_name: voice_graphs
+              branch: ${tasks.spawn-graphs-rm.state.branch}
+              svn_revision: ${tasks.spawn-graphs-rm.state.base_commit_id}
+              tag_number: ${tasks.spawn-graphs-rm.state.tag}
+              release_to: stable
+              retries: 5
+              sleep_time: 60
+              backoff: 1.5
+
+        close-release-ticket:
+          title: Close release ticket
+          task: common/tracker/transit_issue
+          needs:
+            - release-uniproxy
+            - release-graphs
+          input:
+            transition:
+              status: Закрыт
+              resolution: Решен
+            update_template:
+              comment: |
+                Релиз завершён: ${context.version_info.full}
+
+    uniproxy-trunk:
+      title: Build uniproxy binaries from trunk
+      jobs:
+        start-flow:
+          title: Start
+          task: dummy
+          stage: start
+
+        start-build:
+          title: Start build
+          task: dummy
+          stage: build
+          needs: start-flow
+
+        build-wsproxy:
+          title: Build wsproxy
+          task: common/arcadia/ya_package_2
+          needs: start-build
+          attempts: 3
+          input:
+            build_type: release
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: VOICETECH_UNIPROXY_PACKAGE
+            packages: alice/uniproxy/rtc/uniproxy-package.json
+            raw_package: True
+            compress_package_archive: False
+            package_type: 'tarball'
+            publish_package: True
+            checkout_mode: 'auto'
+
+        build-uniproxy-experiments:
+          title: Build uniproxy experiments
+          task: projects/alice/wsproxy/BuildUniproxyExperiments
+          needs: start-build
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            skip_pre_build_check_experiments: True
+            resource_type: VOICETECH_UNIPROXY_EXPERIMENTS
+
+        build-cuttlefish:
+          title: Build cuttlefish
+          task: projects/alice/wsproxy/BuildCuttlefishBinary
+          needs: start-build
+          attempts: 3
+          input:
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            release_type: stable
+
+        release-uniproxy:
+          title: Release uniproxy
+          task: common/releases/simple_releaser
+          stage: release
+          needs:
+            - build-wsproxy
+            - build-cuttlefish
+            - build-uniproxy-experiments
+          input:
+            config:
+              deploy_system: NANNY
+              release_token_yav_key: sandbox.token
+              wait_for_deploy: False
+              common_release_data:
+                nanny_common_release_data:
+                  release_stage: unstable
+                  release_notes: Trunk release wsproxy
+                  release_subject: CI trunk release ${context.version_info.major}
+            context:
+              secret_uid: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+            release_items:
+              - sandbox_release_item:
+                  id: ${(tasks.build-wsproxy.resources[?type == 'VOICETECH_UNIPROXY_PACKAGE'])[0].id}
+                  type: VOICETECH_UNIPROXY_PACKAGE
+              - sandbox_release_item:
+                  id: ${(tasks.build-cuttlefish.resources[?type == 'VOICETECH_CUTTLEFISH_BINARY'])[0].id}
+                  type: VOICETECH_CUTTLEFISH_BINARY
+              - sandbox_release_item:
+                  id: ${(tasks.build-uniproxy-experiments.resources[?type == 'VOICETECH_UNIPROXY_EXPERIMENTS'])[0].id}
+                  type: VOICETECH_UNIPROXY_EXPERIMENTS
+
+    uniproxy-trunk-tests:
+      title: Run regular tests on trunk uniproxy
+      jobs:
+        start-run:
+          title: Start
+          task: dummy
+          stage: start
+
+        start-test:
+          title: Test
+          task: dummy
+          stage: test
+          needs: start-run
+
+        run-integration-tests:
+          title: Run integration tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/AliceEvoIntegrationTestsWrapper
+          needs:
+            - start-test
+          attempts: 3
+          input:
+            uniproxy_url: "wss://beta.uniproxy.alice.yandex.net/wsproxy-trunk/uni.ws?srcrwr=VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL:VOICE__SELF_CUTTLEFISH_TRUNK_BIDIRECTIONAL&srcrwr=SELF__VOICE:VOICE__SELF_CUTTLEFISH_TRUNK&srcrwr=APPHOST:yappy-apphost-hamster.in.yandex-team.ru:3001"
+            checkout_arcadia_from_url: arcadia:/arc/trunk/arcadia
+            fail_threshold: 300
+            branch_number: 0
+            tag_number: 0
+            launch_type: uniproxy
+            beta_name: wsproxy-trunk
+            run_call_owner_subtask: False
+
+        run-func-tests:
+          title: Run func tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/FuncTestVoiceServer
+          needs:
+            - start-test
+          attempts: 3
+          input:
+            uniproxy_websocket_url: "wss://beta.uniproxy.alice.yandex.net/wsproxy-trunk/uni.ws?srcrwr=VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL:VOICE__SELF_CUTTLEFISH_TRUNK_BIDIRECTIONAL&srcrwr=SELF__VOICE:VOICE__SELF_CUTTLEFISH_TRUNK&srcrwr=APPHOST:yappy-apphost-hamster.in.yandex-team.ru:3001"
+            tests_group: all
+            component_name: uniproxy
+            release_number: 0
+            fail_on_test_error: True
+
+    uniproxy-trunk-ue2e-tests:
+      title: Run regular UE2E tests on trunk uniproxy
+      jobs:
+        start-run:
+          title: Start
+          task: dummy
+          stage: start
+
+        start-test:
+          title: Test
+          task: dummy
+          stage: test
+          needs: start-run
+
+        run-ue2e-tests:
+          title: Run UE2E tests (uniproxy+apphost+cuttlefish)
+          task: projects/alice/wsproxy/UniproxyUE2Etests
+          needs:
+            - start-test
+          input:
+            component_name: uniproxy
+            branch_num: 0
+            tag_num: 0
+            uniproxy_url: "wss://beta.uniproxy.alice.yandex.net/wsproxy-trunk/uni.ws?srcrwr=VOICE__SELF_CUTTLEFISH_BIDIRECTIONAL:VOICE__SELF_CUTTLEFISH_TRUNK_BIDIRECTIONAL&srcrwr=SELF__VOICE:VOICE__SELF_CUTTLEFISH_TRUNK&srcrwr=APPHOST:yappy-apphost-hamster.in.yandex-team.ru:3001"
+            release_ticket: "ALICERELEASE-3600"
+            force_start: True
+            fast_run: True
+            web_search_request_mode: '0'

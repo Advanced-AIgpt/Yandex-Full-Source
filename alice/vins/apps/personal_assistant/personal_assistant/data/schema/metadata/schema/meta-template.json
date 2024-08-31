@@ -1,0 +1,136 @@
+{
+  "generate_plain_constructor_swift": true,
+  "generate_serialization_swift": true,
+  "alias": "meta_template",
+  "non_empty_string": {
+    "type": "string",
+    "clientMinLength": 1
+  },
+
+  "domain_rule": {
+    "alias": "domain_rule",
+    "type": "object",
+    "properties": {
+      "key_country": {
+        "$ref": "#/non_empty_string",
+        "pattern": "^[^A-Z]+$",
+        "_comment": "is non empty and lowercased"
+      },
+      "tld": { 
+        "$ref": "#/non_empty_string",
+        "pattern": "^[^\\.A-Z].*[^\\.A-Z]$",
+        "_comment": "does not start or end with dot"
+      }
+    },
+    "required": [ "tld" ]
+  },
+
+  "url_rule": {
+    "alias": "u_r_l_rule",
+    "type": "object",
+    "properties": {
+      "key_country": {
+        "$ref": "#/non_empty_string",
+        "pattern": "^[^A-Z]+$",
+        "_comment": "is non empty and lowercased"
+      },
+      "hostPrefix": { 
+        "$ref": "#/non_empty_string",
+        "pattern": "^http.*[\\.]$",
+        "_comment": "starts either with http or https"
+      },
+      "path": { 
+        "$ref": "#/non_empty_string",
+        "pattern": "^[^/].*$",
+        "_comment": "doesn't start with /"
+      }
+    },
+    "required": [ "path" ]
+  },
+
+  "title_rule": {
+    "alias": "title_rule",
+    "type": "object",
+    "properties": {
+      "key_lang": {
+        "$ref": "#/non_empty_string",
+        "pattern": "^[^A-Z]+$",
+        "_comment": "is non empty and lowercased"
+      },
+      "title":  { "$ref": "#/non_empty_string" }
+    },
+    "required": [ "title" ]
+  },
+
+  "web_view_page": {
+    "alias": "web_view_page",
+    "type": "object",
+    "properties": {
+      "pageId": { "$ref": "#/non_empty_string" },
+      "urlRules": {
+        "type": "array",
+        "items": { "$ref": "#/url_rule" },
+        "clientMinItems": 1
+      },
+      "titleRules": {
+        "type": "array",
+        "items": { "$ref": "#/title_rule" },
+        "clientMinItems": 1
+      },
+      "staticParams": {
+        "type": "string",
+        "ios_default_value": "",
+        "pattern": "^(|&.+)$",
+        "_comment": "either empty or starts with &"
+      },
+      "bigUrlParams": {
+        "type": "array",
+        "items": { "$ref": "#/non_empty_string" },
+        "ios_default_value": "[]"
+      },
+      "bigUrlParamsNegative": {
+        "type": "boolean",
+        "ios_default_value": "false"
+      },
+      "specialParams": {
+        "type": "array",
+        "items": { "$ref": "#/non_empty_string" },
+        "ios_default_value": "[]"
+      },
+      "priority": { "type": "integer" },
+      "sharingParams": {
+        "type": "array",
+        "items": { "$ref": "#/non_empty_string" },
+        "ios_default_value": "[]"
+      },
+      "sharingParamsNegative": {
+        "type": "boolean",
+        "ios_default_value": "false"
+      },
+      "staticSharingParams": {
+        "type": "string",
+        "ios_default_value": "",
+        "pattern": "^(|&.+)$",
+        "_comment": "either empty or starts with &"
+      },
+    },
+    "required": [ "pageId", "urlRules", "titleRules" ]
+  },
+
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "#/non_empty_string" },
+    "version": { "$ref": "#/non_empty_string" },
+    "domainRules": {
+      "type": "array",
+      "items": { "$ref": "#/domain_rule" },
+      "clientMinItems": 1
+    },
+    "webViewPages": {
+      "type": "array",
+      "items": { "$ref": "#/web_view_page" },
+      "clientMinItems": 1
+    }
+  },
+  "required": [ "id", "version", "domainRules", "webViewPages" ]
+}

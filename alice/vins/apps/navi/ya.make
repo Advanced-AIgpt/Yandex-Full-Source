@@ -1,0 +1,106 @@
+PY2_LIBRARY()
+
+OWNER(g:alice)
+
+PEERDIR(
+    alice/vins/core
+    alice/vins/sdk
+    contrib/python/marisa_trie
+    library/python/deprecated/ticket_parser2
+    maps/doc/proto/yandex/maps/proto/common2
+    maps/doc/proto/yandex/maps/proto/search
+)
+
+RESOURCE_FILES(
+    navi_app/config/Vinsfile.json
+    navi_app/config/navi_ru/VinsProjectfile.json
+    navi_app/config/navi_ru/entities/lane.json
+    navi_app/config/navi_ru/entities/layer_accidents.json
+    navi_app/config/navi_ru/entities/layer_cameras.json
+    navi_app/config/navi_ru/entities/layer_parking.json
+    navi_app/config/navi_ru/entities/layer_roadevents.json
+    navi_app/config/navi_ru/entities/layer_roadworks.json
+    navi_app/config/navi_ru/entities/layer_talks.json
+    navi_app/config/navi_ru/entities/layer_traffic.json
+    navi_app/config/navi_ru/entities/nearest_marker.json
+    navi_app/config/navi_ru/entities/route_marker.json
+    navi_app/config/navi_ru/entities/talk_action.json
+    navi_app/config/navi_ru/intents/add_point_accident.json
+    navi_app/config/navi_ru/intents/add_point_accident.nlu
+    navi_app/config/navi_ru/intents/add_point_camera.json
+    navi_app/config/navi_ru/intents/add_point_camera.nlu
+    navi_app/config/navi_ru/intents/add_point_other.json
+    navi_app/config/navi_ru/intents/add_point_other.nlu
+    navi_app/config/navi_ru/intents/add_point_roadworks.json
+    navi_app/config/navi_ru/intents/add_point_roadworks.nlu
+    navi_app/config/navi_ru/intents/add_talk.json
+    navi_app/config/navi_ru/intents/add_talk.nlu
+    navi_app/config/navi_ru/intents/bug_report_noentry.json
+    navi_app/config/navi_ru/intents/bug_report_noentry.nlu
+    navi_app/config/navi_ru/intents/bug_report_noparking.json
+    navi_app/config/navi_ru/intents/bug_report_noparking.nlu
+    navi_app/config/navi_ru/intents/bug_report_noturn.json
+    navi_app/config/navi_ru/intents/bug_report_noturn.nlu
+    navi_app/config/navi_ru/intents/cancel.json
+    navi_app/config/navi_ru/intents/cancel.nlu
+    navi_app/config/navi_ru/intents/confirmation.json
+    navi_app/config/navi_ru/intents/confirmation.nlu
+    navi_app/config/navi_ru/intents/do_nothing.json
+    navi_app/config/navi_ru/intents/do_nothing.nlu
+    navi_app/config/navi_ru/intents/dont_understand.json
+    navi_app/config/navi_ru/intents/dont_understand.nlu
+    navi_app/config/navi_ru/intents/hide_layers.json
+    navi_app/config/navi_ru/intents/hide_layers.nlu
+    navi_app/config/navi_ru/intents/parking_route.json
+    navi_app/config/navi_ru/intents/parking_route.nlu
+    navi_app/config/navi_ru/intents/route.json
+    navi_app/config/navi_ru/intents/route.nlu
+    navi_app/config/navi_ru/intents/route_reset.json
+    navi_app/config/navi_ru/intents/route_reset.nlu
+    navi_app/config/navi_ru/intents/route_time.nlu
+    navi_app/config/navi_ru/intents/route_view.json
+    navi_app/config/navi_ru/intents/route_view.nlu
+    navi_app/config/navi_ru/intents/search.json
+    navi_app/config/navi_ru/intents/search.nlu
+    navi_app/config/navi_ru/intents/show_history.nlu
+    navi_app/config/navi_ru/intents/show_layers.json
+    navi_app/config/navi_ru/intents/show_layers.nlu
+    navi_app/config/navi_ru/intents/show_me.json
+    navi_app/config/navi_ru/intents/show_me.nlu
+    navi_app/config/nlu_templates/camera_speed.txt
+    navi_app/config/nlu_templates/navi_default.txt
+    navi_app/config/nlu_templates/navi_do.txt
+    navi_app/config/nlu_templates/navi_k.txt
+    navi_app/config/nlu_templates/navi_na.txt
+    navi_app/config/nlu_templates/navi_ot.txt
+    navi_app/config/nlu_templates/navi_search.txt
+    navi_app/config/nlu_templates/navi_v.txt
+    navi_app/config/nlu_templates/navi_via.txt
+    navi_app/config/nlu_templates/poi.txt
+    navi_app/config/nlu_templates/prep_searches.txt
+    navi_app/config/nlu_templates/show_prephrase.txt
+    navi_app/config/nlu_templates/street.txt
+    navi_app/config/nlu_templates/talk_text_ru.txt
+    navi_app/config/nlu_templates/top_routes.txt
+    navi_app/config/nlu_templates/top_searches.txt
+)
+
+PY_SRCS(
+    TOP_LEVEL
+    navi_app/__init__.py
+    navi_app/app.py
+    navi_app/lib/__init__.py
+    navi_app/lib/address_fraction.py
+    navi_app/lib/adhoc.py
+    navi_app/lib/callbacks.py
+    navi_app/lib/geosearch.py
+    navi_app/lib/localization.py
+    navi_app/lib/mockdata.py
+    navi_app/lib/navirequest.py
+    navi_app/lib/tvm_client.py
+    navi_app/lib/util.py
+)
+
+END()
+
+RECURSE_FOR_TESTS(ut)

@@ -1,0 +1,97 @@
+[
+    {
+        "action": "set_timeout",
+        "timelimit": 7
+    },
+    {
+        "action": "load_library",
+        "filename": "uniclient__common.json"
+    },
+    {
+        "action": "send_message",
+        "name": "send_synchronize_state",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "System",
+                    "name": "SynchronizeState"
+                },
+                "payload": {
+                    "uaas_tests": [77778]
+                }
+            }
+        },
+        "apply_to_message": [
+            "auth_token",
+            "new_message_id",
+            "new_uuid"
+        ]
+    },
+    {
+        "action": "send_message",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Recognize"
+                },
+                "payload": {
+                    "lang": "ru-RU",
+                    "topic": "dialogeneral",
+                    "application": "test",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key",
+                    "punctuation": false,
+                    "advancedASROptions": {
+                        "partial_results": false
+                    }
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_stream_id",
+            "new_message_id",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_send_data",
+        "filename": "data/whathaveyoudone.opus",
+        "chunk_size": 8000,
+        "chunk_duration": 0.1,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Result"
+                },
+                "payload": {
+                    "responseCode": "OK",
+                    "endOfUtt": true
+                }
+            }
+        },
+        "normalized_sample": [
+            [ "что ты сделал для науки?", "что ты сделал для науки.", "что ты сделал для науки!", "что ты сделал для науки" ]
+        ],
+        "recognition_sample": [
+            [ "что ты сделал для науки" ]
+        ]
+    }
+]

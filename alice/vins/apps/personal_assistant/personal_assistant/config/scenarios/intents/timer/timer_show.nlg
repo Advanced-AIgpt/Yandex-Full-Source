@@ -1,0 +1,25 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "timer/timer__common.nlg" %}
+{% from "timer/timer__common.nlg" import render_timer_list, render_available_timer, render_error %}
+
+{% phrase render_error__timererror %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    К сожалению, у меня нет доступа к {% vc %}т+аймерам{% evc %}{% tx %}таймерам{% etx %} на данном устройстве
+  {% else %}
+    {{ render_error(context.error.data.code, specification=form.specification) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention('timer__is_mobile') %}
+    {% chooseline %}
+      Хорошо, открываю список {% vc %}т+аймеров{% evc %}{% tx %}таймеров{% etx %}.
+      Вот список {% vc %}т+аймеров{% evc %}{% tx %}таймеров{% etx %}.
+      Хорошо, посмотрим на ваши {% vc %}т+аймеры{% evc %}{% tx %}таймеры{% etx %}.
+    {% endchooseline %}
+  {% else %}
+    {% if form.available_timers %}
+      {{ render_timer_list(form.available_timers) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

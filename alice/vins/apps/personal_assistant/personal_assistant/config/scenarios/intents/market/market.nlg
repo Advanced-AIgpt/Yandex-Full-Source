@@ -1,0 +1,537 @@
+{% from "market/common.nlg" import
+  attempts_reminder, currency_sign, debug_run, render_gallery, render_gallery_more, render_offer, render_model,
+  render_cancel, render_total_variant, market_short_name, render_market, which_acc %}
+
+
+{% phrase market__model %}
+  Я нашла товар
+  {% if is_telegram() %}
+    \n
+    {{ render_model(form.model) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__results %}
+  Советую приглядеться к этим товарам \n
+  {% if is_telegram() %}
+    {{ render_gallery(form.result.models) }}
+    {{ render_gallery_more(form.result.url) }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__confirm_category %}
+  Категория "{{ form.category.name }}", я правильно определила?
+{% endphrase %}
+
+
+{% macro render_range(from, to) -%}
+  {%- if to is not none and from is not none -%}
+    {{- from }} - {{ to -}}
+  {%- elif from is not none -%}
+    от {{ from -}}
+  {%- elif to is not none -%}
+    до {{ to -}}
+  {%- endif -%}
+{%- endmacro %}
+
+
+{% macro render_checked_filter(filter) %}
+  {% if filter["name"] %}
+    {% if filter["type"] == "number" %}
+      {% if filter.get("min") is not none or filter.get("max") is not none %}
+        {{ filter["name"] }}: {{ render_range(filter.get("min"), filter.get("max")) }}
+        {% if filter["unit"] %}
+          {{ filter["unit"] }}
+        {% endif %}
+      {% endif %}
+    {% elif filter["type"] == "boolean" %}
+      {% if filter["value"] %}✔{% else %}✘{% endif %} {{ filter["name"] }}
+    {% elif filter["type"] == "enum" %}
+      {% set values = filter["values"].values()|map(attribute="name")|select|list %}
+      {% if values %}
+        {{ filter["name"] -}}: {{ ', '.join(values) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_checked_filters() %}
+  {% if form.price and (form.price.get('to') or form.price.get('from')) %}
+    Цена:
+    {{ render_range(form.price.get('from'), form.price.get('to')) }} {{ currency_sign("RUR") }}\n
+  {% endif %}
+  {% if form.gl_filters %}
+    {% for filter in form.gl_filters.values() %}
+      {% set filter_text = render_checked_filter(filter).strip() %}
+      {% if filter_text %}
+        {{ filter_text }}\n
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_phrase_with_filters() %}
+  {{ caller() }}
+
+  {% set filters_text = render_checked_filters().strip() %}
+  {% if filters_text %}
+    {% tx %}
+      \n
+      {{ filters_text }}
+    {% etx %}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase market__ask_continue_internal %}
+  {% set utterance -%}
+    {%- tx -%}
+      «{{- context.data.utterance -}}»
+    {%- etx -%}
+  {%- endset %}
+  {% call() render_phrase_with_filters() %}
+    {% chooseitem %}
+      С учетом вашего последнего запроса {{ utterance }} вот что я нашла
+      {% if context.data.market_type == "BLUE" %}
+        среди товаров, которые можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Если какой-то товар понравился - нажмите на него.
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Могу предложить следующие варианты по вашему запросу {{ utterance -}}, которые можно купить
+        на {{ render_market('abl') -}}.
+      {% else %}
+        Могу предложить следующие варианты с {{ market_short_name('GREEN', 'gen') }}
+        по вашему запросу {{ utterance -}}.
+      {% endif %}
+      Если какой-то товар понравился - нажмите на него.
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Везде все изучила - вот варианты по вашему запросу {{ utterance -}}, которые можно купить
+        на {{ render_market('abl') -}}.
+      {% else %}
+        Везде все изучила - вот варианты на {{ market_short_name('GREEN', 'abl') }}
+        по вашему запросу {{ utterance -}}.
+      {% endif %}
+      Нажмите на понравившийся.
+    {% endchooseitem %}
+  {% endcall %}
+{% endphrase %}
+
+
+{% phrase market__native_ask_continue %}
+  {% call() render_phrase_with_filters() %}
+    {% chooseitem %}
+      {% if context.data.market_type == "BLUE" %}
+        Я нашла {{ render_total_variant(context.data.total, 'acc') -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        Я нашла {{ render_total_variant(context.data.total, 'acc') }}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Если какой-то понравился - посмотрите его подробнее.
+      А когда надоест - скажите: «Алиса, хватит».
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Среди товаров, которые можно купить на {{ render_market('abl') -}},
+        нашлось {{ render_total_variant(context.data.total) -}}.
+      {% else %}
+        На {{ market_short_name('GREEN', 'abl') }}
+        нашлось {{ render_total_variant(context.data.total) -}}.
+      {% endif %}
+      Посмотрите понравившийся. Если передумаете, скажите: «Алиса, хватит».
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        О! Время шопинга. Нашла {{ render_total_variant(context.data.total, 'acc') -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        О! Время шопинга. Нашла {{ render_total_variant(context.data.total, 'acc') }}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Просто нажмите на понравившийся товар. Когда устанете, скажите: «Алиса, хватит».
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Везде все изучила - нашла {{ render_total_variant(context.data.total, 'acc') -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        Везде все изучила - нашла {{ render_total_variant(context.data.total, 'acc') }}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Нажмите на понравившийся или скажите: «Алиса, хватит», и мы закончим шопинг.
+    {% endchooseitem %}
+  {% endcall %}
+{% endphrase %}
+
+
+{% phrase market__native_open_ask_continue %}
+  {% set region_prepcase %}
+    {% if context.data|get_item("region") %}
+      {{ context.data.region.prepcase }}
+    {% endif %}
+  {% endset %}
+  {% call() render_phrase_with_filters() %}
+    {% chooseitem %}
+      {% if context.data.market_type == "BLUE" %}
+        Нашла {{ render_total_variant(context.data.total, 'acc') }} {{ region_prepcase -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        Нашла {{ render_total_variant(context.data.total, 'acc') }} {{ region_prepcase }}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Правила игры такие: если какой-то понравился - нажмите на него.
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Среди товаров {{ region_prepcase -}}, которые можно купить на {{ render_market('abl') -}},
+        нашлось {{ render_total_variant(context.data.total) -}}.
+      {% else %}
+        На {{ market_short_name('GREEN', 'abl') }} нашлось
+        {{ render_total_variant(context.data.total) }} {{ region_prepacase -}}.
+      {% endif %}
+      Вы можете посмотреть все, а можете уделить внимание только понравившемуся - просто нажмите!
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        О! Время шопинга.
+        Нашла {{ render_total_variant(context.data.total, 'acc') }} {{ region_prepcase -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        О! Время шопинга.
+        Нашла {{ render_total_variant(context.data.total, 'acc') }} {{ region_prepcase -}}.
+      {% endif %}
+      Просто нажмите на тот товар, что понравился - узнаете о нем больше!
+    {% or  %}
+      {% if context.data.market_type == "BLUE" %}
+        Везде все изучила - нашла {{ region_prepcase }} {{ render_total_variant(context.data.total, 'acc') -}},
+        {{ which_acc(context.data.total) }} можно купить на {{ render_market('abl') -}}.
+      {% else %}
+        Везде все изучила - нашла {{ region_prepcase }} {{ render_total_variant(context.data.total, 'acc') }}
+        на {{ market_short_name('GREEN', 'abl') -}}.
+      {% endif %}
+      Нажмите на понравившийся - расскажу о нем подробнее.
+    {% or %}
+      {% if context.data.market_type == "BLUE" %}
+        Вот что нашлось по вашему запросу среди товаров, которые можно купить на
+        {{ render_market('abl') -}}.
+      {% else %}
+        Вот что есть на {{ market_short_name('GREEN', 'abl') }} по вашему запросу.
+      {% endif %}
+      Определенно, есть из чего выбрать - {{ render_total_variant(context.data.total, 'acc') }}
+      {{ region_prepcase -}}! Если захотите подробностей - нажимайте.
+    {% endchooseitem %}
+  {% endcall %}
+{% endphrase %}
+
+
+{% phrase market__ask_continue_custom %}
+  {% set common_params = {
+    "variant_nom": "вариант" | pluralize(context.data.total, "nom"),
+    "variant_gen": "вариант" | pluralize(context.data.total, "gen"),
+    "variant_dat": "вариант" | pluralize(context.data.total, "dat"),
+    "variant_acc": "вариант" | pluralize(context.data.total, "acc"),
+    "variant_abl": "вариант" | pluralize(context.data.total, "abl"),
+    "region": context.data.region,
+    "region_prepcase": context.data.region_prepcase,
+  } %}
+  {% text %}
+    {{ context.data.phrase.format(
+      total_nom = context.data.total,
+      total_gen = context.data.total,
+      total_dat = context.data.total,
+      total_acc = context.data.total,
+      total_abl = context.data.total,
+      utterance = context.data.utterance,
+      **common_params
+    ) }}
+    {% set filters_text = render_checked_filters().strip() %}
+    {% if filters_text %}
+      \n
+      {{ filters_text }}
+    {% endif %}
+  {% endtext %}
+  {% voice %}
+    {{ context.data.phrase.format(
+      total_nom = context.data.total | number_to_word | inflect('nom'),
+      total_gen = context.data.total | number_to_word | inflect('gen'),
+      total_dat = context.data.total | number_to_word | inflect('dat'),
+      total_acc = context.data.total | number_to_word | inflect('acc'),
+      total_abl = context.data.total | number_to_word | inflect('abl'),
+      utterance = "",
+      **common_params
+    ) }}
+  {% endvoice %}
+{% endphrase %}
+
+
+{% phrase market__ask_filter %}
+  {% if form.next_filter.type == "enum" %}
+    Выберите {{ form.next_filter.name | inflect('acc') | lower }} (можете назвать номер) \n
+    {% text %}
+      \n
+      {% if form.next_filter.suggests %}
+        {% for suggest in form.next_filter.suggests %}
+          {{ loop.index }}) {{ suggest.value }} \n
+        {% endfor %}
+      {% endif %}
+    {% endtext %}
+  {% elif form.next_filter.type == "boolean_block" %}
+    Какие параметры вам нужны? \n
+    {% text %}
+      Варианты: \n
+      {% for suggest in form.next_filter.suggests %}
+        {{ loop.index }}) {{ suggest.name }} [{{ suggest.found }}] \n
+      {% endfor %}
+    {% endtext %}
+  {% elif form.next_filter.type == "boolean" %}
+    Оставить только товары с параметром "{{ form.next_filter.name }}" ?
+  {% elif form.next_filter.type == "number" %}
+    {% if form.next_filter.id == "glprice" %}
+      {% chooseline %}
+        Хорошо, выберите цену
+        Назовите, пожалуйста, цену
+        Скажите цену
+        Выберите теперь цену
+        А на какую вы рассчитываете сумму?
+        На какую сумму вы рассчитываете?
+        Какая цена бы вас устроила?
+        А какая бы цена вас устроила?
+        Сколько вы готовы потратить?
+      {% endchooseline %}
+      {% text %}
+        ( от {{ form.next_filter.suggests.min }} до {{ form.next_filter.suggests.max }}
+        {{ 'рубль' | pluralize(form.next_filter.suggests.max, 'gen') }}
+      {% endtext %}) \n
+    {% else %}
+      Выберите {{ form.next_filter.name | inflect('acc') | lower }}
+
+      {% text %}
+        ( от {{ form.next_filter.suggests.min }} до {{ form.next_filter.suggests.max }}
+        {% if form.next_filter.suggests.unit %}
+          {{ form.next_filter.suggests.unit | pluralize(form.next_filter.suggests.max, 'gen') }}
+        {% endif %}) \n
+      {% endtext %}
+    {% endif %}
+  {% elif form.next_filter.type == "boolean_question" %}
+    {{ form.next_filter.name }}
+  {% elif form.next_filter.type == "enum_question" %}
+    {{ form.next_filter.name }}
+    {% text %}
+      \n
+      {% for suggest in form.next_filter.suggests %}
+        {{ loop.index }}) {{ suggest.title }} \n
+      {% endfor %}
+    {% endtext %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__filter_not_reconized %}
+  Будем считать, я этого не слышала!
+{% endphrase %}
+
+
+{% phrase market__no_need_to_change_filter %}
+    {% chooseline %}
+        Думаю, вам это не поможет...
+        И что это даст?
+        Нет
+        Не буду
+    {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__ask_category %}
+  {% chooseline %}
+    Давайте уточним категорию товара. Какая из представленных подходящая?
+    Кажется нам нужно уточнить категорию товара. Какая из представленных подходит?
+    Для данного запроса, есть несколько подходящих категорий. Какую выберем?
+    Мне нужно уточнить категорию. Какая из представленных подходящая?
+    Я нашла несколько категорий подходящих запросу. Какая из представленных подходящая?
+    Есть несколько вариантов категорий, что больше похоже?
+    Хороший запрос, но для идеального надо еще выбрать категорию
+    Я смогла найти много, какая-нибудь из категорий то что надо?
+    Хочу больше деталей. Уточните, пожалуйста, категорию
+    Не простой запрос, помогите, пожалуйста, с выбором категории
+    Не нашла ничего конкретного, давайте еще уточним пожелания
+    Ой, столько разного нашла, помогите, пожалуйста, выбрать конкретную категорию
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__empty_serp %}
+  {% chooseline %}
+    Я не изучала спрос на это
+    Открываю Яндекс
+    Интересный вопрос. Сейчас найдём
+    Даже не знаю. Спросим Яндекс?
+    Давайте поищем в Яндексе
+    Ищу ответ
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__product_outdated %}
+  К сожалению, этого товара больше нет на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase market__beru_offer_outdated %}
+  К сожалению, этот товар больше нельзя купить на {{ render_market('abl') -}}.
+{% endphrase %}
+
+
+{% phrase market__beru_no_sku %}
+  Что заказать? Мы же ещё ничего не выбрали!
+{% endphrase %}
+
+
+{% phrase market__no_sku_for_cart %}
+  Конечно добавлю. Только скажите, какой товар Вам нужен.
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__market__specify_category %}
+  {{ context.market__specify_category.data.name }}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__market__specify_filter %}
+  {{ context.market__specify_filter.data }}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__market__market_search %}
+  Посмотреть на Маркете
+{% endphrase %}
+
+
+{% phrase render_suggest_uri__market__market_search %}
+  {{ context.market__market_search.data }}
+{% endphrase %}
+
+
+{% phrase error %}
+  {% chooseline %}
+    Выжить в магазине - это успех!
+    Я еще только учусь искать по товарам
+    У меня голова идет кругом от количества товаров, не могу определиться
+    Давайте попробуем поискать еще раз, эта попытка не удалась, извините
+  {% endchooseline %}
+  {% if context.data and context.data.error %}
+    \n{% text %}Ошибка: "{{ context.data.error }}"{% endtext %}
+  {% endif %}
+  {% if context.data and context.data.stack %}
+    \n{% text %}Стек: "{{ context.data.stack }}"{% endtext %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__empty_result %}
+  {% chooseline %}
+    {% text %}Ничего не нашлось. Повторите, пожалуйста.{% endtext %}{% voice %}Ничего не нашлось. Повторите пожалуйста{% endvoice %}
+    Что-то я ничего не нашла. Попробуйте назвать товар по-другому.
+    Не нашла подходящих вещей. Назовите товар ещё раз.
+    Ничего нет, эх! Попробуйте изменить запрос.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__no_more %}
+  {% chooseline %}
+    Я уже показала всё, что нашла. Может быть вы уточните, что именно хотите найти и я попробую поискать получше?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__green_search_suggest_because_blue_is_empty %}
+  По вашему запросу нельзя ничего купить прямо на {{ render_market('abl') -}}. Но я нашла
+  {{ render_total_variant(context.data.total, 'acc') }} в других магазинах. Смотрите.
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__market__green_search %}
+  Посмотреть на Маркете
+{% endphrase %}
+
+{% phrase render_suggest_uri__market__green_search %}
+  {{ context.market__green_search.data.url }}
+{% endphrase %}
+
+
+{% phrase market__garbage %}
+  {% chooseline %}
+    Извините, я вас не поняла. Давайте как-нибудь по-другому.
+    Это не похоже на параметры товара.
+  {% endchooseline %}
+  {{ attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market__go_to_shop %}
+  Открываю сайт магазина
+{% endphrase %}
+
+
+{% phrase market__start_choice_again %}
+  Хорошо.
+  {% if context.data | get_item("is_closed") %}
+    Если передумаете выбирать товары, скажите "Алиса, хватит.".
+  {% endif %}
+  Какой товар я могу вам посоветовать?
+{% endphrase %}
+
+
+{% phrase market__attempts_limit %}
+  {% chooseline %}
+    Мне тоже надоело выбирать. Но я буду рада помочь вам с покупками в другой раз.
+    Согласна, шопинг утомляет. Буду ждать вас снова.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase market__garbage %}
+  {% chooseline %}
+    Извините, я вас не поняла. Давайте как-нибудь по-другому.
+    Это не похоже на параметры товара.
+  {% endchooseline %}
+  {{ attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market__cancel %}
+  {% if not form.silent %}
+    {{ render_cancel() }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__add_to_cart %}
+  Добавила к Вам в корзину на Беру.
+{% endphrase %}
+
+
+{% phrase market__product_details_external %}
+  {% if context.data and context.data["need_greeting"] %}
+    {% chooseline %}
+      Привет! Неплохой выбор, давайте посмотрим на товар подробнее.
+      Привет! Классный выбор. Вот что я знаю о данном товаре.
+      Привет! Давайте вместе посмотрим, где можно купить этот товар.
+      Хеллоу. Вот все, что знаю про такой товар.
+      Хеллоу. Смотрите, что могу предложить.
+      Привет-привет! Давайте вместе посмотрим на данный товар.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Неплохой выбор, давайте посмотрим на товар подробнее.
+      Классный выбор. Вот что я знаю о данном товаре.
+      Давайте вместе посмотрим, где можно купить этот товар.
+      Вот все, что знаю про такой товар.
+      Смотрите, что могу предложить.
+      Давайте вместе посмотрим на данный товар.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

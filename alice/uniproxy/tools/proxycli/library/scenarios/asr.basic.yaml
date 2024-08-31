@@ -1,0 +1,50 @@
+action: scenario
+name: asr.basic
+uuid: b36d2b1a-d2f4-11e9-919b-525400123456
+steps:
+    - action: proxy.session
+      steps:
+        - action: proxy.synchronize_state
+          description: System.SynchronizeState
+
+        - action: proxy.asr_recognize
+          description: ASR.Recognize
+          partials: false
+          stream:
+            - resource: /scenarios/data/whathaveyoudone.opus
+              chunk_size: 8000
+
+        - action: proxy.wait_for_reply
+          mode: first
+          checks:
+            - check: proxy.check.event_name
+              namespace: ASR
+              name: Result
+
+            - check: proxy.check.event_payload
+              key: messagesCount
+              value: 3
+
+            - check: proxy.check.event_payload
+              key: responseCode
+              value: OK
+
+            - check: proxy.check.event_payload
+              key: endOfUtt
+              value: true
+
+            - check: proxy.check.event_payload
+              key: metainfo.topic
+              value: $topic$
+              warning: true
+
+            - check: proxy.check.asr_normalized
+              oneof:
+                - что ты сделал для науки?
+                - что ты сделал для науки!
+                - что ты сделал для науки.
+                - что ты сделал для науки
+
+            - check: proxy.check.asr_response
+              oneof:
+                - что ты сделал для науки

@@ -1,0 +1,54 @@
+FROM registry.yandex.net/ubuntu:trusty
+
+MAINTAINER vins@yandex-team.ru
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+RUN groupadd -r vins && useradd -r -g vins -m -d /home/vins vins
+WORKDIR /home/vins
+
+COPY ./test_bot_gunicorn test_bot_gunicorn
+COPY ./test_bot test_bot
+COPY ./pa pa
+COPY ./external_skill external_skill
+COPY ./pa_telegram pa_telegram
+COPY ./pa_tools pa_tools
+COPY ./run-vins.sh run-vins.sh
+COPY ./code code
+
+RUN chmod +x run-vins.sh ./code/cit_configs/sandbox/run-vins.py
+
+RUN echo "deb http://dist.yandex.ru/yandex-voicetech-trusty stable/amd64/" >> /etc/apt/sources.list.d/yandex.list \
+    && echo "deb http://search.dist.yandex.ru/search/ stable/all/"         >> /etc/apt/sources.list.d/yandex.list \
+    && echo "deb http://search.dist.yandex.ru/search/ stable/amd64/"       >> /etc/apt/sources.list.d/yandex.list \
+    && echo "deb http://search.dist.yandex.ru/search/ unstable/all/"       >> /etc/apt/sources.list.d/yandex.list \
+    && echo "deb http://search.dist.yandex.ru/search/ unstable/amd64/"     >> /etc/apt/sources.list.d/yandex.list
+
+RUN apt-get update \
+    && apt-get install -y --force-yes \
+       supervisor=3.0b2-1 \
+       mongodb=1:3.2.12-yandex1 \
+       mongodb-mongos=1:3.2.12-yandex1 \
+       mongodb-server=1:3.2.12-yandex1 \
+       mongodb-shell=1:3.2.12-yandex1 \
+       mongodb-tools=1:3.2.12-yandex1 \
+       mongodb-user=1:3.2.12-yandex1 \
+       config-monrun-mongodb-basecheck-python=1.82 \
+       redis-server4=4.0.2-yandex1 \
+       unzip \
+       python-dev=2.7.5-5ubuntu3 \
+       python-pip=8.1.2-yandex1 \
+       python-setuptools=3.3-1ubuntu2 \
+    && apt-get clean \
+    && mkdir /home/vins/.keras \
+    && echo '{"epsilon":1e-07,"floatx":"float32","image_data_format":"channels_last","backend":"tensorflow"}' > /home/vins/.keras/keras.json \
+    && pip install pyyaml
+
+ENV KERAS_BACKEND=tensorflow
+
+USER vins
+
+CMD ./run-vins.sh

@@ -1,0 +1,83 @@
+USE hahn;
+
+PRAGMA RegexUseRe2='true';
+PRAGMA AnsiInForEmptyOrNullableItemsCollections;
+
+
+$START = {{param.start_date}};
+$END = {{param.end_date}};
+$OUTPUT_TABLE = "//home/alice-dev/zubchick/scenarios/" || $END;
+
+$get_scenario_name = ($mai) -> {
+    $winner_mm = $mai.winner_scenario.name;
+    $winner_psn = $mai.analytics_info[$winner_mm].scenario_analytics_info.product_scenario_name;
+
+    return AsStruct(
+        $winner_mm as mm_scenario,
+        $winner_psn as product_scenario
+    )
+};
+
+$is_station = ($application) -> {
+    return $application.app_id regexp 'quasar|aliced';
+};
+
+$is_pp_like = ($application) -> {
+    $is_pp = $application.app_id regexp 'searchplugin|ru\.yandex\.mobile\.search|com\.yandex\.browser|com\.yandex\.launcher';
+    $is_pp_ios = $application.app_id == 'ru.yandex.mobile';
+    return $is_pp or $is_pp_ios;
+};
+
+
+define SUBQUERY $scenarios($start, $end) as
+    select
+        $get_scenario_name(speechkit_response.megamind_analytics_info) as scenario,
+        TableName() as `date`,
+        $is_station(speechkit_request.application) as is_station,
+        $is_pp_like(speechkit_request.application) as is_pp_like,
+    from range(`//home/alice/wonder/logs`, $start, $end)
+    WHERE
+            speechkit_request IS NOT NULL
+        AND speechkit_response IS NOT NULL
+        AND NOT spotter.false_activation
+        AND _environment.uniproxy_environment.qloud_project IN ('voice-ext', 'alice', 'unknown')
+        AND _environment.uniproxy_environment.qloud_application IN ('uniproxy')
+        AND _environment.megamind_environment.environment IN ('stable', 'megamind_standalone_man', 'megamind_standalone_vla', 'megamind_standalone_sas')
+end define;
+
+
+$raw = (
+    select *
+    from $scenarios($START, $END)
+    flatten columns
+);
+
+
+$stat_by_mm_scenario = (
+    select
+        product_scenario,
+        AsTuple(mm_scenario, count(*)) as mm_scenario_stats,
+        count(*) as cnt,
+        count_if(is_station) as is_station_cnt,
+        count_if(is_pp_like) as is_pp_like_cnt
+    from $raw
+    where mm_scenario is not null
+    group by product_scenario, mm_scenario
+);
+
+
+insert into $OUTPUT_TABLE with truncate
+select
+    t.*,
+    cast(mm_scenario['Vins'] ?? 0 as double) / cnt as vins_ratio
+from (
+    select
+        product_scenario,
+        ToDict(AGGREGATE_LIST_DISTINCT(mm_scenario_stats, 100)) as mm_scenario,
+        sum(cnt) as cnt,
+        cast(sum(is_station_cnt) as double) / sum(cnt) as is_station_ratio,
+        cast(sum(is_pp_like_cnt) as double) / sum(cnt) as is_pp_like_ratio,
+    from $stat_by_mm_scenario
+    group by product_scenario
+) as t
+order by cnt desc

@@ -1,0 +1,204 @@
+{% nlgimport "common.nlg" %}
+{% from "common.nlg" import operator_symbol %}
+
+{% macro need_all() %}
+  Чтобы я мог отменить ваш заказ, мне нужно знать его номер,
+  а также номер телефона или адрес электронной почты, на которые этот заказ был оформлен.
+{% endmacro %}
+
+{% phrase need_order_id_and_phone_or_email %}
+  {{ need_all() }}
+{% endphrase %}
+
+{% phrase need_phone_or_email %}
+  Чтобы я мог отменить этот заказ ({{ form.order_id }}), мне нужно быть уверенным, что это действительно ваш заказ.
+  Назовите, пожалуйста, номер телефона или адрес электронной почты, к которым он привязан.
+{% endphrase %}
+
+{% phrase need_order_id %}
+  {% if form.phone and form.phone != "" %}
+    К сожалению, я не могу ничего узнать только по номеру телефона. Назовите, пожалуйста,
+    номер заказа.
+  {% elif form.email and form.email != "" %}
+    К сожалению, я не могу ничего узнать только по адресу электронной почты. Назовите, пожалуйста,
+    номер заказа.
+  {% else %}
+    {{ need_all() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase order_not_found %}
+  {% if context.data.phoneNumber and context.data.phoneNumber != "" and
+      context.data.email and context.data.email != "" %}
+    К сожалению, ни с почтой {{ context.data.email }}, ни с телефоном {{ context.data.phoneNumber }} заказ с номером
+    {{ context.data.orderId }} не связан.
+  {% elif context.data.phoneNumber and context.data.phoneNumber != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с номером телефона {{ context.data.phoneNumber }}.
+  {% elif context.data.email and context.data.email != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с электронной почтой {{ context.data.email }}.
+  {% else %}
+    К сожалению, среди ваших заказов мне не удалось найти заказ с таким номером.
+  {% endif %}
+{% endphrase %}
+
+{% phrase respond_with_order_list %}
+  Какой заказ вас интересует?
+  \n\n
+  {% for order in context.data.orders %}
+    Заказ {{ order.id }} ({{ order.created_at }})\n
+  {% endfor %}
+{% endphrase %}
+
+{% phrase order_delivered %}
+  Простите, но у меня уже отмечено, что заказ {{ context.data.orderId }} доставлен. Я не могу его отменить.
+{% endphrase %}
+
+{% phrase render_suggest_caption__not_delivered %}
+  {{ operator_symbol() }} Мне не привезли этот заказ!
+{% endphrase %}
+
+{% phrase render_suggest_utterance__not_delivered %}
+  {{ operator_symbol() }} Мне не привезли этот заказ!
+{% endphrase %}
+
+{% phrase order_cancelled %}
+  {% if context.data.orderStatus == "CANCELLED" %}
+    Простите, но у меня отмечено, что заказ {{ context.data.orderId }} уже отменен.
+  {% else %}
+    Я вижу, что для заказа {{ context.data.orderId }} уже оставлена заявка на отмену. Не переживайте, ее рассмотрят в
+    течение 48 часов.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__not_cancelled %}
+  {{ operator_symbol() }} Я не отменял этот заказ!
+{% endphrase %}
+
+{% phrase render_suggest_utterance__not_cancelled %}
+  {{ operator_symbol() }} Я не отменял этот заказ!
+{% endphrase %}
+
+{% phrase ask_reason %}
+  Скажите пожалуйста, почему вы хотите отменить этот заказ?
+{% endphrase %}
+
+{% phrase render_suggest_caption__reason_USER_BOUGHT_CHEAPER %}
+  Нашёл(ла) товар дешевле
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reason_USER_BOUGHT_CHEAPER %}
+  Нашёл(ла) товар дешевле
+{% endphrase %}
+
+{% phrase render_suggest_caption__reason_USER_CHANGED_MIND %}
+  Передумал(а) покупать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reason_USER_CHANGED_MIND %}
+  Передумал(а) покупать
+{% endphrase %}
+
+{% phrase render_suggest_caption__reason_USER_PLACED_OTHER_ORDER %}
+  Есть другой заказ на Маркете
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reason_USER_PLACED_OTHER_ORDER %}
+  Есть другой заказ на Маркете
+{% endphrase %}
+
+{% phrase render_suggest_caption__reason_USER_REFUSED_DELIVERY %}
+  Не устраивают условия доставки
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reason_USER_REFUSED_DELIVERY %}
+  Не устраивают условия доставки
+{% endphrase %}
+
+{% phrase render_suggest_caption__reason_CUSTOM %}
+  Другое
+{% endphrase %}
+
+{% phrase render_suggest_utterance__reason_CUSTOM %}
+  Другое
+{% endphrase %}
+
+{% phrase thanks_for_feedback %}
+  Спасибо, что поделились! Эти данные помогут нам улучшить сервис.
+{% endphrase %}
+
+{% phrase ask_confirmation %}
+  Должен предупредить: после отмены восстановить заказ не получится.
+  Вы уверены, что хотите отменить заказ {{ context.data.orderId }}?
+{% endphrase %}
+
+{% phrase ask_yes_no %}
+  После отмены восстановить заказ не получится.
+  Вы уверены, что хотите отменить заказ {{ context.data.orderId }}?
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_cancel %}
+  Да, отменяй заказ
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_cancel %}
+  Да, отменяй заказ
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_cancel %}
+  Нет, не нужно отменять
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_cancel %}
+  Нет, не нужно отменять
+{% endphrase %}
+
+{% phrase cancel_successful %}
+  Создан запрос на отмену заказа {{ context.data.orderId }}. В личном кабинете статус сменится в ближайшее время.\n
+  \n
+  Отмена заказа может занять до 48 часов.
+  {% if context.data.paymentMethod != "CASH_ON_DELIVERY" and
+        context.data.paymentMethod != "CARD_ON_DELIVERY" and
+        context.data.paymentMethod != "CREDIT" %}
+
+    Деньги
+    {% if context.data.paidWithThankyou > 0 %}
+      и бонусы «Спасибо»
+    {% endif %}
+    мы вернем в ваш банк в течение
+    {% if context.data.status != "DELIVERY" and context.data.status != "PICKUP" %}
+      10 дней
+    {% else %}
+      2 часов
+    {% endif %}
+    после завершения процесса отмены. Срок зачисления денег обратно
+    на вашу карту зависит от банка, но не может превышать 30 суток.
+    {% if context.data.paidWithThankyou > 0 %}
+      Зачисление бонусов «Спасибо» - не более 40 суток.
+    {% endif %}
+
+  {% elif context.data.paymentMethod == "CREDIT" %}
+    {% if context.data.paidWithThankyou > 0 %}
+      Бонусы Cпасибо мы отправим в банк в течение
+      {% if context.data.status != "DELIVERY" and context.data.status != "PICKUP" %}
+        10 дней
+      {% else %}
+        2 часов
+      {% endif %}
+      после завершения процесса отмены. Срок зачисления бонусов обратно на вашу карту зависит от банка, но не должен
+      превышать 40 дней.
+    {% endif %}
+    Деньги будут возвращены на кредитный договор. Обязательно обратитесь в банк для
+    решения вопроса по кредиту.
+  {% endif %}
+  Если при оплате вы пользоватись бонусами или промокодами, то они восстановятся в течение 1-2 часов после
+  завершения отмены.
+{% endphrase %}
+
+{% phrase cancel_failed %}
+  Ой, простите! Что-то пошло не так, мне не удалось создать заявку на отмену. Попробуйте позже, и, если ошибка
+  повторится, позовите оператора.
+{% endphrase %}
+
+{% phrase ok_wont_cancel %}
+  Я рад, что вы передумали! В таком случае, я не буду отменять ваш заказ.
+{% endphrase %}

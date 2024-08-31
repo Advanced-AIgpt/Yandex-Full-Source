@@ -1,0 +1,27 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import need_phone_device %}
+
+{% phrase render_suggest_caption__taxi_call_to_support %}
+  Позвонить в поддержку Яндекс.Такси
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_call_to_support %}
+  {{ context.taxi_call_to_support.data.uri }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention("ticket_created") %}
+    Послала запрос в службу поддержки. Оператор свяжется с вами в ближайшее время.
+  {% elif is_active_attention("no_phone_number") %}
+    Я ещё не научилась этому. {{ tx }}Простите{{ etx }}{{ vc }}Прост+ит+е{{ evc }}.
+  {% elif is_active_attention("need_phone_device") %}
+    {{ need_phone_device() }}
+  {% else %}
+    {% chooseline %}
+      Набираю.
+      Секундочку.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,57 @@
+labels:
+  city_from_A: 'А\w+'
+
+
+experiments:
+- multi_tabs
+- close_dialog_on_deactivate
+- move_deactivating_to_bass
+
+test_deactivate_by_user_with_closing:
+  flags:
+    skip:
+      value: true
+
+  dialog:
+  - request:
+      dialog_id: !Placeholder ['city_dialog_id', '672f7477-d3f0-443d-9bd5-2487ab0b6a4c']
+
+      type: server_action
+      name: new_dialog_session
+      payload:
+        dialog_id: !Placeholder ['city_dialog_id', '672f7477-d3f0-443d-9bd5-2487ab0b6a4c']
+        request: москва
+
+    response:
+      vins_form:
+        name: personal_assistant.scenarios.common.irrelevant.external_skill
+
+  - request:
+      dialog_id: !Placeholder ['city_dialog_id', '672f7477-d3f0-443d-9bd5-2487ab0b6a4c']
+
+      type: 'text_input'
+      text: 'алиса хватит'
+
+    response:
+      vins_form:
+        name: personal_assistant.scenarios.external_skill__deactivate
+
+      directives:
+        - name: end_dialog_session
+          sub_name: external_skill_deactivate_end_dialog_session
+          type: client_action
+          payload:
+            dialog_id: !Placeholder ['city_dialog_id', '672f7477-d3f0-443d-9bd5-2487ab0b6a4c']
+
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios

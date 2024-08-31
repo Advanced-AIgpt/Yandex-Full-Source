@@ -1,0 +1,60 @@
+labels:
+  level:  '( (На дорогах|В пробках|Пробки|Оцениваем дороги на).* (10|[0-9]) балл(а|ов)?\.)?'
+  weather: '( (Сейчас|За бортом|За окном|О погоде\:) ((?:(\+|-)\d\d?)|0), [\d\w ]+\.)?'
+  hi:  '(Ура, вы снова с нами|Привет|Приветствую|Здравствуйте|Салют|Почёт и уважение|Рады вас видеть|С возвращением|Наконец-то вы здесь|Устраивайтесь поудобнее).*'
+  city: '[A-ZА-Я]{}'
+  calls_not_supported_on_device: '.*\b(со?( своего)? телефона|на телефоне)\b.*'
+
+app_info:
+  app_id: 'yandex.auto'
+  app_version: '1.2.3'
+  os_version: '4.4'
+  platform: 'android'
+
+test_user_info:
+  tags:
+    - 'oauth'
+
+test_greeting:
+  dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+      response:
+        text: '{hi}{weather}{level}'
+
+test_greeting_firstname:
+  dialog:
+    - request:
+        type: server_action
+        name: on_reset_session
+        payload:
+          mode: automotive.greeting
+          first_name: 'Василий'
+      response:
+        text: '{hi}, Василий.{weather}{level}'
+
+should_listen_thanks:
+  спасибо:
+    should_listen: false
+    text: '{}'
+
+go_to_spb:
+  поехали в питер:
+    directives:
+      - name: open_uri
+        sub_name: yandexnavi_build_route_on_map
+        type: client_action
+        payload:
+          uri: 'yandexnavi://build_route_on_map?confirmation=1&lat_to=59.939095&lon_to=30.315868'
+
+test_cannot_call:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  вызови скорую:
+    voice: '{calls_not_supported_on_device}'

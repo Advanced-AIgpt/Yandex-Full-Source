@@ -1,0 +1,34 @@
+{{header1}} Документация по TInterfaces.proto
+
+Это пример документации, которая может быть подготовлена на основании протобаф описания
+
+                                                                                            {%- for field in messages.TInterfacesExample.fields %}
+{{header2}} Поле {{field.name}} {% if field.options.deprecated %}(устарело){% endif %}
+
+Тип поля: {{field.type_cpp.base}}, ассоциированное название фичи: `{{field.options.feature}}`
+
+Комментарии из исходного протофайла:
+```cpp
+                                                                                                {%- for c in field.comments %}
+{{c}}
+                                                                                                {%- endfor %}
+```
+
+Логика обработки в коде:
+                                                                                                    {%- if field.options.feature_type == 'SimpleSupport' %}
+* Проверка среди supported features (возврат true, если есть)
+* Если отсутствует, то возврат false
+                                                                                                    {%- elif field.options.feature_type == 'SupportUnsupportTrue' %}
+* Проверка среди supported features (возврат true, если есть)
+* Если отсутствует, то проверка среди unsupported features (возврат false, если есть)
+* Если фичи нет в обоих списках, по умолчанию возвращается true
+                                                                                                    {%- elif field.options.feature_type == 'SupportUnsupportFalse' %}
+* Проверка среди supported features (возврат true, если есть)
+* Если отсутствует, то проверка среди unsupported features (возврат false, если есть)
+* Если фичи нет в обоих списках, по умолчанию возвращается false
+                                                                                                    {%- else %}
+* Кастомная логика обработки
+                                                                                                    {%- endif -%}
+
+
+                                                                                            {%- endfor %}

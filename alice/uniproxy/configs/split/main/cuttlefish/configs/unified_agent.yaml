@@ -1,0 +1,351 @@
+status:
+  port: 16301
+
+monitoring:
+  enabled: true
+  host: null
+  port: 3400
+
+routes:
+  - input:
+      plugin: grpc
+      config:
+        uri: localhost:12345
+    channel:
+      channel_ref:
+        name: uniproxy_flog
+  - input:
+      plugin: grpc
+      config:
+        uri: localhost:12355
+    channel:
+      channel_ref:
+        name: uniproxy_rtlog
+  - input:
+      plugin: grpc
+      config:
+        uri: localhost:12365
+    channel:
+      channel_ref:
+        name: cuttlefish_rtlog
+  - input:
+      plugin: grpc
+      config:
+        uri: unix:///tmp/unified_agent.sock
+        max_receive_message_size: 30mb
+        grpc_memory_quota: 100mb
+      flow_control:
+        new_sessions_rate_limit: 50
+        inflight:
+          action: drop
+          limit: 100mb
+    channel:
+        case:
+          - when:
+              session:
+                log_type: error_booster
+            channel:
+              channel_ref:
+                name: app_host_error_booster_channel
+          - when:
+              session:
+                log_type: eventlog
+            channel:
+              channel_ref:
+                name: app_host_eventlog_channel
+          - when:
+              session:
+                log_type: access
+            channel:
+              channel_ref:
+                name: app_host_access_log_channel
+          - when:
+              session:
+                log_type: yacc
+            channel:
+              channel_ref:
+                name: app_host_yacc_log_channel
+
+storages:
+  - name: flog_storage
+    plugin: fs
+    config:
+      directory: /logs/ua_storage
+      max_partition_size: 1000mb
+  - name: app_host_error_booster_log_storage
+    plugin: fs
+    config:
+      directory: /logs/app_host_error_booster
+      max_partition_size: 1gb
+      data_retention:
+        by_age: 1h
+  - name: app_host_eventlog_storage
+    plugin: fs
+    config:
+      directory: /logs/app_host_eventlog
+      max_partition_size: 1gb
+      data_retention:
+        by_age: 1h
+      api:
+        port: 22123
+  - name: uniproxy_rtlog_storage
+    plugin: fs
+    config:
+      directory: /logs/uniproxy_rtlog
+      max_partition_size: 1gb
+      data_retention:
+        by_age: 1h
+      api:
+        port: 22124
+  - name: cuttlefish_rtlog_storage
+    plugin: fs
+    config:
+      directory: /logs/cuttlefish_rtlog
+      max_partition_size: 1gb
+      data_retention:
+        by_age: 1h
+      api:
+        port: 22125
+
+channels:
+  - name: uniproxy_flog
+    channel:
+      pipe:
+        - storage_ref:
+            name: flog_storage
+        - filter:
+            plugin: split_session
+            config:
+              sessions_count: 5
+        - filter:
+            plugin: batch
+            config:
+              delimiter: "\n"
+              flush_period: 100ms
+              limit:
+                bytes: 256kb
+        - filter:
+            plugin: compress
+            config:
+              codec: zstd
+              compression_quality: 6
+      output:
+        plugin: logbroker
+        config:
+          endpoint: logbroker.yandex.net
+          topic: alice-production/uniproxy
+          tvm:
+            client_id: 2000496
+            secret:
+              file: .tvm_secret/key
+  - name: app_host_error_booster_channel
+    channel:
+      pipe:
+        - storage_ref:
+            storage: app_host_error_booster_log_storage
+      output:
+        plugin: logbroker
+        config:
+          endpoint: logbroker.yandex.net
+          topic: alice-production/apphost-error-log
+          tvm:
+            client_id: 2000496
+            secret:
+              file: .tvm_secret/key
+  - name: app_host_eventlog_channel
+    channel:
+      pipe:
+        - storage_ref:
+            storage: app_host_eventlog_storage
+            flow_control:
+              inflight:
+                limit: 100mb
+      fanout:
+        - channel:
+            pipe:
+              - filter:
+                  plugin: alice_rtlog
+                  config:
+                    port: 22123
+                    service_name: apphost-voice
+                    set_app_host_activation_id_postfix: false
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: "\n"
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: alicelogs/prod/rtlog-index/apphost-voice
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+        - channel:
+            pipe:
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 5
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: ""
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: alice-production/apphost
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+  - name: app_host_access_log_channel
+    channel:
+      output:
+        plugin: dev_null
+  - name: app_host_yacc_log_channel
+    channel:
+      output:
+        plugin: dev_null
+  - name: uniproxy_rtlog
+    channel:
+      pipe:
+        - storage_ref:
+            storage: uniproxy_rtlog_storage
+      fanout:
+        - channel:
+            pipe:
+              - filter:
+                  plugin: alice_rtlog
+                  config:
+                    port: 22124
+                    service_name: uniproxy2
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 2
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: "\n"
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: /alicelogs/prod/rtlog-index/uniproxy2
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+        - channel:
+            pipe:
+              - filter:
+                  plugin: alice_rtlog_index
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 2
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 100
+                      bytes: 2000kb
+                    delimiter: "\n"
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: /alicelogs/prod/rtlog-index/rtlog-index
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+        - channel:
+            pipe:
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 5
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: ""
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: /alicelogs/prod/uniproxy2
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+  - name: cuttlefish_rtlog
+    channel:
+      pipe:
+        - storage_ref:
+            storage: cuttlefish_rtlog_storage
+      fanout:
+        - channel:
+            pipe:
+              - filter:
+                  plugin: alice_rtlog
+                  config:
+                    port: 22125
+                    service_name: cuttlefish
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 2
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: "\n"
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: /alicelogs/prod/rtlog-index/cuttlefish
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key
+        - channel:
+            pipe:
+              - filter:
+                  plugin: split_session
+                  config:
+                    sessions_count: 5
+              - filter:
+                  plugin: batch
+                  config:
+                    limit:
+                      count: 20
+                      bytes: 2000kb
+                    delimiter: ""
+            output:
+              plugin: logbroker
+              config:
+                endpoint: logbroker.yandex.net
+                topic: /alice-production/cuttlefish
+                tvm:
+                  client_id: 2000496
+                  secret:
+                    file: .tvm_secret/key

@@ -1,0 +1,118 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/messaging.nlg" %}
+
+{% macro elari_watch_messaging_not_supported() %}
+  {% chooseline %}
+    Я научусь отправлять сообщения с часов, но пока не умею.
+    С этим в часах пока не помогу. Но только пока.
+    Я бы и рада, но ещё не научилась. Всё будет.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro messaging_not_supported() %}
+  {% chooseline %}
+    Я справлюсь с этим лучше на телефоне.
+    Это я могу, но лучше с телефона.
+    Для переписки телефон как-то удобнее, давайте попробую там.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro confirm_messaging() %}
+  {% with title = form.recipient_info.title %}
+    {% chooseline %}
+      Отправляю {{ title|inflect('dat') }}
+      Уже отправляю {{ title|inflect('dat') }}
+      Сейчас отправлю {{ title|inflect('dat') }}
+    {% endchooseline %} ...
+  {% endwith %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% with %}
+    {% set messaging_not_supported = is_active_attention("messaging_not_supported") %}
+
+    {% if is_active_attention("permission_read_contacts_denied") %}
+      {% chooseline %}
+        Для отправки сообщений, приложению нужен доступ к контактам — включите его в настройках.
+      {% endchooseline %}
+    {% endif %}
+
+    {% if is_active_attention("messaging_not_supported_on_device") %}
+      {% if is_elari_watch() %}
+        {{ elari_watch_messaging_not_supported() }}
+      {% else %}
+        {{ messaging_not_supported() }}
+      {% endif %}
+    {% elif messaging_not_supported %}
+      {% chooseline %}
+        Я бы и рада, но ещё не научилась. Всё будет.
+      {% endchooseline %}
+    {% else %}
+      {% if form.recipient_info and form.client and form.text %}
+        {{ confirm_messaging() }}
+      {% elif is_active_attention("contact_not_found") %}
+        {% chooseline %}
+          Не вижу такого контакта.
+          Я не нашла такого контакта.
+          Кажется, у вас нет таких контактов.
+          Извините, я никого не нашла.
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase ask__recipient %}
+  {% chooseline %}
+    Кому вы хотите написать?
+    Какой контакт использовать для отправки сообщений?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase ask__what_send %}
+  {% chooseline %}
+    Какой текст отправить?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase ask__msg_client %}
+  {% chooseline %}
+    Какое приложение использовать для отправки?
+  {% endchooseline %}
+{% endphrase %}
+
+{% macro which_recipient() %}
+  {% chooseline %}
+    Есть несколько похожих контактов. Кого вы имели в виду?
+    Нашла сразу несколько контактов. Кому будем писать?
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase messaging__specify_which_recipient %}
+  {% with sentence = which_recipient() %}
+    {{ sentence }}
+  {% endwith %}
+{% endphrase %}
+
+{% macro which_phone() %}
+  {% with name = form.contact_search_results[0].name %}
+    {% chooseline %}
+      Какой номер контакта {{ name|inflect('nomn') }} использовать?
+      Какой номер {{ name|inflect('gent') }} вам нужен? Их несколько.
+    {% endchooseline %}
+  {% endwith %}
+{% endmacro %}
+
+{% phrase messaging__specify_which_phone %}
+  {% with sentence = which_phone() %}
+    {{ sentence }}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase messaging__app_not_installed %}
+  {% with client = form.client %}
+    {% chooseline %}
+      Приложение {{ client }} не установлено на вашем устройстве, отправка сообщения невозможна.
+    {% endchooseline %}
+  {% endwith %}
+{% endphrase %}

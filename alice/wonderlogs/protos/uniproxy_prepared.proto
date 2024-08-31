@@ -1,0 +1,548 @@
+package NAlice.NWonderlogs;
+
+import "alice/wonderlogs/protos/request_stat.proto";
+
+import "alice/library/client/protos/client_info.proto";
+import "alice/megamind/protos/speechkit/request.proto";
+
+import "alice/library/field_differ/protos/extension.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TSpotterValidation {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TMultiactivation {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional bool Canceled = 1 [json_name = "canceled", (NYT.column_name) = "canceled"];
+        optional string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+    }
+
+    optional bool Valid = 1 [json_name = "valid", (NYT.column_name) = "valid"];
+    optional bool Result = 2 [json_name = "result", (NYT.column_name) = "result"];
+    optional TMultiactivation Multiactivation = 3 [json_name = "multiactivation", (NYT.column_name) = "multiactivation"];
+    optional bool ModelResult = 4 [json_name = "model_result", (NYT.column_name) = "model_result"];
+    optional bool FinalResult = 5 [json_name = "final_result", (NYT.column_name) = "final_result"];
+}
+
+message TStream {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    // MDS url for example http://storage-int.mds.yandex.net:80/get-speechbase/4395117/2b4dbd7d-2ca1d8ed-6669ea9f-53cb33b_76c6746b-bdd1-4b8f-accd-12300579a132_5.opus
+    optional string Mds = 1 [json_name = "mds", (NYT.column_name) = "mds"];
+    // For example audio/opus
+    optional string Format = 2 [json_name = "format", (NYT.column_name) = "format"];
+}
+
+
+message TLogSpotter {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TSpotterActivationInfo { 
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        reserved "UnhandledBytes"; reserved 10;
+        reserved "DurationSubmitted"; reserved 11;
+    
+        message TSpotterStats {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            repeated double Confidences = 1 [json_name = "confidences", (NYT.column_name) = "confidences"];
+            optional string FreqFilterState = 2 [json_name = "freq_filter_state", (NYT.column_name) = "freq_filter_state"];
+            optional double FreqFilterConfidence = 3 [json_name = "freq_filter_confidence", (NYT.column_name) = "freq_filter_confidence"];
+        }
+    
+        optional string StreamType = 1 [json_name = "stream_type", (NYT.column_name) = "stream_type"];
+        optional string QuasmodromGroup = 2 [json_name = "quasmodrom_group", (NYT.column_name) = "quasmodrom_group"];
+        optional string QuasmodromSubgroup = 3 [json_name = "quasmodrom_subgroup", (NYT.column_name) = "quasmodrom_subgroup"];
+        optional string Context = 4 [json_name = "context", (NYT.column_name) = "context"];
+        optional int64 ActualSoundAfterTriggerMs = 5 [json_name = "actual_sound_after_trigger_ms", (NYT.column_name) = "actual_sound_after_trigger_ms"];
+        optional int64 ActualSoundBeforeTriggerMs = 6 [json_name = "actual_sound_before_trigger_ms", (NYT.column_name) = "actual_sound_before_trigger_ms"];
+        optional int64 RequestSoundAfterTriggerMs = 7 [json_name = "request_sound_after_trigger_ms", (NYT.column_name) = "request_sound_after_trigger_ms"];
+        optional int64 RequestSoundBeforeTriggerMs = 8 [json_name = "request_sound_before_trigger_ms", (NYT.column_name) = "request_sound_before_trigger_ms"];
+        optional bool IsSpotterSound = 9 [json_name = "is_spotter_sound", (NYT.column_name) = "is_spotter_sound"];
+        optional string GlobalStreamId = 12 [json_name = "global_stream_id", (NYT.column_name) = "global_stream_id"];
+        optional TSpotterStats SpotterStats = 13 [json_name = "spotter_stats", (NYT.column_name) = "spotter_stats"];
+        optional int64 UnhandledDataBytes = 14 [json_name = "unhandled_data_bytes", (NYT.column_name) = "unhandled_data_bytes"];
+        optional int64 DurationDataSubmitted = 15 [json_name = "duration_data_submitted", (NYT.column_name) = "duration_data_submitted"];
+    }
+
+    optional string MessageId = 1 [json_name = "message_id", (NYT.column_name) = "message_id"];
+    optional string Transcript = 2 [json_name = "transcript", (NYT.column_name) = "transcript"];
+    optional string Topic = 3 [json_name = "topic", (NYT.column_name) = "topic"];
+    optional string Source = 4 [json_name = "source", (NYT.column_name) = "source"];
+    optional string Firmware = 5 [json_name = "firmware", (NYT.column_name) = "firmware"];
+    optional TSpotterActivationInfo SpotterActivationInfo = 6 [json_name = "spotter_activation_info", (NYT.column_name) = "spotter_activation_info"];
+}
+
+message TSynchronizeState {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string AuthToken = 2 [json_name = "auth_token", (NYT.column_name) = "auth_token"];
+    optional TClientInfoProto Application = 3 [json_name = "application", (NYT.column_name) = "application"];
+}
+
+message TVoiceInput {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string ActivationType = 1 [json_name = "activation_type", (NYT.column_name) = "activation_type"];
+    optional string Topic = 2 [json_name = "topic", (NYT.column_name) = "topic"];
+    optional TSpeechKitRequestProto SpeechKitRequest = 3 [json_name = "speechkit_request", (NYT.column_name) = "speechkit_request"];
+}
+
+message TAsrRecognize {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string Topic = 1 [json_name = "topic", (NYT.column_name) = "topic"];
+}
+
+message TAsrDebug {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TBurstDetector {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        
+        optional int64 TaskCount = 1 [json_name = "task_count", (NYT.column_name) = "task_count"];
+        optional string Status = 2 [json_name = "status", (NYT.column_name) = "status"];
+        optional double Confidence = 3 [json_name = "confidence", (NYT.column_name) = "confidence"]; 
+    }
+
+    message TOnlineValidation {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        
+        optional double DecoderThreshold = 1 [json_name = "decoder_threshold", (NYT.column_name) = "decoder_threshold"];
+        optional string Type = 2 [json_name = "type", (NYT.column_name) = "type"];
+        optional double Confidence = 3 [json_name = "confidence", (NYT.column_name) = "confidence"]; 
+    }
+
+    message TStreamValidationContext {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        
+        optional double SubmittedAsrFrontMs = 1 [json_name = "submitted_asr_front_ms", (NYT.column_name) = "submitted_asr_front_ms"];
+        optional double MaxAsrFrontMs = 2 [json_name = "max_asr_front_ms", (NYT.column_name) = "max_asr_front_ms"];
+        optional double SpotterBackMs = 3 [json_name = "spotter_back_ms", (NYT.column_name) = "spotter_back_ms"];  
+    }
+
+    optional TBurstDetector BurstDetector = 1 [json_name = "burst_detector", (NYT.column_name) = "burst_detector"];
+    optional TOnlineValidation OnlineValidation = 2 [json_name = "online_validation", (NYT.column_name) = "online_validation"];
+    optional TStreamValidationContext StreamValidationContext = 3 [json_name = "stream_validation_context", (NYT.column_name) = "stream_validation_context"];
+}
+
+message TAsrResult {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string Topic = 1 [json_name = "topic", (NYT.column_name) = "topic"];
+    optional string LingwareVersion = 2 [json_name = "lingware_version", (NYT.column_name) = "lingware_version"];
+}
+
+message TMegamindTimings {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional double ResultVinsRunResponseIsReadySec = 1 [json_name = "result_vins_run_response_is_ready_sec", (NYT.column_name) = "result_vins_run_response_is_ready_sec"];
+    optional double VinsRunDelayAfterEouDurationSec = 2 [json_name = "vins_run_delay_after_eou_duration_sec", (NYT.column_name) = "vins_run_delay_after_eou_duration_sec"];
+    optional double UsefulVinsRequestDurationSec = 3 [json_name = "useful_vins_request_duration_sec", (NYT.column_name) = "useful_vins_request_duration_sec"];
+    optional double MeanVinsPreparingRequestDurationSec = 4 [json_name = "mean_vins_preparing_request_duration_sec", (NYT.column_name) = "mean_vins_preparing_request_duration_sec"];
+    optional double UsefulVinsPrepareRequestClassify = 5 [json_name = "useful_vins_prepare_request_classify", (NYT.column_name) = "useful_vins_prepare_request_classify"];
+    optional double MeanVinsRequestDurationSec = 6 [json_name = "mean_vins_request_duration_sec", (NYT.column_name) = "mean_vins_request_duration_sec"];
+    optional int64 VinsRequestCount = 7 [json_name = "vins_request_count", (NYT.column_name) = "vins_request_count"];
+    optional bool HasApplyVinsRequest = 8 [json_name = "has_apply_vins_request", (NYT.column_name) = "has_apply_vins_request"];
+    optional double LastScorePartialSec = 9 [json_name = "last_score_partial_sec", (NYT.column_name) = "last_score_partial_sec"];
+    optional double LastVinsPreparingRequestDurationSec = 10 [json_name = "last_vins_preparing_request_duration_sec", (NYT.column_name) = "last_vins_preparing_request_duration_sec"];
+    optional double LastClassifyPartialSec = 11 [json_name = "last_classify_partial_sec", (NYT.column_name) = "last_classify_partial_sec"];
+    optional string LastVinsRunRequestIntentName = 12 [json_name = "last_vins_run_request_intent_name", (NYT.column_name) = "last_vins_run_request_intent_name"];
+    optional double LastPartialSec = 13 [json_name = "last_partial_sec", (NYT.column_name) = "last_partial_sec"];
+    optional double LastVinsRunRequestDurationSec = 14 [json_name = "last_vins_run_request_duration_sec", (NYT.column_name) = "last_vins_run_request_duration_sec"];
+    optional double UsefulVinsRequestEvage = 15 [json_name = "useful_vins_request_evage", (NYT.column_name) = "useful_vins_request_evage"];
+    optional double LastVinsFullRequestDurationSec = 16 [json_name = "last_vins_full_request_duration_sec", (NYT.column_name) = "last_vins_full_request_duration_sec"];
+    optional double VinsPersonalDataStartEvage = 17 [json_name = "vins_personal_data_start_evage", (NYT.column_name) = "vins_personal_data_start_evage"];
+    optional double UsefulVinsPrepareRequestPersonalData = 18 [json_name = "useful_vins_prepare_request_personal_data", (NYT.column_name) = "useful_vins_prepare_request_personal_data"];
+    optional uint64 Epoch = 19 [json_name = "epoch", (NYT.column_name) = "epoch"];
+    optional double VinsResponseSec = 20 [json_name = "vins_response_sec", (NYT.column_name) = "vins_response_sec"];
+    optional double VinsPersonalDataEndEvage = 21 [json_name = "vins_personal_data_end_evage", (NYT.column_name) = "vins_personal_data_end_evage"];
+    optional double UsefulPartialSec = 22 [json_name = "useful_partial_sec", (NYT.column_name) = "useful_partial_sec"];
+    optional double FirstAsrResultSec = 23 [json_name = "first_asr_result_sec", (NYT.column_name) = "first_asr_result_sec"];
+    optional double VinsSessionLoadEndEvage = 24 [json_name = "vins_session_load_end_evage", (NYT.column_name) = "vins_session_load_end_evage"];
+    optional double EndOfUtteranceSec = 25 [json_name = "end_of_utterance_sec", (NYT.column_name) = "end_of_utterance_sec"];
+    optional double UsefulVinsPrepareRequestAsr = 26 [json_name = "useful_vins_prepare_request_asr", (NYT.column_name) = "useful_vins_prepare_request_asr"];
+    optional bool HasVinsFullResultOnEou = 27 [json_name = "has_vins_full_result_on_eou", (NYT.column_name) = "has_vins_full_result_on_eou"];
+    optional double UsefulVinsPrepareRequestSession = 28 [json_name = "useful_vins_prepare_request_session", (NYT.column_name) = "useful_vins_prepare_request_session"];
+    optional double UsefulVinsPrepareRequestYabio = 29 [json_name = "useful_vins_prepare_request_yabio", (NYT.column_name) = "useful_vins_prepare_request_yabio"];
+    optional double LastVinsApplyRequestDurationSec = 30 [json_name = "last_vins_apply_request_duration_sec", (NYT.column_name) = "last_vins_apply_request_duration_sec"];
+    optional double VinsWaitAfterEouDurationSec = 31 [json_name = "vins_wait_after_eou_duration_sec", (NYT.column_name) = "vins_wait_after_eou_duration_sec"];
+    optional double StartVinsApplyRequestSec = 32 [json_name = "start_vins_apply_request_sec", (NYT.column_name) = "start_vins_apply_request_sec"];
+    optional double FinishVinsRequestEou = 33 [json_name = "finish_vins_request_eou", (NYT.column_name) = "finish_vins_request_eou"];
+    optional double GetSpotterValidationResultStartEvage = 34 [json_name = "get_spotter_validation_result_start_evage", (NYT.column_name) = "get_spotter_validation_result_start_evage"];
+    optional double VinsRunWaitAfterEouDurationSec = 35 [json_name = "vins_run_wait_after_eou_duration_sec", (NYT.column_name) = "vins_run_wait_after_eou_duration_sec"];
+    optional double StartVinsRequestEou = 36 [json_name = "start_vins_request_eou", (NYT.column_name) = "start_vins_request_eou"];
+    optional double GetSpotterValidationResultEndEvage = 37 [json_name = "get_spotter_validation_result_end_evage", (NYT.column_name) = "get_spotter_validation_result_end_evage"];
+    optional double UsefulVinsPrepareRequestContacts = 38 [json_name = "useful_vins_prepare_request_contacts", (NYT.column_name) = "useful_vins_prepare_request_contacts"];
+    optional double UsefulVinsPrepareRequestMemento = 39 [json_name = "useful_vins_prepare_request_memento", (NYT.column_name) = "useful_vins_prepare_request_memento"];
+    optional double UsefulVinsPrepareRequestNotificationState = 40 [json_name = "useful_vins_prepare_request_notification_state", (NYT.column_name) = "useful_vins_prepare_request_notification_state"];
+}
+
+message TTtsTimings {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional double FirstTtsChunkSec = 1 [json_name = "first_tts_chunk_sec", (NYT.column_name) = "first_tts_chunk_sec"];
+    optional double UsefulResponseForUserEvage = 2 [json_name = "useful_response_for_user_evage", (NYT.column_name) = "useful_response_for_user_evage"];
+    optional bool TtsCacheSuccess = 3 [json_name = "tts_cache_success", (NYT.column_name) = "tts_cache_success"];
+    optional double TtsStartEvage = 4 [json_name = "tts_start_evage", (NYT.column_name) = "tts_start_evage"];
+    optional double TtsCacheResponseEvage = 5 [json_name = "tts_cache_response_evage", (NYT.column_name) = "tts_cache_response_evage"];
+}
+
+message TTtsGenerate {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string Text = 1 [json_name = "text", (NYT.column_name) = "text"];
+    optional string Emotion = 2 [json_name = "emotion", (NYT.column_name) = "emotion"];
+    optional string Format = 3 [json_name = "format", (NYT.column_name) = "format"];
+    optional string Lang = 4 [json_name = "lang", (NYT.column_name) = "lang"];
+    optional string Quality = 5 [json_name = "quality", (NYT.column_name) = "quality"];
+    optional string Voice = 6 [json_name = "voice", (NYT.column_name) = "voice"];
+}
+
+message TSpotterMicInfo {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    optional string StreamType = 1 [json_name = "stream_type", (NYT.column_name) = "stream_type"];
+    optional string MdsUrl = 2 [json_name = "mds_url", (NYT.column_name) = "mds_url"];
+}
+
+message TStreams {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+    
+    repeated TStream Streams = 1 [json_name = "streams", (NYT.column_name) = "streams"];
+}
+
+message TUniproxyPrepared {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TError {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EProcess {
+            reserved "P_LOG_SPOTTER_WITH_STREAM_REDUCER"; reserved 6;
+            reserved "P_LOG_SPOTTER_STREAM_MANY_MICS_REDUCER"; reserved 7;
+            P_UNDEFINED = 0;
+            P_UNIPROXY_EVENT_DIRECTIVE_MAPPER = 1;
+            P_UNIPROXY_PREPARED_REDUCER = 2;
+            P_CLIENT_RETRY_REDUCER = 3;
+            P_MEGAMIND_REQUEST_RESPONSE_REQUEST_STAT_REDUCER = 4;
+            P_SYNCHRONIZE_STATE_WITH_MESSAGE_ID_REDUCER = 5;
+            P_LOG_SPOTTER_WITH_STREAMS_REDUCER = 8;
+        }
+
+        enum EReason {
+            R_UNDEFINED = 0;
+            R_INVALID_JSON = 1;
+            R_INVALID_VALUE = 2;
+            R_DIFFERENT_VALUES = 3;
+            R_FAILED_CONVERT_JSON_TO_PROTO = 4;
+        }
+
+        optional EProcess Process = 1 [json_name = "process", (NYT.column_name) = "process"];
+        optional EReason Reason = 2 [json_name = "reason", (NYT.column_name) = "reason"];
+        optional string Message = 3 [json_name = "message", (NYT.column_name) = "message"];
+        optional string Uuid = 4 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 5 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional string SetraceUrl = 6 [json_name = "setrace_url", (NYT.column_name) = "setrace_url"];
+    }
+
+    message TEnvironment {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string QloudProject = 1 [json_name = "qloud_project", (NYT.column_name) = "qloud_project"];
+        optional string QloudApplication = 2 [json_name = "qloud_application", (NYT.column_name) = "qloud_application"];
+    }
+
+    message TRequestStatWrapper {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional TRequestStat RequestStat = 3 [json_name = "request_stat", (NYT.column_name) = "request_stat"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TMegamindRequest {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MegamindRequestId = 2 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+        optional string MessageId = 3 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TMegamindResponse {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MegamindRequestId = 2 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+        optional string MegamindResponseId = 3 [json_name = "megamind_response_id", (NYT.column_name) = "megamind_response_id"];
+        optional string MessageId = 4 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 5 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TMegamindRequestResponse {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MegamindRequestId = 2 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+        optional string MegamindResponseId = 3 [json_name = "megamind_response_id", (NYT.column_name) = "megamind_response_id"];
+        optional string MessageId = 4 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 5 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TClientRetry {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional bool Successful = 3 [json_name = "successful", (NYT.column_name) = "successful"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TSpotterValidation {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TSpotterValidation Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TMegamindRequestResponseRequestStat {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional TRequestStat RequestStat = 3 [json_name = "request_stat", (NYT.column_name) = "request_stat"];
+        optional string MegamindRequestId = 4 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+        optional uint64 TimestampLogMs = 5 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    }
+
+    message TPresence {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional bool MegamindRequest = 1 [json_name = "megamind_request", (NYT.column_name) = "megamind_request"];
+        optional bool MegamindResponse = 2 [json_name = "megamind_response", (NYT.column_name) = "megamind_response"];
+        optional bool RequestStat = 3 [json_name = "request_stat", (NYT.column_name) = "request_stat"];
+        optional bool SpotterValidation = 4 [json_name = "spotter_validation", (NYT.column_name) = "spotter_validation"];
+        optional bool SpotterStream = 5 [json_name = "spotter_stream", (NYT.column_name) = "spotter_stream"];
+        optional bool Stream = 6 [json_name = "stream", (NYT.column_name) = "stream"];
+        optional bool LogSpotter = 7 [json_name = "log_spotter", (NYT.column_name) = "log_spotter"];
+        optional bool VoiceInput = 8 [json_name = "voice_input", (NYT.column_name) = "voice_input"];
+        optional bool AsrRecognize = 9 [json_name = "asr_recognize", (NYT.column_name) = "asr_recognize"];
+        optional bool AsrResult = 10 [json_name = "asr_result", (NYT.column_name) = "asr_result"];
+        optional bool SynchronizeState = 11 [json_name = "synchronize_state", (NYT.column_name) = "synchronize_state"];
+        optional bool MegamindTimings = 12 [json_name = "megamind_timings", (NYT.column_name) = "megamind_timings"];
+        optional bool TtsTimings = 13 [json_name = "tts_timings", (NYT.column_name) = "tts_timings"];
+        optional bool TtsGenerate = 14 [json_name = "tts_generate", (NYT.column_name) = "tts_generate"];
+        optional bool AsrDebug = 15 [json_name = "asr_debug", (NYT.column_name) = "asr_debug"];
+        optional bool TestIds = 16 [json_name = "test_ids", (NYT.column_name) = "test_ids"];
+    }
+
+    message TSpotterStream {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+        
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TStream Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+        optional bool RealMessageId = 5 [json_name = "real_message_id", (NYT.column_name) = "real_message_id"];
+    }
+
+    message TLogSpotterWithStreams {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 4 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional bool RealMessageId = 5 [json_name = "real_message_id", (NYT.column_name) = "real_message_id"];
+        optional NWonderlogs.TLogSpotter LogSpotter = 6 [json_name = "log_spotter", (NYT.column_name) = "log_spotter"];
+        repeated NWonderlogs.TStream Streams = 7 [json_name = "streams", (NYT.column_name) = "streams"];
+    }
+
+    message TStream {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TStream Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+        optional bool RealMessageId = 5 [json_name = "real_message_id", (NYT.column_name) = "real_message_id"];
+        optional string SpotterStreamId = 6 [json_name = "spotter_stream_id", (NYT.column_name) = "spotter_stream_id"];
+        reserved "HadVinsMessageId"; reserved 7;
+    }
+
+    message TLogSpotter {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TLogSpotter Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+        optional bool RealMessageId = 5 [json_name = "real_message_id", (NYT.column_name) = "real_message_id"];
+        optional string SpotterStreamId = 6 [json_name = "spotter_stream_id", (NYT.column_name) = "spotter_stream_id"];
+        reserved "GlobalStreamId"; reserved 7;
+    }
+
+    message TSynchronizeState {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string ConnectSessionId = 2 [json_name = "connect_session_id", (NYT.column_name) = "connect_session_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TSynchronizeState Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TSynchronizeStateWithMessageId {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TSynchronizeState Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TVoiceInput {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TVoiceInput Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TAsrRecognize {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TAsrRecognize Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TAsrResult {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TAsrResult Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TAsrDebug {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TAsrDebug Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TMegamindTimings {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TMegamindTimings Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TTtsTimings {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TTtsTimings Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TTtsGenerate {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional NWonderlogs.TTtsGenerate Value = 4 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TMessageIdToConnectSessionId {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional string ConnectSessionId = 4 [json_name = "connect_session_id", (NYT.column_name) = "connect_session_id"];
+    }
+
+    message TMessageIdToEnvironment {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional TEnvironment Environment = 4 [json_name = "environment", (NYT.column_name) = "environment"];
+    }
+
+    message TMessageIdToClientIp {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional string ClientIp = 4 [json_name = "client_ip", (NYT.column_name) = "client_ip"];
+    }
+
+    message TMessageIdToDoNotUseUserLogs {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        optional bool DoNotUseUserLogs = 4 [json_name = "do_not_use_user_logs", (NYT.column_name) = "do_not_use_user_logs"];
+    }
+
+    message TTestIds {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 2 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional uint64 TimestampLogMs = 3 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+        repeated uint64 TestIds = 4 [json_name = "test_ids", (NYT.column_name) = "test_ids"];
+    }
+
+    reserved "SpotterMicsMergedInfo"; reserved 35;
+
+    optional string Uuid = 1 [json_name = "uuid", (NYT.column_name) = "uuid"];
+    optional string MegamindRequestId = 2 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+    optional string MessageId = 3 [json_name = "message_id", (NYT.column_name) = "message_id"];
+    optional string MegamindResponseId = 4 [json_name = "megamind_response_id", (NYT.column_name) = "megamind_response_id"];
+    optional TRequestStat RequestStat = 5 [json_name = "request_stat", (NYT.column_name) = "request_stat"];
+    optional string ConnectSessionId = 6 [json_name = "connect_session_id", (NYT.column_name) = "connect_session_id"];
+    optional bool SuccessfulClientRetry = 7 [json_name = "successful_client_retry", (NYT.column_name) = "successful_client_retry"];
+    // VinsRequest timestamp if present, VinsResponse timestamp otherwise
+    optional uint64 TimestampLogMs = 8 [json_name = "timestamp_log_ms", (NYT.column_name) = "timestamp_log_ms"];
+    optional TEnvironment Environment = 9 [json_name = "environment", (NYT.column_name) = "environment"];
+    optional string ClientIp = 10 [json_name = "client_ip", (NYT.column_name) = "client_ip"];
+    optional TPresence Presence = 11 [json_name = "presence", (NYT.column_name) = "presence"];
+    optional NWonderlogs.TSpotterValidation SpotterValidation = 12 [json_name = "spotter_validation", (NYT.column_name) = "spotter_validation"];
+    optional NWonderlogs.TStream AsrStream = 13 [json_name = "asr_stream", (NYT.column_name) = "asr_stream"];
+    optional NWonderlogs.TStream SpotterStream = 14 [json_name = "spotter_stream", (NYT.column_name) = "spotter_stream"];
+    optional NWonderlogs.TLogSpotter LogSpotter = 15 [json_name = "log_spotter", (NYT.column_name) = "log_spotter"];
+    optional bool RealMessageId = 16 [json_name = "real_message_id", (NYT.column_name) = "real_message_id"];
+    optional NWonderlogs.TSynchronizeState SynchronizeState = 17 [json_name = "synchronize_state", (NYT.column_name) = "synchronize_state"];
+    optional NWonderlogs.TVoiceInput VoiceInput = 18 [json_name = "voice_input", (NYT.column_name) = "voice_input"];
+    optional NWonderlogs.TAsrRecognize AsrRecognize = 19 [json_name = "asr_recognize", (NYT.column_name) = "asr_recognize"];
+    optional NWonderlogs.TAsrResult AsrResult = 29 [json_name = "asr_result", (NYT.column_name) = "asr_result"];
+    optional NWonderlogs.TMegamindTimings MegamindTimings = 30 [json_name = "megamind_timings", (NYT.column_name) = "megamind_timings"];
+    optional NWonderlogs.TTtsTimings TtsTimings = 31 [json_name = "tts_timings", (NYT.column_name) = "tts_timings"];
+    optional NWonderlogs.TTtsGenerate TtsGenerate = 32 [json_name = "tts_generate", (NYT.column_name) = "tts_generate"];
+    optional bool DoNotUseUserLogs = 33 [json_name = "do_not_use_user_logs", (NYT.column_name) = "do_not_use_user_logs"];
+    optional NWonderlogs.TAsrDebug AsrDebug = 34 [json_name = "asr_debug", (NYT.column_name) = "asr_debug"];
+    repeated uint64 TestIds = 36 [json_name = "test_ids", (NYT.column_name) = "test_ids"];
+    // key - stream_type
+    map<string, TStreams> SpotterStreams = 37 [json_name = "spotter_streams", (NYT.column_name) = "spotter_streams", (NYT.flags) = MAP_AS_DICT];
+}

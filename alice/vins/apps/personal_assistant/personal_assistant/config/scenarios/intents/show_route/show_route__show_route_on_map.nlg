@@ -1,0 +1,41 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "show_route/show_route__ask.nlg" %}
+
+{% from "show_route/show_route_common.nlg" import pick_route_uri %}
+{% from "scenarios/intents/common.nlg" import showing_map_not_supported %}
+
+{% phrase render_uri %}
+  {% if not is_smart_speaker() and not is_tv_device() %}  {# open_link supported feature should be used instead #}
+    {{ pick_route_uri(form) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% set uri = pick_route_uri(form) | trim %}
+  {% if uri %}
+    {% if is_smart_speaker() or is_tv_device() %}  {# open_link supported feature should be used instead #}
+      {{ showing_map_not_supported() }}
+    {% else %}
+      {% if form.route_info %}
+        {% if is_navigator() or is_auto() %}
+          В путь!
+        {% else %}
+          {% chooseline %}
+            Открываю маршрут на карте.
+            Сейчас открою маршрут на карте.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        {% chooseline %}
+          Я не смогла построить маршрут, но сейчас открою карту.
+          Я не смогла построить маршрут, но давайте хоть на карте покажу.
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      Как я уже сказала, у меня нет информации о маршруте.
+      Я не знаю ничего об этом маршруте.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

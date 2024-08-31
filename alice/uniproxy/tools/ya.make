@@ -1,0 +1,19 @@
+OWNER(
+    g:voicetech-infra
+)
+
+RECURSE(
+    balancer_top
+    balancer_top/balancer_log_parser
+    clear_mds
+    mdsdelete
+    nirvana_cleaner
+    nirvana_cleaner_from_sandbox
+    perf_results_parser
+    perf_results_uploader
+    perf_tester
+    proxycli
+    revoke_pods
+    tts_memcache_loader
+    wsproxy_admin
+)

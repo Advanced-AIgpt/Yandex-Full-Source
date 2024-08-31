@@ -1,0 +1,74 @@
+{% macro extract_fields(field_collection, slot_name) %}
+                                                                                                                {%- for subfield2 in field_collection %}
+                                                                                                                    {%- if subfield2.type == "uint32" %}
+    {
+        ui32 value;
+        if (!TryFromString<ui32>("{{slot_name}}", value)) {
+            return Nothing();
+        }
+        tsf.{{subfield2.name}}.{{subfield2.name}} = value;
+    }
+                                                                                                                    {%- elif subfield2.type == "bool" %}
+    {
+        bool value;
+        if (!TryFromString<bool>("{{slot_name}}", value)) {
+            return Nothing();
+        }
+        tsf.{{subfield2.name}}.{{subfield2.name}} = value;
+    }
+                                                                                                                    {%- elif subfield2.type == "string" %}
+    {
+        TString value;
+        if (!TryFromString<TString>("{{slot_name}}", value)) {
+            return Nothing();
+        }
+        tsf.{{subfield2.name}}.{{subfield2.name}} = value;
+    }
+                                                                                                                    {%- elif subfield2.type == "oneof" %}
+                                                                                                                        {{ extract_fields(subfield2.fields, slot_name) }}
+                                                                                                                    {%- elif subfield2.type == "message" %}
+                                                                                                                        {{ extract_fields(subfield2.message.fields, slot_name) }}
+                                                                                                                    {%- endif %}
+                                                                                                                {%- endfor %}
+{%- endmacro -%}
+
+
+//
+// Semantic frame -> Types semantic frames converter
+//
+
+                                                                                            {%- for field in messages.TTypedSemanticFrameSample.oneofs -%}
+                                                                                                {%- for u in field.fields %}
+
+//
+// Semantic frame handler for {{u.type_cpp.full}} {{u.name}};
+//
+TMayBe<{{u.type_cpp.full}}> TryCreate{{u.name}}(const TSemanticFrame& semanticFrame) { const {
+    if (semanticFrame.GetName() != "{{u.message.options.SemanticFrameName}}") {
+        return Nothing();
+    }
+    {{u.type_cpp.full}} tsf;
+                                                                                                    {%- for subfield in u.message.fields %}
+                                                                                                        {#- extract_fields(subfield.fields, subfield.options.SlotName) -#}
+                                                                                                        {%- for uu in subfield.message.oneofs %}
+                                                                                                            {%- for uuu in uu.fields  %}
+
+                                                                                                                {%- if uuu.type_proto == "string" %}
+    TString value;
+    if (type == "{{uuu.options.SlotType}}" && TryFromString<TString>("{{subfield.options.SlotName}}", value)) {
+        tsf.{{subfield.name}}.{{uuu.name}} = value;
+    }
+
+
+                                                                                                                {%- endif -%}
+                                                                                                            {%- endfor -%}
+                                                                                                        {%- endfor -%}
+                                                                                                    {%- endfor %}
+    return TMaybe<{{u.type_cpp.full}}> tsf;
+
+}
+                                                                                                {%- endfor %}
+                                                                                            {%- endfor %}
+
+
+

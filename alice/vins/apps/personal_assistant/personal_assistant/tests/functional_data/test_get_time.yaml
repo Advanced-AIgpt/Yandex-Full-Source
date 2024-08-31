@@ -1,0 +1,338 @@
+labels:
+  city_preposition: '(в|во|В|Во)'
+  now_label: '(Сейчас |)'
+
+test_basic:
+  скажи время:
+    bass:
+      form:
+        time_location:
+          value:
+            city_cases:
+              preposition: в
+              prepositional: Москве
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}12 часов дня.'
+    voice_text: '{now_label}12 часов дня.'
+
+  скажи время!:
+    bass:
+      form:
+        time_location:
+          value:
+            city_cases:
+              preposition: в
+              prepositional: Москве
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 5
+            min: 48
+
+    text: '{now_label}5:48.'
+    voice_text: '{now_label}5:48.'
+
+
+test_import_entity:
+  город манагуа:
+    vins_form:
+      name: 'personal_assistant.scenarios.search'
+      slots:
+        query:
+          value: город манагуа
+
+  который там час:
+    vins_form:
+      name: 'personal_assistant.scenarios.get_time'
+      slots:
+        where:
+          value: Манагуа
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Манагуа
+        time_result:
+          value:
+            year: 2018
+            month: 4
+            day: 5
+            hour: 5
+            min: 48
+
+    text: '{now_label}{city_preposition} Манагуа 5:48, четверг, 5 апреля.'
+
+
+test_time_in_city1:
+  который час в манагуа:
+    vins_form:
+      name: 'personal_assistant.scenarios.get_time'
+      slots:
+        where:
+          value: в манагуа
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Манагуа
+        time_result:
+          value:
+            year: 2018
+            month: 4
+            day: 5
+            hour: 5
+            min: 48
+
+    text: '{now_label}{city_preposition} Манагуа 5:48, четверг, 5 апреля.'
+
+
+test_time_in_city2:
+  который час в манагуа:
+    vins_form:
+      name: 'personal_assistant.scenarios.get_time'
+      slots:
+        where:
+          value: в манагуа
+    bass:
+      form:
+        time_location:
+          value:
+            city_cases:
+              preposition: в
+              prepositional: Манагуа
+        time_result:
+          value:
+            year: 2018
+            month: 4
+            day: 5
+            hour: 5
+            min: 48
+
+    text: '{now_label}{city_preposition} Манагуа 5:48, четверг, 5 апреля.'
+
+
+test_local_time:
+  bass:
+    form:
+      time_location:
+        value:
+          city_cases:
+            preposition: в
+            prepositional: Манагуа
+      time_result:
+        value:
+          year: 2017
+          month: 6
+          day: 5
+          hour: 12
+          min: 0
+  case1:
+    скажи местное время:
+      text: '{now_label}12 часов дня.'
+  case2:
+    местное время:
+      text: '{now_label}12 часов дня.'
+
+
+test_ellipsis:
+  скажи время:
+    bass:
+      form:
+        time_location:
+          value:
+            city_cases:
+              preposition: в
+              prepositional: Москве
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}12 часов дня.'
+
+  а в питере?:
+    vins_form:
+      slots:
+        where:
+          value: питере
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Санкт-Петербурге
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}{city_preposition} Санкт-Петербурге 12 часов дня, понедельник, 5 июня.'
+
+  а теперь в лосанджелесе:
+    vins_form:
+      slots:
+        where:
+          value: лос анджелесе
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Лос-Анджелесе
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 3
+            min: 0
+
+    text: '{now_label}{city_preposition} Лос-Анджелесе 3 ночи, понедельник, 5 июня.'
+
+
+test_notimezone:
+  какое время в сша:
+    vins_form:
+      slots:
+        where:
+          value: сша
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: notimezone
+          msg: errormsg
+
+    text: 'В каком городе?'
+
+  в маунтин вью:
+    vins_form:
+      slots:
+        where:
+          value: маунтин вью
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Маунтин-Вью
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 3
+            min: 0
+
+    text: '{now_label}{city_preposition} Маунтин-Вью 3 ночи, понедельник, 5 июня.'
+
+
+test_nousergeo:
+  скажи время:
+    bass:
+      blocks:
+      - type: error
+        error:
+          type: nousergeo
+          msg: errormsg
+
+    text: 'В каком городе?'
+
+
+test_geo_adjective_slot_type:
+  московское время:
+    vins_form:
+      slots:
+        where:
+          value: москва
+
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Москве
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}{city_preposition} Москве 12 часов дня, понедельник, 5 июня.'
+
+  питерское время:
+    vins_form:
+      slots:
+        where:
+          value: санкт-петербург
+
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Санкт-Петербурге
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}{city_preposition} Санкт-Петербурге 12 часов дня, понедельник, 5 июня.'
+
+  псковское время:
+    vins_form:
+      slots:
+        where:
+          value: псков
+
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Пскове
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}{city_preposition} Пскове 12 часов дня, понедельник, 5 июня.'
+
+test_special_location:
+  скажи время поблизости:
+    vins_form:
+      slots:
+        where:
+          value: nearby
+
+    bass:
+      form:
+        time_location:
+          value:
+            city_prepcase: в Москве
+        time_result:
+          value:
+            year: 2017
+            month: 6
+            day: 5
+            hour: 12
+            min: 0
+
+    text: '{now_label}12 часов дня.'

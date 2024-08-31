@@ -1,0 +1,93 @@
+{% macro render_skill_name(name) %}
+  {% if name %}
+    «{{ name }}»
+  {% endif %}
+{% endmacro %}
+
+{% macro render_skill_attention(form) %}
+  {% set skill_name = render_skill_name(form.skill_info.name) | trim %}
+  {% if is_active_attention('skill_authorization_required') %}
+    Чтобы оплачивать покупки в навыках Алисы, войдите в приложение Яндекс.
+  {% elif is_active_attention('skill_billing_start_purchase_offer_ok') or is_active_attention('skill_purchase_request') %}
+    Сейчас вам придёт пуш-сообщение от приложения Яндекс. Откройте его, чтобы подтвердить оплату в навыке {{ skill_name }}.
+  {% elif is_active_attention('skill_billing_start_purchase_offer_ok_no_push') or is_active_attention('skill_purchase_request_no_push') %}
+    Пожалуйста, подтвердите оплату в навыке {{ skill_name }}.
+  {% elif is_active_attention('skill_billing_start_purchase_offer_fail') or is_active_attention('skill_purchase_request_failure') %}
+    Не получилось оплатить покупку в навыке {{ skill_name }}.
+  {% elif is_active_attention('skill_purchase_success') %}
+    Оплата прошла успешно.
+  {% elif is_active_attention('skill_purchase_success_delegate_disclaimer') %}
+    {% text %}
+      Оплата прошла успешно. Можно вернуться к навыку на вашем устройстве.
+    {% endtext %}
+  {% elif is_active_attention('skill_account_linking_required') or is_active_attention('skill_account_linking_request') %}
+    {% chooseline %}
+      Для продолжения работы с навыком {{ skill_name }} нужно авторизоваться. Вам придёт пуш-сообщение от приложения Яндекс.
+      Чтобы продолжить, вам нужно пройти авторизацию. Ждите пуш-сообщения от приложения Яндекс.
+      Авторизуйтесь, чтобы продолжить. Для этого откройте пуш-сообщение от приложения Яндекс.
+    {% endchooseline %}
+  {% elif is_active_attention('skill_account_linking_required_no_push') or is_active_attention('skill_account_linking_request_no_push') %}
+    {% chooseline %}
+      Чтобы продолжить, вам нужно пройти авторизацию в навыке {{ skill_name }}.
+      Авторизуйтесь, чтобы продолжить.
+      Войдите в свой аккаунт, чтобы продолжить.
+      Для продолжения работы с навыком {{ skill_name }} войдите в свой аккаунт.
+    {% endchooseline %}
+  {% elif is_active_attention('skill_account_linking_request_failure') %}
+    {% chooseline %}
+      Авторизация не выполнена. Попробуйте снова.
+      Авторизация не выполнена. Попробуйте ещё раз.
+      Вход в аккаунт не выполнен. Попробуйте авторизоваться позднее.
+    {% endchooseline %}
+  {% elif is_active_attention('skill_account_linking_success') %}
+    {% chooseline %}
+      Вы вошли в аккаунт. Можно продолжать.
+      Авторизация завершена.
+      Выполнен вход в аккаунт.
+      Авторизация завершена. Продолжим.
+      Ура, авторизация завершена. Можно продолжать.
+    {% endchooseline %}
+  {% elif is_active_attention('skill_account_linking_success_delegate_disclaimer') %}
+    {% text %}
+      {% chooseline %}
+        Вы вошли в аккаунт. Можно вернуться к навыку на вашем устройстве.
+        Авторизация выполнена. Можно вернуться к навыку на вашем устройстве.
+        Авторизация завершена. Можно вернуться к навыку на вашем устройстве.
+        Выполнен вход в аккаунт. Можно вернуться к навыку на вашем устройстве.
+        Авторизация завершена. Продолжим общение на вашем устройстве.
+      {% endchooseline %}
+    {% endtext %}
+  {% elif is_active_attention('device_does_not_support_account_linking') %}
+    {% if req_info.experiments['enable_account_linking_on_desktop_browser'] == None %}
+      {% text %}
+        К сожалению, это приложение не поддерживает авторизацию в навыках Алисы. Вы можете попробовать авторизоваться в навыке в мобильном Яндекс.Браузере или приложении Яндекс.
+      {% endtext %}
+      {% voice %}
+        К сожалению, это приложение не поддерживает авторизацию в навыках Алисы. Вы можете попробовать авторизоваться в навыке в мобильном Яндекс Браузере или приложении Яндекс.
+      {% endvoice %}
+    {% else %}
+      {% text %}
+        К сожалению, это приложение не поддерживает авторизацию в навыках Алисы. Вы можете попробовать авторизоваться в навыке в Яндекс.Браузере или в мобильном приложении Яндекс.
+      {% endtext %}
+      {% voice %}
+        К сожалению, это приложение не поддерживает авторизацию в навыках Алисы. Вы можете попробовать авторизоваться в навыке в Яндекс Браузере или в мобильном приложении Яндекс.
+      {% endvoice %}
+    {% endif %}  
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_suggest_caption__skill_billing_request_make_purchase_button %}
+  Оплатить
+{% endphrase %}
+
+{% phrase render_suggest_uri__skill_billing_request_make_purchase_button %}
+  {{ context.skill_billing_request_make_purchase_button.data.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__skill_account_linking_button %}
+  Авторизоваться
+{% endphrase %}
+
+{% phrase render_suggest_uri__skill_account_linking_button %}
+  {{ context.skill_account_linking_button.data.url }}
+{% endphrase %}

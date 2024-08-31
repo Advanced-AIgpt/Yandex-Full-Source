@@ -1,0 +1,576 @@
+labels:
+  quasar_repeat: "(Рассказать ещё|Продолжить|Хотите узнать больше, скажите «да»\
+    |Хотите узнать ещё|Рассказывать ещё|Продолжим)."
+  onboarding_voice_variants_exp: ".*погод.*"
+  onboarding_navi_voice: "Я многое умею. Скажите, например: .*"
+
+experiments:
+  long_onboarding_intro: null
+
+
+test_onboarding:
+  bass:
+    form_name: personal_assistant.scenarios.onboarding
+    form:
+      set_number:
+        value: 1
+      mode:
+        value: onboarding
+
+    blocks:
+    - type: text_card
+      phrase_id: onboarding__greetings
+    - type: text_card
+      phrase_id: onboarding__set_message
+    - type: suggest
+      suggest_type: onboarding__next
+      form_update:
+        name: personal_assistant.scenarios.onboarding
+        resubmit: true
+        slots:
+        - type: num
+          optional: true
+          name: set_number
+          value: 1
+    - type: div_card
+      card_template: onboarding
+      data:
+        cases:
+        - onboarding__search
+        - onboarding__show_route
+        - onboarding__weather
+        - onboarding__find_poi
+        - onboarding__get_date
+        icons:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+
+  dialog:
+    что ты умеешь:
+      text: |-
+        Привет, я Алиса.
+        Вот что я могу:
+        ...
+      voice: 'Привет, я Алиса. Вот что я могу.'
+      suggests:
+      - caption: Что ещё ты умеешь?
+        directive: update_form
+        payload:
+          resubmit: true
+          form_update:
+            name: personal_assistant.scenarios.onboarding
+            slots:
+            - name: set_number
+              optional: true
+              type: num
+              value: 1
+
+
+    Сколько лет Полу Маккартни?:
+      bass:
+        form:
+          search_results:
+            value:
+              factoid:
+                tts: 'Его возраст 75 лет'
+                text: 'Его возраст 75 лет'
+              serp:
+                url: 'https://yandex.ru/search/'
+
+      voice: 'Его возраст 75 лет'
+  app_info:
+    ignore:
+    - pa_android
+    - auto
+    - desktop_alice
+    - speaker
+    - pa_ios
+    - irbis
+    - watch
+    - navigator_ios
+    - dexp
+    - navigator_android
+
+
+test_onboarding_dj_navi:
+  app_info:
+    app_id: 'ru.yandex.mobile.navigator.vins_test'
+    app_version: '10'
+    os_version: '8.1.0'
+    platform: 'android'
+  experiments: ['dj_service_for_onboarding_navi']
+
+  bass:
+    form_name: personal_assistant.scenarios.skill_recommendation
+    form:
+      card_name:
+        value: onboarding
+    blocks:
+    - type: text_card
+      phrase_id: onboarding__skills
+      data:
+        cases:
+        - activation: 'Пой'
+        - activation: 'Пляши'
+        - activation: 'Танцуй'
+    - type: suggest
+      suggest_type: onboarding__skill
+      data:
+        name: 'Тестовый саджест'
+        activation: 'Тестовый саджест'
+
+  dialog:
+    Что ты умеешь?:
+      text: 'Я многое умею. Скажите, например: «Пой», «Пляши» или «Танцуй».'
+      voice: '{onboarding_navi_voice}'
+
+
+test_onboarding_dj_nocards:
+  experiments: ['dj_service_for_onboarding_nocards']
+  bass:
+    form_name: personal_assistant.scenarios.skill_recommendation
+    form:
+      card_name:
+        value: onboarding
+    blocks:
+    - type: suggest
+      suggest_type: onboarding__next
+      form_update:
+        name: personal_assistant.scenarios.onboarding
+        resubmit: true
+    - type: text_card
+      phrase_id: onboarding__skills
+      data:
+        cases:
+        - activation: 'Петь'
+        - activation: 'Плясать'
+        - activation: 'Танцевать'
+        editors_answer: 'Я могу петь, плясать и танцевать!'
+
+  dialog:
+    Что ты умеешь?:
+      text: 'Я могу петь, плясать и танцевать!'
+
+  app_info:
+    ignore:
+      - pa_android
+      - auto
+      - desktop_alice
+      - speaker
+      - pa_ios
+      - irbis
+      - watch
+      - navigator_ios
+      - dexp
+      - navigator_android
+
+
+test_onboarding_exp:
+  experiments: ['long_onboarding_intro', 'vins_onboarding_relevant_again']
+  bass:
+    form_name: personal_assistant.scenarios.onboarding
+    form:
+      set_number:
+        value: 1
+      mode:
+        value: onboarding
+
+    blocks:
+    - type: text_card
+      phrase_id: onboarding__greetings
+    - type: text_card
+      phrase_id: onboarding__set_message
+    - type: div_card
+      card_template: onboarding
+  dialog:
+    что ты умеешь:
+      text: |-
+        Привет, я Алиса.
+        Вот что я могу:
+        ...
+      voice: '{onboarding_voice_variants_exp}'
+
+
+test_quasar_onboarding__main_screen:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'main'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_main
+      text: 'Вы можете поставить таймер или будильник. Например, скажите: "Поставь таймер на 5 минут" или "Поставь будильник на 9 утра". {quasar_repeat}'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+        slots:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_main
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: quasar_main
+      text: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+    хватит:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__cancel'
+      text: ''
+
+test_quasar_onboarding__main_screen__old_phrases:
+  experiments: ['vins_onboarding_relevant_again', 'onboarding_quasar_old_phrases']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'main'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_main
+      text: 'Вы можете попросить меня поставить вашу любимую группу или включить музыку
+        для романтического вечера. {quasar_repeat}'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+        slots:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_main
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: quasar_main
+      text: 'Вы можете поставить таймер или будильник. Например,
+        скажите — поставь таймер на 20 минут или поставь будильник на 9 утра. {quasar_repeat}'
+    хватит:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__cancel'
+      text: ''
+
+test_quasar_onboarding__mordovia_main_screen:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'mordovia_webview'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_mordovia_webview
+      text: 'Вы можете поставить таймер или будильник. Например, скажите: "Поставь таймер на 5 минут" или "Поставь будильник на 9 утра". {quasar_repeat}'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+        slots:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_mordovia_webview
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: quasar_mordovia_webview
+      text: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+    хватит:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__cancel'
+      text: ''
+
+test_quasar_onboarding__not_quasar:
+  experiments: ['vins_pause_commands_relevant_again']
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      text: ''
+    еще:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+      text: '{}'
+    хватит:
+      vins_form:
+        name: 'personal_assistant.handcrafted.fast_cancel'
+      text: '{}'
+  app_info:
+    ignore:
+    - irbis
+    - speaker
+    - dexp
+    - auto
+    - watch
+
+
+test_quasar_onboarding__cycle_phrases:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'description'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 3
+          mode:
+            value: quasar_description
+      text: 'Вы можете запустить просмотр видео, сказав «смотреть», или купить его,
+        сказав «купить». {quasar_repeat}'
+
+
+test_quasar_onboarding__only_one_response:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'payment'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: quasar_payment
+      text: 'Ожидайте уведомления на мобильном телефоне для оплаты. Или скажите «назад»,
+        чтобы вернуться.'
+
+
+test_quasar_onboarding__voice_and_text_screen:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'main'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: quasar_main
+      text: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+      voice: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+      bass:
+        form:
+          set_number:
+            value: 2
+          mode:
+            value: quasar_main
+      text: 'Я знаю телепрограмму, вы всегда можете спросить меня, что идет по РБК или программу ТНТ. {quasar_repeat}'
+      voice: 'Я знаю телепрограмму, вы всегда можете спросить меня, что идет по РБК или программу ТНТ. {quasar_repeat}'
+
+test_quasar_onboarding__voice_and_text_no_screen:
+  experiments: ['vins_onboarding_relevant_again']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: false
+    video:
+      current_screen: 'main'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: quasar_main
+      text: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+      voice: 'Я могу напомнить вам поздравить с днем рождения врага или покормить хомячка. {quasar_repeat}'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+      bass:
+        form:
+          set_number:
+            value: 2
+          mode:
+            value: quasar_main
+      text: 'Я знаю телепрограмму, вы всегда можете спросить меня, что идет по Первому каналу или ТНТ. {quasar_repeat}'
+      voice: 'Я знаю телепрограмму, вы всегда можете спросить меня, что идет по Первому каналу или ТНТ. {quasar_repeat}'
+
+test_quasar_onboarding__cancel:
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+  device_state:
+    is_tv_plugged_in: true
+    video:
+      current_screen: 'main'
+  dialog:
+    помощь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      text: '{}'
+    хватит:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__cancel'
+      text: ''
+    еще:
+      vins_form:
+        name: 'personal_assistant.general_conversation.general_conversation'
+      text: '{}'
+
+
+test_elari_onboarding__all_responses:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    что ты умеешь:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding'
+      bass:
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: elari_watch_main
+      text: 'Я могу подсказать дорогу, сыграть с тобой в игру или просто поболтать.
+        Хочешь узнать ещё?'
+    еще:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+      bass:
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: elari_watch_main
+      text: 'Умею рассказывать о погоде, считать, а ещё включать сказки. Хочешь что-нибудь
+        другое?'
+    еще!:
+      vins_form:
+        name: 'personal_assistant.scenarios.onboarding__next'
+      bass:
+        form:
+          set_number:
+            value: 2
+          mode:
+            value: elari_watch_main
+      text: 'Могу отвечать на разные вопросы. Например, сколько стоит велосипед. Хочешь узнать ещё?'
+
+test_elari_game_onboarding__all_responses:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    давай поиграем:
+      bass:
+        form_name: personal_assistant.scenarios.onboarding
+        form:
+          set_number:
+            value: 0
+          mode:
+            value: elari_watch_games
+      text: 'Можем сыграть в загадки или в города. Хочешь узнать ещё?.'
+    еще:
+      bass:
+        form_name: personal_assistant.scenarios.onboarding__next
+        form:
+          set_number:
+            value: 1
+          mode:
+            value: elari_watch_games
+      text: 'В «Найди лишнее» или «Что было раньше». Скажи да, если нужна другая игра.'
+    еще!:
+      bass:
+        form_name: personal_assistant.scenarios.onboarding__next
+        form:
+          set_number:
+            value: 2
+          mode:
+            value: elari_watch_games
+      text: 'Могу сыграть в «Угадай животное» или «Угадай число». Хочешь что-нибудь другое?'
+    еще!!:
+      bass:
+        form_name: personal_assistant.scenarios.onboarding__next
+        form:
+          set_number:
+            value: 3
+          mode:
+            value: elari_watch_games
+      text: 'Можем сыграть в загадки или в города. Или вообще послушать сказку! Хочешь узнать ещё?'

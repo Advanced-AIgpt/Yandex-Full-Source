@@ -1,0 +1,165 @@
+{% from "cards/common.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color, logged_action_url with context %}
+
+{% macro render_serp_gallery_item(gallery_item, idx, gallery_items, data) %}
+{% set pronounce_icon = data|get_item('pronounce_icon') %}
+{% set call_icon = data|get_item('call_icon') %}
+{% set call_uri = gallery_item|get_item('call_uri') %}
+{
+  "type": "div-container-block",
+  "frame": {
+    "style": "border",
+    {% if is_active_attention("serp_gallery__mark_as_voice") and gallery_item|get_item('voice_text') %}
+      "color": "{{ '#4e58a1' }}"
+    {% else %}
+      "color": "{{ '#E5E5E5' }}"
+    {% endif %}
+  },
+  "width": {
+    "value": 260,
+    "unit": "dp",
+    "type": "numeric"
+  },
+  "height": {
+    "value": 240,
+    "unit": "dp",
+    "type": "numeric"
+  },
+  "action": {
+    "url": "{{ open_uri_action_for_item_in_list(gallery_item|get_item('url'), 'whole_card', idx, 'search_gallery_whole_card') }}"
+    {% if is_active_attention('serp_gallery__log_id_for_url') %}
+      ,"log_id": "serp_gallery_click_{{- idx -}}"
+    {% endif %}
+  },
+  "children": [
+    {
+      "type": "div-separator-block",
+      "size": "xs"
+    },
+    {
+      "text_style": "text_s",
+      "title": "{{ gallery_item|get_item('title')|html_escape }}",
+      "text": "{{ font_color('#4ea14e', gallery_item|get_item('green_url')|html_escape) }}",
+      "title_max_lines": 2,
+      "text_max_lines": 1,
+      "title_style": "title_s",
+      "type": "div-universal-block"
+    },
+    {
+      "text_style": "text_s",
+      "text_max_lines": 6,
+      "text": "{{ font_color('#969595', gallery_item|get_item('text')|html_escape) }}",
+      "type": "div-universal-block"
+    }
+    {% if pronounce_icon or (call_icon and call_uri) %}
+      ,{
+        "type" : "div-buttons-block",
+        "items": [
+          {% if pronounce_icon %}
+            {
+              "action": {
+                "url":
+                  "{{
+                   logged_action_url([
+                     client_action_directive(
+                       name="type_silent",
+                       sub_name="serp_gallery_type_silent",
+                       payload={
+                         "text": ""
+                       }
+                     ),
+                     server_action_directive(
+                       "update_form",
+                       {
+                         "form_update":
+                            {
+                              "name": "personal_assistant.scenarios.serp_gallery__switch_by_id",
+                              "slots": [
+                                {
+                                  "name": "id",
+                                  "optional": true,
+                                  "type": "num",
+                                  "value": idx
+                                },
+                                {
+                                  "name": "serp_items",
+                                  "optional": true,
+                                  "type": "serp_items",
+                                  "value": gallery_items
+                                }
+                              ]
+                            },
+                         "resubmit": true
+                       }
+                     )
+                   ], dict(item_number=idx))
+                  }}",
+                "log_id": "serp_gallery_pronounce"
+              },
+              "image": {
+                "image_url": "{{ pronounce_icon }}",
+                "type": "div-image-element"
+              }
+            }
+          {% endif %}
+          {% if call_icon and call_uri %}
+            {% if pronounce_icon %} , {% endif %}
+            {
+              "action": {
+                "url": "{{ call_uri }}",
+                "log_id": "serp_gallery_call"
+              },
+              "image": {
+                "image_url": "{{ call_icon }}",
+                "type": "div-image-element"
+              }
+            }
+          {% endif %}
+        ]
+      }
+    {% endif %}
+  ]
+}
+{% endmacro %}
+
+{% macro render_serp_gallery_card(data) %}
+{% set items = data|get_item("serp_items") %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-gallery-block",
+          "tail" : {
+            "text": "Все результаты поиска",
+            "icon" : {
+            },
+            "action": {
+              "url": "{{ open_uri_action(data|get_item('serp_url'), 'open_serp__button') }}",
+              "log_id": "serp_gallery__serp"
+            }
+          },
+          "items": [
+            {% for item in items %}
+               {% if loop.index0 %}
+                 ,
+               {% endif %}
+               {{ render_serp_gallery_item(item, loop.index, items, data) }}
+            {% endfor %}
+          ]
+        }
+      ]
+    }
+  ],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endmacro %}
+
+{% card serp_gallery %}
+  {{ render_serp_gallery_card(context.data) }}
+{% endcard %}

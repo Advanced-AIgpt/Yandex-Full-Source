@@ -1,0 +1,249 @@
+{% from "market/common.nlg" import checkout_attempts_reminder, pretty_date, delivery_name,
+  currency_sign, render_market %}
+
+
+{% macro render_if_scenario_closed() %}
+    {% if form.is_open and form.raw_form.name=='personal_assistant.scenarios.market__checkout' %}
+        {% chooseline %}
+            Приступим к оформлению заказа! Если передумаете оформлять заказ, скажите: «Алиса, хватит».
+            Начнём! Если передумаете оформлять заказ, скажите: «Алиса, хватит».
+            Люблю шопинг! Если передумаете оформлять заказ, скажите: «Алиса, хватит».
+            Отлично, давайте заказывать! Если передумаете оформлять заказ, скажите: «Алиса, хватит».
+        {% endchooseline %}
+    {% endif %}
+{% endmacro %}
+
+
+{% phrase market_checkout__nologin %}
+    {{ render_if_scenario_closed() }}
+    К сожалению, покупать могут только зарегистрированные пользователи.
+{% endphrase %}
+
+
+{% phrase market_checkout__beru_offer_outdated %}
+    {{ render_if_scenario_closed() }}
+    К сожалению, этот товар больше нельзя купить на {{ render_market('abl') -}}. Давайте выберем что-нибудь ещё.
+{% endphrase %}
+
+
+{% phrase market_checkout__ask_items_number %}
+  {{ render_if_scenario_closed() }}
+  Сколько единиц данного товара будем заказывать?
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_items_number %}
+  {{ render_if_scenario_closed() }}
+  Извините, я вас не поняла. Сколько единиц будем заказывать?
+{% endphrase %}
+
+
+{% phrase market_checkout__not_enough_items %}
+  {{ render_if_scenario_closed() }}
+  К сожалению, у нас осталось только
+  {{ context.data.available_items_number }} {{ "штука" | pluralize(context.data.available_items_number) }}.
+  Сколько закажем?
+{% endphrase %}
+
+
+{% phrase market_checkout__ask_email %}
+  {{ render_if_scenario_closed() }}
+  {% if is_ios() or is_searchapp_android() %}
+    Чтобы продолжить шопинг, вам необходимо авторизоваться и сообщить мне об этом. Либо просто введите вашу электронную почту.
+  {% else %}
+    {# не ПП (бразуер/лаунчер/etc) #}
+    {% chooseline %}
+      Супер! Теперь введите ваш электронный адрес или войдите в личный кабинет в Яндексе.
+      Двигаемся к финалу. Пожалуйста, напишите вашу почту или войдите в личный кабинет в Яндексе.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+
+{% macro ask_phone_prefix(is_guest) %}
+  {% if not is_guest %}
+    {% chooseline %}
+      Супер! Можно оформлять заказ.
+      Есть! Двигаемся к финалу.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase market_checkout__ask_phone %}
+  {{ render_if_scenario_closed() }}
+  {# todo use only context.data.is_guest when MALISA-352 will be in prod #}
+  {% set is_guest = context.data.is_guest if context.data else form.state.muid %}
+  {% chooseitem %}
+    {{ ask_phone_prefix(is_guest) }} Назовите свой телефонный номер.
+  {% or %}
+    {{ ask_phone_prefix(is_guest) }} Теперь мне нужен номер вашего телефона.
+  {% endchooseitem %}
+{% endphrase %}
+
+{% macro render_delivery_suggest(delivery) %}
+  {% set delivery_type_name = delivery_name(delivery["type"]) %}
+  {% if delivery_type_name %}
+    {{ delivery_type_name -}}:
+  {% endif %}
+  {% if delivery.get("outlet_name") %}
+    {{ delivery.outlet_name -}}.
+  {% endif %}
+  {{ delivery["address"] }}
+  {% if delivery.get("prices") %}
+    -
+    {% set min_price = delivery["prices"].get("min") %}
+    {% set max_price = delivery["prices"].get("max") %}
+    {% if min_price == max_price %}
+      {% if min_price == 0 %}
+        бесплатно
+      {% else %}
+        {{ min_price }} {{ currency_sign("RUR") }}
+      {% endif %}
+    {% else %}
+      до {{ max_price }} {{ currency_sign("RUR") }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_delivery_suggests(delivery_suggests) %}
+  {% if delivery_suggests|length == 1 %}
+    \n
+    Или скажите: "да", если вас устраивает такой вариант:\n
+    {% text %}
+      {{ render_delivery_suggest(delivery_suggests[0]) }}
+    {%- endtext -%}
+  {% elif delivery_suggests|length > 1 %}
+    \n
+    Или назовите номер одного из вариантов ниже:\n
+    {% text %}
+      {% for delivery in delivery_suggests %}
+        {{ loop.index -}}) {{ render_delivery_suggest(delivery) }}\n
+      {% endfor %}
+    {%- endtext -%}
+  {% endif %}
+{% endmacro %}
+
+{% phrase market_checkout__ask_address %}
+  {{ render_if_scenario_closed() }}
+  {% chooseline %}
+    Теперь назовите адрес — город, улицу, номер и корпус дома.
+    Теперь мне нужен адрес доставки — город, улица, номер и корпус дома.
+  {% endchooseline %}
+  {{ render_delivery_suggests((context.data or {}).get("delivery_suggests", [])) }}
+{% endphrase %}
+
+{% phrase market_checkout__ask_delivery_options %}
+  {{ render_if_scenario_closed() }}
+  {% chooseline %}
+    Выберите удобный день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите день и время доставки. Вот варианты — назовите номер самого подходящего.
+    Выберите подходящее время доставки. Вот разные варианты — вам нужно только назвать номер.
+  {% endchooseline %}
+  \n
+  {% text %}
+    {% for deliveryOption in form.state.deliveryOptions %}
+      {{ loop.index }}) {{ pretty_date(deliveryOption.dates.fromDate, req_info, dayfirst=True) }}
+      {% if deliveryOption.dates.fromTime %}
+        с {{ deliveryOption.dates.fromTime }} до {{ deliveryOption.dates.toTime }} \n
+      {% endif %}
+    {% endfor %}
+  {% endtext %}
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_email %}
+  {{ render_if_scenario_closed() }}
+  {% if context.data and context.data["ask_user_to_login"] %}
+    Извините, не поняла. Введите почту с клавиатуры или войдите в приложение Яндекс.
+  {% else %}
+    {# todo remove this branch when malisa-462 will be in prod #}
+    Извините, не поняла. Введите почту с клавиатуры.
+  {% endif %}
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_phone %}
+  {{ render_if_scenario_closed() }}
+  Извините, не разобрала. Назовите телефон ещё раз или введите его с клавиатуры.
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_address %}
+  {{ render_if_scenario_closed() }}
+  Извините, не поняла. Назовите улицу, дом — и корпус, если есть.
+  {{ render_delivery_suggests((context.data or {}).get("delivery_suggests", [])) }}
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market_checkout__empty_delivery_options %}
+  {{ render_if_scenario_closed() }}
+  {% chooseline %}
+    По этому адресу товары пока не доставляют. Можем записать другой.
+    А сюда товары пока не доставляют. Если хотите, можем изменить адрес.
+  {% endchooseline %}
+  {{ render_delivery_suggests((context.data or {}).get("delivery_suggests", [])) }}
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_index %}
+  {{ render_if_scenario_closed() }}
+  Не поняла. Назовите номер подходящего варианта.
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% phrase market_checkout__invalid_confirm %}
+  {{ render_if_scenario_closed() }}
+  Извините, не разобрала. Скажите, пожалуйста, «да» или «нет».
+  {{ checkout_attempts_reminder(form) }}
+{% endphrase %}
+
+
+{% macro render_delivery_interval(deliveryInterval, req_info) %}
+  {{ pretty_date(deliveryInterval.fromDate, req_info, dayfirst=True) }}
+  {% if deliveryInterval.fromTime and deliveryInterval.toTime %}
+    с {{ deliveryInterval.fromTime }} до {{ deliveryInterval.toTime }}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase market_checkout__confirm %}
+  {{ render_if_scenario_closed() }}
+  {% chooseline %}
+    Готово! Если все верно, скажите — «да», и я начну оформлять заказ.
+    Записала! Если все правильно, скажите — «да», и я начну оформлять заказ.
+  {% endchooseline %}
+  {# todo remove this "if" when MALISA-337 will be in prod #}
+  {% if "offer_picture" not in context.data %}
+    {# bass is old. It can't render order info div card from MALISA-337, so we need to render it here #}
+    \n\n
+    {% text %}
+      Почта: {{ context.data.email }} \n
+      Номер телефона: {{ context.data.phone }} \n
+      Адрес: {{ context.data.address }} \n
+      Интервал доставки: {{ render_delivery_interval(context.data.deliveryInterval, req_info) }} \n
+      Способ оплаты: наличными курьеру \n
+      \n
+      Стоимость товара: {{ context.data.offerPrice }} ₽ \n
+      Стоимость доставки: {{ context.data.deliveryPrice }} ₽ \n
+      Итого к оплате: {{ context.data.offerPrice + context.data.deliveryPrice }} ₽ \n
+    {% endtext %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase market__checkout_wait %}
+  {% if form.state.order.attempt == 0 %}
+    {% chooseline %}
+      Отлично, теперь мне нужно убедиться{%- text -%},{% endtext %} что товар не закончился, и подтвердить заказ. Как вам шопинг со мной?
+      Почти готово. Теперь ещё пару секунд — мне надо подтвердить заказ. Скажите, понравилось ли вам делать покупки вместе со мной?
+    {% endchooseline %}
+  {% elif form.state.order.attempt == 1 %}
+    Заказ в стадии подтверждения. Спросите меня через пару секунд «Как там мой заказ?».
+  {% else %}
+    Ещё не готово. Спросите через пару секунд.
+  {% endif %}
+{% endphrase %}

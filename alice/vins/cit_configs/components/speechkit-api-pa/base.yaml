@@ -1,0 +1,77 @@
+---
+include:
+  - extensions/common.yaml
+  - extensions/yt_token.yaml
+  - extensions/pa_resources.yaml
+  - extensions/http_status_hook.yaml
+  - extensions/health_check.yaml
+  - extensions/stop_action.yaml
+component:
+  deployPolicy: InPlace
+  environmentVariables:
+    RUN_COMMAND: "/home/vins/pa"
+    DJANGO_SETTINGS_MODULE: vins_api.speechkit.settings
+    VINS_ENABLE_BACKGROUND_UPDATES: "1"
+    VINS_GC_TEMPERATURE: "0.95"
+    VINS_GC_MAX_SUGGESTS: "5"
+    VINS_GC_FORCE_QUESTION_TOP_K: "4"
+    VINS_PRELOAD_APP: "pa;navi"
+    VINS_SPEECHKIT_LISTEN_BY_DEFAULT: "1"
+    VINS_WORKERS_COUNT: "21"
+    VINS_SKILLS_ENV_TYPE: production
+  image:
+    repo: registry.yandex.net/vins/vins-all
+    tag: ~
+  diskSize: 100
+  size: 32;8.0;256
+  activateRecipe:
+    updateWindow: 2
+    updateLimit: 2
+    updatePeriod: 1
+    doneThreshold: "100%"
+routes:
+  -
+    geo: "true"
+    location: /speechkit/app/pa/
+    proxyConnectTimeout: 200ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 3000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: ""
+    yandexErrorPage: "OFF"
+    componentName: speechkit-api-pa
+    proxyNextUpstreamTries: 3
+  -
+    geo: "true"
+    location: /speechkit/app/navi/
+    proxyConnectTimeout: 150ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 5000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: ""
+    yandexErrorPage: "OFF"
+    componentName: speechkit-api-pa
+  -
+    geo: "true"
+    location: /speechkit/app/stroka/
+    proxyConnectTimeout: 200ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 3000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: /speechkit/app/pa/
+    yandexErrorPage: "OFF"
+    componentName: speechkit-api-pa
+  -
+    geo: "true"
+    location: /speechkit/app/quasar/
+    proxyConnectTimeout: 200ms
+    proxyNextUpstream: "error timeout http_502 http_503"
+    proxyPolicy: round_robin
+    proxyReadTimeout: 5000ms
+    proxyWriteTimeout: 1000ms
+    upstreamPath: /speechkit/app/pa/
+    yandexErrorPage: "OFF"
+    componentName: speechkit-api-pa

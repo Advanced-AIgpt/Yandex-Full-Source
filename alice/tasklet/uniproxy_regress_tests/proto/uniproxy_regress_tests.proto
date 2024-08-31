@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+import "tasklet/services/yav/proto/yav.proto";
+
+package alice.tasklet.uniproxy_regress_tests;
+
+message Context {
+    option (.tasklet.context) = true;
+    yav_service.YavService yav = 1 [(.tasklet.inject) = true];
+    .ci.CiService ci = 2 [(.tasklet.inject) = true];
+}
+
+message Config {
+    string component_name = 1;
+    string release_number = 2;
+    string uniproxy_websocket_url = 3;
+    string testsuite = 4;
+    string st_ticket = 5;
+}
+
+message State {
+    bool success = 1;
+    string ticket = 2;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message Output {
+    State state = 1;
+}
+
+message UniproxyRegressTests {
+    option (.tasklet.tasklet_interface) = true;
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+    Context ctx = 3;
+}

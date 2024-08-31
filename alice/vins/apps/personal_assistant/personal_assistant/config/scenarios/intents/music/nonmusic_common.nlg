@@ -1,0 +1,124 @@
+{% macro render_fairytale_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+
+  {% if what_is_playing %}
+    Сейчас играет
+    {% if 'сказка' not in normalized_title %}
+      сказка
+    {% endif %}
+  {% else %}
+    {{ render_continued_listening_beginning() }}
+    {% if music_answer.type == 'track' and 'сказка' not in normalized_title %}
+      сказку
+    {% elif music_answer.type == 'playlist' %}
+      подборку
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_fairytale_answer(req_info, music_answer, what_is_playing=False) %}
+  {% if is_active_attention('is_general_playlist') or req_info.experiments['fairytale_radio'] != None and music_answer.type == 'filters' %}
+    Включаю сказки.
+  {% else %}
+    {{ render_fairytale_answer_beginning(music_answer, what_is_playing) }}
+    {% if music_answer.title %}
+      "{{ music_answer.title }}"
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+
+  {% if what_is_playing %}
+    Сейчас играет
+  {% else %}
+    Включаю
+  {% endif %}
+  {% if music_answer.type == 'track' and 'стих' not in normalized_title %}
+    стихотворение
+  {% endif %}
+{% endmacro %}
+
+{% macro render_poem_answer(music_answer, what_is_playing=False) %}
+  {{ render_poem_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer_beginning(music_answer, what_is_playing=False) %}
+  {% set normalized_title = (music_answer or {}).get('title', '').lower() %}
+  {% set title_tokens = normalized_title.split() %}
+  {% set has_podcast_in_title = 'podcast' in normalized_title or 'подкаст' in normalized_title %}
+
+  {% if what_is_playing %}
+    Сейчас играет
+    {% if 'выпуск' not in title_tokens %}
+      выпуск
+    {% endif %}
+  {% else %}
+    {% if not is_active_attention('music_restricted_by_child_content_settings') %}
+      {{ render_continued_listening_beginning() }}
+      {% if music_answer.type == 'track' and 'выпуск' not in title_tokens %}
+        выпуск
+      {% elif music_answer.type == 'album' and not has_podcast_in_title %}
+        подкаст
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_podcast_answer(music_answer, what_is_playing=False) %}
+  {{ render_podcast_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+  .
+{% endmacro %}
+
+{% macro render_podcast_restricted_by_content_settings() %}
+  Лучше всего послушать этот подкаст вместе с родителями.
+{% endmacro %}
+
+{% macro render_audiobook_answer_beginning(music_answer, what_is_playing=False) %}
+  {% if what_is_playing %}
+    Сейчас играет
+  {% else %}
+    Включаю
+  {% endif %}
+{% endmacro %}
+
+{% macro render_audiobook_answer(music_answer, what_is_playing=False) %}
+  {{ render_audiobook_answer_beginning(music_answer, what_is_playing) }}
+  {% if music_answer.title %}
+    "{{ music_answer.title }}"
+  {% endif %}
+  .
+{% endmacro %}
+
+{% macro render_authorization_from_fairytale() %}
+  {% chooseline %}
+    Пожалуйста, войдите в свой аккаунт на Яндексе, чтобы я могла включать вам сказки целиком. А пока послушайте отрывок.
+    Пожалуйста, войдите в аккаунт, чтобы я могла включать вам сказки, которые вы любите, полностью. А пока - отрывок.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_suggest_yaplus_fairytale() %}
+  {% chooseline %}
+    Без подписки доступен только отрывок сказки. Это неплохо, но с подпиской было бы идеально.
+    Без подписки можно слушать только часть сказки, но самое интересное впереди!
+    Сказка прервется в самом интересном месте! Оформите подписку - слушайте целиком.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_continued_listening_beginning() %}
+  {% if is_active_attention('continued_listening') %}
+    {% chooseline %}
+      Продолжаю
+      Продолжаю играть
+    {% endchooseline %}
+  {% else %}
+    Включаю
+  {% endif %}
+{% endmacro %}

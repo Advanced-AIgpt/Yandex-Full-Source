@@ -1,0 +1,1308 @@
+labels:
+  failed_to_process_text: 'Не поняла\. Давайте снова\. Пример: «переведи слово \"кошка\" на испанский»\.|Не поняла\. Повторите, пожалуйста\. Пример: «переведи слово \"собака\" на немецкий»\.|А что именно перевести\? Попробуйте спросить по-другому\. Например: «как будет \"стол\" по-английски\?»'
+  failed_to_process_voice: 'Не поняла\. Давайте снова\. Пример: переведи слово кошка на испанский\.|Не поняла\. Повторите, пожалуйста\. Пример: «переведи слово собака на немецкий\.|А что именно перевести\? Попробуйте спросить по-другому\. Например: как будет стол по-английски\?'
+  wrong_language_translate: 'Это и есть нужный вам язык, русский\.|Если я не ошибаюсь, это уже русский\.|Сдаётся мне, это и есть русский\.|Погодите\. Эта фраза уже на русском\.'
+  not_supported_language_text: 'Я не знаю ни абхазского, ни древнерусского\. Когда-нибудь изучу\.|У меня тут 95 языков, но ни абхазского, ни древнерусского среди них нет\. Увы\.|Мне не знаком ни абхазский, ни древнерусский\. Такое бывает\.'
+  not_supported_language_voice: 'Я не знаю ни абхазского, ни древнерусского\. Когда-нибудь изучу\.|У меня тут 95 языков, но ни абхазского, ни древнерусского среди них нет\. Увы\.|Мне не знак\+ом ни абхазский, ни древнерусский\. Такое бывает\.'
+  foreign_src_language_card: 'Сдаётся мне, перевод такой:|Подозреваю, что вот так:|Вроде так:|Кажется, вот так:'
+  foreign_src_language_nocard: "Сдаётся мне, .* - это|Подозреваю, что .* - это|Кажется, что .* - это"
+  start_foreign_answer: 'Перевела на .*:|.* - это|.* на .* -'
+  swear_unlimited: 'Вот вам не видно, а я покраснела\. Держите перевод:|Ну ладно, тоже язык\. Перевод такой:'
+  swear_children_text: 'Я бы с радостью это перевела, но вам нужно включить режим поиска без ограничений\.|Вот когда включите режим поиска без ограничений, тогда и переведу\.'
+  swear_children_voice: 'Я бы с радостью это перевела, но вам нужно включить режим поиска без ограничений\.|Вот когда вкл\+ючите режим поиска без ограничений, тогда и переведу\.'
+  swear_children_watch: 'Есть слова, которые я переводить не буду\. Не буду - и всё\.|Тяга к языкам - это прекрасно, но тебе такое рановато знать\.'
+  swear_children_other: 'Некоторые слова я не перевожу\. Скажите иначе\.|Есть слова, которые я переводить не буду\. Не буду - и всё\.|Я всё поняла, но переводить не стану\. Найдите другие слова\.'
+
+test_dict:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      переведи кошку на английский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи кошку на английский
+
+        bass:
+          form:
+            query:
+              value: переведи кошку на английский
+            voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">cat
+            result:
+              value: cat
+            text_to_translate:
+              value: кошку
+            text_to_translate_voice:
+              value: кошку
+            lang_src:
+              value: русский
+            lang_dst:
+              value: английский
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: шведский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} cat"
+        voice: "{start_foreign_answer} <speaker voice=\"oksana\" lang=\"en\" effect=\"translate_oksana_en\" speed=\"0.9\">cat"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на шведском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_dict_detect_lang:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      алиса, переведи слово экзампл:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи слово экзампл
+
+        bass:
+          form:
+            query:
+              value: переведи слово экзампл
+            result:
+              value: образец
+            voice:
+              value: образец
+            text_to_translate:
+              value: example
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">example
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: датский
+
+        text: "{foreign_src_language_nocard} образец"
+        voice: "{foreign_src_language_nocard} образец"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на датском?
+
+test_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      как будет я смотрю фильм на английском:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: как будет я смотрю фильм на английском
+
+        bass:
+          form:
+            query:
+              value: как будет я смотрю фильм на английском
+            voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">i watch the movie
+            result:
+              value: I watch the movie
+            text_to_translate:
+              value: я смотрю фильм
+            text_to_translate_voice:
+              value: я смотрю фильм
+            lang_src:
+              value: русский
+            lang_dst:
+              value: английский
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: французский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} I watch the movie"
+        voice: "{start_foreign_answer} <speaker voice=\"oksana\" lang=\"en\" effect=\"translate_oksana_en\" speed=\"0.9\">i watch the movie"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на французском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_translate_detect_lang:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - dexp
+      - irbis
+      - speaker
+      - auto
+      - navigator_ios
+      - navigator_android
+
+    dialog:
+      перевод май френд:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: перевод май френд
+
+        bass:
+          form:
+            query:
+              value: перевод май френд
+            result:
+              value: мой друг
+            voice:
+              value: мой друг
+            text_to_translate:
+              value: my friend
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">my friend
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: attention
+            attention_type: result_card
+          - type: text_card
+            phrase_id: foreign_translate
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: немецкий
+
+        text: "{foreign_src_language_card}"
+        voice: "{foreign_src_language_card} мой друг"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на немецком?
+
+test_nothing_to_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - dexp
+      - irbis
+      - speaker
+      - navigator_android
+      - navigator_ios
+
+    dialog:
+      переведи перевод на французский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи перевод на французский
+
+        bass:
+          form:
+            query:
+              value: переведи перевод на французский
+            result:
+              value: Яндекс.Переводчик — 95 языков\ntranslate.yandex.ru
+            lang_src:
+              value: русский
+            lang_dst:
+              value: французский
+
+          blocks:
+          - type: error
+            error:
+              msg: failed_to_process
+              type: translateerror
+          - type: suggest
+            suggest_type: translate__open_uri
+
+        text: "{failed_to_process_text}"
+        voice: "{failed_to_process_voice}"
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+
+test_same_lang_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - dexp
+      - irbis
+      - speaker
+      - navigator_android
+      - navigator_ios
+
+    dialog:
+      как будет кошка на русском:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: как будет кошка на русском
+
+        bass:
+          form:
+            query:
+              value: как будет кошка на русском
+            text_to_translate:
+              value: кошка
+            text_to_translate_voice:
+              value: кошка
+            lang_src:
+              value: русский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: error
+            error:
+              msg: wrong_language_translate
+              type: translateerror
+          - type: suggest
+            suggest_type: translate__open_uri
+
+        text: "{wrong_language_translate}"
+        voice: "{wrong_language_translate}"
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+
+test_translate_mixed_langs:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      переведи russian репаблик:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи russian репаблик
+
+        bass:
+          form:
+            query:
+              value: переведи russian репаблик
+            result:
+              value: Российская Республика
+            voice:
+              value: российская республика
+            text_to_translate:
+              value: russian republic
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">russian republic
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: удмуртский
+
+        text: "{foreign_src_language_nocard} Российская Республика"
+        voice: "{foreign_src_language_nocard} российская республика"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на удмуртском?
+
+test_translate_eng:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - dexp
+      - irbis
+      - speaker
+      - watch
+      - auto
+      - navigator_ios
+      - navigator_android
+
+    dialog:
+      переведи table:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи table
+
+        bass:
+          form:
+            query:
+              value: переведи table
+            result:
+              value: таблица
+            voice:
+              value: таблица
+            text_to_translate:
+              value: table
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">table
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: attention
+            attention_type: result_card
+          - type: text_card
+            phrase_id: foreign_translate
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: башкирский
+
+        text: "{foreign_src_language_card}"
+        voice: "{foreign_src_language_card} таблица"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на башкирском?
+
+test_translate_two_stage_translit:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      переведи я читаю книгу на японский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи я читаю книгу на японский
+
+        bass:
+          form:
+            query:
+              value: переведи я читаю книгу на японский
+            result:
+              value: 私は本を読んだ
+            voice:
+              value: <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">ши ха хан о сатору нда
+            text_to_translate:
+              value: я читаю книгу
+            text_to_translate_voice:
+              value: я читаю книгу
+            lang_src:
+              value: русский
+            lang_dst:
+              value: японский
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: ирландский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} 私は本を読んだ"
+        voice: "{start_foreign_answer} <speaker voice=\"alyss\" effect=\"translate_alyss_omni\" speed=\"0.9\">ши ха хан о сатору нда"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на ирландском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_translate_translit:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      переведи я слушаю музыку на турецкий:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи я слушаю музыку на турецкий
+
+        bass:
+          form:
+            query:
+              value: переведи я слушаю музыку на турецкий
+            result:
+              value: ben müzik dinlemek
+            voice:
+              value: <speaker voice="oksana" lang="tr" effect="translate_oksana_tr" speed="0.9">ben müzik dinlemek
+            text_to_translate:
+              value: я слушаю музыку
+            text_to_translate_voice:
+              value: я слушаю музыку
+            lang_src:
+              value: русский
+            lang_dst:
+              value: турецкий
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: норвежский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} ben müzik dinlemek"
+        voice: "{start_foreign_answer} <speaker voice=\"oksana\" lang=\"tr\" effect=\"translate_oksana_tr\" speed=\"0.9\">ben müzik dinlemek"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на норвежском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_translate_wrong_lang:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      как будет кошка на германском языке:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: как будет кошка на германском языке
+
+        bass:
+          form:
+            query:
+              value: как будет кошка на германском языке
+            result:
+              value: Katze
+            voice:
+              value: <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">katze <[ k aa c schwa ]>
+            text_to_translate:
+              value: кошка
+            text_to_translate_voice:
+              value: кошка
+            lang_src:
+              value: русский
+            lang_dst:
+              value: немецкий
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: лаосский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} Katze"
+        voice: "{start_foreign_answer} <speaker voice=\"alyss\" effect=\"translate_alyss_omni\" speed=\"0.9\">katze <[ k aa c schwa ]>"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на лаосском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_translate_arabish:
+  experiments: [translate, translte_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      как будет собака на арабском:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: как будет собака на арабском
+
+        bass:
+          form:
+            query:
+              value: как будет собака на арабском
+            result:
+              value: كلب
+            voice:
+              value: <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">клб
+            text_to_translate:
+              value: собака
+            text_to_translate_voice:
+              value: собака
+            lang_src:
+              value: русский
+            lang_dst:
+              value: арабский
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: кхмерский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} كلب"
+        voice: "{start_foreign_answer} <speaker voice=\"alyss\" effect=\"translate_alyss_omni\" speed=\"0.9\">клб"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на кхмерском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+test_translate_portuguese:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+
+    dialog:
+      как будет я люблю вино на португальском:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: как будет я люблю вино на португальском
+
+        bass:
+          form:
+            query:
+              value: как будет я люблю вино на португальском
+            result:
+              value: eu gosto de vinho
+            voice:
+              value: <speaker voice="alyss" effect="translate_alyss_omni" speed="0.9">eu <[ ee l ]> gosto <[ g oo s t u ]> de <[ d ee ]> vinho <[ vv ii n uu ]>
+            text_to_translate:
+              value: я люблю вино
+            text_to_translate_voice:
+              value: я люблю вино
+            lang_src:
+              value: русский
+            lang_dst:
+              value: португальский
+            speed:
+              value: 0.9
+          blocks:
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: финский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{start_foreign_answer} eu gosto de vinho"
+        voice: "{start_foreign_answer} <speaker voice=\"alyss\" effect=\"translate_alyss_omni\" speed=\"0.9\">eu <[ ee l ]> gosto <[ g oo s t u ]> de <[ d ee ]> vinho <[ vv ii n uu ]>"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на финском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстрее
+
+
+test_translate_unsupported_language:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - irbis
+      - dexp
+      - speaker
+
+    dialog:
+      переведи книжку с абхазского на древнерусский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи книжку с абхазского на древнерусский
+
+        bass:
+          form:
+            query:
+              value: переведи книжку с абхазского на древнерусский
+            text_to_translate:
+              value: книжка
+            text_to_translate_voice:
+              value: книжка
+            lang_src:
+              value: unsupported абхазского
+            lang_dst:
+              value: unsupported древнерусский
+          blocks:
+          - type: attention
+            attention_type: open_search
+          - type: text_card
+            phrase_id: unsupported_lang
+          - type: command
+            command_type: open_uri
+            command_sub_type: translate_search
+            data:
+              uri: https://yandex.ru/search/?text=переведи%20книжку%20с%20абхазского%20на%20древнерусский&lr=213
+          - type: suggest
+            suggest_type: translate__open_uri
+
+        text: "{not_supported_language_text}"
+        voice: "{not_supported_language_voice} Давайте поищем в Яндексе"
+        blocks:
+        - type: div-universal-block
+          title: Давайте поищем в Яндексе
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_search
+          type: client_action
+          payload:
+            uri: https://yandex.ru/search/?text=переведи%20книжку%20с%20абхазского%20на%20древнерусский&lr=213
+
+test_yandex_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - pa_ios
+      - navigator_android
+      - navigator_alice
+      - desktop_alice
+      - irbis
+      - dexp
+      - speaker
+
+    dialog:
+      яндекс переводчик dog на французский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: dog на французский
+
+        bass:
+          form:
+            query:
+              value: dog на французский
+            lang_src:
+              value: английский
+            lang_dst:
+              value: французский
+            text_to_translate:
+              value: dog
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">dog
+            result:
+              value: Яндекс.Переводчик — 95 языков\ntranslate.yandex.ru
+            translate_service:
+              value: yandex
+          blocks:
+          - type: command
+            command_type: open_uri
+            command_sub_type: translate_yandex
+            data:
+              uri: "intent://?lang=en-fr&text=dog#Intent;scheme=yandextranslate;package=ru.yandex.translate;S.browser_fallback_url=browser%253A%252F%252F%253Furl%253Dhttps%25253A%25252F%25252Ftranslate.yandex.ru%25252F%25253Flang%25253Den-fr%252526text%25253Ddog;end"
+          - type: suggest
+            suggest_type: translate__open_uri
+          - type: attention
+            attention_type: open_translate
+
+        voice: "Открываю Переводчик"
+        blocks:
+        - type: div-universal-block
+          title: Яндекс.Переводчик — 95 языков\ntranslate.yandex.ru
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+        - name: open_uri
+          sub_name: translate_yandex
+          type: client_action
+          payload:
+            uri: "intent://?lang=en-fr&text=dog#Intent;scheme=yandextranslate;package=ru.yandex.translate;S.browser_fallback_url=browser%253A%252F%252F%253Furl%253Dhttps%25253A%25252F%25252Ftranslate.yandex.ru%25252F%25253Flang%25253Den-fr%252526text%25253Ddog;end"
+
+test_google_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - desktop_alice
+      - dexp
+      - irbis
+      - speaker
+      - navigator_android
+      - navigator_ios
+
+    dialog:
+      гугл переводчик на английский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: гугл переводчик на английский
+
+        bass:
+          form:
+            query:
+              value: гугл переводчик на английский
+            lang_src:
+              value: русский
+            lang_dst:
+              value: английский
+            result:
+              value: Google Переводчик — быстрый перевод на 103 языка и обратно\ntranslate.google.ru
+            translate_service:
+              value: google
+          blocks:
+          - type: command
+            command_type: open_uri
+            command_sub_type: translate_google
+            data:
+              uri: https://translate.google.com/#ru/en/
+          - type: suggest
+            suggest_type: translate__open_uri
+          - type: attention
+            attention_type: open_translate
+
+        voice: "Открываю Переводчик"
+        blocks:
+        - type: div-universal-block
+          title: Google Переводчик — быстрый перевод на 103 языка и обратно\ntranslate.google.ru
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+        directives:
+        - name: open_uri
+          sub_name: translate_google
+          type: client_action
+          payload:
+            uri: https://translate.google.com/#ru/en/
+
+test_empty_query_google_translate_not_supported:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_ios
+      - pa_android
+
+    dialog:
+      гугл переводчик с абхазского на древнерусский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: с абхазского на древнерусский
+
+        bass:
+          form:
+            query:
+              value: с абхазского на древнерусский
+            lang_src:
+              value: unsupported абхазского
+            lang_dst:
+              value: unsupported древнерусский
+          blocks:
+          - type: error
+            error:
+              msg: not_supported_language
+              type: translateerror
+          - type: suggest
+            suggest_type: translate__open_uri
+
+        text: "{not_supported_language_text}"
+        voice: "{not_supported_language_voice}"
+
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+
+test_same_langs_yandex_translate:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - watch
+      - dexp
+      - irbis
+      - speaker
+
+    dialog:
+      переводчик с русского на русский:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: с русского на русский
+
+        bass:
+          form:
+            query:
+              value: с русского на русский
+            lang_src:
+              value: русский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: error
+            error:
+              msg: wrong_language_translate
+              type: translateerror
+          - type: suggest
+            suggest_type: translate__open_uri
+
+        text: "{wrong_language_translate}"
+        voice: "{wrong_language_translate}"
+        suggests:
+        - directives:
+          payload:
+            text: Открой Переводчик
+
+test_swear_unlimited:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+      - navigator_android
+      - navigator_ios
+      - desktop_alice
+      - auto
+      - watch
+
+    dialog:
+      переведи fuck:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи fuck
+
+        bass:
+          form:
+            query:
+              value: переведи fuck
+            result:
+              value: трахать
+            voice:
+              value: трахать
+            text_to_translate:
+              value: fuck
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">fuck
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: attention
+            attention_type: swear_unlimited
+          - type: suggest
+            suggest_type: translate__repeat
+          - type: suggest
+            suggest_type: translate__change_language
+            data: каталанский
+          - type: suggest
+            suggest_type: translate__slower
+          - type: suggest
+            suggest_type: translate__quicker
+
+        text: "{swear_unlimited} трахать"
+        voice: "{swear_unlimited} трахать"
+        suggests:
+        - directives:
+          payload:
+            text: Повтори
+        - directives:
+          payload:
+            text: А на каталанском?
+        - directives:
+          payload:
+            text: Медленнее
+        - directives:
+          payload:
+            text: Быстре
+
+test_swear_children:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+      - navigator_android
+      - navigator_ios
+      - desktop_alice
+      - watch
+      - auto
+
+    dialog:
+      переведи блядь:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи блядь
+
+        bass:
+          form:
+            query:
+              value: переведи блядь
+            text_to_translate:
+              value: блядь
+            text_to_translate_voice:
+              value: блядь
+            lang_src:
+              value: русский
+            lang_dst:
+              value: английский
+          blocks:
+          - type: attention
+            attention_type: swear_children
+
+        text: "{swear_children_text}"
+        voice: "{swear_children_voice}"
+
+test_swear_children_watch:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+      - navigator_android
+      - navigator_ios
+      - desktop_alice
+      - speaker
+      - dexp
+      - irbis
+      - auto
+
+    dialog:
+      переведи bitch:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи bitch
+
+        bass:
+          form:
+            query:
+              value: переведи bitch
+            text_to_translate:
+              value: bitch
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">bitch
+            lang_src:
+              value: английский
+            lang_dst:
+              value: русский
+          blocks:
+          - type: attention
+            attention_type: swear_children
+
+        text: "{swear_children_watch}"
+        voice: "{swear_children_watch}"
+
+test_swear_children_other:
+  experiments: [translate, translate_speed]
+  test:
+    flags:
+      skip:
+        value: true
+        reason: 'Scenario in irrelevant list'
+
+    app_info:
+      ignore:
+      - pa_android
+      - pa_ios
+      - speaker
+      - dexp
+      - irbis
+      - watch
+
+    dialog:
+      переведи cunt:
+        vins_form:
+          name: personal_assistant.scenarios.translate
+          slots:
+            query:
+              value: переведи cunt
+
+        bass:
+          form:
+            query:
+              value: переведи cunt
+            text_to_translate:
+              value: cunt
+            text_to_translate_voice:
+              value: <speaker voice="oksana" lang="en" effect="translate_oksana_en" speed="0.9">cunt
+            lang_src:
+              value: русский
+            lang_dst:
+              value: английский
+          blocks:
+          - type: attention
+            attention_type: swear_children
+
+        text: "{swear_children_other}"
+        voice: "{swear_children_other}"

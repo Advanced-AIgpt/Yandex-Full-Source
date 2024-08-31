@@ -1,0 +1,28 @@
+RESOURCE_FILES(
+    crm_bot/tests/functional_data/app_presets.yaml
+    crm_bot/tests/functional_data/test_bonus_bb_activate.yaml
+    crm_bot/tests/functional_data/test_bonus_bb_apply.yaml
+    crm_bot/tests/functional_data/test_bonus_bb_get.yaml
+    crm_bot/tests/functional_data/test_bonus_bb_not_recieved.yaml
+    crm_bot/tests/functional_data/test_bonus_problem_ya_plus.yaml
+    crm_bot/tests/functional_data/test_bonus_ya_plus.yaml
+    crm_bot/tests/functional_data/test_bye.yaml
+    crm_bot/tests/functional_data/test_credit.yaml
+    crm_bot/tests/functional_data/test_delivery_options.yaml
+    crm_bot/tests/functional_data/test_experiments.yaml
+    crm_bot/tests/functional_data/test_feedback.yaml
+    crm_bot/tests/functional_data/test_hello.yaml
+    crm_bot/tests/functional_data/test_operator_redirect.yaml
+    crm_bot/tests/functional_data/test_order_how_to.yaml
+    crm_bot/tests/functional_data/test_order_cancel.yaml
+    crm_bot/tests/functional_data/test_order_change_goods.yaml
+    crm_bot/tests/functional_data/test_order_return.yaml
+    crm_bot/tests/functional_data/test_order_status.yaml
+    crm_bot/tests/functional_data/test_payment_issues.yaml
+    crm_bot/tests/functional_data/test_payment_legal_entity.yaml
+    crm_bot/tests/functional_data/test_payment_options.yaml
+    crm_bot/tests/functional_data/test_payment_return_policy.yaml
+    crm_bot/tests/functional_data/test_pickup_location_find.yaml
+    crm_bot/tests/functional_data/test_sbrf_thankyou.yaml
+    crm_bot/tests/functional_data/test_search_warranty.yaml
+)

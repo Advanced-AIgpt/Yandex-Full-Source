@@ -1,0 +1,88 @@
+{
+    "objects": {
+        "context_load_quintiles": {
+            "label": "Quantiles (uniproxy)",
+            "normalize": true,
+            "gen_chart": [
+                {
+                    "type": "quantiles",
+                    "active": true,
+                    "colors": ["#ff0000", "#ffa500", "#ffff00", "#008000", "#42aaff", "#0000ff"],
+                    "quantiles": [50, 75, 90, 95, 99, 999],
+                    "host": "ASEARCH",
+                    "signal": "quant(unistat-vins_context_load_hgram,{quantile})",
+                    "tag": "itype=uniproxy;ctype=prod;prj=uniproxy",
+                    "title": "q{quantile}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "context_load_requests": {
+            "label": "Requests (uniproxy)",
+            "normalize": true,
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "alertName": "alice.uniproxy-asr_5xx_perc_{loc}",
+                    "colors": ["#ff0000", "#008000", "#0000ff"],
+                    "locations": ["man", "sas", "vla"],
+                    "host": "ASEARCH",
+                    "signal": "unistat-vins_context_load_requests_summ",
+                    "tag": "itype=uniproxy;ctype=prod;geo={loc};prj=uniproxy",
+                    "title": "{loc}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "context_load_unanswers": {
+            "label": "Unanswers (uniproxy), %: man(red), sas(green), vla(blue)",
+            "normalize": true,
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "alertName": "alice.uniproxy-context_load_failures_{loc}",
+                    "colors": ["#ff0000", "#008000", "#0000ff"],
+                    "locations": ["man", "sas", "vla"],
+                    "host": "ASEARCH",
+                    "signal": "or(perc(unistat-vins_context_load_non_retryable_errors_summ,unistat-vins_context_load_requests_summ),0)",
+                    "tag": "itype=uniproxy;ctype=prod;geo={loc};prj=uniproxy",
+                    "title": "{loc}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "unistat_context_load_failed_man": {
+            "alert": "alice.uniproxy-context_load_failures_man",
+            "label": "5xx man",
+            "size": [
+                1,
+                1
+            ]
+        },
+        "unistat_context_load_failed_sas": {
+            "alert": "alice.uniproxy-context_load_failures_sas",
+            "label": "5xx sas",
+            "size": [
+                1,
+                1
+            ]
+        },
+        "unistat_context_load_failed_vla": {
+            "alert": "alice.uniproxy-context_load_failures_vla",
+            "label": "5xx vla",
+            "size": [
+                1,
+                1
+            ]
+        }
+    }
+}

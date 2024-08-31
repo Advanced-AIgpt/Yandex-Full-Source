@@ -1,0 +1,220 @@
+[
+    {
+        "action": "set_timeout",
+        "timelimit": 20
+    },
+    {
+        "action": "load_library",
+        "filename": "uniclient__common.json"
+    },
+    {
+        "action": "from_library",
+        "use": "send_synchronize_state_vins"
+    },
+    {
+        "action": "send_message",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "VINS",
+                    "name": "VoiceInput"
+                },
+                "payload": {
+                    "header": {
+                        "request_id": ""
+                    },
+                    "request": {
+                        "event": {
+                            "type": "voice_input",
+                            "voice_session": true
+                        }
+                    },
+                    "application": {
+                        "timezone": "Europe/Moscow"
+                    },
+                    "lang": "ru-RU",
+                    "topic": "dialogeneral",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key",
+                    "enable_spotter_validation": true,
+                    "spotter_phrase": "алиса",
+                    "advancedASROptions": {
+                        "partial_results": false
+                    },
+                    "spotter_options": {
+                        "spotter_back": 450,
+                        "request_front": 800
+                    },
+                    "asr_balancer": "yaldi.alice.yandex.net"
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_message_id",
+            "new_request_id",
+            "new_stream_id",
+            "application_client_time",
+            "application_timestamp",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_recv_message",
+        "id": 0,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Result",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "endOfUtt": false,
+                    "responseCode": "OK"
+                }
+            }
+        }
+    },
+    {
+        "action": "async_recv_message",
+        "id": 1,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Classification",
+                    "namespace": "Biometry"
+                }
+            }
+        }
+    },
+    {
+        "action": "async_send_data",
+        "filename": "data/spotter.opus",
+        "chunk_size": 8000,
+        "chunk_duration": 0.1,
+        "finalize": [
+            {
+                "action": "send_message",
+                "message": {
+                    "streamcontrol": {
+                        "action": 2,
+                        "reason": 0
+                    }
+                },
+                "apply_to_message": [
+                    "old_stream_id",
+                    "old_message_id"
+                ]
+            },
+            {
+            "action": "async_send_data",
+            "filename": "data/privet.opus",
+            "chunk_size": 800,
+            "chunk_duration": 0.1,
+            "finalize": {
+                    "action": "send_message",
+                    "message": {
+                        "streamcontrol": {
+                            "action": 0,
+                            "reason": 0
+                        }
+                    },
+                    "apply_to_message": [
+                        "old_stream_id",
+                        "old_message_id"
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "action": "async_recv_message",
+        "id": 2,
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "Spotter",
+                    "name": "Validation"
+                },
+                "payload": {
+                    "result": 1
+                }
+            }
+        }
+    },
+    {
+        "action": "async_recv_message",
+        "id": 3,
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Result"
+                },
+                "payload": {
+                    "responseCode": "OK",
+                    "endOfUtt": true
+                }
+            }
+        },
+        "recognition_sample": [
+            [ "привет" ]
+        ]
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "streamcontrol": {
+                "reason": 0,
+                "action": 0,
+                "streamId": 1
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "Vins",
+                    "name": "VinsResponse"
+                },
+                "payload": {
+                    "response": {
+                        "card": {
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "TTS",
+                    "name": "Speak"
+                },
+                "payload": {
+                    "format": "audio/opus"
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "streamcontrol": {
+                "action": 0,
+                "reason": 0,
+                "streamId": 2
+            }
+        }
+    },
+    {
+        "action": "check_received_data",
+        "stream_id": 2,
+        "min_binary_data_size": 1000
+    }
+
+]

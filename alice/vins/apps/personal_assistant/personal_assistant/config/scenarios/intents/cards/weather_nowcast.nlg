@@ -1,0 +1,222 @@
+{% from "cards/common.nlg" import open_uri_action, open_uri_action_for_item_in_list, font_color with context %}
+
+{% macro render_footer_caption__weather() %}
+    {% if form.weather_nowcast_alert is not none %}
+    ОТКРЫТЬ КАРТУ ОСАДКОВ
+    {% else %}
+    ПОСМОТРЕТЬ ПОДРОБНЫЙ ПРОГНОЗ
+    {% endif %}
+{% endmacro %}
+
+
+{% macro render_table_item(local_day_time, precipitation, icon_url, item_number)%}
+{
+  "type": "div-container-block",
+  "height": {
+    "value": 44,
+    "type": "numeric"
+  },
+  "width": {
+    "value": 58,
+    "type": "numeric"
+  },
+  "children": [
+    {
+      "type": "div-table-block",
+      "rows": [
+        {
+          "cells": [
+            {
+              "image": {
+                "type": "div-image-element",
+                "ratio": 1,
+                "image_url": "{{ icon_url }}"
+              },
+              "horizontal_alignment": "center",
+              "image_size": "l"
+            }
+          ],
+          "top_padding": "zero",
+          "bottom_padding": "xxs",
+          "type": "row_element"
+        },
+        {
+          "cells": [
+            {
+              "vertical_alignment": "center",
+              "text_style": "text_s",
+              "horizontal_alignment": "center",
+              "text": "{{ font_color('#5D96E1', local_day_time) if precipitation else local_day_time }}"
+            }
+          ],
+          "top_padding": "zero",
+          "bottom_padding": "xxs",
+          "type": "row_element"
+        }
+      ],
+      "columns": [
+        {
+          "left_padding": "zero",
+          "right_padding": "zero"
+        }
+      ]
+    }
+  ],
+  "background": [
+    {
+      "type": "div-solid-background",
+      "color": "{{ '#FFFFFF' }}"
+    }
+  ],
+  "action": {
+    "url": "{{ open_uri_action_for_item_in_list(form.uri, 'open_weather_turbo', item_number) }}",
+    "log_id": "whole_card"
+  }
+}
+{%- endmacro %}
+
+
+{% macro render_weather_precipitation_card(data) %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-separator-block",
+          "size": "s"
+        },
+        {
+          "type": "div-gallery-block",
+          "items": [
+            {% for hour in data|get_item('hours') %}
+              {% if loop.index0 %}
+               ,
+              {% endif %}
+              {{ render_table_item(hour|get_item('local_day_time'), hour|get_item('precipitation'), hour|get_item('icon'), loop.index) }}
+            {% endfor %}
+          ]
+        },
+        {
+          "size": "s",
+          "delimiter_color": "{{ '#0a000000' }}",
+          "weight": 1,
+          "type": "div-separator-block",
+          "has_delimiter": 1
+        },
+        {
+          "type": "div-footer-block",
+          "text_style": "button",
+          "text": "{{ font_color('#6839cf', render_footer_caption__weather()) }}",
+          "action": {
+            "url":"{{ open_uri_action(form.uri, 'whole_card', 'footer_caption_weather_whole_card') }}",
+           "log_id": "whole_card"
+          }
+        }
+      ],
+      "action": {
+        "url": "{{ open_uri_action(form.uri, 'open_weather_turbo') }}",
+        "log_id": "whole_card"
+      }
+    }
+  ],
+  "background": [
+    {
+      "type": "div-solid-background",
+      "color": "{{ '#FFFFFF' }}"
+    }
+  ]
+}
+{%- endmacro %}
+
+{% macro render_weather_precipitation_nowcast_card(data) %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-container-block",
+          "height": {
+            "value": 160,
+            "type": "numeric"
+          },
+          "width": {
+            "value": "match_parent",
+            "type": "predefined"
+          },
+          "children": [
+            {
+              "type": "div-separator-block",
+              "size": "s"
+            }
+          ],
+          "background": [
+            {
+              "type": "div-solid-background",
+              "color": "{{ '#E9EBF0' }}"
+            },
+            {
+              "type": "div-image-background",
+              "image_url": "{{ data|get_item('current.background_url') }}"
+            },
+            {
+              "type": "div-image-background",
+              "image_url": "{{ data|get_item('current.prec_type_url') }}"
+            }
+          ]
+        },
+        {
+          "type": "div-separator-block",
+          "size": "s"
+        },
+        {
+          "type": "div-gallery-block",
+          "items": [
+            {% for hour in data|get_item('hours') %}
+              {% if loop.index0 %}
+               ,
+              {% endif %}
+              {{ render_table_item(hour|get_item('local_day_time'), hour|get_item('precipitation'), hour|get_item('icon'), loop.index) }}
+            {% endfor %}
+          ]
+        },
+        {
+          "size": "s",
+          "delimiter_color": "{{ '#0a000000' }}",
+          "weight": 1,
+          "type": "div-separator-block",
+          "has_delimiter": 1
+        },
+        {
+          "type": "div-footer-block",
+          "text_style": "button",
+          "text": "{{ font_color('#6839cf', render_footer_caption__weather()) }}",
+          "action": {
+            "url":"{{ open_uri_action(form.uri, 'whole_card', 'footer_caption_weather_nowcast_whole_card') }}",
+           "log_id": "whole_card"
+          }
+        }
+      ],
+      "action": {
+        "url": "{{ open_uri_action(form.uri, 'open_weather_turbo') }}",
+        "log_id": "whole_card"
+      }
+    }
+  ],
+  "background": [
+    {
+      "type": "div-solid-background",
+      "color": "{{ '#FFFFFF' }}"
+    }
+  ]
+}
+{%- endmacro %}
+
+{% card weather__precipitation %}
+  {{ render_weather_precipitation_card(context.data) }}
+{% endcard %}
+
+{% card weather__precipitation__nowcast %}
+  {{ render_weather_precipitation_nowcast_card(context.data) }}
+{% endcard %}

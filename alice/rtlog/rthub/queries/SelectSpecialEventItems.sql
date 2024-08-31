@@ -1,0 +1,4 @@
+SELECT * FROM (
+  SELECT SpecialEventItem FROM Input
+  WHERE SpecialEventItem IS NOT NULL
+) FLATTEN COLUMNS;

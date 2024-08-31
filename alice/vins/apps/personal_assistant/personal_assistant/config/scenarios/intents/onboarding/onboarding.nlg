@@ -1,0 +1,112 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/onboarding.nlg" %}
+{% from "onboarding/quasar/onboarding.nlg" import quasar_onboarding_cases_data with context %}
+{% from "onboarding/elari-watch/onboarding.nlg" import elari_watch_onboarding_cases_data %}
+{% from "onboarding/tv/onboarding.nlg" import tv_onboarding_cases_data %}
+
+{% macro render_help_message(cases_data, number) %}
+  {% if cases_data %}
+    {% set case_data = cases_data[number % (cases_data|length)] %}
+    {% if case_data.voice %}
+      {% text %}
+        {{ case_data.text }}
+      {% endtext %}
+      {% voice %}
+        {{ case_data.voice }}
+      {% endvoice %}
+    {% else %}
+      {{ case_data.text }}
+    {% endif %}
+    {% if cases_data|length > 1 %}
+      {% if not is_elari_watch() %}
+        {% chooseline %}
+          Рассказать ещё?
+          Продолжить?
+          Хотите узнать больше, скажите «да».
+          Хотите узнать ещё?
+          Рассказывать ещё?
+          Продолжим?
+        {% endchooseline %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro help_message(cases_data, number) %}
+  {% if cases_data %}
+    {% if not cases_data is mapping %}
+      {{ render_help_message(cases_data, number) }}
+    {% else %}
+      {% set ns = namespace(cases=[]) %}
+      {% set postfixes = [""] %}
+      {% if is_quasar() %}
+        {% do postfixes.append("_quasar") %}
+      {% elif is_mini_speaker() %}
+        {% do postfixes.append("_quasar_mini") %}
+      {% endif %}
+      {% for postfix in postfixes %}
+        {% set exp_prefix = "" %}
+        {% if req_info.experiments['onboarding_quasar_old_phrases'] != None %}
+          {% set exp_prefix = "old_" %}
+        {% endif %}
+        {% set ns.cases = ns.cases + cases_data.get(exp_prefix + "normal" + postfix, []) %}
+        {% if is_tv_plugged_in() %}
+          {% set ns.cases = ns.cases + cases_data.get(exp_prefix + "screen" + postfix, []) %}
+        {% else %}
+          {% set ns.cases = ns.cases + cases_data.get(exp_prefix + "no_screen" + postfix, []) %}
+        {% endif %}
+      {% endfor %}
+      {{ render_help_message(ns.cases, number) }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+# text cards
+{% phrase onboarding__set_message %}
+  {% if form.mode == "onboarding" %}
+    {% text %}
+      Привет, я Алиса.\n
+      Вот что я могу:
+    {% endtext %}
+    {% voice %}
+      {% if req_info.experiments['long_onboarding_intro'] != None %}
+        {% chooseline %}
+          Привет, я Алиса, ваш голосовой помощник. Я могу подсказать погоду, маршрут до д+ома или высоту Эвереста. А ещё — просто поболтать с вами.
+          Привет, я Алиса. Спрашивайте у меня что угодно — сколько сейчас времени, какая погода, как добраться до нужного места. А хотите — можем просто поболтать.
+          Привет, я Алиса. Я могу подсказать погоду, определить музыку на слух, узнать, что на фотографии или вызвать такси. А ещё мы можем просто поговорить.
+          Хелоу! Это Алиса. Я могу подсказать погоду, определить музыку на слух, узнать, что на фотографии, поиграть с вами. А ещё мы можем просто поболтать.
+        {% endchooseline %}
+      {% else %}
+        Привет, я Алиса. Вот что я могу.
+    {% endif %}
+    {% endvoice %}
+  {% else %}
+    {% text %}
+      Вот что я могу:
+    {% endtext %}
+    {% voice %}
+      Вот что я могу
+    {% endvoice %}
+  {% endif %}
+{% endphrase %}
+
+# suggests
+{% phrase render_suggest_caption__onboarding__next %}
+  Что ещё ты умеешь?
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__onboarding__next %}
+  Что ещё ты умеешь?
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_smart_speaker() %}
+    {{ help_message(quasar_onboarding_cases_data.get(form.mode), form.set_number) }}
+  {% elif is_elari_watch() %}
+    {{ help_message(elari_watch_onboarding_cases_data.get(form.mode), form.set_number) }}
+  {% elif is_tv_device() %}
+    {{ help_message(tv_onboarding_cases_data.get(form.mode), form.set_number) }}
+  {% elif is_legatus() %}
+    Сейчас покажу.
+  {% endif %}
+{% endphrase %}

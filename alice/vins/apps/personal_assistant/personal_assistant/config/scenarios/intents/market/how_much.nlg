@@ -1,0 +1,113 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "market/common.nlg" %}
+{% from "market/common.nlg" import debug_run, render_gallery, render_gallery_more, render_offer, render_price %}
+{% nlgimport "market/suggests/beru_activation.nlg" %}
+
+{% if not is_telegram() %}
+  {% nlgimport "cards/market/gallery.nlg" %}
+{% endif %}
+
+{% phrase ask__slot_request %}
+  {% chooseline %}
+    Я подскажу вам цену — только назовите товар. Например: «сколько стоит чайник?»
+    Я подскажу вам цену — только назовите товар.
+    Я с радостью подскажу цену — только назовите нужный товар. Например: «цена чайника».
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase how_much__vulgar_query_result %}
+  {% chooseline %}
+    Не стоит вскрывать эту тему, поверьте мне.
+    Не хочу говорить об этом.
+    Нет настроения говорить об этом.
+    Давайте про что-нибудь другое.
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% macro render_avg_price(avg_price, currency) %}
+  {% chooseline %}
+    Посмотрела на Маркете. Это стоит около {{ render_price(avg_price, currency, 'gen') }}. Вот.
+    Заглянула на Маркет. В среднем — {{ render_price(avg_price, currency) }}. Смотрите.
+    {{ render_price(avg_price, currency) }}. Это средняя цена по данным Яндекс Маркета.
+    Примерно {{ render_price(avg_price, currency) }}. Нашла на Маркете. Смотрите.
+  {% endchooseline %}
+  {% if context.data|get_item('beru_suggest') %}
+    \n
+    {% if context.data.beru_suggest|get_item('with_voice', False) %}
+      А еще со мной можно выбирать и покупать товары. Подсказка ниже. Это не сложно, попробуйте!
+    {% else %}
+      {% text %}
+        А еще со мной можно выбирать и покупать товары. Подсказка ниже. Это не сложно, попробуйте!
+      {% endtext %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_avg_price__no_cards(avg_price, currency) %}
+  {% chooseline %}
+    Посмотрела на Маркете. Это стоит около {{ render_price(avg_price, currency, 'gen') }}.
+    Заглянула на Маркет. В среднем — около {{ render_price(avg_price, currency, 'gen') }}.
+    {{ render_price(avg_price, currency) }}. Это средняя цена по данным Яндекс Маркета.
+    Примерно {{ render_price(avg_price, currency) }}. Нашла на Маркете.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% phrase how_much__model %}
+  {{ render_avg_price(form.model.prices.avg, form.currency) }}
+{% endphrase %}
+
+
+{% phrase how_much__model__no_cards %}
+  {{ render_avg_price__no_cards(form.model.prices.avg, form.currency) }}
+  {% call debug_run(req_info) %}
+    \n
+    {{ render_offer(form.model.results[0], form.currency) }}
+    {{ render_gallery_more(form.model.url) }}
+  {% endcall %}
+{% endphrase %}
+
+
+{% phrase how_much__popular_goods %}
+  {{ render_avg_price(form.popular_good.prices.avg, form.currency) }}
+{% endphrase %}
+
+
+{% phrase how_much__popular_goods__no_cards %}
+  {{ render_avg_price__no_cards(form.popular_good.prices.avg, form.currency) }}
+  {% call debug_run(req_info) %}
+    \n
+    {{ render_gallery(form.popular_good.results, form.currency) }}\n
+    {{ render_gallery_more(form.popular_good.url) }}
+  {% endcall %}
+{% endphrase %}
+
+
+{% phrase how_much__empty_serp %}
+  {% if is_elari_watch() %}
+    {% chooseline %}
+      Я не изучала спрос на это.
+      Даже не знаю.
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Я не изучала спрос на это
+      Открываю Яндекс
+      Интересный вопрос. Сейчас найдём
+      Даже не знаю. Спросим Яндекс?
+      Давайте поищем в Яндексе
+      Ищу ответ
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__how_much__yandex_search %}
+  Поискать в Яндексе
+{% endphrase %}
+
+{% phrase render_suggest_uri__how_much__yandex_search %}
+  {{ context.how_much__yandex_search.data }}
+{% endphrase %}

@@ -1,0 +1,566 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "show_route/show_route__ask.nlg" %}
+{% nlgimport "cards/show_route_div_cards.nlg" %}
+
+{% from "show_route/show_route_common.nlg" import pick_route_uri, render_location, phrase_for_sorry, render_nogeo %}
+
+{% macro render_from_to() %}
+  {% if form.what_from or form.where_from %}
+    от {{ render_location(form.resolved_location_from) }}
+  {% endif %}
+  {% if form.resolved_location_to %}
+    до {{ render_location(form.resolved_location_to) }}
+  {% endif %}
+  {% if form.what_via or form.where_via %}
+    через {{ render_location(form.resolved_location_via, 'acc') }}
+  {% endif %}
+{% endmacro %}
+
+{% macro phrase_for_route() %}
+  {% chooseline %}
+    Путь
+    Дорога
+    Маршрут
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro try_again() %}
+  {% chooseline %}
+    Давайте снова.
+    Давайте заново.
+    Попробуйте ещё раз.
+    Давайте ещё разок.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_route_introduction_phrase(route_action_type) %}
+  {% if not route_action_type or route_action_type == 'other' %}
+    {{ phrase_for_route() }} займет
+  {% endif %}
+{% endmacro %}
+
+{% macro auto_route() %}
+  {% if req_info.experiments['show_route_gallery'] == None %}
+    {% if form.route_info and form.route_info.car %}
+      {{ render_route_introduction_phrase(form.route_action_type) }}
+      {{ form.route_info.car.jams_time.value | human_seconds }} с учетом пробок.
+      Это путь {{ render_from_to() }}.
+    {% else %}
+      {{ phrase_for_sorry() }}
+      {% chooseline %}
+        у меня нет информации об автомобильном маршруте
+        я ничего не знаю об автомобильном маршруте
+        я не смогла построить маршрут на авто
+      {% endchooseline %}
+      {{ render_from_to() }}
+      . {{ try_again() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro public_transport_route() %}
+  {% if req_info.experiments['show_route_gallery'] == None %}
+    {% if form.route_info and form.route_info.public_transport %}
+      {{ render_route_introduction_phrase(form.route_action_type) }}
+      {% set transfers = form.route_info.public_transport.transfers %}
+      {{ form.route_info.public_transport.time.value | human_seconds }}, включая
+      {% if transfers > 0 %}
+        {{ transfers }} {{ 'пересадка' | pluralize(transfers, 'acc') }} и
+      {% endif %}
+      {{ form.route_info.public_transport.walking_dist.value | human_meters }} пешком.
+      Это путь {{ render_from_to() }}.
+    {% else %}
+      {{ phrase_for_sorry() }}
+      {% chooseline %}
+        у меня нет информации о том, как доехать на общественном транспорте
+        я не знаю, как доехать на общественном транспорте
+        у меня нет информации о маршруте на общественном транспорте
+      {% endchooseline %}
+      {{ render_from_to() }}
+      . {{ try_again() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro pedestrian_route() %}
+  {% if req_info.experiments['show_route_gallery'] == None %}
+    {% if form.route_info and form.route_info.pedestrian %}
+      {{ render_route_introduction_phrase(form.route_action_type) }}
+      {{ form.route_info.pedestrian.time.value | human_seconds  }}.
+      Это путь {{ render_from_to() }}.
+    {% else %}
+      {{ phrase_for_sorry() }}
+      {% chooseline %}
+        у меня нет информации о пешеходном маршруте
+        я ничего не знаю о пешеходном маршруте
+        я не смогла построить пешеходный маршрут
+      {% endchooseline %}
+      {{ render_from_to() }}
+      . {{ try_again() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro non_pedestrian_route() %}
+  {% if req_info.experiments['show_route_gallery'] == None %}
+    {% if form.route_info and (form.route_info.car or form.route_info.public_transport) %}
+      {{ render_route_introduction_phrase(form.route_action_type) }}
+      {% set has_prefix = False %}
+      {% if form.route_info.car %}
+        {{ form.route_info.car.jams_time.value | human_seconds }} на машине
+        {% set has_prefix = True %}
+      {% endif %}
+      {% if form.route_info.public_transport %}
+        {% if has_prefix %}
+          или
+        {% endif %}
+        {{ form.route_info.public_transport.time.value | human_seconds }} на транспорте
+      {% endif %}
+      . Это путь {{ render_from_to() }}.
+    {% else %}
+      {{ phrase_for_sorry() }}
+      {% chooseline %}
+        у меня нет информации о маршруте
+        я ничего не знаю о маршруте
+        я не смогла построить маршрут
+      {% endchooseline %}
+      {{ render_from_to() }}
+      . {{ try_again() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro all_available_routes() %}
+  {% if req_info.experiments['show_route_gallery'] == None and form.route_info %}
+    {{ render_route_introduction_phrase(form.route_action_type) }}
+    {% set has_prefix = False %}
+    {% set is_triple = False %}
+    {% if form.route_info.car and form.route_info.public_transport and form.route_info.pedestrian and form.route_info.pedestrian.walking_dist.value <= 5000 %}
+      {% set is_triple = True %}
+    {% endif %}
+    {% if form.route_info.car %}
+      {{ form.route_info.car.jams_time.value | human_seconds }} на машине
+      {% set has_prefix = True %}
+    {% endif %}
+    {% if form.route_info.public_transport %}
+      {% if has_prefix and not is_triple %}
+       или
+      {% elif has_prefix and is_triple %}
+       ,
+      {% endif %}
+      {% set has_prefix = True %}
+      {{ form.route_info.public_transport.time.value | human_seconds }} на транспорте
+    {% endif %}
+    {% if form.route_info.pedestrian and form.route_info.pedestrian.walking_dist.value <= 5000 %}
+      {% if has_prefix %}
+        или
+      {% endif %}
+      {{ form.route_info.pedestrian.time.value | human_seconds }} пешком
+    {% endif %}
+    . Это путь {{ render_from_to() }}.
+  {% endif %}
+{% endmacro %}
+
+{% macro navigator_route(form) %}
+  {% if form.resolved_location_to %}
+    {% set location = form.resolved_location_to %}
+    {% set location_is_poi = 'geo' in location %}
+    {% if location.level %}
+      {% set location_is_city = location.level == 'city' %}
+    {% endif %}
+  {% endif %}
+  {% if form.what_to %}
+    {% set location_is_home = form.what_to == 'home' %}
+  {% endif %}
+  {% if form.what_to %}
+    {% set location_is_work = form.what_to == 'work' %}
+  {% endif %}
+  {% if form.resolved_location_via %}
+    {% set via_is_poi = 'geo' in form.resolved_location_via %}
+  {% endif %}
+  {% set flags = namespace() %}
+  {% set commands = get_commands('open_uri') %}
+  {% for command in commands %}
+    {% set uri = command.data.uri %}
+    {% if 'build_route' in uri %}
+      {% set flags.has_route_command = true %}
+    {% endif %}
+    {% if 'map_search' in uri %}
+      {% set flags.has_search_command = true %}
+    {% endif %}
+    {% if 'confirmed=0' in uri %}
+      {% set flags.reset_show = true %}
+    {% endif %}
+  {% endfor %}
+  {% if via_is_poi %}
+    {% if flags.has_route_command %}
+      {% chooseline %}
+        Маршрут готов.
+        Вот ваш маршрут.
+        Добраться можно вот так.
+      {% endchooseline %}
+    {% endif %}
+    {% if flags.has_search_command %}
+      {% chooseline %}
+        Отметила на карте все нужные точки.
+        Отметила на карте все нужные места.
+        Нужные места отметила на карте. Всё для вас!
+      {% endchooseline %}
+    {% endif %}
+  {% else %}
+    {% chooseline %}
+      Принято.
+      Хорошо.
+      {% if not flags.reset_show %}
+        В путь!
+        {% if location_is_home %} Ура! {% endif %}
+      {% endif %}
+    {% endchooseline %}
+  {% endif %}
+  {% text %}
+    {% if flags.has_route_command %}
+      {% if location_is_home %}
+        Едем домой
+      {% elif location_is_work %}
+        {% chooseline %}
+          Строю маршрут до работы
+          Едем на работу
+        {% endchooseline %}
+      {% elif location_is_poi or location %}
+        Едем до {{ render_location(location) }}
+      {% endif %}
+      {% if form.resolved_location_via and not via_is_poi %}
+         через {{ render_location(form.resolved_location_via, 'acc') }}.
+      {% elif location_is_home or location_is_work or location_is_poi or location %}
+        .
+      {% endif %}
+    {% endif %}
+  {% endtext %}
+{% endmacro %}
+
+{% macro route_distance() %}
+  {% if req_info.experiments['show_route_gallery'] == None and form.route_info %}
+    {% if not (form.route_info.car or form.route_info.pedestrian) or form.route_type == 'direct' %}
+      {% set geodesic = geodesic_distance(form.resolved_location_from, form.resolved_location_to) %}
+      {% if geodesic %}
+        Примерно {{ geodesic | human_meters }}.
+        Это расстояние по прямой {{ render_from_to() }}.
+       {% else %}
+        {{ phrase_for_sorry() }} я не знаю расстояние {{ render_from_to() }}.
+       {% endif %}
+    {% else %}
+      {% if form.route_info.car and (form.route_type == 'auto' or form.route_type == 'non_pedestrian') %}
+        {{ form.route_info.car.length.value | human_meters | capitalize_first}} — {{ render_from_to() }}.
+      {% elif form.route_info.pedestrian and form.route_type == 'pedestrian' %}
+        {{ form.route_info.pedestrian.walking_dist.value | human_meters | capitalize_first }}. Это путь {{ render_from_to() }}.
+      {% else %}
+        {% if form.route_info.car %}
+          {{ form.route_info.car.length.value | human_meters | capitalize_first}} на машине
+          {% if form.route_info.pedestrian and form.route_info.pedestrian.walking_dist.value <= 5000 %}
+            или {{ form.route_info.pedestrian.walking_dist.value | human_meters }} пешком
+          {% endif %}
+        {% else %}
+          {{ form.route_info.pedestrian.walking_dist.value | human_meters | capitalize_first }} пешком
+        {% endif %}
+        .
+        Это путь {{ render_from_to() }}.
+       {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+
+{% phrase ya_auto_short_answer %}
+  {% tx %}
+    {{ phrase_for_route() }} {{ render_from_to() }}
+  {% etx %}
+{% endphrase %}
+
+
+{% phrase render_result %}
+  {% if form.route_action_type == 'how_far' %}
+    {{ route_distance() | capitalize_first }}
+  {% elif is_auto() %}
+    {% if not form.route_action_type or form.route_action_type == 'other' %}
+    {% elif form.route_type == 'auto' %}
+      {{ auto_route() | capitalize_first }}
+    {% elif form.route_type == 'public_transport' %}
+      {{ public_transport_route() | capitalize_first }}
+    {% elif form.route_type == 'pedestrian' %}
+      {{ pedestrian_route() | capitalize_first }}
+    {% elif form.route_type == 'non_pedestrian' %}
+      {{ auto_route() | capitalize_first }}
+    {% else %}
+      {{ auto_route() | capitalize_first }}
+    {% endif %}
+  {% elif is_client_with_navigator() and form.route_type in ['auto', 'non_pedestrian', None] %}
+    {% if form.route_action_type == 'how_long' %}
+      {{ auto_route() | capitalize_first }}
+    {% else %}
+      {{ navigator_route(form) | capitalize_first }}
+    {% endif %}
+  {% elif form.route_type == 'auto' %}
+    {{ auto_route() | capitalize_first }}
+  {% elif form.route_type == 'public_transport' %}
+    {{ public_transport_route() | capitalize_first }}
+  {% elif form.route_type == 'pedestrian' %}
+    {{ pedestrian_route() | capitalize_first }}
+  {% elif form.route_type == 'non_pedestrian' %}
+    {{ non_pedestrian_route() | capitalize_first }}
+  {% else %}
+    {{ all_available_routes() | capitalize_first }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__go_by_car %}
+  На авто
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__go_by_car %}
+  {% chooseline %}
+    А на авто?
+    А на автомобиле?
+    А на машине?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__go_by_public_transport %}
+  На транспорте
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__go_by_public_transport %}
+  {% chooseline %}
+    А на транспорте?
+    А на общественном транспорте?
+    А если на транспорте?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__taxi_order_fallback %}
+  На такси
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__taxi_order_fallback %}
+  {% chooseline %}
+    А на такси?
+    А если на такси?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__go_by_foot %}
+  Пешком
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__go_by_foot %}
+  {% chooseline %}
+    А пешком?
+    А если пешком?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__show_on_map %}
+  Маршрут на карте
+{% endphrase %}
+
+{% phrase render_suggest_uri__show_route__show_on_map %}
+  {{ pick_route_uri(form) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__another_location_from %}
+  от {{ render_location(context.show_route__another_location_from.data) }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__another_location_from %}
+  от {{ render_location(context.show_route__another_location_from.data) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__another_location_to %}
+  до {{ render_location(context.show_route__another_location_to.data) }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__another_location_to %}
+  до {{ render_location(context.show_route__another_location_to.data) }}
+{% endphrase %}
+
+{% phrase render_error__nogeo %}
+  {{ render_nogeo(form, context.error) }}
+{% endphrase %}
+
+{% phrase render_error__noroute %}
+  {% if req_info.experiments['show_route_gallery'] != None %}
+  {% chooseline %}
+    Такого пути не нашлось.
+    Я не смогла построить маршрут.
+    Не могу построить такой маршрут.
+    У меня для вас ничего нет. Увы.
+  {% endchooseline %}
+  {% else %}
+    {{ phrase_for_sorry() }}
+    {% chooseline %}
+      я не понимаю, как добраться
+      я ничего не знаю о маршруте
+      мне не удалось проложить маршрут
+    {% endchooseline %}
+    {{ render_from_to() }}
+    .
+  {% endif %}
+  {{ try_again() }}
+{% endphrase %}
+
+{% macro gallery_route_distance(route_type) %}
+  {% if form.route_info %}
+    {% if form.route_type == 'direct' %}
+      .
+      {% set geodesic = geodesic_distance(form.resolved_location_from, form.resolved_location_to) %}
+      {% if geodesic %}
+        Расстояние по прямой - примерно {{ geodesic | human_meters }}
+      {% else %}
+        {{ phrase_for_sorry() }} я не знаю расстояние
+      {% endif %}
+    {% elif route_type %}
+      {% if form.route_info.car and route_type == 'auto' %}
+        . Расстояние - {{ form.route_info.car.length.value | human_meters }}
+      {% elif form.route_info.pedestrian and route_type == 'pedestrian' %}
+        . Расстояние - {{ form.route_info.pedestrian.walking_dist.value | human_meters }}
+      {% endif %}
+    {% elif form.route_info.car or form.route_info.pedestrian %}
+      {% vc %}
+        . Расстояние -
+        {% if form.route_info.car %}
+          {{ form.route_info.car.length.value | human_meters }} на машине
+          {% if form.route_info.pedestrian and form.route_info.pedestrian.walking_dist.value <= 5000 %}
+            или {{ form.route_info.pedestrian.walking_dist.value | human_meters }} пешком
+          {% endif %}
+        {% elif form.route_info.pedestrian %}
+          {{ form.route_info.pedestrian.walking_dist.value | human_meters }} пешком
+        {% endif %}
+      {% evc %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro show_route_gallery_render_phrase_with_location_time(route_type, time, location='') %}
+  {% set route_t = 'на машине' if route_type == 'auto' else 'пешком' if route_type == 'pedestrian' else 'на общественном транспорте' if route_type == 'public_transport' else '' %}
+  {% if location %}
+    {% chooseitem %}
+      Путь до "{{ location }}" займет {{ time }} {{ route_t }}
+    {% or %}
+      Путь до "{{ location }}" {{ route_t }} займет {{ time }}
+    {% or %}
+      Дорога до "{{ location }}" займёт {{ time }} {{ route_t }}
+    {% or %}
+      Дорога до "{{ location }}" {{ route_t }} займёт {{ time }}
+    {% or %}
+      {{ route_t | capitalize_first }} добираться до "{{ location }}" {{ time }}
+    {% or %}
+      Добираться до "{{ location }}" {{ route_t }} {{ time }}
+    {% endchooseitem %}
+  {% else %}
+    {% chooseitem %}
+      Путь займет {{ time }} {{ route_t }}
+    {% or %}
+      Путь {{ route_t }} займет {{ time }}
+    {% or %}
+      Дорога займёт {{ time }} {{ route_t }}
+    {% or %}
+      Дорога {{ route_t }} займёт {{ time }}
+    {% or %}
+      {{ route_t | capitalize_first }} добираться {{ time }}
+    {% or %}
+      Добираться {{ route_t }} {{ time }}
+    {% endchooseitem %}
+  {% endif %}
+  {{ gallery_route_distance(route_type) }}
+{% endmacro %}
+
+{% macro show_route_gallery_render_phrase(route_type, time) %}
+  {% set location = form.resolved_location_to.name if 'geo' in form.resolved_location_to else '' %}
+  {% if not route_type %}
+    {% if location %}
+      {% chooseitem %}
+          Нашла вот такие маршруты до "{{ location }}"
+        {% or %}
+          Вот разные маршруты до "{{ location }}"
+        {% or %}
+          Прикинула, как добраться до "{{ location }}"
+        {% or %}
+          До "{{ location }}" можно добраться вот так
+      {% endchooseitem %}
+    {% else %}
+      {% chooseline %}
+        Нашла вот такие маршруты
+        Есть вот такие варианты
+        Смотрите, выбирайте
+        Вот разные маршруты
+        Прикинула разные маршруты
+        Прикинула, как добраться
+      {% endchooseline %}
+    {% endif %}
+    {{ gallery_route_distance('') }}
+  {% else %}
+    {{ show_route_gallery_render_phrase_with_location_time(route_type, time, location) }}
+  {% endif %}
+  .
+{% endmacro %}
+
+{% phrase show_route_gallery__all %}
+  {% if is_active_attention("close_destination") %}
+    {% chooseline %}
+      Ой, тут рукой подать.
+      О, тут вообще два шага. Ерунда!
+      Это совсем близко.
+      Это совсем рядом. Можно и пешком.
+      Рекомендую дойти пешком.
+      Тут совсем недалеко.
+    {% endchooseline %}
+  {% else %}
+    {{ show_route_gallery_render_phrase(None, None)}}
+  {% endif %}
+{% endphrase %}
+
+{% phrase show_route_gallery__car %}
+  {% with time = form.route_info.car.jams_time.value | human_seconds %}
+    {{ show_route_gallery_render_phrase('auto', time) }}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase show_route_gallery__public_transport %}
+  {% with time = form.route_info.public_transport.time.value | human_seconds %}
+    {{ show_route_gallery_render_phrase('public_transport', time) }}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase show_route_gallery__pedestrian %}
+  {% set location = form.resolved_location_to.name if 'geo' in form.resolved_location_to else None %}
+  {% with time = form.route_info.pedestrian.time.value | human_seconds %}
+    {% if location %}
+      {% chooseitem 0.8 %}
+        {{ show_route_gallery_render_phrase_with_location_time('pedestrian', time, location) }}.
+      {% or 0.2 %}
+        До "{{ location }}" идти пешком {{ time }}{{ gallery_route_distance('pedestrian') }}.
+      {% endchooseitem %}
+    {% else %}
+      {% chooseitem 0.8 %}
+        {{ show_route_gallery_render_phrase('pedestrian', time) }}
+      {% or 0.2 %}
+        Идти пешком {{ time }}{{ gallery_route_distance('pedestrian') }}.
+      {% endchooseitem %}
+    {% endif %}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__confirm %}
+  Поехали
+{% endphrase %}
+
+{% phrase render_suggest_caption__show_route__confirm %}
+  Поехали
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__decline %}
+  Отмена
+{% endphrase %}
+
+{% phrase render_suggest_utterance__show_route__decline %}
+  Отмена
+{% endphrase %}

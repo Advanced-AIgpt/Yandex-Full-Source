@@ -1,0 +1,51 @@
+{% from "market/common.nlg" import render_big_number, render_beru, render_market %}
+
+
+{% phrase market__checkout_complete %}
+  {# todo use only context.data when MALISA-292 will be in prod #}
+    {% set ns = namespace() %}
+    {% if context.data %}
+      {% set ns.order_id = context.data.order_id %}
+    {% else %}
+      {# todo remove slot order_id when MALISA-292 will be in prod #}
+      {% set ns.order_id = form.order_id %}
+    {% endif %}
+  {# end of todo #}
+  {% chooseline %}
+    Всё готово. Номер вашего заказа — {{ render_big_number(ns.order_id) -}}. За ним можно следить в личном кабинете на {{ render_market('abl') -}}.
+    Заказ оформлен. Ура! За ним можно следить в личном кабинете на {{ render_market('abl') -}}. Номер заказа — {{ render_big_number(ns.order_id) -}}.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__market__checkout_complete %}
+  Ваш заказ
+{% endphrase %}
+
+{% phrase render_suggest_uri__market__checkout_complete %}
+  {{ context.market__checkout_complete.data }}
+{% endphrase %}
+
+
+{% phrase market__manual_checkout %}
+  {% chooseline %}
+    Я пока не научилась изменять заказы. Но вот ссылка, по которой это можно сделать. Либо можем начать выбирать другой товар.
+    Менять заказы я ещё не умею. Держите ссылку на свой заказ — можете изменить его, как вздумается. Либо давайте выберем какой-нибудь другой товар.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__market__manual_checkout %}
+  Оформить заказ на {{ render_market('abl') }}
+{% endphrase %}
+
+{% phrase render_suggest_uri__market__manual_checkout %}
+  {{ context.market__manual_checkout.data }}
+{% endphrase %}
+
+
+{% phrase market__checkout_failed %}
+  {% chooseline %}
+    Что-то пошло не так. Можем выбрать что-нибудь другое.
+    У меня не получилось оформить заказ. Можем поискать что-нибудь ещё.
+    Что-то пошло не так. Давайте поищем что-то ещё.
+  {% endchooseline %}
+{% endphrase %}

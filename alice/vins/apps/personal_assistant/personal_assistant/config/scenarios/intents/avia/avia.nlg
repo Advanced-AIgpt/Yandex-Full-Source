@@ -1,0 +1,419 @@
+{% nlgimport "cards/avia.nlg" %}
+{% nlgimport "common/suggests.nlg" %}
+{% from "avia/common.nlg" import render_date, render_point_from, render_point_to, month_name, is_month_query, get_to_preposition  %}
+
+
+{% macro render_price_bottom_line(price) %}
+    {% if price %}
+        от {{ price }}  {{ 'рубль' | pluralize(price, 'gen')  }}
+    {% endif %}
+{% endmacro %}
+
+{% macro render_without_airport(title, point) %}
+    {% chooseline %}
+        Аэропорт в месте {{ point }} нам бы точно не помешал.
+        Вы не обижайтесь, но в месте {{ point }} вообще нет аэропорта.
+        Я не нашла аэропорта в точке «{{ title }}».
+    {% endchooseline %}
+{% endmacro %}
+
+
+{% macro render_internal_error() %}
+    Кажется, на сервере нелётная погода. Попробуйте позже.
+{% endmacro %}
+
+{% macro render_error() %}
+    {% if form.error_code == 'same_points' %}
+        Не хочу летать по кругу! Выберите разные города
+    {% elif form.error_code == 'no_airport_to' %}
+        {{ render_without_airport(form.error, 'прибытия') }}
+    {% elif form.error_code == 'no_airport_from' %}
+        {{ render_without_airport(form.error, 'отправления') }}
+    {% elif form.error_code == 'internal_error' %}
+        {{ render_internal_error() }}
+    {% else %}
+        Что-то не так
+    {% endif %}
+{% endmacro %}
+
+
+{% phrase same_points %}
+    {% set response = "Не хочу летать по кругу! Выберите разные города" %}
+    {% text %}
+        {{ response }}
+    {% endtext %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+{% endphrase %}
+
+
+{% macro render_without_prices(form, short) %}
+    {% set first_part %}
+        {% if form.date_forward %}
+            {% if is_month_query(form.date_forward) == '1' %}
+                Я пока не знаю цен на этот месяц.
+            {% elif form.date_backward %}
+                Я пока не знаю цен на эти даты
+            {% else %}
+                Я пока не знаю цен на эту дату
+            {% endif %}
+        {% else %}
+            Я пока не знаю цен на это направление
+        {% endif %}
+    {% endset %}
+
+    {% set second_path %}
+        {% if form.date_forward %}
+            {% if is_month_query(form.date_forward) == '1' %}
+                {% chooseline %}
+                    Наверное, лучше заглянуть на Яндекс Авиабилеты.
+                    Можно выбрать другой или посмотреть их на Яндекс Авиабилетах.
+                {% endchooseline %}
+            {% elif form.date_backward %}
+                {% chooseline %}
+                    Наверное, лучше заглянуть на Яндекс Авиабилеты.
+                    Можно выбрать другие или посмотреть их на Яндекс Авиабилетах.
+                {% endchooseline %}
+            {% else %}
+                {% chooseline %}
+                    Наверное, лучше заглянуть на Яндекс Авиабилеты.
+                    Можно выбрать другие или посмотреть их на Яндекс Авиабилетах.
+                {% endchooseline %}
+            {% endif %}
+        {% else %}
+            Наверное, лучше заглянуть на Яндекс Авиабилеты.
+        {% endif %}
+    {% endset %}
+
+    {% set response %}
+        {% if short %}
+            {{ first_part }}
+        {% else %}
+            {{ first_part }} {{ second_part }}
+        {% endif %}
+    {% endset %}
+
+    {{ response }}
+{% endmacro %}
+
+{% macro get_price_text(price) %}
+    {{ price }} {{ 'рубль' | pluralize(price, 'acc') }}
+{% endmacro %}
+
+{% macro capitalize_and_case(text, case) %}
+    {{ text | inflect(case) | capitalize_first }}
+{% endmacro %}
+
+{% macro get_from_text(point_title) %}
+    {{ capitalize_and_case(point_title, 'gen') }}
+{% endmacro %}
+
+{% macro get_to_text(point_title) %}
+    {{ capitalize_and_case(point_title, 'acc') }}
+{% endmacro %}
+
+{% macro get_date_text(date_forward, date_backward) %}
+    {% if not date_forward %}
+        {{ '' }}
+    {% elif is_month_query(date_forward) == '1'  %}
+        в {{ month_name(date_forward.get('months')) | inflect('abl') }}
+    {% elif not date_backward %}
+        {{ render_date(date_forward) }}
+    {% elif date_forward.get('months') == date_backward.get('months') %}
+        {{ date_forward.get('days') }} – {{ render_date(date_backward) }}
+    {% else %}
+        {{ render_date(date_forward) }} – {{ render_date(date_backward) }}
+    {% endif %}
+{% endmacro %}
+
+
+{% macro render_with_prices(form, short) %}
+    {% set from_text = get_from_text(form.geo_from) %}
+    {% set to_text = get_to_text(form.geo_to) %}
+    {% set return_text = 'и обратно' if form.date_backward else '' %}
+    {% set price_text = get_price_text(form.min_price) if form.min_price else '' %}
+
+    {% set date_part = get_date_text(form.date_forward, form.date_backward) %}
+    {% set main_part %}
+        {% chooseitem 1.0 %}
+            из {{ from_text }} в {{ to_text }} можно улететь за {{ price_text }}. {% if not short %} Это я на Яндекс Авиабилетах смотрю, там ещё много вариантов. {% endif %}
+        {% or 1.0 %}
+            до {{ form.geo_to | inflect('gen') | capitalize_first }} {{ return_text }} можно долететь за {{ price_text }}. {% if not short %} Смотрела на Яндекс Авиабилетах, там есть и другие варианты. {% endif %}
+        {% or 1.0 %}
+            в  {{ to_text }} {{ return_text }} можно улететь за {{ price_text }}. {% if not short %} Это — самая лучшая цена на Яндекс Авиабилетах. Там и другие есть {% endif %}
+        {% endchooseitem %}
+    {% endset %}
+
+    {% set response_text %}
+         {{ date_part }} {{ main_part }}
+    {% endset %}
+
+    {{ response_text | capitalize_first }}
+{% endmacro %}
+
+
+{% phrase without_cards %}
+    {% set response %}
+        {% if form.error_code %}
+            {{ render_error() }}
+        {% elif form.min_price %}
+            {{ render_with_prices(form, False) }}
+        {% else %}
+            {{ render_without_prices(form, False) }}
+        {% endif %}
+    {% endset %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+
+{% phrase voice_comment %}
+    {% set response %}
+        {% if form.min_price %}
+            {{ render_with_prices(form, True) }}
+        {% else %}
+            {{ render_without_prices(form, True) }}
+        {% endif %}
+    {% endset %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+
+    {% text %}
+        {% chooseline %}
+            Выбирайте.
+            Ну что, летим?
+            Варианты вот такие.
+            Полетели?
+            Соберите чемодан заранее.
+            Люблю летать. В вашем кармане, конечно
+            Вот что у нас есть.
+        {% endchooseline %}
+    {% endtext %}
+{% endphrase %}
+
+
+{% phrase ask__from %}
+    {% set response %}
+        {% if form.error_code == 'unparsed_from' and form.geo_from %}
+            Откуда вы хотите лететь? Повторите, пожалуйста. Отвлеклась.
+        {% elif form.error_code == 'from_country' %}
+            Я не могу найти билеты из страны. Пожалуйста, выберите город отправления
+        {% elif form.error_code == 'from_airport' %}
+            Простите, я не могу искать билеты из аэропорта. Пожалуйста, выберите город отправления
+        {% elif form.error_code == 'no_airport' %}
+            {{ render_without_airport(form.geo_from, 'отправления') }}
+        {% else %}
+            {% chooseline %}
+                Откуда полетим?
+                Откуда вылетаем?
+            {% endchooseline %}
+        {% endif %}
+    {% endset %}
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+
+{% macro ask_to_point() %}
+    {% chooseline %}
+        Куда летим?
+        Куда будем искать билеты?
+        Куда вам нужно?
+    {% endchooseline %}
+{% endmacro %}
+
+
+{% phrase ask__to %}
+    {% set response %}
+        {% if form.error_code == 'unparsed_to' %}
+            {% if form.error %}
+                Я не смогла разобрать пункт назначения. Куда полетим?
+            {% else %}
+                {{ ask_to_point() }}
+            {% endif %}
+        {% elif form.error_code == 'no_airport' %}
+            {{ render_without_airport(form.error, 'прибытия') }}
+        {% elif form.error_code == 'no_city_in_country' %}
+            Я не знаю городов {{ get_to_preposition(form.error) }} {{form.error | inflect('loc') | capitalize_first}}. Куда полетим?
+        {% elif form.error_code == 'to_airport' %}
+            Простите, я не могу искать билеты в аэропорт. Пожалуйста, выберите город назначения
+        {% else %}
+            {{ ask_to_point() }}
+        {% endif %}
+    {% endset %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+
+{% macro no_price_text() %}
+    {% chooseline %}
+        Вы меня озадачили. Кажется, придётся искать на сайте.
+        Вы меня озадачили. Давайте посмотрим на Яндекс.Авиабилетах.
+        Непростой запрос. Давайте лучше на сайте посмотрим.
+        Это не так просто, как кажется. Давайте поищем на Яндекс.Авиабилетах.
+    {% endchooseline %}
+{% endmacro %}
+
+{% phrase avia_direction_no_prices %}
+    {% set response %}
+        {{ no_price_text() }}
+    {% endset %}
+
+    {% voice %}
+        {{ response | replace("Яндекс.Авиабилетах", "Яндекс Авиабилетах") }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+
+{% phrase avia_direction_with_dates_no_prices %}
+    {% set response %}
+        {{ no_price_text() }}
+    {% endset %}
+
+    {% voice %}
+        {{ response | replace("Яндекс.Авиабилетах", "Яндекс Авиабилетах") }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__avia__point_to %}
+    {{ render_point_to(context.avia__point_to.data.caption) | capitalize_first }}
+{% endphrase %}
+
+
+{% phrase render_suggest_user_utterance__avia__point_to %}
+    {{ render_point_to(context.avia__point_to.data.caption) | capitalize_first}}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__avia__point_from %}
+    Из {{ context.avia__point_from.data.caption | inflect('gen') | capitalize_first }}
+{% endphrase %}
+
+
+{% phrase render_suggest_user_utterance__avia__point_from %}
+    Из {{ context.avia__point_from.data.caption | inflect('gen') | capitalize_first}}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__avia__dates %}
+    {{ get_date_text(context.avia__dates.data.date_forward, context.avia__dates.data.date_backward) | capitalize_first }}
+{% endphrase %}
+
+
+{% phrase render_suggest_user_utterance__avia__dates %}
+    {{ get_date_text(context.avia__dates.data.date_forward, context.avia__dates.data.date_backward) }}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__avia__month %}
+    В {{ month_name(context.avia__month.data.month) | inflect('abl') }}
+{% endphrase %}
+
+
+{% phrase render_suggest_user_utterance__avia__month %}
+    В {{ month_name(context.avia__month.data.month) | inflect('abl') }}
+{% endphrase %}
+
+
+{% phrase render_suggest_uri__avia__search_link %}
+  {{ context.avia__search_link.data.uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__avia__search_link %}
+    {% chooseline %}
+        Перейти на Я.Авиабилеты
+        Смотреть на Я.Авиабилетах
+    {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase ask__when %}
+    {% chooseline %}
+        Когда вылетаем?
+        Когда вылет?
+        Когда летим?
+    {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase avia__checkout %}
+    {% set response %}
+        {% chooseline %}
+            Начнём.
+            Давайте приступим.
+            Легко.
+            Я готова.
+            Сейчас всё сделаем.
+        {% endchooseline %}
+    {% endset %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+{% endphrase %}
+
+{% phrase avia__checkout_text %}
+    {% set response %}
+        {% chooseline %}
+            Этот билет вы сможете найти на Яндекс Авиабилетах
+            Подробности про этот вариант перелета вы можете получить на Яндекс Авиабилетах
+        {% endchooseline %}
+    {% endset %}
+
+    {% voice %}
+        {{ response }}
+    {% endvoice %}
+
+    {% text %}
+        {{ response }}
+    {% endtext %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__avia__checkout_link %}
+    {% chooseline %}
+        Купить на Я.Авиабилетах
+        Купить на Яндекс.Авиабилетах
+        Забронировать
+        Купить
+        Купить билеты
+    {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__avia__checkout_link %}
+  {{ context.avia__checkout_link.data.uri }}
+{% endphrase %}

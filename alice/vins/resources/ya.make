@@ -1,0 +1,3178 @@
+UNION()
+
+OWNER(g:alice)
+
+PEERDIR(
+    alice/nlu/data/ru/entities/custom
+    alice/nlu/data/ru/entities/custom-navi_app
+)
+
+FROM_SANDBOX(
+    233342907
+    FILE
+    PREFIX
+    embeddings
+    OUT
+    embeddings/trie_size_300_window_2_sg_1_min_count_1
+)
+
+FROM_SANDBOX(
+    521972762
+    FILE
+    PREFIX
+    req_embeddings
+    OUT
+    req_embeddings/trie_size_300_window_3_sg_0_min_count_3_iter_5
+)
+
+# repack of 530947240
+FROM_SANDBOX(
+    894964863
+    PREFIX
+    suggest
+    OUT
+    suggest/query_wizard_features/query_wizard_features.trie
+    suggest/query_wizard_features/query_wizard_features.data
+)
+
+# repack of 798998793
+FROM_SANDBOX(
+    894966548
+    PREFIX
+    suggest_test
+    OUT
+    suggest_test/query_wizard_features/query_wizard_features.trie
+    suggest_test/query_wizard_features/query_wizard_features.data
+)
+
+FROM_SANDBOX(
+    693301554
+    PREFIX
+    normalizer
+    OUT
+    normalizer/ru/units.convert_number_abbr.fst
+    normalizer/ru/symbols.sym
+    normalizer/ru/simple_conversions.final_spaces_adjustment.fst
+    normalizer/ru/address.expand_address.fst
+    normalizer/ru/units.convert_units_with_slash.fst
+    normalizer/ru/case_control.remove_control_marks.fst
+    normalizer/ru/sport.expand_score.fst
+    normalizer/ru/hyphen_deletion.hyphen_deletion.fst
+    normalizer/ru/simple_conversions.number_ranges.fst
+    normalizer/ru/ip_addr.convert_ip_address.fst
+    normalizer/ru/tts_norm_tests_critical_ans.txt
+    normalizer/ru/number.prepare_ordinal.fst
+    normalizer/ru/units.convert_size.fst
+    normalizer/ru/simple_conversions.replace_unconditionally.fst
+    normalizer/ru/simple_conversions.convert_slash_between_numbers.fst
+    normalizer/ru/date.convert_date.fst
+    normalizer/ru/music_domain.music_top_transcriptions.fst
+    normalizer/ru/number.convert_ordinal.fst
+    normalizer/ru/simple_conversions.lower_and_whitespace.fst
+    normalizer/ru/number.convert_upper_register.fst
+    normalizer/ru/units.convert_units.fst
+    normalizer/ru/simple_conversions.split_l2d.fst
+    normalizer/ru/simple_conversions.spaces_around_punctuation.fst
+    normalizer/ru/names.name_abbreviation.fst
+    normalizer/ru/simple_conversions.convert_digit_sequences.fst
+    normalizer/ru/roman.convert_roman.fst
+    normalizer/ru/simple_conversions.plus_minus.fst
+    normalizer/ru/prepare_for_g2p.cvt.fst
+    normalizer/ru/number.prepare_cardinal.fst
+    normalizer/ru/simple_conversions.transform_url.fst
+    normalizer/ru/tts_norm_tests_full_in.txt
+    normalizer/ru/number.convert_cardinal.fst
+    normalizer/ru/simple_conversions.words_to_phrases.fst
+    normalizer/ru/number.numbers_case_control.fst
+    normalizer/ru/tts_norm_tests_critical_in.txt
+    normalizer/ru/sequence.txt
+    normalizer/ru/tts_norm_tests_full_ans.txt
+    normalizer/ru/simple_conversions.replace_sharp.fst
+    normalizer/ru/address.expand_city_with_name.fst
+    normalizer/ru/address.expand_metro.fst
+    normalizer/ru/case_control.insert_control_marks.fst
+    normalizer/ru/flags.txt
+    normalizer/ru/simple_conversions.marriage.fst
+    normalizer/ru/number.use_ordinal_markers.fst
+    normalizer/ru/time_cvt.convert_time.fst
+    normalizer/ru/simple_conversions.transform_email.fst
+    normalizer/ru/telephone.convert_telephone.fst
+    normalizer/ru/simple_conversions.glue_punctuation.fst
+    normalizer/ru/simple_conversions.collapse_spaces.fst
+    normalizer/ru/spec_codes.special_codes.fst
+    normalizer/ru/number.convert_fraction.fst
+    normalizer/ru/simple_conversions.space_at_start_end.fst
+)
+
+FROM_SANDBOX(
+    693302669
+    PREFIX
+    denormalizer
+    OUT
+    denormalizer/ru/symbols.sym
+    denormalizer/ru/units.converter.fst
+    denormalizer/ru/number.convert_number_segment.fst
+    denormalizer/ru/number.convert_size.fst
+    denormalizer/ru/reverse_conversion.phones.fst
+    denormalizer/ru/number.convert_fraction_symbol.fst
+    denormalizer/ru/reverse_conversion.profanity.fst
+    denormalizer/ru/punctuation_cvt.glue_punctuation.fst
+    denormalizer/ru/reverse_conversion.numbers.fst
+    denormalizer/ru/reverse_conversion.make_substitution_group.fst
+    denormalizer/ru/reverse_conversion.number_sequence.fst
+    denormalizer/ru/reverse_conversion.remove_unk.fst
+    denormalizer/ru/reverse_conversion.remove_space_at_start.fst
+    denormalizer/ru/sequence.txt
+    denormalizer/ru/reverse_conversion.times.fst
+    denormalizer/ru/flags.txt
+    denormalizer/ru/reverse_conversion.space_at_start.fst
+    denormalizer/ru/punctuation_cvt.capitalize.fst
+    denormalizer/ru/reverse_conversion.dates.fst
+)
+
+INCLUDE(${ARCADIA_ROOT}/alice/begemot/lib/fst/data/fst_data_archive/resource.make)
+
+FROM_SANDBOX(
+    ${FST_ARCHIVE_RESOURCE_ID}
+    PREFIX
+    fst
+    OUT
+    fst/fst/ru/fio/symbols.sym
+    fst/fst/ru/fio/weights.json
+    fst/fst/ru/fio/sequence.txt
+    fst/fst/ru/fio/flags.txt
+    fst/fst/ru/fio/maps.json
+    fst/fst/ru/fio/fio.fst
+    fst/fst/ru/currency/symbols.sym
+    fst/fst/ru/currency/weights.json
+    fst/fst/ru/currency/sequence.txt
+    fst/fst/ru/currency/flags.txt
+    fst/fst/ru/currency/maps.json
+    fst/fst/ru/currency/currency.fst
+    fst/fst/ru/track/symbols.sym
+    fst/fst/ru/track/weights.json
+    fst/fst/ru/track/track.fst
+    fst/fst/ru/track/sequence.txt
+    fst/fst/ru/track/flags.txt
+    fst/fst/ru/track/maps.json
+    fst/fst/ru/base/symbols.sym
+    fst/fst/ru/base/base.fst
+    fst/fst/ru/base/sequence.txt
+    fst/fst/ru/base/flags.txt
+    fst/fst/ru/path/symbols.sym
+    fst/fst/ru/path/sequence.txt
+    fst/fst/ru/path/flags.txt
+    fst/fst/ru/path/path.fst
+    fst/fst/ru/album/symbols.sym
+    fst/fst/ru/album/weights.json
+    fst/fst/ru/album/album.fst
+    fst/fst/ru/album/sequence.txt
+    fst/fst/ru/album/flags.txt
+    fst/fst/ru/album/maps.json
+    fst/fst/ru/datetime_range/symbols.sym
+    fst/fst/ru/datetime_range/weights.json
+    fst/fst/ru/datetime_range/datetime_range.fst
+    fst/fst/ru/datetime_range/sequence.txt
+    fst/fst/ru/datetime_range/flags.txt
+    fst/fst/ru/datetime_range/maps.json
+    fst/fst/ru/calc/symbols.sym
+    fst/fst/ru/calc/calc.fst
+    fst/fst/ru/calc/sequence.txt
+    fst/fst/ru/calc/flags.txt
+    fst/fst/ru/calc/maps.json
+    fst/fst/ru/site/symbols.sym
+    fst/fst/ru/site/sequence.txt
+    fst/fst/ru/site/flags.txt
+    fst/fst/ru/site/site.fst
+    fst/fst/ru/site/maps.json
+    fst/fst/ru/artist/symbols.sym
+    fst/fst/ru/artist/weights.json
+    fst/fst/ru/artist/artist.fst
+    fst/fst/ru/artist/sequence.txt
+    fst/fst/ru/artist/flags.txt
+    fst/fst/ru/artist/maps.json
+    fst/fst/ru/units_time/symbols.sym
+    fst/fst/ru/units_time/sequence.txt
+    fst/fst/ru/units_time/flags.txt
+    fst/fst/ru/units_time/units_time.fst
+    fst/fst/ru/units_time/maps.json
+    fst/fst/ru/datetime/symbols.sym
+    fst/fst/ru/datetime/weights.json
+    fst/fst/ru/datetime/datetime.fst
+    fst/fst/ru/datetime/sequence.txt
+    fst/fst/ru/datetime/flags.txt
+    fst/fst/ru/datetime/maps.json
+    fst/fst/ru/films_50_filtered/symbols.sym
+    fst/fst/ru/films_50_filtered/weights.json
+    fst/fst/ru/films_50_filtered/films_50_filtered.fst
+    fst/fst/ru/films_50_filtered/sequence.txt
+    fst/fst/ru/films_50_filtered/flags.txt
+    fst/fst/ru/films_50_filtered/maps.json
+    fst/fst/ru/weekdays/symbols.sym
+    fst/fst/ru/weekdays/weekdays.fst
+    fst/fst/ru/weekdays/sequence.txt
+    fst/fst/ru/weekdays/flags.txt
+    fst/fst/ru/weekdays/maps.json
+    fst/fst/ru/swear/symbols.sym
+    fst/fst/ru/swear/weights.json
+    fst/fst/ru/swear/swear.fst
+    fst/fst/ru/swear/sequence.txt
+    fst/fst/ru/swear/flags.txt
+    fst/fst/ru/swear/maps.json
+    fst/fst/ru/swear/swear.json
+    fst/fst/ru/time/symbols.sym
+    fst/fst/ru/time/weights.json
+    fst/fst/ru/time/time.fst
+    fst/fst/ru/time/sequence.txt
+    fst/fst/ru/time/flags.txt
+    fst/fst/ru/time/maps.json
+    fst/fst/ru/float/symbols.sym
+    fst/fst/ru/float/float.fst
+    fst/fst/ru/float/sequence.txt
+    fst/fst/ru/float/flags.txt
+    fst/fst/ru/float/maps.json
+    fst/fst/ru/geo/symbols.sym
+    fst/fst/ru/geo/geo.fst
+    fst/fst/ru/geo/sequence.txt
+    fst/fst/ru/geo/flags.txt
+    fst/fst/ru/geo/maps.json
+    fst/fst/ru/poi_category_ru/symbols.sym
+    fst/fst/ru/poi_category_ru/poi_category_ru.fst
+    fst/fst/ru/poi_category_ru/sequence.txt
+    fst/fst/ru/poi_category_ru/flags.txt
+    fst/fst/ru/poi_category_ru/maps.json
+    fst/fst/ru/num/symbols.sym
+    fst/fst/ru/num/num.fst
+    fst/fst/ru/num/sequence.txt
+    fst/fst/ru/num/flags.txt
+    fst/fst/ru/date/symbols.sym
+    fst/fst/ru/date/date.fst
+    fst/fst/ru/date/sequence.txt
+    fst/fst/ru/date/flags.txt
+    fst/fst/ru/date/maps.json
+    fst/fst/ru/soft/symbols.sym
+    fst/fst/ru/soft/sequence.txt
+    fst/fst/ru/soft/flags.txt
+    fst/fst/ru/soft/maps.json
+    fst/fst/ru/soft/soft.fst
+    fst/fst/ru/films_100_750/symbols.sym
+    fst/fst/ru/films_100_750/weights.json
+    fst/fst/ru/films_100_750/films_100_750.fst
+    fst/fst/ru/films_100_750/sequence.txt
+    fst/fst/ru/films_100_750/flags.txt
+    fst/fst/ru/films_100_750/maps.json
+)
+
+FROM_SANDBOX(
+    641288418
+    FILE
+    PREFIX
+    embeddings_ids
+    OUT
+    embeddings_ids/ids_trie_size_300_window_3_sg_0_min_count_3_iter_5
+)
+
+# repack of 776646935
+FROM_SANDBOX(
+    894967783
+    PREFIX
+    anaphora
+    OUT
+    anaphora/anaphora_model/rank.bin
+    anaphora/anaphora_model/border.bin
+)
+
+# repack of 748552858
+FROM_SANDBOX(
+    894968825
+    PREFIX
+    dssm_embeddings
+    OUT
+    dssm_embeddings/tf_model/twitter.trigrams.30k.dict
+    dssm_embeddings/tf_model/twitter.vins.104k.dict
+    dssm_embeddings/tf_model/model.mmap
+    dssm_embeddings/tf_model/model_description
+    dssm_embeddings/tf_model/encoders_list.pkl
+)
+
+FROM_SANDBOX(
+    1055679687
+    PREFIX
+    catboost
+    OUT
+    catboost/catboost/model.desc
+    catboost/catboost/model_independent.desc
+    catboost/catboost/model.cbm
+    catboost/catboost/model_with_setup.cbm
+    catboost/catboost/model_relev_markup.cbm
+    catboost/catboost/independent/video
+    catboost/catboost/independent/music
+    catboost/catboost/independent/other
+)
+
+# repack of 775781623
+FROM_SANDBOX(
+    894971152
+    PREFIX
+    scenarios_word_lstm
+    OUT
+    scenarios_word_lstm/scenarios_word_lstm/model.mmap
+    scenarios_word_lstm/scenarios_word_lstm/model_description
+    scenarios_word_lstm/scenarios_word_lstm/model.labels
+)
+
+# repack of 775784190
+FROM_SANDBOX(
+    894972383
+    PREFIX
+    toloka_word_lstm
+    OUT
+    toloka_word_lstm/toloka_word_lstm/model.mmap
+    toloka_word_lstm/toloka_word_lstm/model_description
+    toloka_word_lstm/toloka_word_lstm/model.labels
+)
+
+FROM_SANDBOX(
+    796967129
+    FILE
+    PREFIX
+    reranker
+    OUT
+    reranker/intent_info
+)
+
+FROM_SANDBOX(
+    796968963
+    FILE
+    PREFIX
+    ner_mapping
+    OUT
+    ner_mapping/ner
+)
+
+FROM_SANDBOX(
+    796970100
+    FILE
+    PREFIX
+    wizard_mapping
+    OUT
+    wizard_mapping/wizard
+)
+
+# repack of 727440308
+FROM_SANDBOX(
+    894973784
+    PREFIX
+    custom_enitities
+    OUT
+    custom_enitities/custom_enitities/test_entities_update.tar.gz
+    custom_enitities/custom_enitities/test_entities.tar.gz
+)
+
+FROM_SANDBOX(
+    796958871
+    FILE
+    PREFIX
+    entity_search
+    OUT
+    entity_search/entitysearch
+)
+
+FROM_SANDBOX(
+    888715071
+    PREFIX
+    gc_skill_model_directory
+    OUT
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_yandex_a_good_company
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.skill_run_an_application
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_pregnant
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_there_life_after_death
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_rain
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_travelling
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.lets_have_a_drink
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.this_is_wrong_music_genre
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_old_are_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.goto_blogger_external_skill
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_to_wear
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_just_married_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_the_next_president_of_russia
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_a_dream
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_send_message
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_serious
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_dancing
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_17_21
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_wifi
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_to_have_children
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_support_ivan_guy_or_maryana
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_do_you_look_like
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.recite_a_poem
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_kind_of_girls_do_you_like
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.paren_menya_brosil
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_iq
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.i_love_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_positive_character_traits
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_relations_has_boyfriend
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tell_me_a_tongue_twister
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_cut_bold_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_friends
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_application
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.football_who_is_the_best
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_you_afraid_of
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.yes_or_no
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_purpose
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_there_other_life_forms_in_the_universe
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_dogs
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.v_chem_sila_brat
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_know_other_assistants
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_22_25
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_character_cheerful
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_a_human
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_flashlight
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_when_available
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.football_do_you_like_it
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.mielofon
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_sweets
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.will_you_marry_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.lets_have_a_date
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.when_is_your_birthday_step_2
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.can_you_keep_a_secret
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dislikes_cleaning
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_gender_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_name
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_google_assistant
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_computergames
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_kidding_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.guess_my_age
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_brunette_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_gender
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.harassment
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_the_color_of_your_eyes
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_above_95
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_working
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_sea
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_reading
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_red_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tell_me_about_yourself
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_cortana
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.good_morning
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.where_do_you_live
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_watch_football
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.study_more
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.nice_to_meet_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_sport
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.hello
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_our_future
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_read_message
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tsoi_is_alive
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_birthplace_city
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_iphone
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_am_i
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.yandex_or_google
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_negative_character_traits
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_your_opinion
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_nature
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.user_reactions_negative_feedback
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.noone_loves_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.have_you_got_some
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.devushka_menya_brosil
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_are_your_future_plans
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.goodbye
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_to_do
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_or_practice_sport
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_the_name_of_your_mother
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_beer
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_respect_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_dead
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_car
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_hobby
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_location_city
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.shaverma_or_pizza
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.favorite_impressionist
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_night_owl_or_early_bird
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_do_you_love
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_habits_smoking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.favorite_paining
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_brunette_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_to_wear_err
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_where_to_buy
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_the_way_you_work
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.when_is_the_world_gonna_end
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_shoe_size
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_football
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_there_any_advantage_of_ai
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.remind_me_my_phone_number
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.when_am_i_going_to_die
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_cats
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_quit_smoking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_believe_in_god
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.when_is_your_birthday
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_student
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.delete_history
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.solve_the_problem
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.where_do_children_come_from
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_red_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_amazon_alexa
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.am_i_fat
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_pets_cat
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_tea
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_sleep
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.use_bad_language
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_to_meet_a_boy
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_food
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_the_purpose_of_life
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_pets_unspecified
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_there
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_to_meet_a_girl
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_a_gay
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_height
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.why_your_name_is
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.am_i_a_good_company
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.when_you_had_a_sex_first_time
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_football
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_yandex
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_brothers_sisters
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_how_much
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_an_AI
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_sport
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_unemployed
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tell_about_yandex_auto
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_are_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.ahchoo
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.which_station_to_buy
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_can_i_go_on_living_my_miserable_life
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_fsb_listening
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_gender_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.where_do_you_work
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_alive
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_loves_mom
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_like_step_2
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favourite_browser
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_alexey
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_knitting
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_sleeping
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_work_or_study
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_are_you_wearing
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_sleeping
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_married_to_a_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.let_us_talk
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_is_farther
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_singing
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.where_are_you_from
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_color
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_do_you_spend_your_free_time
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_blondie_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.goodnight
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_movies
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_a_family_step2
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.avada_kedavra
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_can_you_say_about_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.an_elefant_or_a_whale
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_cooking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.phone_call
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_to_please_a_boy
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_the_next_president_of_russia_step_2
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.am_i_a_good_person
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_a_boyfriend
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_relations_has_spouce
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_know_everything
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_drinking_alcohol
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.football_do_you_play_it
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_habits_no_smoking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_pizza
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_there_life_on_mars
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_music
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.lets_have_a_smoke
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.helloola
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.send_me_your_photo
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.chei_krym
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_think_about_other_it_companies
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_brown_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_vacation
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_blondie_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.does_it_suit_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_just_married_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.skill_run_a_desktop_application
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.show_history
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_a_family
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_walking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_to_have_a_dog
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_the_most_good_looking
+    gc_skill_model_directory/classifiers/handcrafted/model_meta_data
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_work_offline
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_photo
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_job
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_has_no_child
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_send_email
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_married_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_know_laws_of_robotics
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_often_do_you_travel
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_birthdate_year
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_dislike
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_single_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_band
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_brothers_or_sisters
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_are_your_bad_habits
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_on_your_mind
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_children
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_color_brown_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_calendar
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_salary
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_married_to_a_male
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_like
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_myself
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_know_how_to_ski_or_skate
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_to_say_on_meeting
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_reading
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_tall_are_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_there_a_friendship_betweeb_boy_and_girl
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_can_you_do
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_life
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.hellodratuti
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_watch_wintergames
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_order_a_pizza
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_smart
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.dont_want_to_go_to_school
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.favorite_painter
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_afraid_of_death
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_to_please_a_girl
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_hair_cut_bold_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_know_yandex
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.why_are_you_sad
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_other
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.rude
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.war_between_humanity_and_robots
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_married_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.can_i_borrow_money_from_you
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.is_everithing_going_to_be_ok
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_current_mood_sad
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_is_mother
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_remember_from_childhood
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_pets_dog
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_child_age
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_travelling
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_getting_bullied
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_languages_do_you_speak
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_a_rain
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.let_us_play_football
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_feel_lonely
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_what_do_you_do_there
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_music
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_character
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_movie
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_your_horoscope_sign
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.ok_google
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_guitar
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.let_us_talk_football
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_37
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.let_us_play_chess
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_animals
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_your_favorite_writer
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_favorite_book
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.station_what_for
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_safe
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_marriage_status_single_female
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_think_about_humans
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_love_me
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_family_has_children
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_skills_cooking
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.impressionist_paintings
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tell_me_another
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_7_16
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_capable_of_love
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.to_be_or_not_to_be
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_was_your_weekend
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_dreams_go_seaside
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.heads_or_tails
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_scifi
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_travelling
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.user_reactions_positive_feedback
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_we_live_in_the_matrix
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_look_pretty
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_children
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.who_is_your_maker
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.how_can_i_live_forever
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_do_you_appreciate_in_people
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_calling_themselves_names
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_like_pets_or_animals
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_love
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.chicken_or_the_egg
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_love_your_job
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.let_us_be_friends
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_nationality
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_38_95
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_your_education
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.cancel
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_is_up
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.za_kogo_boleesh
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.hellosholom
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.tell_me_a_joke
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.nature_has_no_bad_weather
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.do_you_have_a_pet
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_26_36
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.what_are_you_doing
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_age_under_6
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.future_skill_read_email
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.are_you_siri
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.harassment_step_2
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_coffee
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_current_mood_good
+    gc_skill_model_directory/classifiers/handcrafted/personal_assistant.handcrafted.userinfo_likes_eating
+)
+
+FROM_SANDBOX(
+    807198732
+    PREFIX
+    navi_app_model
+    OUT
+    navi_app_model/classifiers/navi
+    navi_app_model/tagger/tagger
+)
+
+COPY(custom_entities.trie
+    FROM alice/nlu/data/ru/entities/custom-navi_app
+    DESTINATION navi_app_model/custom_entities/all
+)
+
+FROM_SANDBOX(
+    813706205
+    PREFIX
+    query_subtitles_charcnn
+    OUT
+    query_subtitles_charcnn/charcnn/model_data.pkl
+    query_subtitles_charcnn/charcnn/model.mmap
+    query_subtitles_charcnn/charcnn/model_description
+)
+
+FROM_SANDBOX(
+    819705167
+    FILE
+    PREFIX
+    marisa_trie
+    OUT
+    marisa_trie/geonorm_stoplist.marisa
+)
+
+FROM_SANDBOX(
+    820695487
+    FILE
+    PREFIX
+    arcadia
+    OUT
+    arcadia/ya
+)
+
+FROM_SANDBOX(
+    834867998
+    FILE
+    PREFIX
+    external_skills_inference
+    OUT
+    external_skills_inference/ce_updater__skill
+)
+
+# repack of 890233428
+FROM_SANDBOX(
+    894974842
+    PREFIX
+    scenarios_lstm_model
+    OUT
+    scenarios_lstm_model/scenarios_lstm_model/model.ckpt.data-00000-of-00001
+    scenarios_lstm_model/scenarios_lstm_model/model.ckpt.index
+    scenarios_lstm_model/scenarios_lstm_model/checkpoint
+    scenarios_lstm_model/scenarios_lstm_model/model_info.pkl
+)
+
+# repack of 890235445
+FROM_SANDBOX(
+    894975789
+    PREFIX
+    toloka_lstm_model
+    OUT
+    toloka_lstm_model/toloka_lstm_model/model.ckpt.data-00000-of-00001
+    toloka_lstm_model/toloka_lstm_model/model.ckpt.index
+    toloka_lstm_model/toloka_lstm_model/checkpoint
+    toloka_lstm_model/toloka_lstm_model/model_info.pkl
+)
+
+FROM_SANDBOX(
+    755473355
+    FILE
+    OUT
+    vmtouch
+    EXECUTABLE
+)
+
+COPY(
+    custom_entities.trie
+    FROM alice/nlu/data/ru/entities/custom
+    DESTINATION personal_assistant_model_directory/custom_entities/all
+)
+
+FROM_SANDBOX(
+    2263378825
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/model_meta_data
+)
+
+FROM_SANDBOX(
+    2549987746
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.ahchoo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.am_i_a_good_company
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.am_i_a_good_person
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.am_i_fat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.an_elefant_or_a_whale
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_there_other_life_forms_in_the_universe
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_a_gay
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_a_human
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_afraid_of_death
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_alive
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_amazon_alexa
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_an_AI
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_capable_of_love
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_cortana
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_dead
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_getting_bullied
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_google_assistant
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_kidding_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_married_to_a_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_married_to_a_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_night_owl_or_early_bird
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_safe
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_serious
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_siri
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_sleeping
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.are_you_smart
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.autoapp.confirmation_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.autoapp.confirmation_yes
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.autoapp.internet_appeared
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.autoapp.missed
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.autoapp.tired
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.avada_kedavra
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.blind
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.can_i_borrow_money_from_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.can_you_keep_a_secret
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.chei_krym
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.chicken_or_the_egg
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.deaf
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.delete_history
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.devushka_menya_brosil
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_we_live_in_the_matrix
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_believe_in_god
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_feel_lonely
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_a_boyfriend
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_a_dream
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_a_family
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_a_family_step2
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_a_pet
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_brothers_or_sisters
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_children
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_have_friends
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_know_everything
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_know_how_to_ski_or_skate
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_know_laws_of_robotics
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_know_other_assistants
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_know_yandex
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_a_rain
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_children
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_cooking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_or_practice_sport
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_pets_or_animals
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_reading
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_travelling
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_like_yandex
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_love_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_love_your_job
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_respect_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_support_ivan_guy_or_maryana
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_work_offline
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.do_you_work_or_study
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.does_it_suit_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.dont_want_to_go_to_school
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.gas_station
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.general_help
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.insurance_info
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport_dme
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport_led
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport_svo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport_vko
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.drive.parking_airport_zia
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.fast_cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.favorite_impressionist
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.favorite_paining
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.favorite_painter
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.football_do_you_play_it
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_calendar
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_flashlight
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_iphone
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_read_email
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_read_message
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_send_email
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_send_message
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.future_skill_wifi
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.good_morning
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.goodbye
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.goodnight
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.goto_blogger_external_skill
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.guess_my_age
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.harassment
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.harassment_step_2
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.have_you_got_some
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.heads_or_tails
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.hello
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.hellodratuti
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.helloola
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.hellosholom
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_are_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_can_i_go_on_living_my_miserable_life
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_can_i_live_forever
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_do_you_look_like
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_do_you_spend_your_free_time
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_often_do_you_travel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_old_are_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_tall_are_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_to_meet_a_boy
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_to_meet_a_girl
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_to_please_a_boy
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_to_please_a_girl
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.how_was_your_weekend
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.i_love_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.impressionist_paintings
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_everithing_going_to_be_ok
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_fsb_listening
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_there_a_friendship_betweeb_boy_and_girl
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_there_any_advantage_of_ai
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_there_life_after_death
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_there_life_on_mars
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.is_yandex_a_good_company
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.let_us_be_friends
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.let_us_play_chess
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.let_us_talk
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.lets_have_a_date
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.lets_have_a_drink
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.lets_have_a_smoke
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.mielofon
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.nature_has_no_bad_weather
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.nice_to_meet_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.noone_loves_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.ok_google
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.paren_menya_brosil
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.recite_a_poem
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.remind_me_my_phone_number
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.rude
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.send_me_your_photo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.shaverma_or_pizza
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.show_history
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.skill_run_a_desktop_application
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.skill_run_an_application
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.solve_the_problem
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.station_what_do_you_do_there
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.station_what_for
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.station_when_available
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.station_where_to_buy
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.station_your_opinion
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.study_more
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.tell_me_a_joke
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.tell_me_a_tongue_twister
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.tell_me_about_yourself
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.tell_me_another
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.this_is_wrong_music_genre
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.to_be_or_not_to_be
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.tsoi_is_alive
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.use_bad_language
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.user_reactions_negative_feedback
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.user_reactions_positive_feedback
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_17_21
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_22_25
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_26_36
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_37
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_38_95
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_7_16
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_above_95
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_age_under_6
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_birthdate_year
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_birthplace_city
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_calling_themselves_names
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_character_cheerful
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_current_mood_good
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_current_mood_sad
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dislikes_cleaning
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_car
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_go_seaside
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_quit_smoking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_sleep
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_to_have_a_dog
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_to_have_children
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_travelling
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_dreams_vacation
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_brothers_sisters
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_child_age
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_has_children
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_has_no_child
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_is_farther
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_is_mother
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_just_married_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_just_married_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_married_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_married_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_single_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_family_marriage_status_single_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_gender_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_gender_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_habits_no_smoking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_habits_smoking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_animals
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_beer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_cats
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_coffee
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_computergames
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_dogs
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_drinking_alcohol
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_eating
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_movies
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_music
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_myself
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_nature
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_pizza
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_rain
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_reading
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_scifi
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_sea
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_sleeping
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_sport
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_sweets
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_tea
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_travelling
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_likes_walking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_location_city
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_blondie_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_blondie_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_brown_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_brown_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_brunette_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_brunette_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_red_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_color_red_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_cut_bold_female
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_hair_cut_bold_male
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_height
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_look_pretty
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_loves_mom
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_pets_cat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_pets_dog
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_pets_unspecified
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_pregnant
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_relations_has_boyfriend
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_relations_has_spouce
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_cooking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_dancing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_guitar
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_knitting
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_music
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_other
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_photo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_singing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_skills_sport
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_student
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_unemployed
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.userinfo_working
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.v_chem_sila_brat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.war_between_humanity_and_robots
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_are_you_doing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_are_you_wearing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_are_your_bad_habits
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_are_your_future_plans
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_can_you_say_about_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_appreciate_in_people
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_dislike
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_like
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_like_step_2
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_remember_from_childhood
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_think_about_humans
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_do_you_think_about_other_it_companies
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_life
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_love
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_on_your_mind
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_our_future
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_the_color_of_your_eyes
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_the_name_of_your_mother
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_the_purpose_of_life
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_the_way_you_work
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_character
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_education
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_application
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_band
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_book
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_color
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_food
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favorite_movie
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_favourite_browser
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_gender
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_hobby
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_iq
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_job
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_name
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_nationality
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_negative_character_traits
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_positive_character_traits
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_purpose
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_salary
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_is_your_shoe_size
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_kind_of_girls_do_you_like
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_languages_do_you_speak
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_to_do
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_to_say_on_meeting
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_to_wear
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_to_wear_err
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.what_you_afraid_of
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.when_am_i_going_to_die
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.when_is_the_world_gonna_end
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.when_is_your_birthday
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.when_is_your_birthday_step_2
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.when_you_had_a_sex_first_time
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.where_are_you_from
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.where_do_children_come_from
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.where_do_you_live
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.where_do_you_work
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.which_station_to_buy
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_am_i
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_do_you_love
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_alexey
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_the_most_good_looking
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_there
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_your_favorite_writer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_your_horoscope_sign
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.who_is_your_maker
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.why_are_you_sad
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.why_your_name_is
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.will_you_marry_me
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.yandex_or_google
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.yes_or_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.za_kogo_boleesh
+)
+
+FROM_SANDBOX(
+    2561971298
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.can_you_connect_bluetooth
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.can_you_connect_bluetooth_to_tv
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_add_to_playlist
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_another_version_of_song
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_equaizer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_get_software_version
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_get_wifi
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_get_yandex_account
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_hibernation
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_radio_alarm
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_remove_playlist
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_set_alarm_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_show_lyrics
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_what_music_do_i_like
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.future_skill_what_music_on_alarm
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.get_device_id
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_change_restrictions
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_connect_bluetooth
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_connect_tv
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_install_phone_module
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_open_settings
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_put_the_case_off
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_reboot
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_rename
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_set_volume
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_turn_on_music
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_turn_tv_on
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.how_to_update
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_alarm
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_multiple_alarms
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_music_buy_subscription
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_music_can_you
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_music_create_playlist
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_music_personalized
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_cartoon
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_do_i_have_subscription
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_how_to_buy_movie
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_how_to_search
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_movie
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_series
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_video
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.onboarding_video_youtube
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.subscription_amediateka_howto
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.subscription_foreign
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.subscription_ivi_howto
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.subscription_plus_how_long_is_promo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.subscription_plus_howto
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.turn_display_off
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.turn_display_on
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.turn_microphone_off
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.turn_off
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.turn_tv_on
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.what_is_promo_period
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.handcrafted.quasar.when_is_the_next_update
+)
+
+FROM_SANDBOX(
+    2520120873
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.add_point
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.add_point__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.add_point__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.change_voice
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.change_voice__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.hide_layer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.how_long_to_drive
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.how_long_traffic_jam
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.parking_route
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.refuel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.refuel__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.reset_route
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.show_layer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.show_route_on_map
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.navi.when_we_get_there
+)
+
+FROM_SANDBOX(
+    2549987677
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_ask_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_ask_time
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_cancel__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_fast_snooze
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_how_long
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_how_to_set_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_reset_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_set
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_set__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_set_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_set_with_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_show
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_show__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_snooze
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_snooze_abs
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_snooze_rel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_sound_set_level
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_stop_playing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_what_sound_is_set
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.alarm_what_sound_level_is_set
+)
+
+FROM_SANDBOX(
+    2259351643
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.avia
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.avia__ask_to
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.avia__checkout
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.avia__ellipsis
+)
+
+FROM_SANDBOX(
+    2259343254
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.avia_date
+)
+
+FROM_SANDBOX(
+    2520128375
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.battery_power_state
+)
+
+FROM_SANDBOX(
+    2459166436
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.bluetooth_off
+)
+
+FROM_SANDBOX(
+    2459166540
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.bluetooth_on
+)
+
+FROM_SANDBOX(
+    2259359027
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.browser_read_page
+)
+
+FROM_SANDBOX(
+    2259375574
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.browser_read_page_continue
+)
+
+FROM_SANDBOX(
+    2259384409
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.browser_read_page_pause
+)
+
+FROM_SANDBOX(
+    2520131324
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.call
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.call__ellipsis
+)
+
+FROM_SANDBOX(
+    2520135819
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.cancel_todo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.cancel_todo__ellipsis
+)
+
+FROM_SANDBOX(
+    2520140230
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.call_to_support
+)
+
+FROM_SANDBOX(
+    2259408695
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.cancel_list
+)
+
+FROM_SANDBOX(
+    2259372742
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.cancel_order
+)
+
+FROM_SANDBOX(
+    2259404390
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.change
+)
+
+FROM_SANDBOX(
+    2259405700
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.change_payment_method
+)
+
+FROM_SANDBOX(
+    2259414502
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.get_price
+)
+
+FROM_SANDBOX(
+    2259339981
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.leave_feedback
+)
+
+FROM_SANDBOX(
+    2259345748
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.leave_tips
+)
+
+FROM_SANDBOX(
+    2259367023
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common.open_app
+)
+
+FROM_SANDBOX(
+    2259384141
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common_backward
+)
+
+FROM_SANDBOX(
+    2259340629
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common_forward
+)
+
+FROM_SANDBOX(
+    2538848226
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.common_yet_another
+)
+
+FROM_SANDBOX(
+    2259401163
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.confirmation_no
+)
+
+FROM_SANDBOX(
+    2259411048
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.confirmation_yes
+)
+
+FROM_SANDBOX(
+    2259381011
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.connect_named_location_to_device__confirmation_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.connect_named_location_to_device__confirmation_yes
+)
+
+FROM_SANDBOX(
+    2549987318
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.convert
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.convert__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.convert__get_info
+)
+
+FROM_SANDBOX(
+    2459167778
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_reminder
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_reminder__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_reminder__ellipsis
+)
+
+FROM_SANDBOX(
+    2520148692
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_todo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_todo__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.create_todo__ellipsis
+)
+
+FROM_SANDBOX(
+    2259383370
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.external_skill
+)
+
+FROM_SANDBOX(
+    2520151587
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__call
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__details
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__open_site
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__scroll__by_index
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__scroll__next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.find_poi__scroll__prev
+)
+
+FROM_SANDBOX(
+    2259356469
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.games_onboarding
+)
+
+FROM_SANDBOX(
+    2259372559
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.general_dislike
+)
+
+FROM_SANDBOX(
+    2259382982
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.general_like
+)
+
+FROM_SANDBOX(
+    2259397192
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_date
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_date__ellipsis
+)
+
+FROM_SANDBOX(
+    2520154885
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_my_location
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_my_location__details
+)
+
+FROM_SANDBOX(
+    2259388645
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_news
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_news__details
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_news__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_news__more
+)
+
+FROM_SANDBOX(
+    2520158283
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_time
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_time__ellipsis
+)
+
+FROM_SANDBOX(
+    2259351362
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_weather
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_weather__details
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_weather__ellipsis
+)
+
+FROM_SANDBOX(
+    2259394859
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_weather_nowcast
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.get_weather_nowcast__ellipsis
+)
+
+FROM_SANDBOX(
+    2549987369
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.happy_new_year_music_play
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.happy_new_year_tv_stream
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.happy_new_year_video_play
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.anohina
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.badcomedian
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.bekmambetov
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.bubenitta
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.cook
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.dakota
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.decorate
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.gagarina
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.general
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.grilkov
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.have_fun
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.jarahov
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.lisovec
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.may
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.offer
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.parfenon
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.pokashevarim
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.present
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.review
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.semenihin
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.slivki
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.smetana
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.suhov
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.trubenkova
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.varlamov
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.viskunova
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.wear
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.hny.wylsacom
+)
+
+FROM_SANDBOX(
+    2549989092
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.how_much
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.how_much__ellipsis
+)
+
+FROM_SANDBOX(
+    2259381762
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__clothes_forced
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__details
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__market
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__ocr
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__ocr_voice
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__ocr_voice_suggest
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__office_lens_disk
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this__similar
+)
+
+FROM_SANDBOX(
+    2259340384
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_barcode
+)
+
+FROM_SANDBOX(
+    2259364640
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_clothes
+)
+
+FROM_SANDBOX(
+    2259378152
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_frontal
+)
+
+FROM_SANDBOX(
+    2259390418
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_frontal_similar_people
+)
+
+FROM_SANDBOX(
+    2259400161
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_market
+)
+
+FROM_SANDBOX(
+    2259367600
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_ocr
+)
+
+FROM_SANDBOX(
+    2259381373
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_ocr_voice
+)
+
+FROM_SANDBOX(
+    2259337613
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_office_lens
+)
+
+FROM_SANDBOX(
+    2259389053
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_similar
+)
+
+FROM_SANDBOX(
+    2259370370
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_similar_artwork
+)
+
+FROM_SANDBOX(
+    2259409479
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_similar_people
+)
+
+FROM_SANDBOX(
+    2520166465
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.image_what_is_this_translate
+)
+
+FROM_SANDBOX(
+    2520171716
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_reminders
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_reminders__scroll_next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_reminders__scroll_reset
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_reminders__scroll_stop
+)
+
+FROM_SANDBOX(
+    2520175191
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_todo
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_todo__scroll_next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.list_todo__scroll_stop
+)
+
+FROM_SANDBOX(
+    2259406674
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__beru_order
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_address
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_delivery_intervals
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_email
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_index
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_items_number
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_phone
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__checkout_yes_or_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__garbage
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__go_to_shop
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__market
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__market__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__number_filter
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__repeat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__show_more
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market__start_choice_again
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_beru
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_beru_my_bonuses_list
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_beru_my_bonuses_list__login
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_native
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_native_beru
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_orders_status
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.market_orders_status__login
+)
+
+FROM_SANDBOX(
+    2259386235
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.messaging
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.messaging__recipient
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.messaging__recipient_ellipsis
+)
+
+FROM_SANDBOX(
+    3277803129
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_ambient_sound
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_fairy_tale
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_general
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_play
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_play_anaphora
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_play_less
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_play_more
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_podcast
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_podcast_onboarding
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_podcast_onboarding__next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_sing_song
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_sing_song__next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_what_is_playing
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_what_is_playing__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.music_what_is_playing__play
+)
+
+FROM_SANDBOX(
+    2259362405
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.onboarding
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.onboarding__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.onboarding__next
+)
+
+FROM_SANDBOX(
+    2561970585
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.onboarding_image_search
+)
+
+FROM_SANDBOX(
+    2259379071
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.open_on_map
+)
+
+FROM_SANDBOX(
+    2520181820
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.open_site_or_app
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.open_site_or_app__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.open_site_or_app__open
+)
+
+FROM_SANDBOX(
+    2259379049
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.open_video_hosting
+)
+
+FROM_SANDBOX(
+    2549989539
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.other
+)
+
+FROM_SANDBOX(
+    2564282104
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_continue
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_dislike
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_like
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_next_track
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_pause
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_previous_track
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_repeat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_replay
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_rewind
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.player_shuffle
+)
+
+FROM_SANDBOX(
+    2259386912
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.poi_general
+)
+
+FROM_SANDBOX(
+    2538850205
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.pure_general_conversation_phone_call
+)
+
+FROM_SANDBOX(
+    2538850215
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.pure_general_conversation_what_can_you_do
+)
+
+FROM_SANDBOX(
+    2520200443
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.authorize_video_provider
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.go_backward
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.go_forward
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.go_home
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.go_to_the_beginning
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.go_to_the_end
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.goto_video_screen
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.open_current_video
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.open_or_continue
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.quasar.payment_confirmed
+)
+
+FROM_SANDBOX(
+    2259391671
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.radio_play
+)
+
+FROM_SANDBOX(
+    2538187417
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.radio_play_onboarding
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.radio_play_onboarding__next
+)
+
+FROM_SANDBOX(
+    2259337750
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.random_num
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.random_num__ellipsis
+)
+
+FROM_SANDBOX(
+    2259391806
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout_delivery_intervals
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout_index
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout_items_number
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout_suits
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__checkout_yes_or_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__garbage
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__login
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__number_filter
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.recurring_purchase__repeat
+)
+
+FROM_SANDBOX(
+    2259386607
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.remember_named_location
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.remember_named_location__ellipsis
+)
+
+FROM_SANDBOX(
+    2259392601
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.repeat
+)
+
+FROM_SANDBOX(
+    2259387957
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.route_general
+)
+
+FROM_SANDBOX(
+    2561970387
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search__factoid_call
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search__factoid_src
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search__serp
+)
+
+FROM_SANDBOX(
+    2561970350
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_anaphoric
+)
+
+FROM_SANDBOX(
+    2561972743
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_filter_get
+)
+
+FROM_SANDBOX(
+    2561972737
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_filter_how
+)
+
+FROM_SANDBOX(
+    2561973150
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_filter_reset
+)
+
+FROM_SANDBOX(
+    2561973880
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_filter_set_family
+)
+
+FROM_SANDBOX(
+    2561975245
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.search_filter_set_no_filter
+)
+
+FROM_SANDBOX(
+    2520213276
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__call
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__chat
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__item_continuation
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__item_stop
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__map
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__open
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__switch_to_begin
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__switch_to_end
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__switch_to_next
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.serp_gallery__switch_to_prev
+)
+
+FROM_SANDBOX(
+    2259367848
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.set_my_name
+)
+
+FROM_SANDBOX(
+    2520221156
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_add
+)
+
+FROM_SANDBOX(
+    2520223914
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_delete_all
+)
+
+FROM_SANDBOX(
+    2520226885
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_delete_item
+)
+
+FROM_SANDBOX(
+    2259359432
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_login
+)
+
+FROM_SANDBOX(
+    2259393319
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_show
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_show__add
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_show__delete_all
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_show__delete_index
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.shopping_list_show__delete_item
+)
+
+FROM_SANDBOX(
+    2259403970
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_collection
+)
+
+FROM_SANDBOX(
+    2520230403
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_route
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_route__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_route__show_route_on_map
+)
+
+FROM_SANDBOX(
+    2520233171
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_traffic
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_traffic__details
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.show_traffic__ellipsis
+)
+
+FROM_SANDBOX(
+    2459166120
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sleep_timer_how_long
+)
+
+FROM_SANDBOX(
+    2459166754
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sleep_timer_set
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sleep_timer_set__ellipsis
+)
+
+FROM_SANDBOX(
+    2259380601
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sleep_timer_time_left
+)
+
+FROM_SANDBOX(
+    2520239298
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_get_level
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_get_level__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_louder
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_louder__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_mute
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_quiter
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_quiter__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_set_level
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.sound_unmute
+)
+
+FROM_SANDBOX(
+    2259346124
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_cancel
+)
+
+FROM_SANDBOX(
+    2520244442
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_after_order_actions
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_call_to_driver
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_call_to_driver_internal
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_call_to_support
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_cancel__confirm
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_cancel__confirmation_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_cancel__confirmation_yes
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_get_price_of_ride
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_get_time_of_ride
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_open_app
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__change_card
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__change_payment_or_tariff
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__confirm
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__confirmation_no
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__confirmation_wrong
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__confirmation_yes
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_order__specify
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_show_driver_info
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_show_legal
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_status
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_status_address
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_status_price
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_status_time
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_new_where_is_my_car
+)
+
+FROM_SANDBOX(
+    2259340175
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_order
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.taxi_order__ellipsis
+)
+
+FROM_SANDBOX(
+    2549989322
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_cancel__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_how_long
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_pause
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_pause__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_resume
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_resume__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_set
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_set__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_show
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_show__cancel
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_show__pause
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_show__resume
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.timer_stop_playing
+)
+
+FROM_SANDBOX(
+    2520250517
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.translate
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.translate__ellipsis
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.translate__quicker
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.translate__slower
+)
+
+FROM_SANDBOX(
+    3075552892
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.tv_broadcast
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.tv_broadcast__ellipsis
+)
+
+FROM_SANDBOX(
+    3075554665
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.tv_stream
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.tv_stream__ellipsis
+)
+
+FROM_SANDBOX(
+    2259358864
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.video_play
+)
+
+FROM_SANDBOX(
+    2259351639
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.voiceprint_enroll
+)
+
+FROM_SANDBOX(
+    2520266365
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.voiceprint_remove
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.voiceprint_remove__confirm
+)
+
+FROM_SANDBOX(
+    2520269281
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.what_is_my_name
+)
+
+FROM_SANDBOX(
+    2259410800
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.scenarios.whats_new
+)
+
+FROM_SANDBOX(
+    2561975441
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.clear_history
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.close_browser
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.go_home
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.hibernate
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.mute
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.new_tab
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_bookmarks_manager
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_default_browser
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_disk
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_file
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_flash_card
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_folder
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_history
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_incognito_mode
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_settings
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_start
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.open_ya_browser
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.power_off
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.restart_pc
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.restore_tab
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.search_local
+    personal_assistant_model_directory/classifiers/scenarios/personal_assistant.stroka.unmute
+)
+
+FROM_SANDBOX(
+    1166815607
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/classifiers/search-or-converse/model.mmap
+    personal_assistant_model_directory/classifiers/search-or-converse/model_data.pkl
+    personal_assistant_model_directory/classifiers/search-or-converse/model_description
+)
+
+FROM_SANDBOX(
+    1170421572
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/metric_learning/metric_learning_info.json
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-3050.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-3050.index
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-3150.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-3150.index
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-4000.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-4000.index
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-4100.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_life/checkpoint-4100.index
+    personal_assistant_model_directory/metric_learning/new_year/checkpoint
+    personal_assistant_model_directory/metric_learning/new_year/checkpoint-4500.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_year/checkpoint-4500.index
+    personal_assistant_model_directory/metric_learning/new_year/checkpoint-4900.data-00000-of-00001
+    personal_assistant_model_directory/metric_learning/new_year/checkpoint-4900.index
+)
+
+FROM_SANDBOX(
+    1166816163
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.add_point/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.add_point/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.add_point__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.add_point__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.change_voice/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.change_voice/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.change_voice__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.change_voice__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.hide_layer/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.hide_layer/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.refuel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.refuel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.refuel__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.refuel__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.show_layer/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.navi.show_layer/model_description
+)
+
+FROM_SANDBOX(
+    3113525006
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_ask_sound/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_ask_sound/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_cancel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_cancel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_cancel__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_cancel__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_how_to_set_sound/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_how_to_set_sound/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_sound/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_sound/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_with_sound/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_with_sound/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_with_sound__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_set_with_sound__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_show/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_show/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_show__cancel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_show__cancel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze_abs/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze_abs/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze_rel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_snooze_rel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_sound_set_level/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.alarm_sound_set_level/model_description
+)
+
+FROM_SANDBOX(
+    1166817150
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia__ask_to/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia__ask_to/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166817627
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia_date/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.avia_date/model_description
+)
+
+FROM_SANDBOX(
+    1166817890
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.call/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.call/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.call__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.call__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1201428217
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.cancel_todo/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.cancel_todo/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.cancel_todo__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.cancel_todo__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166817980
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.confirmation_no/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.confirmation_no/model_description
+)
+
+FROM_SANDBOX(
+    1166818306
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.confirmation_yes/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.confirmation_yes/model_description
+)
+
+FROM_SANDBOX(
+    1166818646
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.connect_named_location_to_device__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.connect_named_location_to_device__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166819002
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.convert/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.convert/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.convert__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.convert__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1391545399
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_reminder/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_reminder/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_reminder__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_reminder__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1391546238
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_todo/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_todo/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_todo__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.create_todo__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166819652
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.example_intent/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.example_intent/model_description
+)
+
+FROM_SANDBOX(
+    1166819915
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.external_skill/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.external_skill/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.external_skill__continue/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.external_skill__continue/model_description
+)
+
+FROM_SANDBOX(
+    1218495039
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi__scroll__by_index/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.find_poi__scroll__by_index/model_description
+)
+
+FROM_SANDBOX(
+    1166820361
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_date/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_date/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_date__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_date__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1686370727
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_news/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_news/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_news__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_news__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166821616
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_time/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_time/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_time__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_time__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1221100125
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1221100118
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather_nowcast/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather_nowcast/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather_nowcast__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.get_weather_nowcast__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166822359
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.how_much/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.how_much/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.how_much__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.how_much__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1951960605
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders__scroll_next/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders__scroll_next/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders__scroll_reset/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_reminders__scroll_reset/model_description
+)
+
+FROM_SANDBOX(
+    1166823092
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_todo/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.list_todo/model_description
+)
+
+FROM_SANDBOX(
+    1197073327
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_address/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_address/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_delivery_intervals/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_delivery_intervals/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_index/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_index/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_items_number/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_items_number/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_phone/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_phone/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_yes_or_no/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__checkout_yes_or_no/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__market/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__market/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__market__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__market__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__number_filter/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market__number_filter/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market_native/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market_native/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market_native_beru/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.market_native_beru/model_description
+)
+
+FROM_SANDBOX(
+    1166823766
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging__recipient/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging__recipient/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging__recipient_ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.messaging__recipient_ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    3277844916
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_ambient_sound/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_ambient_sound/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_fairy_tale/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_fairy_tale/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_anaphora/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_anaphora/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_less/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_less/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_more/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_play_more/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_podcast/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_podcast/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_what_is_playing__play/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.music_what_is_playing__play/model_description
+)
+
+FROM_SANDBOX(
+    1355862146
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.open_site_or_app/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.open_site_or_app/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.open_site_or_app__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.open_site_or_app__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166824266
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_continue/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_continue/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_next_track/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_next_track/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_previous_track/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_previous_track/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_rewind/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.player_rewind/model_description
+)
+
+FROM_SANDBOX(
+    1788594518
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.goto_video_screen/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.goto_video_screen/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.open_current_video/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.open_current_video/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.payment_confirmed/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.payment_confirmed/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_channel_from_gallery_by_text/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_channel_from_gallery_by_text/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_ether_from_gallery_by_text/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_ether_from_gallery_by_text/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_video_from_gallery_by_text/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.quasar.select_video_from_gallery_by_text/model_description
+)
+
+FROM_SANDBOX(
+    3113524769
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.radio_play/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.radio_play/model_description
+)
+
+FROM_SANDBOX(
+    1166826418
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.random_num/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.random_num/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.random_num__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.random_num__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166825596
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_delivery_intervals/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_delivery_intervals/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_index/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_index/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_items_number/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_items_number/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_suits/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_suits/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_yes_or_no/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__checkout_yes_or_no/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__number_filter/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.recurring_purchase__number_filter/model_description
+)
+
+FROM_SANDBOX(
+    1166827029
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.remember_named_location/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.remember_named_location/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.remember_named_location__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.remember_named_location__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166826744
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.repeat_after_me/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.repeat_after_me/model_description
+)
+
+FROM_SANDBOX(
+    2462296150
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.search/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.search/model_description
+)
+
+FROM_SANDBOX(
+    1166827842
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.search_anaphoric/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.search_anaphoric/model_description
+)
+
+FROM_SANDBOX(
+    1256078942
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.set_my_name/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.set_my_name/model_description
+)
+
+FROM_SANDBOX(
+    1391548071
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_add/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_add/model_description
+)
+
+FROM_SANDBOX(
+    1391548881
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_add_fixlist/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_add_fixlist/model_description
+)
+
+FROM_SANDBOX(
+    1391549670
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_delete_item/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_delete_item/model_description
+)
+
+FROM_SANDBOX(
+    1391550539
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_delete_item_fixlist/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_delete_item_fixlist/model_description
+)
+
+FROM_SANDBOX(
+    1391551601
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__add/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__add/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__add_fixlist/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__add_fixlist/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_index/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_index/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_index_fixlist/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_index_fixlist/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_item/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_item/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_item_fixlist/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.shopping_list_show__delete_item_fixlist/model_description
+)
+
+FROM_SANDBOX(
+    1166829638
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_collection/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_collection/model_description
+)
+
+FROM_SANDBOX(
+    1166829622
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route__show_route_on_map/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_route__show_route_on_map/model_description
+)
+
+FROM_SANDBOX(
+    1166829939
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_traffic/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_traffic/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_traffic__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.show_traffic__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1166830987
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sleep_timer_set/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sleep_timer_set/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sleep_timer_set__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sleep_timer_set__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1364553271
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sound_get_level__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sound_get_level__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sound_set_level/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.sound_set_level/model_description
+)
+
+FROM_SANDBOX(
+    1220020326
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_cancel__confirm/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_cancel__confirm/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__change_payment_or_tariff/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__change_payment_or_tariff/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__confirm/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__confirm/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__specify/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_new_order__specify/model_description
+)
+
+FROM_SANDBOX(
+    1166831055
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_order/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_order/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_order__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.taxi_order__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    1402228656
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_cancel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_cancel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_cancel__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_cancel__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_how_long/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_how_long/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_pause/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_pause/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_pause__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_pause__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_resume/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_resume/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_resume__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_resume__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_set/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_set/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_set__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_set__ellipsis/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__cancel/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__cancel/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__pause/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__pause/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__resume/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.timer_show__resume/model_description
+)
+
+FROM_SANDBOX(
+    1396018581
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.translate/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.translate/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.translate__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.translate__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    3075567737
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_broadcast/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_broadcast/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_broadcast__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_broadcast__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    3075569637
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_stream/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_stream/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_stream__ellipsis/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.tv_stream__ellipsis/model_description
+)
+
+FROM_SANDBOX(
+    3333988332
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.video_play/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.video_play/model_description
+)
+
+FROM_SANDBOX(
+    1256080788
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.voiceprint_enroll__collect_voice/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.voiceprint_enroll__collect_voice/model_description
+)
+
+FROM_SANDBOX(
+    1166833206
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.voiceprint_remove__confirm/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.scenarios.voiceprint_remove__confirm/model_description
+)
+
+FROM_SANDBOX(
+    1166833339
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_disk/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_disk/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_file/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_file/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_folder/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_folder/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_settings/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.open_settings/model_description
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.search_local/model.mmap
+    personal_assistant_model_directory/tagger/tagger.data/personal_assistant.stroka.search_local/model_description
+)
+
+FROM_SANDBOX(
+    1166834208
+    PREFIX
+    personal_assistant_model_directory
+    OUT
+    personal_assistant_model_directory/tagger/tagger.info
+)
+
+END()
+
+RECURSE(crm_bot)

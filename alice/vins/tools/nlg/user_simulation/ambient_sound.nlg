@@ -1,0 +1,227 @@
+{% macro render_instance(ent_instance) -%}
+  {{ context.onto_synth.random_nlu_phrase(ent_instance) }}
+{%- endmacro %}
+
+{% macro greetings() %}
+  {% maybe 0.2 %}
+    {% chooseline %}
+      привет
+      здравствуй
+      добрый вечер
+      доброе утро
+      добрый день
+      хай
+      здарова
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro polite() %}
+  {% chooseline %}
+    пожалуйста
+    плиз
+    если не трудно
+    хочу
+    я хочу
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro maybe_polite() %}
+  {% maybe 0.2 %}
+    {{ polite() }}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro listen() %}
+  {% chooseline %}
+    слушать
+    послушаем
+    послушать
+    послушать
+    давай послушаем
+  {% endchooseline %}
+{% endmacro %}
+
+{%  macro action() %}
+  {% chooseitem 0.2 %}
+    {{ listen() }}
+  {% or 0.8 %}
+    {% chooseline %}
+      найди
+      давай
+      включи
+      включить
+      запусти
+      запустить
+      давай все таки
+      поставь
+      поставить
+      давай включи
+      давай поставь
+      скачать бесплатно
+      заснуть под
+      играть
+      играй
+      вруби
+    {% endchooseline %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro polite_action() %}
+  {% chooseitem 0.5 %}
+    {{ polite() }}
+    {{ action() }}
+  {% or 0.5 %}
+    {{ action() }}
+    {{ polite() }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro sound_or_noise() %}
+  {% chooseitem %}
+    шум '{{ form.sound_noise | inflect('gen') }}'(ambient_sound)
+  {% or %}
+    звук '{{ form.common_sound | inflect('gen') }}'(ambient_sound)
+  {% or %}
+    звуки '{{ form.common_sound | inflect('gen') }}'(ambient_sound)
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro no_sound() %}
+  '{{ form.common_sound | inflect('acc') }}'(ambient_sound)
+{% endmacro %}
+
+{% macro sound_verb() %}
+  {% maybe 0.8 %}
+    звук
+  {% endmaybe %}
+  как '{{ form.verb_sound }}'(ambient_sound)
+{% endmacro %}
+
+{% macro nature_common() %}
+  {% chooseline %}
+    звуки природы
+    звук природы
+    природные звуки
+    звуки живой природы
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro just_nature() %}
+  {{ nature_common() }}
+{% endmacro %}
+
+{% macro relax_and_other() %}
+  {% chooseline %}
+    для расслабления
+    для релакса
+    для релаксации
+    для сна
+    чтобы заснуть
+    на ночь
+    колыбельные
+    без музыки
+    для детей
+    для младенцев
+    для малышей
+    ребенку
+    для медитации
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro maybe_nature_common() %}
+  {% maybe 0.5 %}
+    {% chooseitem 0.5 %}
+      {{ nature_common() }}
+    {% or 0.3 %}
+      {{ nature_common() }}
+      {{ relax_and_other() }}
+    {% or 0.2 %}
+      {{ relax_and_other() }}
+    {% endchooseitem %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro query_common() %}
+  {% chooseitem 0.3 %}
+    {{ polite_action() }}
+    {{ maybe_nature_common() }}
+    {{ sound_or_noise() }}
+  {% or 0.7 %}
+    {{ action() }}
+    {{ maybe_nature_common() }}
+    {{ sound_or_noise() }}
+    {{ maybe_polite() }}
+  {% or 0.1 %}
+    {{ polite_action() }}
+    {{ sound_or_noise() }}
+    {{ relax_and_other() }}
+  {% or 0.3 %}
+    {{ action() }}
+    {{ sound_or_noise() }}
+    {{ relax_and_other() }}
+    {{ maybe_polite() }}
+  {% or 0.1 %}
+    {{ polite() }}
+    {{ listen() }}
+    {{ no_sound() }}
+    {% maybe 0.3 %}
+      {{ relax_and_other() }}
+    {% endmaybe %}
+  {% or 0.01 %}
+    {{ listen() }}
+    {% maybe 0.1 %}
+      {{ polite() }}
+    {% endmaybe %}
+    {{ no_sound() }}
+    {% maybe 0.3 %}
+      {{ relax_and_other() }}
+    {% endmaybe %}
+  {% or 0.05 %}
+    {{ polite_action() }}
+    {{ just_nature() }}
+    {% maybe 0.3 %}
+      {{ relax_and_other() }}
+    {% endmaybe %}
+  {% or 0.1 %}
+    {{ action() }}
+    {{ just_nature() }}
+    {% maybe 0.3 %}
+      {{ relax_and_other() }}
+    {% endmaybe %}
+    {% maybe 0.1 %}
+      {{ polite() }}
+    {% endmaybe %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro query_verb() %}
+  {% chooseitem 0.3 %}
+    {{ polite_action() }}
+    {{ maybe_nature_common() }}
+    {{ sound_verb() }}
+  {% or 0.7 %}
+    {{ action() }}
+    {{ maybe_nature_common() }}
+    {{ sound_verb() }}
+    {{ maybe_polite() }}
+  {% or 0.1 %}
+    {{ polite_action() }}
+    {{ relax_and_other() }}
+    {{ sound_verb() }}
+  {% or 0.3 %}
+    {{ action() }}
+    {{ sound_verb() }}
+    {{ relax_and_other() }}
+    {{ maybe_polite() }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase render_query %}
+  {{ greetings() }}
+  {% chooseitem 0.8 %}
+    {{ query_common() }}
+  {% or 0.2 %}
+    {{ query_verb() }}
+  {% endchooseitem %}
+{% endphrase %}

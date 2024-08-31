@@ -1,0 +1,95 @@
+{% nlgimport "music/music__common.nlg" %}
+
+{% from "music/music__common.nlg" import ya_plus, render_ya_plus_required, render_authorization_required %}
+{% from "music/nonmusic_common.nlg" import render_fairytale_answer, render_suggest_yaplus_fairytale, render_authorization_from_fairytale with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention('music_play_not_supported_on_device') and (is_tv_device() or is_legatus()) %}
+    {% chooseline %}
+      Простите, но я не могу включить сказку здесь. Попросите меня об этом в умной колонке или в приложении Яндекса.
+      Упс, сказки на телик пока не залила. Но могу с радостью рассказать их в приложении или через колонку, если попросите.
+    {% endchooseline %}
+  {% elif is_active_attention('unknown_fairy_tale') %}
+    {% chooseline %}
+      Простите,{% vc %}sil <[200]>{% evc %} такой сказки у меня пока нет. Держите сказку-сюрприз.
+      Простите,{% vc %}sil <[200]>{% evc %} такой сказки у меня нет. Но я нашла для вас кое-что волшебное.
+      Извините,{% vc %}sil <[200]>{% evc %} но такой сказки у меня нет. Послушайте мою любимую.
+      Простите,{% vc %}sil <[200]>{% evc %} такой сказки нет. Включу вам свою любимую.
+      Ой,{% vc %}sil <[200]>{% evc %} такой сказки нет. Включу вам сказку, которую сама слушаю перед сном.
+      Оу оу, такой сказки нет. Но есть кое-что получше. Сказка-сюрприз!
+    {% endchooseline %}
+  {% else %}
+    {% if is_active_attention('suggest_authorization_from_music_play') %}
+      {% text %}
+        {{ render_authorization_from_fairytale() }}
+        \n
+      {% endtext %}
+    {% elif is_active_attention('suggest_yaplus') %}
+      {% text %}
+        {{ render_suggest_yaplus_fairytale() }}
+        \n
+      {% endtext %}
+    {% endif %}
+    {% if is_active_attention('is_general_playlist') and is_active_attention('yamusic_audiobranding') and randuniform(0, 1) < get_attention('yamusic_audiobranding').data %}
+      {% chooseitem %}
+        {% text %}
+          Выбрала для вас хорошую сказку на Яндекс.Музыке. Итак,...
+        {% endtext %}
+        {% voice %}
+          Выбрала для вас хорошую сказку на Яндекс Музыке. Итак,...
+        {% endvoice %}
+      {% or %}
+        {% text %}
+          Мой юный друг, я кое-что нашла для вас на Яндекс.Музыке...
+        {% endtext %}
+        {% voice %}
+          Мой юный друг, я кое-что нашла для вас на Яндекс Музыке...
+        {% endvoice %}
+      {% or %}
+        {% text %}
+          У меня много любимых сказок на Яндекс.Музыке, а для вас я выбрала эту...
+        {% endtext %}
+        {% voice %}
+          У меня много любимых сказок на Яндекс Музыке, а для вас я выбрала эту...
+        {% endvoice %}
+      {% endchooseitem %}
+    {% else %}
+      {{ render_fairytale_answer(req_info, form.answer) }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+# errors
+
+{% phrase render_error__unauthorized %}
+  {% if context.error.data.code == 'music_authorization_problem' %}
+    О, кажется, у вас проблемы с авторизацией на Яндекс Музыке.
+  {% elif context.error.data.code == 'unauthorized_general' %}
+    {{ render_authorization_required('сказки') }}
+  {% elif context.error.data.code == 'payment-required' %}
+    {% if is_active_attention('plus_push') %}
+      Чтобы слушать сказки, вам нужна подписка {{ ya_plus() }}.
+      Ссылка для покупки придёт на ваш смартфон — я уже её отправила.
+    {% elif is_active_attention('fairy_tale_noplus') %}
+      Чтобы слушать аудиоконтент, необходима подписка на Яндекс.Плюс. Однако вы всегда можете сказать мне: «Включи навык "Сказки"», и я включу бесплатную подборку.
+    {% else %}
+      {{ render_ya_plus_required('сказки') }}
+    {% endif %}
+  {% elif context.error.data.code == 'promo_available' and req_info.experiments['alter_music_promo_nlg'] != None %}
+    Чтобы слушать сказки, вам нужно оформить подписку {{ ya_plus() }}. Откройте приложение Яндекса для активации промо-периода. Отправила ссылку на телефон.
+  {% elif context.error.data.code == 'promo_available' %}
+    Чтобы слушать сказки, вам нужно оформить подписку {{ ya_plus() }}. Сейчас вам доступен промо-период. Вы можете активировать его в приложении Яндекс.
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__notsupported %}
+  Я не могу включить сказку на этом устройстве.
+{% endphrase %}
+
+{% phrase render_error__invalidparam %}
+  Я не могу включить сказку с таким названием.
+{% endphrase %}
+
+{% phrase render_error__musicerror %}
+  Извините, но такой сказки у меня нет.
+{% endphrase %}

@@ -1,0 +1,181 @@
+labels:
+  ruble: 'рубл(ь|ей|ям|ю|я)'
+  kopek: 'копе(йка|йку|ек|йкам|йке|йки)'
+  ruble_sum: '\d+ {ruble}( \d\d? {kopek})?|\d\d? {kopek}'
+  dollar: 'доллар(ов|ам|у|а)?'
+  cent: 'цент(ов|ам|у|а)?'
+  dollar_sum: '\d+ {dollar}( \d\d? {cent})?|\d\d? {cent}'
+  euro: 'евро'
+  eurocent: 'евроцент(ов|ам|у|а)?'
+  euro_sum: '\d+ {euro}( \d\d? {eurocent})?|\d\d? {eurocent}'
+  tenge: 'тенге'
+  tenge_sum: '\d+(\.\d+)? {tenge}'
+  yena: 'йен(а|у|ам|е|ы)?'
+  yena_sum: '\d+(\.\d+)? {yena}'
+  grivny: 'грив(на|ну|ен|нам|не|ны)'
+  grivny_sum: '\d+ {grivny}( \d\d? {kopek})?|\d\d? {kopek}'
+  day_part: '(час(ов|а) )?(утра|дня|вечера|ночи)'
+  time: '\d\d?:\d\d( {day_part})?|\d\d? {day_part}'
+  datetime: '\d\d? \w+( \d\d\d\d года)?( в {time})?'
+  datetime_na: 'на ({time} )?\d\d? \w+( \d\d\d\d года)?'
+  source_nom: 'ЦБ РФ|Московская Биржа|Банк Украины'
+  source_gen: 'ЦБ РФ|Московской Биржи|банка Украины'
+  source_abl: 'в ЦБ РФ|на Московской Бирже'
+  exchange_point_abl: 'пунктах обмена( валюты)?'
+  equal_word: '(был(а)? )?рав(ен|на)|составля(ет|л(а)?)|–'
+  sorry: '(Сожалею|К сожалению),'
+  no_info_date: '(у меня нет информации|я не знаю курса|курс) на {datetime}( мне неизвестен)?'
+  no_info_mmvb_source: 'курса Московской Биржи я не знаю|я не знаю курса Московской
+    Биржи|курс Московской Биржи мне неизвестен'
+  connective: ', ((но|зато) могу сказать, что|но)'
+  flaky_mmvb_answer: '{ruble_sum}\.\nМосковская Биржа, {datetime}\.|{sorry} {no_info_mmvb_source}{connective}
+    курс ЦБ РФ {datetime} {equal_word} {ruble_sum} за {euro_sum}\.'
+  byr_special_ending: ' за \d+ старых белорусских рублей'
+  krw: '.*корейск.* вон.*'
+
+# test_currency_sign:
+#   dialog:
+#     '$2600 в рублях':
+#       text: |-
+#         {ruble_sum}.
+#         По курсу {source_gen} {datetime_na}.
+#       vins_form:
+#         slots:
+#           amount_from:
+#             value: 2600
+
+#   app_info:
+#     ignore:
+#     - speaker
+#     - pa_android
+#     - desktop_alice
+#     - pa_ios
+#     - watch
+#     - navigator_android
+#     - auto
+#     - navigator_ios
+#     - irbis
+#     - dexp
+
+
+# test_dollar_euro_rate:
+#   курс доллара: |-
+#     {ruble_sum}.
+#     {source_nom}, {datetime}.
+#   откуда знаешь: 'Это курс {source_gen} {datetime_na}, цена за 1 доллар.'
+#   а евро: |-
+#     {ruble_sum}.
+#     {source_nom}, {datetime}.
+#   а цб: |-
+#     {ruble_sum}.
+#     {source_nom}, {datetime}.
+#   что это за курс: 'Это курс ЦБ РФ {datetime_na}, цена за 1 евро.'
+#   а ммвб: '{flaky_mmvb_answer}'
+
+# test_no_geo:
+#   geo: null
+#   dialog:
+#     курс доллара: |-
+#       {ruble_sum}.
+#       {source_nom}, {datetime}.
+#     откуда знаешь: 'Это курс {source_gen} {datetime_na}, цена за 1 доллар.'
+#     а евро: |-
+#       {ruble_sum}.
+#       {source_nom}, {datetime}.
+#     а цб: |-
+#       {ruble_sum}.
+#       {source_nom}, {datetime}.
+#     что это за курс: 'Это курс ЦБ РФ {datetime_na}, цена за 1 евро.'
+#     а ммвб: '{flaky_mmvb_answer}'
+#     скажи курс биткоина: |-
+#       {ruble_sum}.
+#       Биржа биткоинов, {datetime}.
+
+test_byn_1:
+  курс белорусского рубля: |-
+    {ruble_sum}.
+    {source_nom}, {datetime}.
+  откуда знаешь: 'Это курс {source_gen} {datetime_na}, цена за 1 белорусский рубль.'
+
+test_byn_2:
+  курс деноминированного белорусского рубля: |-
+    {ruble_sum}.
+    {source_nom}, {datetime}.
+  откуда знаешь: 'Это курс {source_gen} {datetime_na}, цена за 1 белорусский рубль.'
+
+test_byr:
+  курс старого белорусского рубля: |-
+    {ruble_sum}{byr_special_ending}.
+    {source_nom}, {datetime}.
+  откуда знаешь: 'Это курс {source_gen} {datetime_na}.'
+
+# test_full_sum:
+#   у меня есть 100 тенге, сколько это в рублях?: |-
+#     {ruble_sum}.
+#     По курсу {source_gen} {datetime_na}.
+
+test_tenge_rate:
+  курс тенге: |-
+    {ruble_sum} за {tenge_sum}.
+    {source_nom}, {datetime}.
+
+# test_no_date:
+#   курс доллара 1 февраля: '{sorry} {no_info_date}{connective} {datetime} курс {source_gen}
+#     {equal_word} {ruble_sum} за {dollar_sum}.'
+
+test_no_info_geo1:
+  курс доллара в Таджикистане: 'К сожалению, у меня нет такой информации.'
+
+test_no_info_geo2:
+  flags:
+    xfail:
+      value: true
+  # will be removed after error types refactoring on the BASS side
+  dialog:
+    курс доллара в Германии: 'К сожалению, у меня нет информации о курсах валют в Германии.'
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+
+# test_no_info_for_date:
+#   курс тенге 1 февраля в банке Украины: '{sorry} {no_info_date}{connective} {datetime}
+#     курс {source_gen} {equal_word} {grivny_sum} за {tenge_sum}.'
+
+test_no_info_complex:
+  курс тенге в обменниках Москвы 1 марта: 'К сожалению, у меня нет такой информации.'
+
+negative_sum:
+  -5 долларов в рублях: 'Денежная сумма должна быть больше нуля.'
+
+zero_sum:
+  0 долларов в рублях: 'Денежная сумма должна быть больше нуля.'
+
+very_big_sum:
+  100 миллиардов долларов в рублях: 'Такая сумма не помещается в моей памяти.'
+
+very_small_sum:
+  одна миллионная доллара в рублях: 'Давайте не будем мелочиться.'
+
+# test_rk_1:
+#   92 евро — сколько в рублях?: |-
+#     {ruble_sum}.
+#     По курсу {source_gen} {datetime_na}.
+
+# test_rk_2:
+#   Какой курс доллара?: |-
+#     {ruble_sum}.
+#     {source_nom}, {datetime}.
+
+test_rk_3:
+  Курс йены к рублю: |-
+    {ruble_sum} за {yena_sum}.
+    {source_nom}, {datetime}.
+
+test_krw:
+  какой курс корейской воны:
+    vins_form:
+      slots:
+        type_from:
+          value: KRW
+    text: '{krw}'

@@ -1,0 +1,109 @@
+{% macro pick_route_uri(form) %}
+  {% if form.app == 'navigator' and form.route_navigator_uri %}
+    {{ form.route_navigator_uri }}
+  {% elif (form.route_type == 'auto' or form.app == 'navigator') and form.route_info.car %}
+    {{ form.route_info.car.maps_uri }}
+  {% elif form.route_type == 'public_transport' and form.route_info.public_transport %}
+    {{ form.route_info.public_transport.maps_uri }}
+  {% elif form.route_type == 'pedestrian' and form.route_info.pedestrian %}
+    {{ form.route_info.pedestrian.maps_uri }}
+  {% elif form.route_type == 'non_pedestrian' and form.route_maps_uri %}
+    {{ form.route_maps_uri }}
+  {% elif form.route_maps_uri %}
+    {{ form.route_maps_uri }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_input_address(what, where) %}
+  {% if what and where %}
+    {{ what | inflect('nomn') }} по адресу {{ where | inflect('nomn') }}
+  {% elif what %}
+    {{ what | inflect('nomn') }}
+  {% elif where %}
+    {{ where | inflect('nomn') }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_city_genitive(location) %}
+  {% if location.city_cases %}
+    {{ location.city_cases.genitive }}
+  {% else %}
+    города {{ location.city }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_location(location_or_poi, address_case='gen') %}
+  {% set location = location_or_poi['geo'] if 'geo' in location_or_poi else location_or_poi %}
+  {% set poi = location_or_poi if 'geo' in location_or_poi else None %}
+  {% set user_bookmark = location_or_poi if (not poi and 'name' in location_or_poi) else None %}
+  {% set location_is_city = location.level == 'city' %}
+
+  {% if user_bookmark %}
+    "{{ user_bookmark.name }}"
+  {% elif poi %}
+    "{{ poi.name }}"
+    {% if location_is_city %}
+      {{ render_city_genitive(location) }}
+    {% else %}
+      по адресу {{ location | geo_city_address }}
+    {% endif %}
+  {% else %}
+    {% if location_is_city %}
+      {{ render_city_genitive(location) }}
+    {% else %}
+      {{ 'адрес' | inflect(address_case) }} {{ location | geo_city_address }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro phrase_for_sorry() %}
+  {% chooseline %}
+    К сожалению,
+    Извините,
+    Увы,
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_nogeo(form, error) %}
+  {% chooseline %}
+    Не могу понять, где находится
+    Не знаю, что за место такое —
+  {% endchooseline %}
+  {% set error_name = error.data.slot %}
+  {% set error_what = error.data.what %}
+  {% set error_where = error.data.where %}
+  {% if error_name == 'what_from/where_from' %}
+    {% set what = error_what or form.what_from %}
+    {% set where = error_where or form.where_from %}
+  {% elif error_name == 'what_via/where_via' %}
+    {% set what = error_what or form.what_via %}
+    {% set where = error_where or form.where_via %}
+  {% else %}
+    {% set what = error_what or form.what_to %}
+    {% set where = error_where or form.where_to %}
+  {% endif %}
+  {% if what or where %}
+      {{ render_input_address(what, where) }}
+  {% endif %}
+  .
+  {% chooseline %}
+    Попробуйте указать
+    Укажите
+  {% endchooseline %}
+  {% if error_name == 'what_from/where_from' %}
+    {% chooseline %}
+      другую точку
+      другой адрес
+      другое начало маршрута
+    {% endchooseline %}
+  {% elif error_name == 'what_via/where_via' %}
+    другую промежуточную точку маршрута
+  {% else %}
+    {% chooseline %}
+      другую точку
+      другой адрес
+      другое место назначения
+    {% endchooseline %}
+  {% endif %}
+  .
+{% endmacro %}

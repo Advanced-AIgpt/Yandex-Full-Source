@@ -1,0 +1,137 @@
+{% macro send_message_card(recipient_info) %}
+  {
+    "states": [
+        {
+            "state_id": 1,
+            "blocks": [
+                { "size": "xs", "type": "div-separator-block" },
+                {
+                    {% if recipient_info.avatar_url -%}
+                    "side_element": {
+                      "element": {
+                        "image_url": "{{recipient_info.avatar_url}}",
+                        "type": "div-image-element"
+                      },
+                      "size": "s"
+                    },
+                    {%- endif %}
+                    "title": "{{ recipient_info['title'] | capitalize_first | html_escape }}",
+                    "title_style": "text_s",
+                    "text": "{{ recipient_info['phone'] | html_escape }}",
+                    "text_style": "numbers_s",
+                    "type": "div-universal-block"
+                }
+            ]
+        }
+    ],
+    "background": [
+        {
+            "color": "{{ '#FFFFFF' }}",
+            "type": "div-solid-background"
+        }
+    ]
+  }
+{% endmacro %}
+
+{% macro contact_header(contact) %}
+{
+  "type": "div-table-block",
+  "rows": [
+    {
+      "type": "row_element",
+      "cells": [
+        {% if contact.avatar_url -%}
+        {
+          "image": {
+            "type": "div-image-element",
+            "image_url": "{{contact.avatar_url}}"
+          },
+          "image_size": "xxl"
+        },
+        {%- endif %}
+        {
+          "text": "{{ contact.name | html_escape }}",
+          "text_style": "title_l"
+        }
+      ],
+      "top_padding": "xs"
+    }
+  ],
+  "columns": [
+    {
+      "right_padding": "xxs",
+      "left_padding": "zero",
+      "weight": 0
+    },
+    {
+      "weight": 0
+    }
+  ]
+}
+{% endmacro %}
+
+{% macro phone_list_item(phone) %}
+  {
+      "size": "xxs",
+      "type": "div-separator-block",
+      "padding_modifier": {
+          "size": "s"
+      },
+      "has_delimiter": 1
+  },
+  {
+      "size": "xs",
+      "type": "div-separator-block"
+  },
+  {
+      "title": "{{ phone.phone | html_escape }}",
+      "type": "div-universal-block",
+      "padding_modifier": {
+          "size": "s"
+      }
+  }
+{% endmacro %}
+
+{% macro search_contacts_card(contacts) %}
+  {
+    "background": [{
+        "type": "div-solid-background",
+        "color": "{{ '#FFFFFF' }}"
+    }],
+    "states": [{
+      "state_id": 1,
+      "blocks": [
+        {% for contact in contacts -%}
+          {{ contact_header(contact) }},
+          {% for phone in contact.phones %}
+            {{ phone_list_item(phone) }}{{ "," if not loop.last }}
+          {% endfor %}
+          {% if not loop.last %}
+          , {
+            "has_delimiter": 1,
+            "type": "div-separator-block",
+            "size": "xxs"
+          } ,
+          {% else %}
+          , {
+            "type": "div-separator-block",
+            "size": "xxs"
+          }
+          {% endif %}
+        {%- endfor %}
+      ]
+    }]
+  }
+{% endmacro %}
+
+{% card messaging__send_message %}
+  {{ send_message_card(context.data) }}
+{% endcard %}
+
+{% card messaging__search_contacts %}
+  {{ search_contacts_card(context.data) }}
+{% endcard %}
+
+{% card call__search_contacts %}
+  {{ search_contacts_card(context.data) }}
+{% endcard %}

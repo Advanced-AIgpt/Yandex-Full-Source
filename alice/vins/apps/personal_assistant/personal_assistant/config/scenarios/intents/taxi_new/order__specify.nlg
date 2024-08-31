@@ -1,0 +1,22 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/order_phrases.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/order_phrases.nlg" import taxi_route with context %}
+{% from "taxi_new/macros.nlg" import not_supported, not_understood, not_supported_tariff with context %}
+
+{% from "show_route/show_route_common.nlg" import render_nogeo with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention("not_implemented") %}
+    {{ not_supported() }}
+  {% elif is_active_attention("not_supported_tariff") %}
+    {{ not_supported_tariff() }}
+  {% elif is_active_attention("not_understood") %}
+    {{ not_understood() }}
+  {% elif form.status == "ok" or form.deep_link %}
+    {{ taxi_route() }}
+  {% else %}
+    Что-то сломалось...
+  {% endif %}
+{% endphrase %}

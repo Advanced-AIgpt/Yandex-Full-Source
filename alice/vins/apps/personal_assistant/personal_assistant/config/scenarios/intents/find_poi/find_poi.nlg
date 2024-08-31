@@ -1,0 +1,344 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "find_poi/find_poi__ask.nlg" %}
+{% nlgimport "cards/found_poi_div_cards.nlg" %}
+{% nlgimport "cards/found_poi_gallery_div_cards.nlg" %}
+{% nlgimport "cards/found_poi_events_div_cards.nlg" %}
+{% nlgimport "cards/found_poi_one_div_cards.nlg" %}
+
+{% from "find_poi/find_poi_common.nlg" import nothing_found %}
+
+{% macro render_geo(last_found_poi) %}
+  {% if is_smart_speaker() or is_elari_watch() %}
+    {% chooseline %}
+      Без карты я не справлюсь. Увы.
+      Для этого мне нужны {%vc%}Яндекс Карты{%evc%}{%tx%}Яндекс.Карты{%etx%}, а здесь их нет.
+      Я бы и рада помочь, но без карты никак.
+    {% endchooseline %}
+  {% else %}
+    {{ last_found_poi | geo_city_address }} —
+    {% chooseline %}
+      адрес есть на картах.
+      могу открыть карту для этого адреса.
+      ответ есть на картах.
+      найдено на картах.
+    {% endchooseline %}
+  {%endif%}
+{% endmacro %}
+
+{% macro render_first_phrase(last_found_poi) %}
+  {% set phrase1 %}
+    {% chooseitem %}
+      "{{ last_found_poi.name }}" по адресу {{ last_found_poi.geo | geo_city_address }}
+    {% or %}
+      "{{ last_found_poi.name }}", {{ last_found_poi.geo | geo_city_address }}
+    {% endchooseitem %}
+  {% endset %}
+
+  {% set full_phrase1 %}
+    {% chooseitem %}
+      Как насчет {{ phrase1 }}?
+    {% or %}
+      Может {{ phrase1 }}?
+    {% or %}
+      Может, подойдет {{ phrase1 }}?
+    {% or %}
+      Могу предложить {{ phrase1 }}.
+    {% or %}
+      Вам может подойти {{ phrase1 }}.
+    {% or %}
+      Вот что нашлось: {{ phrase1 }}.
+    {% endchooseitem %}
+  {% endset %}
+
+  {% set full_phrase2 %}
+    Я знаю, что по адресу {{ last_found_poi.geo | geo_city_address }} есть "{{ last_found_poi.name }}".
+  {% endset %}
+
+  {% set full_phrase3 %}
+    По адресу {{ last_found_poi.geo | geo_city_address }} есть "{{ last_found_poi.name }}".
+  {% endset %}
+
+  {% chooseitem %}
+    {{ full_phrase1 }}
+  {% or %}
+    {{ full_phrase2 }}
+  {% or %}
+    {{ full_phrase3 }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_next_phrase(last_found_poi) %}
+  {% set phrase1 %}
+    {% chooseitem %}
+      "{{ last_found_poi.name }}" по адресу {{ last_found_poi.geo | geo_city_address }}
+    {% or %}
+      "{{ last_found_poi.name }}", {{ last_found_poi.geo | geo_city_address }}
+    {% endchooseitem %}
+  {% endset %}
+
+  {% set phrase2 %}
+    По адресу {{ last_found_poi.geo | geo_city_address }} есть "{{ last_found_poi.name }}"
+  {% endset %}
+
+  {% set random_phrase %}
+    {% chooseitem %}
+      {{ phrase1 }}
+    {% or %}
+      {{ phrase2 }}
+    {% endchooseitem %}
+  {% endset %}
+
+  {% chooseitem %}
+    Еще есть {{ phrase1 }}.
+  {% or %}
+    Вам непросто угодить. {{ random_phrase }}.
+  {% or %}
+    Может быть, {{ phrase1 }}?
+  {% or %}
+    Идём дальше, {{ phrase1 }}.
+  {% or %}
+    Будем искать. {{ random_phrase }}.
+  {% or %}
+    Ещё вариант: {{ phrase1 }}.
+  {% or %}
+    Продолжаем поиск, {{ phrase1 }}.
+  {% or %}
+    Такой вариант: {{ phrase1 }}.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro render_poi(last_found_poi, result_index) %}
+  {% if result_index == 1 %}
+    {{ render_first_phrase(last_found_poi) }}
+  {% else %}
+    {{ render_next_phrase(last_found_poi) }}
+  {% endif %}
+
+  {% if last_found_poi.hours %}
+    {% set opened_all_day = last_found_poi.hours['24_hours'] %}
+    {% set opened_from = last_found_poi.hours.from %}
+    {% set opened_to = last_found_poi.hours.to %}
+    {% set current_status = last_found_poi.hours.current_status %}
+    {% set working_hours = last_found_poi.hours.working %}
+
+    {% if opened_all_day or (opened_from and opened_to) or working_hours %}
+      Работает
+      {% if opened_all_day %}
+        круглосуточно
+      {% elif opened_from and opened_to %}
+        с {{ opened_from | parse_dt | human_time(case='gen') }}
+        до {{ opened_to | parse_dt | human_time(case='gen') }}
+      {% else %}
+        {% for hours in working_hours %}
+          {% if not loop.first %}
+            {% if loop.last %} и {% else %}, {% endif %}
+          {% endif %}
+          с {{ hours.from | parse_dt | human_time(case='gen') }}
+          до {{ hours.to | parse_dt | human_time(case='gen') }}
+        {% endfor %}
+      {% endif %}.
+    {% endif %}
+
+    {% if current_status %}
+      {% if not (opened_all_day and current_status == 'open') %}
+        Сейчас
+        {% if current_status == 'open' %}
+          открыто.
+        {% else %}
+          закрыто.
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_not_found(form) %}
+  {% if form.resolved_where %}
+    {% if form.result_index == 1 %}
+      {% chooseline %}
+        Ничего не удалось найти по адресу {{ form.resolved_where | geo_city_address }}.
+        Ничего не нашлось по адресу {{ form.resolved_where | geo_city_address }}.
+        Боюсь, что по адресу {{ form.resolved_where | geo_city_address }} ничего не нашлось.
+        По адресу {{ form.resolved_where | geo_city_address }} ничего найти не удалось.
+      {% endchooseline %}
+    {% else %}
+      {% chooseline %}
+        Больше по адресу {{ form.resolved_where | geo_city_address }} ни одного места не знаю.
+        По адресу {{ form.resolved_where | geo_city_address }} больше ничего не нашлось.
+      {% endchooseline %}
+    {% endif %}
+  {% else %}
+    {{ nothing_found(form) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_navigator_phrase() %}
+  {% chooseline %}
+    Сейчас найду.
+    Сейчас поищу.
+    Внимание на карту.
+    Показываю варианты.
+    Взгляните.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase find_poi__what_i_found %}
+  {% chooseline %}
+    Вот что я нашла.
+    Вот, смотрите.
+    Всё для вас.
+    Вот варианты.
+    Нашла.
+    Смотрите, выбирайте.
+    Выбирайте.
+    Нашла разные варианты.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase find_poi__what_i_found_one %}
+  {% chooseline %}
+    Смотрите, что нашлось.
+    Кажется, вам нужно это место.
+    Смотрите.
+    Вот оно!
+    Всё для вас.
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase ya_auto_short_answer %}
+  {% tx %}
+    {% if form.last_found_poi %}
+      {% if 'geo' in form.last_found_poi %}
+        {{ form.last_found_poi.geo | geo_city_address }} - нашла на карте.
+      {% else %}
+        {{ form.last_found_poi | geo_city_address }} - нашла на карте.
+      {% endif %}
+    {% endif %}
+  {% etx %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_client_with_navigator() %}
+    {{ render_navigator_phrase() }}
+  {% elif req_info.experiments['find_poi_gallery'] != None or req_info.experiments['find_poi_one'] != None %}
+    {% if form.gallery_results_count == 0 %}
+      {% if not form.last_found_poi %}
+        {{ render_not_found(form) }}
+      {% elif 'geo' in form.last_found_poi %}
+        {{ render_poi(form.last_found_poi, form.result_index) }}
+      {% else %}
+        {{ render_geo(form.last_found_poi) }}
+      {% endif %}
+    {% endif %}
+  {% elif not form.last_found_poi %}
+    {{ render_not_found(form) }}
+  {% elif 'geo' in form.last_found_poi %}
+    {{ render_poi(form.last_found_poi, form.result_index) }}
+  {% else %}
+    {{ render_geo(form.last_found_poi) }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__details %}
+  Подробнее
+{% endphrase %}
+
+{% phrase render_suggest_uri__find_poi__details %}
+  {{ form.last_found_poi.object_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__call %}
+  Позвонить
+{% endphrase %}
+
+{% phrase render_suggest_uri__find_poi__call %}
+  {{ form.last_found_poi.phone_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__open_site %}
+  Сайт
+{% endphrase %}
+
+{% phrase render_suggest_uri__find_poi__open_site %}
+  {{ form.last_found_poi.url }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__near %}
+  Рядом
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__near %}
+  Рядом
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__next %}
+  Ещё вариант
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__next %}
+  {% chooseline %}
+    Ещё
+    Дальше
+    Давай дальше
+    Давай ещё
+    Ещё вариант
+    Другой вариант
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__go_by_car %}
+  Доехать на авто
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__go_by_car %}
+  {% chooseline %}
+    Построй туда маршрут на авто
+    Как доехать туда на машине?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__taxi_order_fallback %}
+  Доехать на такси
+{% endphrase %}
+
+{% phrase render_suggest_user_utterance__taxi_order_fallback %}
+  Доехать на такси
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__go_by_public_transport %}
+  Доехать на транспорте
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__go_by_public_transport %}
+  {% chooseline %}
+    Построй туда маршрут на общественном транспорте
+    Как туда доехать на транспорте?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__go_by_foot %}
+  Дойти пешком
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__go_by_foot %}
+  {% chooseline %}
+    Как туда дойти?
+    Построй мне туда пешеходный маршрут
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__show_on_map %}
+   Показать на карте
+{% endphrase %}
+
+{% phrase render_suggest_uri__find_poi__show_on_map %}
+  {{ form.last_found_poi.geo_uri }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__find_poi__show_route_there %}
+  Проложить маршрут туда
+{% endphrase %}
+
+{% phrase render_suggest_utterance__find_poi__show_route_there %}
+  Проложить маршрут туда
+{% endphrase %}

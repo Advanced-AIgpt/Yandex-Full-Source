@@ -1,0 +1,34 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "alarm/alarm__common.nlg" import is_alarm_set_with_sound_intent with context %}
+
+{% macro render_radio_title(radio_title) %}
+  {% if ("радио" in radio_title.lower()) or ("radio" in radio_title.lower()) %}
+    "{{ radio_title }}"
+  {% else %}
+    радио "{{ radio_title }}"
+  {% endif %}
+{% endmacro %}
+
+{% macro render_unknown_station() %}
+  {% if is_alarm_set_with_sound_intent() %}
+    Но этого радио я не нашла — попробуйте другое.
+  {% else %}
+    Простите, не знаю такой радиостанции.
+  {% endif %}
+{% endmacro %}
+
+{% macro render_unsupported_user_region() %}
+  К сожалению, для вашего региона не найдено ни одной доступной радиостанции.
+{% endmacro %}
+
+{% macro render_unconfigured_station() %}
+  {% if is_alarm_set_with_sound_intent() %}
+    Но эту частоту я ещё не поймала. Попросите меня поставить другое радио.
+  {% else %}
+    {% chooseline %}
+      Я ещё не настроилась на эту волну.
+      Я ещё не поймала эту волну.
+      Я ещё не настроилась на эту радиостанцию.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}

@@ -1,0 +1,59 @@
+{% nlgimport "common/suggests.nlg" %}
+{% from "common/error.nlg" import render_error %}
+
+{% phrase render_error__system %}
+  {{ render_error() }}
+{% endphrase %}
+
+{% macro name_not_present() %}
+     {% chooseitem %}
+       Могу ошибаться, но на имя это не похоже.
+     {% or %}
+       Простите, не расслышала вашего имени.
+     {% endchooseitem %}
+{% endmacro %}
+
+{% macro bad_hearing() %}
+    {% chooseitem %}
+        Простите, не расслышала.
+    {% or %}
+        Простите, не поняла.
+    {% endchooseitem %}
+{% endmacro %}
+
+{% macro explain_rules() %}
+     Если вы хотите, чтобы я запомнила ваше имя, скажите «Меня зовут...» и добавьте своё имя.
+{% endmacro %}
+
+
+{% phrase render_result %}
+  {% if form.raw_form.get_slot_by_name('user_name').value_type == 'swear' %}
+    {{ name_not_present() }}
+  {% else %}
+    {% if form.distractor %}
+        {{ bad_hearing() }}{{ explain_rules() }}
+    {% else %}
+        {% if form.old_user_name %}
+          Хорошо, {{ form.old_user_name|capitalize }}. Теперь я буду называть вас {{ form.user_name|capitalize }}.
+        {% else %}
+          {% chooseitem %}
+            Хорошо, {{ form.user_name|capitalize }}.
+          {% or %}
+            Рада познакомиться, {{ form.user_name|capitalize }}.
+          {% or %}
+            Очень приятно, {{ form.user_name|capitalize }}. Я, кстати, всё ещё Алиса.
+          {% or %}
+            Очень приятно, {{ form.user_name|capitalize }}. А я Алиса.
+          {% endchooseitem %}
+        {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase ask__user_name %}
+    {% if form.distractor %}
+        {{ bad_hearing() }}{{ explain_rules() }}
+    {% else %}
+        {{ name_not_present() }}
+    {% endif %}
+{% endphrase %}

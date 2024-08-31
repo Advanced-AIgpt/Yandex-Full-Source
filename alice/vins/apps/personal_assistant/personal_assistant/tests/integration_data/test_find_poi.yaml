@@ -1,0 +1,272 @@
+labels:
+  digit_time: '\d:\d\d|\d\d:\d\d|\d|\d\d'
+  time: 'полуночи|{digit_time} (часа |часов )?(дня|вечера|утра|ночи)|{digit_time}'
+  opening_hours: '(Работает (с {time} до {time}|круглосуточно)( и (с {time} до {time}|круглосуточно))?\.)?\s?(Сейчас
+    (открыто|закрыто)\.)?'
+  name: '".+?"'
+  words: '(\w|\-|\/|\.)+( (\w|\-|\/|\.)+)*'
+  address: '{words}(, {words})*'
+  phone: '\+7 \(\d\d\d\) \d\d\d-\d\d-\d\d'
+  maybe_po_adresu: ' (по адресу)|,'
+  first_response_preamble1: 'Как насчет|Может|Может, подойдет|Могу предложить|Вам
+    может подойти|Вот что нашлось:'
+  first_response_preamble2: 'Я знаю, что по адресу|По адресу'
+  next_response_preamble: 'Еще есть|Вам непросто угодить\.|Может быть,|Идём дальше,|Будем
+    искать\.|Ещё вариант:|Продолжаем поиск,|Такой вариант:'
+  question_mark_or_dot: '[?.]'
+  first_response1: '{first_response_preamble1} {name}{maybe_po_adresu} {address}{question_mark_or_dot}(
+    {opening_hours})?'
+  first_response2: '{first_response_preamble2} {address} есть {name}\.( {opening_hours})?'
+  first_response3: '{first_response_preamble1} {name}\? {opening_hours}\.'
+  first_response: '{first_response1}|{first_response2}|{first_response3}'
+  next_response1: '{next_response_preamble} {name}{maybe_po_adresu} {address}{question_mark_or_dot}(
+    {opening_hours})?'
+  next_response2: '{next_response_preamble} По адресу {address} есть {name}\.( {opening_hours})?'
+  next_response: '{next_response1}|{next_response2}'
+  open_details: 'Открываю карточку с подробной информацией\.|Сейчас мы про эту организацию
+    всё узнаем\.|Открываю подробную информацию\.|Давайте узнаем всё подробно\.'
+  show_on_map: '.*карт[уеы].*'
+  no_phone: '.*(не знаю|нет).*'
+  call: '.*([Мм]инут|[Сс]екунд).*\.'
+  bar_nearby_name: 'Изя гриль|Выдыхай|Shaggy Dog|Джон Донн|I Like Wine|True Cost Bar & Grill|Винный базар на Комсомольском'
+  bar_nearby: '{first_response_preamble1} "{bar_nearby_name}"{maybe_po_adresu} {address}{question_mark_or_dot} {opening_hours}|{first_response_preamble2} {address} есть "{bar_nearby_name}"\.( {opening_hours})?'
+  geo_postamble: 'адрес есть на картах\.|могу открыть карту для этого адреса\.|ответ есть на картах\.|найдено на картах\.'
+  pharmacy_nearby_name: 'Аптека 36, ?6|Диасфарм|Аптека|Аптеки столицы|Аптека столицы|Аптека Айлант|АБК|Аптека 03'
+  pharmacy_nearby: '{first_response_preamble1} "{pharmacy_nearby_name}"{maybe_po_adresu} {address}{question_mark_or_dot} {opening_hours}|{first_response_preamble2} {address} есть "{pharmacy_nearby_name}"\.( {opening_hours})?'
+  nikulin_circus: '{first_response_preamble1} "Цирк Никулина"{maybe_po_adresu} Цветной бульвар 13{question_mark_or_dot}( {opening_hours})?|{first_response_preamble2} Цветной бульвар 13 есть "Цирк Никулина". {opening_hours}'
+  big_circus: 'Цирк на (пр|ПР)\. Вернадского|Большой цирк|(Большой )?Московский цирк'
+  vernadsky_circus: '{first_response_preamble1} "{big_circus}"{maybe_po_adresu} (проспект
+    Вернадского 7|Vernadskogo Avenue 7){question_mark_or_dot}( {opening_hours})?|{first_response_preamble2}
+    (проспект Вернадского 7|Vernadskogo Avenue 7) есть "{big_circus}". {opening_hours}'
+  nikulin_booze: '{first_response_preamble1} "Ароматный [Мм]ир"{maybe_po_adresu}
+    {address}{question_mark_or_dot} {opening_hours}|{first_response_preamble2} {address}
+    есть "Ароматный [Мм]ир"\.( {opening_hours})?'
+  route_response: '.*минут.*до.*'
+  taxi_suggest: '.*такси.*'
+  pedestrian_suggest: '.*(дойти|пешеходный).*'
+  transport_suggest: '.*транспорте.*'
+  auto_suggest: '.*(авто|машин).*'
+
+with_taxi:
+  experiments: [taxi_nlu, taxi]
+  test_basic_1:
+    dialog:
+      найди адрес цирка который на цветном бульваре:
+        text: '{nikulin_circus}'
+        suggests:
+        - caption: 'Доехать на такси'
+          user_utterance: '{taxi_suggest}'
+        - caption: 'Доехать на транспорте'
+          utterance: '{transport_suggest}'
+        - caption: 'Дойти пешком'
+          utterance: '{pedestrian_suggest}'
+        - caption: 'Доехать на авто'
+          utterance: '{auto_suggest}'
+
+    app_info:
+      ignore:
+      - irbis
+      - dexp
+      - desktop_alice
+      - auto
+      - pa_android
+      - watch
+      - navigator_ios
+      - speaker
+      - pa_ios
+      - navigator_android
+
+
+test_basic_1_without_taxi:
+  flags:
+    xfail:
+      value: true
+  dialog:
+    найди адрес цирка который на цветном бульваре:
+      suggests:
+      - caption: 'Доехать на такси'
+        user_utterance: '{taxi_suggest}'
+  app_info:
+    ignore:
+    - desktop_alice
+    - watch
+    - pa_android
+    - pa_ios
+
+test_basic_2:
+  dialog:
+    красная площадь: 'Красная площадь — {geo_postamble}'
+    улица льва толстого: 'улица Льва Толстого — {geo_postamble}'
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - auto
+    - navigator_ios
+    - navigator_android
+    - watch
+    - speaker
+
+
+test_change_form:
+  dialog:
+    найди адрес цирка на вернадского: '{vernadsky_circus}'
+    а на цветном бульваре: '{nikulin_circus}'
+    а ароматного мира: '{nikulin_booze}'
+  app_info:
+    ignore:
+    - pa_ios
+    - pa_android
+    - navigator_ios
+    - auto
+    - navigator_android
+
+
+test_additional_commands:
+  dialog:
+    найди аптеку: '{first_response}'
+    еще: '{next_response}'
+    назад: '{first_response}'
+    там дорого?: '{open_details}'
+    позвони туда: '{call}'
+    покажи на карте: '{show_on_map}'
+  app_info:
+    ignore:
+    - pa_ios
+    - desktop_alice
+    - irbis
+    - pa_android
+    - dexp
+    - speaker
+    - navigator_android
+    - auto
+    - watch
+    - navigator_ios
+
+
+test_additional_commands_for_geo:
+  dialog:
+    найди адрес ленинский проспект 21: 'Ленинский проспект 21 — {geo_postamble}'
+    подробнее: '{show_on_map}'
+    покажи на карте: '{show_on_map}'
+    позвони туда: '{no_phone}'
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - auto
+    - navigator_ios
+    - speaker
+    - watch
+    - navigator_android
+
+
+test_special_location:
+  dialog:
+    найди бар: '{first_response}'
+    а поближе: '{bar_nearby}'
+    подскажи аптеку рядом: '{pharmacy_nearby}'
+    подскажи аптеку рядом со мной: '{pharmacy_nearby}'
+  app_info:
+    ignore:
+    - irbis
+    - dexp
+    - navigator_ios
+    - watch
+    - pa_android
+    - speaker
+    - navigator_android
+    - desktop_alice
+    - auto
+    - pa_ios
+
+
+test_no_markers:
+  dialog:
+    аптека: '{first_response}'
+    заправка: '{first_response}'
+    азс: '{first_response}'
+    шоколадница: '{first_response}'
+    седьмой континент: '{first_response}'
+    поликлиника: '{first_response}'
+    итальянский ресторан: '{first_response}'
+  app_info:
+    ignore:
+    - pa_ios
+    - pa_android
+    - auto
+    - navigator_android
+    - navigator_ios
+
+
+test_rk_1:
+  dialog:
+    Где тут рядом бассейн?: '{first_response}'
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - navigator_android
+    - navigator_ios
+    - auto
+
+
+test_rk_2:
+  dialog:
+    Куда сходить в кино?: '{first_response}'
+  app_info:
+    ignore:
+    - pa_ios
+    - pa_android
+    - navigator_android
+    - auto
+    - navigator_ios
+
+
+test_rk_3:
+  dialog:
+    Найди кафе рядом: '{first_response}'
+  app_info:
+    ignore:
+    - pa_ios
+    - pa_android
+    - auto
+    - navigator_android
+    - navigator_ios
+
+
+test_rk_4:
+  dialog:
+    где поужинать: '{first_response}'
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - auto
+    - navigator_android
+    - navigator_ios
+
+
+test_rk_5:
+  dialog:
+    кофейня улица космонавтов: '{first_response}'
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - auto
+    - navigator_ios
+    - navigator_android
+
+
+test_rk_6:
+  dialog:
+    Где поблизости выпить кофе?: '{first_response}'
+    Отлично, а как туда пройти?: '{route_response}'
+  app_info:
+    ignore:
+    - pa_android
+    - pa_ios
+    - navigator_ios
+    - navigator_android
+    - auto

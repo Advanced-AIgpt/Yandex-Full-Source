@@ -1,0 +1,337 @@
+{% from "show_route/show_route_common.nlg" import render_location with context %}
+
+{% macro ya_taxi() %}
+  {% tx %}Яндекс.Такси{% etx %}{% vc %}Яндекс Такс+и{% evc %}
+{% endmacro %}
+
+{% macro ya_go() %}
+  Яндекс Go
+{% endmacro %}
+
+{% macro in_ya_pasport() %}
+  в {% tx %}Яндекс.Паспорте{% etx %}{% vc %}Яндекс Паспорте{% evc %}
+{% endmacro %}
+
+{% macro redirect_to_login_page() %}
+  {% if is_active_attention('redirect_not_from_order_intent') %}
+    Войдите в свой аккаунт, и я постараюсь помочь.
+  {% else %}
+    {% vc %}Чтобы заказывать такс+и, войдите в св+ой аккаунт.{% evc %}
+    {% tx %}Чтобы заказывать такси, войдите в свой аккаунт.{% etx %}
+  {% endif %}
+{% endmacro %}
+
+{% macro redirect_to_add_phone_page() %}
+  {% if is_active_attention('redirect_not_from_order_intent') %}
+    Чтобы найти заказ, нужен ваш телефон. Пожалуйста, введите его
+    {{ in_ya_pasport() }}.
+  {% else %}
+    Чтобы заказывать такси, нужен ваш телефон. Пожалуйста, введите его
+    {{ in_ya_pasport() }}.
+  {% endif %}
+{% endmacro %}
+
+{% macro taxi_not_supported_on_device() %}
+  {% if is_elari_watch() %}
+    Здесь я не справлюсь. Лучше {% tx %}Яндекс.Станция{% etx %}{% vc %}Яндекс Станция{% evc %}
+    или твой смартфон, давай там.
+  {% elif is_smart_speaker() %}
+    Простите, на этом устройстве я этого пока не умею.
+  {% else %}
+    Здесь я не справлюсь. Лучше приложение Яндекс или {% tx %}Яндекс.Станция{% etx %}{% vc %}Яндекс Станция{% evc %},
+    давайте там.
+  {% endif %}
+{% endmacro %}
+
+{% macro need_phone_in_passport_for_order_from_smart_speaker() %}
+  Чтобы заказывать такси, нужен ваш номер телефона. Откройте приложение Яндекс, войдите в свой аккаунт{% vc %},{% evc %}
+  и добавьте номер {{ in_ya_pasport() }}.
+{% endmacro %}
+
+{% macro can_not_cancel() %}
+  У меня не выйдет отменить заказ, извините. Вы можете обратиться в службу поддержки.
+{% endmacro %}
+
+{% macro no_valid_response() %}
+  {% chooseline %}
+    Что-то пошло не так. Спросите меня позже.
+    Что-то не так. Попробуйте ещё раз, но позже.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro have_not_resolved_location() %}
+  Всё сломалось... Шучу. Не всё. Попробуйте, пожалуйста, заказать ещё раз.
+{% endmacro %}
+
+{% macro have_not_options() %}
+  Я пока не умею заказывать этот тариф. Лучше открою для вас приложение {{ ya_go() }}.
+{% endmacro %}
+
+{% macro user_blocked() %}
+  Ой, кажется, вы временно заблокированы в {{ ya_taxi() }}.
+  Пожалуйста, обратитесь в службу поддержки.
+{% endmacro %}
+
+{% macro location_not_supported() %}
+  Я искала машину в {{ ya_taxi() }}, но{% vc %},{% evc %} сервис тут не работает.
+  Попробуйте указать другую точку: чем дальше отсюда — тем лучше.
+{% endmacro %}
+
+{% macro offer_expired() %}
+  {% chooseline %}
+    Время подтверждения заказа {% tx %}истекло{% etx %}{% vc %}+истекл+о{% evc %}. Пожалуйста, закажите машину снова.
+    Вы не успели подтвердить заказ. Пожалуйста, закажите машину снова.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro confused() %}
+  Ой, отвлеклась. Будьте добры, уточните адрес или название {% tx %}места{% etx %}{% vc %}м+еста{% evc %}.
+{% endmacro %}
+
+{% macro no_active_orders() %}
+  {% chooseline %}
+    У вас нет заказанных машин, но это можно исправить. Просто скажите: «Вызови такси».
+    Подозреваю, что вы не заказывали такси. Но это легко исправить. Скажите: «Вызови такси».
+    У вас нет заказанных машин, такие дела. Если нужно, попросите меня вызвать такси.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro no_driver_yet() %}
+  Погодите, я ещё не нашла машину.
+{% endmacro %}
+
+{% macro need_application_device() %}
+  {% chooseline %}
+    Боюсь{% tx %},{% etx %} для этого нужно приложение
+    Я бы и рада, но не здесь. Нужно приложение
+  {% endchooseline %}
+  {{ ya_go() }}.
+{% endmacro %}
+
+{% macro need_phone_device() %}
+  {% chooseline %}
+    Боюсь{% tx %},{% etx %} для этого нужен телефон.
+    Я бы и рада, но не здесь. Нужен телефон.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro payment_method_not_available() %}
+  Не нашла такого способа оплаты. Или он недоступен.
+{% endmacro %}
+
+{% macro greetings() %}
+  {% if not form.stop_options and form.phone and not is_active_attention("location_is_not_supported") %}
+    {% if form.connect_named_location_to_device__confirmation
+       and form.connect_named_location_to_device__confirmation == "yes" %}
+      Хорошо, теперь я буду использовать адрес дома как отправную точку по умолчанию.
+    {% elif form.connect_named_location_to_device__confirmation
+       and form.connect_named_location_to_device__confirmation == "no" %}
+      В таком случае я попробую определить адрес автоматически.
+      В дальнейшем буду использовать адрес предыдущего заказа с этого устройства.
+    {% else %}
+    {% endif %}
+    Поищем такси в {{ ya_go() }}.
+    {% if is_active_attention("first_order") %}
+      Условия использования сервиса придут в пуш-сообщении.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro unknown_error() %}
+  Произошла какая-то ошибка. Спросите, пожалуйста, позже.
+{% endmacro %}
+
+{% macro user_has_debt() %}
+  Я не могу заказать вам такси — скорее всего, одна из предыдущих поездок всё ещё не оплачена.
+  Исправить ситуацию можно в приложении {{ ya_go() }}.
+{% endmacro %}
+
+{% macro invalid_phone_number() %}
+  Сервис такси не может обработать ваш номер телефона.
+  Исправить ситуацию можно в приложении {{ ya_go() }}.
+{% endmacro %}
+
+{% macro tariff_not_found() %}
+  У меня не получилось подобрать для вас тариф.
+  Исправить ситуацию можно в приложении {{ ya_go() }}.
+{% endmacro %}
+
+{% macro not_supported() %}
+  Этому я пока не научилась.
+  Вы можете подтвердить или отменить заказ. Или же я могу открыть для вас приложение {{ ya_go() }}.
+{% endmacro %}
+
+{% macro not_supported_tariff() %}
+  Этот тариф тут недоступен. Пожалуйста, выберите другой.
+{% endmacro %}
+
+{% macro not_understood() %}
+  Извините, я вас не поняла. Пожалуйста, спросите меня по-другому.
+{% endmacro %}
+
+{% macro payment_method(id) %}
+  {% if id == 'cash' %}
+    наличными
+  {% elif id == 'card' %}
+    картой
+  {% elif id == 'corp' %}
+    корпоративным счётом
+  {% endif %}
+{% endmacro %}
+
+{% macro base_error_handle() %}
+  {% if context.error.data.code == 'TaxiNotSupportedOnDevice' %}
+    {{ taxi_not_supported_on_device() }}
+  {% elif context.error.data.code == 'NeedPhoneInPassportForOrderFromSmartSpeaker' %}
+    {{ need_phone_in_passport_for_order_from_smart_speaker() }}
+  {% elif context.error.data.code == 'NeedPhoneDevice' %}
+    {{ need_phone_device() }}
+  {% elif context.error.data.code == 'NeedApplicationDevice' %}
+    {{ need_application_device() }}
+  {% elif context.error.data.code == 'NoValidResponse' %}
+    {{ no_valid_response() }}
+  {% elif context.error.data.code == 'CanNotCancel' %}
+    {{ can_not_cancel() }}
+  {% elif context.error.data.code == 'NoOrdersFound' %}
+    {{ no_active_orders() }}
+  {% elif context.error.data.code == 'UserBlocked' %}
+    {{ user_blocked() }}
+  {% elif context.error.data.code == 'HaveNotResolvedLocation' %}
+    {{ have_not_resolved_location() }}
+  {% elif context.error.data.code == 'OfferExpired' %}
+    {{ offer_expired() }}
+  {% elif context.error.data.code == 'UnknownPaymentMethod' %}
+    {{ payment_method_not_available() }}
+  {% elif context.error.data.code == 'PaymentMethodNotAvailable' %}
+    {{ payment_method_not_available() }}
+  {% elif context.error.data.code == 'UserHasDebt' %}
+    {{ user_has_debt() }}
+  {% elif context.error.data.code == 'InvalidPhoneNumber' %}
+    {{ invalid_phone_number() }}
+  {% elif context.error.data.code == 'TariffNotFound' %}
+    {{ tariff_not_found() }}
+  {% else %}
+    {{ unknown_error() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro taxi_info() %}
+  {% if form.order_data.car_model or form.order_data.car_number or form.order_data.car_color %}
+    {% if form.order_data.car_color %}
+      {{ form.order_data.car_color }}
+    {% endif %}
+
+    {% if form.order_data.car_model %}
+      {{ form.order_data.car_model }}
+    {% endif %}
+
+    {% if form.order_data.car_short_number %}
+      ,
+      {% if form.order_data.car_number %}
+        {% tx %}{{ form.order_data.car_number }}{% etx %}
+        {% vc %}{{ form.order_data.car_short_number }}{% evc %}
+      {% else %}
+        {{ form.order_data.car_short_number }}
+      {% endif %}
+    {% elif form.order_data.car_number %}
+      , {{ form.order_data.car_number }}
+    {% endif %}
+
+  {% endif %}
+{% endmacro %}
+
+{% macro order_status(form) %}
+  {% if form.status %}
+    {% set status_address = "personal_assistant.scenarios.taxi_new_status_address" %}
+    {% set status_price = "personal_assistant.scenarios.taxi_new_status_price" %}
+    {% set status_time = "personal_assistant.scenarios.taxi_new_status_time" %}
+
+    {% if form.status_redirect_form_name == status_price and form.is_active_order %}
+      {% if form.order_data.price %}
+        Стоимость поездки {{ form.order_data.price }} {% vc %}.{% evc %}
+      {% else %}
+        Мне не удалось узнать цену поездки. Но вам поможет приложение {{ ya_go() }}.
+      {% endif %}
+      \n
+    {% elif form.status_redirect_form_name == status_time and form.is_active_order and form.status != "transporting" %}
+      {% if form.order_data.ride_time_left %}
+        Поездка займёт {{ form.order_data.ride_time_left }}.
+      {% else %}
+        Я пока не научилась этому. Но вам может помочь приложение {{ ya_go() }}.
+      {% endif %}
+      \n
+    {# form.raw_form.name - it is correct here #}
+    {% elif form.raw_form.name == status_address and form.is_active_order %}
+      {% if form.location_from or form.location_to %}
+        Едем
+        {% if form.location_from %}
+          от {{ render_location(form.location_from) }}
+        {% endif %}
+        {% if form.location_to %}
+          до {{ render_location(form.location_to) }}
+        {% endif %}
+        .
+      {% else %}
+        Извините, я не смогла найти информацию о маршруте.
+        Но вы можете посмотреть подробности в приложении {{ ya_go() }}.
+      {% endif %}
+      \n
+    {% endif %}
+
+    {% if form.status == "scheduling" or form.status == "scheduled" or form.status == "search" %}
+      {% chooseline %}
+        Ищу для вас машину.
+        Я ещё не нашла машину.
+        Минутку, я ищу машину.
+      {% endchooseline %}
+    {% elif form.status == "driving" %}
+      {% if form.order_data.time_left %}
+        Через {{ form.order_data.time_left }}
+      {% else %}
+        Скоро
+      {% endif %}
+      приедет {{ taxi_info() }}.
+    {% elif form.status == "waiting" %}
+      Вас ожидает
+      {{ taxi_info() }}.
+    {% elif form.status == "transporting" %}
+      По моим данным, сейчас вы в пути.
+      {% if form.order_data.time_left %}
+        До места назначения осталось {{ form.order_data.time_left }}.
+      {% endif %}
+      {% vc %}sil <[ 50 ]>{% evc %}
+      Машина — {{ taxi_info() }}
+      {% if form.order_data.payment_method %}
+      , оплата {{ payment_method(form.order_data.payment_method) }}
+      {% endif %}
+      .
+    {% elif form.status == "complete" or form.status == "finished" %}
+      {% chooseline %}
+        Предыдущий заказ завершён, но мы можем заказать ещё одну машину. Просто скажите: «Вызови такси».
+        Заказ был завершён. Но я без проблем закажу вам ещё одну машину. Скажите: «Вызови такси».
+        К вам ничего не едет — заказ был завершён. Если нужно, попросите меня вызвать такси.
+      {% endchooseline %}
+    {% elif form.status == "draft" %}
+      А поездки вообще не было. Наверное, какая-то ошибка.
+    {% elif form.status == "cancelled" %}
+      {% chooseline %}
+        Ваш предыдущий заказ отменён, но это можно исправить. Просто скажите: «Вызови такси».
+        Подозреваю, что заказ был отменён. Но это легко исправить. Скажите: «Вызови такси».
+        К вам ничего не едет — заказ был отменён. Если нужно, попросите меня вызвать такси.
+      {% endchooseline %}
+    {% elif form.status == "failed" or form.status == "preexpired" or form.status == "expired" %}
+      {% chooseitem 1 %}
+        Я не смогла найти водителя, но могу попробовать снова. Просто скажите: «Вызови такси».
+        {% or 1 %}
+        Я не нашла водителя на последний заказ, но могу попробовать снова. Скажите: «Вызови такси».
+        {% or 1 %}
+        У вас нет заказанных машин, потому что я не нашла водителя.
+        Если нужно, попробуем снова — просто попросите меня вызвать такси.
+      {% endchooseitem %}
+    {% else %}
+      {{ unknown_error() }}
+    {% endif %}
+  {% else %}
+    Что-то поломалось :(
+  {% endif %}
+{% endmacro %}

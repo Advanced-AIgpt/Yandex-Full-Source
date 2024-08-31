@@ -1,0 +1,52 @@
+{% from "music/music__common.nlg" import render_music_answer with context %}
+{% from "radio/radio__common.nlg" import render_radio_title %}
+{% from "alarm/alarm__common.nlg" import stoit, alarm_stoit, set_sound_phrase %}
+{% from "alarm/alarm_set_sound.nlg" import render_filtered_success with context %}
+
+{% macro repeat() -%}
+  {% if is_active_attention('alarm_sound__repeat') %}
+    {% chooseline %}
+      на повторе
+      на репите
+    {% endchooseline %}
+  {% endif %}
+{%- endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('alarm_sound__supported') %}
+    {% if is_active_attention('alarm_sound__default_is_set') %}
+      {% chooseline %}
+        Будильник самый обычный. Хотите, я установлю на него песню, группу, радиостанцию или музыку для определенного настроения? Скажите
+        Сейчас стандартная мелодия. Могу заменить её песней, группой или радиостанцией. Скажите, например,
+      {% endchooseline %}
+      {{ set_sound_phrase() }}.
+    {% elif form.radio_result %}
+      {% set radio_title = form.radio_result | get_item('title', 'радио') %}        
+      {{ alarm_stoit() }} {{ render_radio_title(radio_title) }}.
+    {% elif not form.music_result %}
+      Кажется, я поломалась. Пойду ещё посплю.
+    {% elif form.music_result.filters %}
+      {{ render_filtered_success() }}
+    {% else %}
+      {{ alarm_stoit() }}
+      {{ repeat() }}
+      {% vc %}
+        {{ render_music_answer(form.music_result, 'nom', render_album=False, shorten=True) | tts_domain('music') }}
+      {% evc %}
+      {% tx %}
+        {{ render_music_answer(form.music_result, 'nom') }}
+      {% etx %}
+      .
+    {% endif %}
+    {% if is_active_attention('alarm_sound__no_alarms') %}
+      А самих будильников у вас нет. Можете попросить меня завести.
+    {% endif %}
+  {% else %}
+    У вас {{ stoit() }} стандартный звук будильника.
+    {% if not has_uncontrollable_updates() and is_active_attention('alarm_sound__update_first') %}
+      Иначе и быть не могло. Чтобы его изменять, обновите прошивку колонки: просто оставьте её на ночь с подключенным соединением, я всё сделаю сама.
+    {% else %}
+      Другие настраивать на этом устройстве я пока не умею.
+    {% endif %}
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,46 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "search/search__ask.nlg" %}
+
+{% from "search/search__common.nlg" import get_search_info %}
+{% from "common.nlg" import showing_search_results_not_supported %}
+
+{% set info = namespace() %}
+{% do get_search_info(form, info, req_info.experiments['enable_factoid_child_answer'] != None) %}
+
+{% phrase render_uri %}
+  {% if not is_smart_speaker() and info.map_search_url %}
+    {{ info.map_search_url }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_smart_speaker() %}
+    {{ showing_search_results_not_supported() }}
+  {% elif not info.map_search_url %}
+    К сожалению,
+    {% chooseline %}
+      я не могу
+      не получается
+    {% endchooseline %}
+    {% chooseline %}
+      открыть
+      показать
+    {% endchooseline %}
+    карту
+    {% chooseline %}
+      для этого запроса
+      по такому запросу
+    {% endchooseline %}
+    .
+  {% else %}
+    {% chooseline %}
+      Открываю
+      Сейчас открою
+    {% endchooseline %}
+    {% chooseline %}
+      поиск
+      результаты поиска
+    {% endchooseline %}
+    на карте.
+  {% endif %}
+{% endphrase %}

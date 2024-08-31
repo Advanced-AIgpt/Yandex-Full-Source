@@ -1,0 +1,71 @@
+version: '2.1'
+
+
+services:
+  base:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.base
+    image: registry.yandex.net/vins/base
+
+  devbase:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.dev
+    image: vins_dev
+    environment:
+      YT_TOKEN: "${YT_TOKEN}"
+      VINS_RESOURCES_PATH: "${HOME}/tmp/vins/sandbox"
+    volumes:
+      - ./cit_configs/:/vins-dm/cit_configs/
+      - ./core/vins_core/:/vins-dm/core/vins_core/
+      - ./sdk/vins_sdk/:/vins-dm/sdk/vins_sdk/
+      - ./api/vins_api/:/vins-dm/api/vins_api/
+      - ./apps/:/vins-dm/apps/
+      - ./test_bot/vins_test_bot/:/vins-dm/test_bot/vins_test_bot/
+      - ./div2html/:/vins-dm/div2html/
+      - ./tools/:/vins-dm/tools/
+      - /home/:/home/
+
+  prepare:
+    extends: devbase
+    command: >
+        bash -c "cd core/ && python setup.py build_ext --inplace && cd ../ &&
+                 protoc -I=core/vins_core/schema/protofiles/ --python_out=core/vins_core/schema/ \
+                 core/vins_core/schema/protofiles/features.proto &&
+                 ./cit_configs/download_resources/download_resources.py --resource-base-dir \
+                 /home/mkamalova/tmp/vins/sandbox -t sandbox_proxy -e teamcity-agents teamcity-agents
+                 "
+
+  dev:
+    extends: devbase
+    command: ./api/run-dev-pa.sh
+    environment:
+      VINS_MONGODB_URL: "mongodb://mongodb:27017/vinsdb"
+    ports:
+      - "80:8000"
+    links:
+      - mongodb
+    depends_on:
+      - mongodb
+
+  tests:
+    extends: devbase
+    command: pytest
+
+  stylecheck:
+    extends: devbase
+    command: flake8
+
+
+  mongodb:
+    image: mongo:latest
+    container_name: "mongodb"
+    environment:
+      MONGO_DATA_DIR: "/data/db"
+      MONGO_LOG_DIR: "/dev/null"
+    volumes:
+      - /tmp/data/db:/data/db
+    ports:
+      - 27017:27017
+    command: mongod --smallfiles --logpath=/dev/null --quiet

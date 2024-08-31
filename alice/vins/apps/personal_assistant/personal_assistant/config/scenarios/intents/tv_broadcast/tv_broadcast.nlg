@@ -1,0 +1,296 @@
+{% from "common/macros.nlg" import day_part_title %}
+
+{%- macro add_dot(line) -%}
+  {% if line.strip()[-1] not in ['.', '!', '?', ':'] %}
+    {{ line.strip() }}.
+  {% else %}
+    {{ line.strip() }}
+  {% endif %}
+{%- endmacro -%}
+
+{% macro city() -%}
+  {{ form.broadcast_location | city_prepcase if is_active_attention('geo_changed') else '' }}
+{%- endmacro %}
+
+{% macro format_date(date, tz=None) -%}
+  {{ date | parse_dt | human_day_rel(tz) }}
+{%- endmacro %}
+
+{% macro short_time(time) %}
+  {% set parsed = time | parse_dt %}
+  {{ parsed | format_datetime('%H') }} {{ parsed | format_datetime('%M') }}
+{% endmacro %}
+
+{% macro genre_title(genre) -%}
+  {% if genre == "films" %}
+    фильмы
+  {% elif genre == "series" %}
+    сериалы
+  {% elif genre == "sport" %}
+    спортивные передачи
+  {% elif genre == "children" %}
+    детские передачи
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_schedule_title() %}
+  {% if (form.raw_form.name == "personal_assistant.scenarios.tv_stream" or form.raw_form.name == "personal_assistant.scenarios.tv_stream__ellipsis") %}
+    {% if (form.answer.channel) %}
+      {% chooseline %}
+        Я не могу включить этот канал. Но у меня есть его расписание.
+        Боюсь, миссия невыполнима. Зато у меня есть расписание этого канала.
+      {% endchooseline %}
+      {% set break=True %}
+    {% else %}
+      {% chooseline %}
+        Здесь, к сожалению, не выйдет.
+        На этом устройстве не получится.
+        Не умею. Но я исправлюсь. Наверное.
+      {% endchooseline %}
+    {% endif %}
+  {% elif (form.channel and not form.answer.channel) %}
+    {% chooseline %}
+      Кажется, канала «{{ form.channel }}» нет в вашем регионе.
+      К сожалению, не смогла найти канал «{{ form.channel }}» для вашего региона.
+      Такого канала, доступного для вашего региона, я не знаю, но есть другие.
+    {% endchooseline %}
+  {% elif (form.answer.ignore_channel) %}
+    {% if (form.answer.ignore_time) %}
+      {% if form.program %}
+        Не нашла ничего подходящего.
+      {% else %}
+        {% chooseline %}
+          Не нашла такого на канале {{ add_dot(form.answer.channel.title).strip() }} На эту дату — тем более.
+          Искала и не нашла ничего подходящего на эти даты.
+        {% endchooseline %}
+      {% endif %}
+    {% else %}
+      {% chooseline %}
+        На канале {{ form.answer.channel.title }} не нашлось ничего подходящего.
+        Не нашла такого на канале {{ add_dot(form.answer.channel.title).strip() }}
+        Не нашла ничего похожего на этом канале.
+      {% endchooseline %}
+    {% endif %}
+  {% elif (form.answer.ignore_time) %}
+    {% if form.program %}
+      Не нашла ничего подходящего.
+    {% else %}
+      {% chooseline %}
+        Ничего себе вы загнули! Я ещё не знаю расписания на этот день.
+        Я не знаю расписания на эти даты. Ничего себе у вас горизонт планирования!
+        Простите, я не знаю расписания на эти даты. Его еще просто нет.
+        Я не знаю расписания на эти даты. Уверена, они сами его не знают!
+      {% endchooseline %}
+    {% endif %}
+  {% endif %}
+  {% if not break %}
+    {% if form.program %}
+      {% if form.answer.channel and not form.answer.ignore_channel %}
+        {% chooseline %}
+          Вот расписание передачи {{ form.answer.program.title }} на канале {{ add_dot(form.answer.channel.title).strip() }}
+          Вот расписание программы {{ form.answer.program.title }} на канале {{ add_dot(form.answer.channel.title).strip() }}
+        {% endchooseline %}
+      {% else %}
+        {% chooseline %}
+          Вот расписание передачи {{ add_dot(form.answer.program.title).strip() }}
+          Вот расписание программы {{ add_dot(form.answer.program.title).strip() }}
+        {% endchooseline %}
+      {% endif %}
+    {% else %}
+      {% set target %}
+        {% if form.genre %}
+          какие {{ genre_title(form.genre) }}
+        {% else %}
+          что
+        {% endif %}
+      {% endset %}
+      {% set verb %}
+        {% if form.answer.start_time and form.answer.user_time and (form.answer.start_time < form.answer.user_time) and not form.answer.ignore_time %}
+          {% if form.genre %}
+            {% chooseline %}
+              шли
+              показывали
+            {% endchooseline %}
+          {% else %}
+            показывали
+          {% endif %}
+        {% else %}
+          {% if form.genre %}
+            {% chooseline %}
+              можно посмотреть
+              есть
+            {% endchooseline %}
+          {% else %}
+            {% chooseline %}
+              можно посмотреть
+              показывают
+              идёт
+            {% endchooseline %}
+          {% endif %}
+        {% endif %}
+      {% endset %}
+      {% set channel %}
+        {% if form.answer.channel and not form.answer.ignore_channel %}
+            на канале {{ form.answer.channel.title }}
+        {% endif %}
+      {% endset %}
+      {% set date_time %}
+        {% set date=format_date(form.answer.start_time, form.answer.tz) if form.answer.start_time else "сегодня" %}
+        {% set time=day_part_title(form.day_part).strip() | inflect('ins') if not form.answer.start_now %}
+        {% if form.answer.ignore_time %}
+          сегодня
+        {% elif date in ["сегодня", "завтра", "послезавтра", "вчера", "позавчера"] %}
+          {{ date }} {{ time }}
+        {% else %}
+          {{ time }} {{ date }}
+        {% endif %}
+      {% endset %}
+      {% set big_title %}
+        Вот {{ target }} {{ verb }} {{ date_time if not (form.answer.channel and not form.answer.ignore_channel and form.genre) }} {{ channel }}
+      {% endset %}
+      {{ add_dot(big_title).strip() }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_program_schedule() %}
+  {% set need_channel = not (form.answer.channel and not form.answer.ignore_channel) %}
+  {% for channel in form.answer.schedule[:5] %}
+    {% set prev_date=namespace(a=channel.events[0].start | parse_dt | human_day_rel(form.answer.tz)) %}
+    {% if need_channel %}
+      Канал {{ channel.channel.title }} —
+    {% endif %}
+    {{ prev_date.a }} в
+    {% for event in channel.events[:5] %}
+      {% set current_date=event.start | parse_dt | human_day_rel(form.answer.tz) %}
+      {% if (prev_date.a != current_date) %}
+        {{ current_date }} в
+        {% set prev_date.a=current_date %}
+      {% endif %}
+      {{ event.start | parse_dt | format_datetime('%H:%M') }}
+      {{ "," if not loop.last }}
+    {% endfor %}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_program_schedule_text() %}
+  {% set need_channel = not (form.answer.channel and not form.answer.ignore_channel) %}
+  {% for channel in form.answer.schedule[:5] %}
+    {% set prev_date=namespace(a=channel.events[0].start | parse_dt | human_day_rel(form.answer.tz)) %}
+    {% if need_channel %}
+      {{ channel.channel.title }} —
+      {{ prev_date.a }} в
+    {% else %}
+      {{ prev_date.a | capitalize_first }} в
+    {% endif %}
+    {% for event in channel.events[:5] %}
+      {% set current_date=event.start | parse_dt | human_day_rel(form.answer.tz) %}
+      {% if (prev_date.a != current_date) %}
+        {{ current_date }} в
+        {% set prev_date.a=current_date %}
+      {% endif %}
+      {{ event.start | parse_dt | format_datetime('%H:%M') }}
+      {{ "," if not loop.last }}
+    {% endfor %}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_channel_schedule() %}
+  {% set channel = form.answer.schedule[0] %}
+  {% for event in channel.events[:5] %}
+    {{ event.title }} —
+    {{ event.start | parse_dt | format_datetime('%H:%M') }}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_channel_schedule_text() %}
+  {% set channel = form.answer.schedule[0] %}
+  {% for event in channel.events[:5] %}
+    {{ event.title }} — {{ event.start | parse_dt | format_datetime('%H:%M') }}\n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_schedule() %}
+  {% for channel in form.answer.schedule[:5] %}
+    {{ channel.events[0].title }} —
+    канал {{ channel.channel.title }},
+    {{ channel.events[0].start | parse_dt | format_datetime('%H:%M') }}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_schedule_text() %}
+  {% for channel in form.answer.schedule[:5] %}
+    {{ channel.events[0].title }} —
+    {{ channel.channel.title }},
+    {{ channel.events[0].start | parse_dt | format_datetime('%H:%M') }}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_genre_schedule() %}
+  {% set first_date = form.answer.schedule[0].events[0].start | parse_dt | human_day_rel(form.answer.tz) %}
+  {% set last_date = form.answer.schedule[(4, form.answer.schedule | length - 1) | min].events[0].start | parse_dt | human_day_rel(form.answer.tz) %}
+  {% set need_date = ((first_date != last_date) or (form.answer.channel and not form.answer.ignore_channel and form.genre)) %}
+  {% set need_channel = not (form.answer.channel and not form.answer.ignore_channel) %}
+  {% for channel in form.answer.schedule[:5] %}
+    {% set event=channel.events[0] %}
+    {{ event.title }} —
+    {% if need_channel %}
+      канал {{ channel.channel.title }},
+    {% endif %}
+    {% if need_date %}
+      {{ event.start | parse_dt | human_day_rel(form.answer.tz) }} в
+    {% endif %}
+    {{ event.start | parse_dt | format_datetime('%H:%M') }}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_genre_schedule_text() %}
+  {% set first_date = form.answer.schedule[0].events[0].start | parse_dt | human_day_rel(form.answer.tz) %}
+  {% set last_date = form.answer.schedule[(4, form.answer.schedule | length - 1) | min].events[0].start | parse_dt | human_day_rel(form.answer.tz) %}
+  {% set need_date = ((first_date != last_date) or (form.answer.channel and not form.answer.ignore_channel and form.genre)) %}
+  {% set need_channel = not (form.answer.channel and not form.answer.ignore_channel) %}
+  {% for channel in form.answer.schedule[:5] %}
+    {% set event=channel.events[0] %}
+    {{ event.title }} —
+    {% if need_channel %}
+      {{ channel.channel.title }},
+    {% endif %}
+    {% if need_date %}
+      {{ event.start | parse_dt | human_day_rel(form.answer.tz) }} в
+    {% endif %}
+    {{ event.start | parse_dt | format_datetime('%H:%M') }}
+    \n
+  {% endfor %}
+{% endmacro %}
+
+{% macro render_personal_schedule_disclaimer() %}
+  {% if is_active_attention('personal_tv_schedule_first_time') and not is_active_attention('personal_tv_schedule_future') %}
+    Чтобы изменить порядок показа и сделать рекомендации точнее, используйте команды «Лайк», «Дизлайк» или «Пропустить».
+  {% endif %}
+{% endmacro %}
+
+{% macro render_personal_future_schedule_disclaimer() %}
+  {% if is_active_attention('personal_tv_schedule_future') %}
+    Расписание составляется каждый раз с учётом ваших предпочтений. Чтобы изменить порядок показа и сделать рекомендации точнее, используйте команды «Лайк», «Дизлайк» или «Пропустить».
+  {% endif %}
+{% endmacro %}
+
+{% macro render_personal_channel_schedule() %}
+  {{ render_personal_future_schedule_disclaimer() }}
+  Далее на вашем канале:
+  {{ render_channel_schedule() }}
+  {{ render_personal_schedule_disclaimer() }}
+{% endmacro %}
+
+{% macro render_personal_channel_schedule_text() %}
+  {{ render_personal_future_schedule_disclaimer() }}
+  Далее на вашем канале:\n
+  {{ render_channel_schedule_text() }}
+  {{ render_personal_schedule_disclaimer() }}
+{% endmacro %}

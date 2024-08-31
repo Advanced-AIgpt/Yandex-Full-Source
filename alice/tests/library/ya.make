@@ -1,0 +1,22 @@
+OWNER(mihajlova)
+
+RECURSE(
+    auth
+    directives
+    intent
+    locale
+    mark
+    region
+    scenario
+    service
+    solomon
+    surface
+    translit
+    tus_client
+    uniclient
+    url
+    vault
+    version
+    vins_response
+    ydb
+)

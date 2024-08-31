@@ -1,0 +1,258 @@
+package NAlice.NWonderlogs;
+
+import "alice/library/client/protos/client_info.proto";
+
+import "alice/wonderlogs/protos/asr_prepared.proto";
+import "alice/wonderlogs/protos/megamind_prepared.proto";
+import "alice/wonderlogs/protos/request_stat.proto";
+import "alice/wonderlogs/protos/uniproxy_prepared.proto";
+
+import "alice/megamind/protos/common/content_properties.proto";
+import "alice/megamind/protos/speechkit/request.proto";
+import "alice/megamind/protos/speechkit/response.proto";
+
+import "alice/library/censor/protos/extension.proto";
+import "alice/library/field_differ/protos/extension.proto";
+
+import "voicetech/library/proto_api/analytics_info.proto";
+
+import "mapreduce/yt/interface/protos/extension.proto";
+
+message TWonderlog {
+    option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+    message TError {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        enum EProcess {
+            P_UNDEFINED = 0;
+            P_WONDERLOGS_REDUCER = 1;
+        }
+
+        enum EReason {
+            R_UNDEFINED = 0;
+            R_INVALID_VALUE = 1;
+            R_DIFFERENT_VALUES = 2;
+        }
+
+        optional EProcess Process = 1 [json_name = "process", (NYT.column_name) = "process"];
+        optional EReason Reason = 2 [json_name = "reason", (NYT.column_name) = "reason"];
+        optional string Message = 3 [json_name = "message", (NYT.column_name) = "message"];
+        optional string Uuid = 4 [json_name = "uuid", (NYT.column_name) = "uuid"];
+        optional string MessageId = 5 [json_name = "message_id", (NYT.column_name) = "message_id"];
+        optional string MegamindRequestId = 6 [json_name = "megamind_request_id", (NYT.column_name) = "megamind_request_id"];
+        optional string SetraceUrl = 7 [json_name = "setrace_url", (NYT.column_name) = "setrace_url"];
+    }
+
+    enum EAction {
+        VOICE = 0;
+        TEXT = 1;
+        SUGGEST = 2;
+        CALLBACK = 3;
+        IMAGE = 4;
+        MUSIC = 5;
+    }
+
+    enum EAccountType {
+        AT_UNDEFINED = 0;
+        AT_ROBOT = 1;
+        AT_STAFF = 2;
+        AT_HUMAN = 3;
+    }
+
+    message TPresence {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional bool Uniproxy = 1 [json_name = "uniproxy", (NYT.column_name) = "uniproxy"];
+        optional bool Megamind = 2 [json_name = "megamind", (NYT.column_name) = "megamind", (ImportantFieldCheck) = IFC_DIFF];
+        optional bool Asr = 3 [json_name = "asr", (NYT.column_name) = "asr", (ImportantFieldCheck) = IFC_DIFF];
+        optional TUniproxyPrepared.TPresence UniproxyPresence = 4 [json_name = "uniproxy_presence", (NYT.column_name) = "uniproxy_presence"];
+        optional TAsrPrepared.TPresence AsrPresence = 5 [json_name = "asr_presence", (NYT.column_name) = "asr_presence"];
+    }
+
+    message TDownloadingInfo {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TIpInfo {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+            
+            optional string ClientIp = 1 [json_name = "client_ip", (NYT.column_name) = "client_ip"];
+            optional bool YandexNet = 2 [json_name = "yandex_net", (NYT.column_name) = "yandex_net"];
+            optional bool StaffNet = 3 [json_name = "staff_net", (NYT.column_name) = "staff_net"];
+        }
+
+        optional string UniproxyClientIp = 1 [json_name = "uniproxy_client_ip", (NYT.column_name) = "uniproxy_client_ip", deprecated = true];
+        optional bool UniproxyYandexIp = 2 [json_name = "uniproxy_yandex_ip", (NYT.column_name) = "uniproxy_yandex_ip", deprecated = true];
+        optional string MegamindClientIp = 3 [json_name = "megamind_client_ip", (NYT.column_name) = "megamind_client_ip", deprecated = true];
+        optional bool MegamindYandexIp = 4 [json_name = "megamind_yandex_ip", (NYT.column_name) = "megamind_yandex_ip", deprecated = true];
+        optional TIpInfo Uniproxy = 5 [json_name = "uniproxy", (NYT.column_name) = "uniproxy"];
+        optional TIpInfo Megamind = 6 [json_name = "megamind", (NYT.column_name) = "megamind"];
+    }
+
+    message TEnvironment {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional TMegamindPrepared.TEnvironment MegamindEnvironment = 1 [json_name = "megamind_environment", (NYT.column_name) = "megamind_environment"];
+        optional TUniproxyPrepared.TEnvironment UniproxyEnvironment = 2 [json_name = "uniproxy_environment", (NYT.column_name) = "uniproxy_environment"];
+    }
+
+    message TAsr {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TTopics {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Model = 1 [json_name = "model", (NYT.column_name) = "model"];
+            optional string Request = 2 [json_name = "request", (NYT.column_name) = "request"];
+        }
+
+        optional NWonderlogs.TAsr Data = 1 [json_name = "data", (NYT.column_name) = "data"];
+        optional TStream VoiceByUniproxy = 2 [json_name = "voice_by_uniproxy", (NYT.column_name) = "voice_by_uniproxy", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+        optional bool TrashOrEmpty = 3 [json_name = "trash_or_empty", (NYT.column_name) = "trash_or_empty"];
+        optional string ActivationType = 4 [json_name = "activation_type", (NYT.column_name) = "activation_type"];
+        optional TTopics Topics = 5 [json_name = "topics", (NYT.column_name) = "topics"];
+        optional string LingwareVersion = 6 [json_name = "lingware_version", (NYT.column_name) = "lingware_version"];
+        optional TAsrDebug OnlineValidationDebug = 7 [json_name = "online_validation_debug", (NYT.column_name) = "online_validation_debug"];
+        optional YaldiProtobuf.AnalyticsInfo AnalyticsInfo = 8 [json_name = "analytics_info", (NYT.column_name) = "analytics_info"];
+    }
+
+    message TSpotter {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TMultiactivation {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional bool Canceled = 1 [json_name = "canceled", (NYT.column_name) = "canceled"];
+            optional string Id = 2 [json_name = "id", (NYT.column_name) = "id"];
+        }
+
+        message TCommonStats {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional int64 ActualSoundAfterTriggerMs = 1 [json_name = "actual_sound_after_trigger_ms", (NYT.column_name) = "actual_sound_after_trigger_ms"];
+            optional int64 ActualSoundBeforeTriggerMs = 2 [json_name = "actual_sound_before_trigger_ms", (NYT.column_name) = "actual_sound_before_trigger_ms"];
+            optional int64 RequestSoundAfterTriggerMs = 3 [json_name = "request_sound_after_trigger_ms", (NYT.column_name) = "request_sound_after_trigger_ms"];
+            optional int64 RequestSoundBeforeTriggerMs = 4 [json_name = "request_sound_before_trigger_ms", (NYT.column_name) = "request_sound_before_trigger_ms"];
+            optional int64 UnhandledBytes = 5 [json_name = "unhandled_bytes", (NYT.column_name) = "unhandled_bytes"];
+            optional int64 DurationSubmitted = 6 [json_name = "duration_submitted", (NYT.column_name) = "duration_submitted"];
+        }
+
+        message TActivation {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string Context = 1 [json_name = "context", (NYT.column_name) = "context"];
+            optional TCommonStats CommonStats = 2 [json_name = "common_stats", (NYT.column_name) = "common_stats"];
+            optional TLogSpotter.TSpotterActivationInfo.TSpotterStats TechStats = 3 [json_name = "tech_stats", (NYT.column_name) = "tech_stats"];
+        }
+
+        message TValidation {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional string MdsKey = 1 [json_name = "mds_key", (NYT.column_name) = "mds_key", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+            optional bool ModelResult = 2 [json_name = "model_result", (NYT.column_name) = "model_result"];
+            optional bool FinalResult = 3 [json_name = "final_result", (NYT.column_name) = "final_result"];
+        }
+
+        optional bool FalseActivation = 1 [json_name = "false_activation", (NYT.column_name) = "false_activation"];
+        optional string MdsUrl = 2 [json_name = "mds_url", (NYT.column_name) = "mds_url", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+        optional string Format = 3 [json_name = "format", (NYT.column_name) = "format"];
+        optional string Transcript = 4 [json_name = "transcript", (NYT.column_name) = "transcript", (NAlice.FieldAccess) = A_PRIVATE_REQUEST, (NAlice.FieldAccess) = A_PRIVATE_RESPONSE];
+        optional string Topic = 5 [json_name = "topic", (NYT.column_name) = "topic"];
+        optional TMultiactivation Multiactivation = 6 [json_name = "multiactivation", (NYT.column_name) = "multiactivation"];
+        optional string SpotterSource = 7 [json_name = "spotter_source", (NYT.column_name) = "spotter_source"];
+        optional TActivation Activation = 8 [json_name = "activation", (NYT.column_name) = "activation"];
+        repeated TSpotterMicInfo Mics = 9 [json_name = "mics", (NYT.column_name) = "mics"];
+        // key - stream_type
+        map<string, TStreams> Streams = 10 [json_name = "streams", (NYT.column_name) = "streams", (NYT.flags) = MAP_AS_DICT];
+        optional TValidation Validation = 11 [json_name = "validation", (NYT.column_name) = "validation"];
+    }
+
+    message TPuid {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string Puid = 1 [json_name = "puid", (NYT.column_name) = "puid"];
+        optional TWonderlog Value = 2 [json_name = "value", (NYT.column_name) = "value"];
+    }
+
+    message TPrivacy {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TGeoRestrictions {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            enum ERegion {
+                R_UNDEFINED = 0;
+                R_COUNTRY_BELARUS = 149;
+                R_COUNTRY_ISRAEL = 181;
+                R_COUNTRY_UKRAINE = 187;
+                R_COUNTRY_RUSSIA = 225;
+            }
+
+            optional bool ProhibitedByRegion = 1 [json_name = "prohibited_by_region", (NYT.column_name) = "prohibited_by_region"];
+            optional ERegion Region = 2 [json_name = "region", (NYT.column_name) = "region"];
+        }
+
+        optional TGeoRestrictions GeoRestrictions = 1 [json_name = "get_restrictions", (NYT.column_name) = "get_restrictions"];
+        optional bool ProhibitedByGdpr = 2 [json_name = "prohibited_by_gdpr", (NYT.column_name) = "prohibited_by_gdpr"];
+        optional TContentProperties ContentProperties = 3 [json_name = "content_properties", (NYT.column_name) = "content_properties"];
+        optional bool DoNotUseUserLogs = 4 [json_name = "do_not_use_user_logs", (NYT.column_name) = "do_not_use_user_logs"];
+        optional bool OriginalDoNotUseUserLogs = 5 [json_name = "original_do_not_use_user_logs", (NYT.column_name) = "original_do_not_use_user_logs"];
+    }
+
+    message TClient {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional TClientInfoProto Application = 1 [json_name = "content_properties", (NYT.column_name) = "application"];
+        optional string AuthToken = 2 [json_name = "auth_token", (NYT.column_name) = "auth_token"];
+        optional EAccountType Type = 3 [json_name = "type", (NYT.column_name) = "type"];
+    }
+
+    message TTimings {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        message TUniproxy {
+            option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+            optional TMegamindTimings Megamind = 1 [json_name = "megamind", (NYT.column_name) = "megamind"];
+            optional TTtsTimings Tts = 2 [json_name = "tts", (NYT.column_name) = "tts"];
+        }
+
+        optional TUniproxy Uniproxy = 1 [json_name = "uniproxy", (NYT.column_name) = "uniproxy"];
+    }
+
+    message TTts {
+        option (NYT.default_field_flags) = SERIALIZATION_YT;
+
+        optional string GeneratedText = 1 [json_name = "generated_text", (NYT.column_name) = "generated_text"];
+        optional string Emotion = 2 [json_name = "emotion", (NYT.column_name) = "emotion"];
+        optional string Format = 3 [json_name = "format", (NYT.column_name) = "format"];
+        optional string Lang = 4 [json_name = "lang", (NYT.column_name) = "lang"];
+        optional string Quality = 5 [json_name = "quality", (NYT.column_name) = "quality"];
+        optional string Voice = 6 [json_name = "voice", (NYT.column_name) = "voice"];
+    }
+
+    reserved 17;
+    reserved "ClientInfo";
+
+    optional string Uuid = 1 [json_name = "_uuid", (NYT.column_name) = "_uuid", (NAlice.ImportantFieldCheck) = IFC_PRESENCE];
+    optional string MessageId = 2 [json_name = "_message_id", (NYT.column_name) = "_message_id", (NAlice.ImportantFieldCheck) = IFC_PRESENCE];
+    optional string MegamindRequestId = 3 [json_name = "_megamind_request_id", (NYT.column_name) = "_megamind_request_id", (NAlice.ImportantFieldCheck) = IFC_PRESENCE];
+    optional TSpeechKitRequestProto SpeechkitRequest = 4 [json_name = "speechkit_request", (NYT.column_name) = "speechkit_request"];
+    optional TSpeechKitResponseProto SpeechkitResponse = 5 [json_name = "speechkit_response", (NYT.column_name) = "speechkit_response"];
+    optional TRequestStat RequestStat = 6 [json_name = "request_stat", (NYT.column_name) = "request_stat"];
+    optional int64 ServerTimeMs = 7 [json_name = "_server_time_ms", (NYT.column_name) = "_server_time_ms", (NAlice.ImportantFieldCheck) = IFC_PRESENCE];
+    optional int64 SequenceNumber = 8 [json_name = "_sequence_number", (NYT.column_name) = "_sequence_number"];
+    optional TPresence Presence = 9 [json_name = "_presence", (NYT.column_name) = "_presence"];
+    optional EAction Action = 10 [json_name = "_action", (NYT.column_name) = "_action"];
+    optional TEnvironment Environment = 11 [json_name = "_environment", (NYT.column_name) = "_environment"];
+    optional TDownloadingInfo DownloadingInfo = 12 [json_name = "_downloading_info", (NYT.column_name) = "_downloading_info"];
+    optional TAsr Asr = 13 [json_name = "asr", (NYT.column_name) = "asr"];
+    optional TSpotter Spotter = 14 [json_name = "spotter", (NYT.column_name) = "spotter"];
+    // message_id might be fake in case sk of the request does not have ref_message_id field and the request is not
+    // present in uniproxy or in case of spotter command without an actual request to asr
+    optional bool RealMessageId = 15 [json_name = "_real_message_id", (NYT.column_name) = "_real_message_id"];
+    optional TPrivacy Privacy = 16 [json_name = "privacy", (NYT.column_name) = "privacy"];
+    optional TClient Client = 18 [json_name = "client", (NYT.column_name) = "client"];
+    optional TTimings Timings = 19 [json_name = "timings", (NYT.column_name) = "timings"];
+    optional TTts Tts = 20 [json_name = "tts", (NYT.column_name) = "tts"];
+}

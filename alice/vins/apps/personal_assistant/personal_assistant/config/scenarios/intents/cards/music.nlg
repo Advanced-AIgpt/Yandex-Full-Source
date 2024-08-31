@@ -1,0 +1,346 @@
+{% from "cards/common.nlg" import font_color %}
+
+{% set yandex_music_logo = "https://avatars.mds.yandex.net/get-bass/1961516/logo_gray/orig" %}
+
+{% macro get_artists(artists) -%}
+  {% if artists -%}
+  {% for artist in artists -%}
+      {{ artist.name | html_escape -}}
+      {{ ", " if not loop.last -}}
+  {% endfor %}
+  {%- endif %}
+{%- endmacro %}
+
+
+{% macro render_track_card(music_answer) -%}
+  {% set subtitle = get_artists(music_answer.artists) if music_answer.subtype != 'podcast-episode' else music_answer.album.title %}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'НАЙТИ В ЯНДЕКСЕ' if context.data.not_available else ('ВОСПРОИЗВЕСТИ' if context.data.play_inside_app else 'СЛУШАТЬ НА ЯНДЕКС.МУЗЫКЕ') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.title | html_escape }}",
+            "title_style": "title_s",
+            "text": "{{ font_color('#7f7f7f', subtitle ) }}",
+            "text_style": "text_m",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id or 'music_recognizer' }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+
+{% macro render_artist_card(music_answer) -%}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'НАЙТИ В ЯНДЕКСЕ' if context.data.not_available else ('ВОСПРОИЗВЕСТИ' if context.data.play_inside_app else 'СЛУШАТЬ НА ЯНДЕКС.МУЗЫКЕ') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.name | html_escape }}",
+            "title_style": "title_s",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+
+{% macro render_playlist_card(music_answer) -%}
+  {% set action_url = context.data.search_url if context.data.not_available else (context.data.playUri if context.data.play_inside_app else music_answer.uri) %}
+  {% set action_text = 'НАЙТИ В ЯНДЕКСЕ' if context.data.not_available else ('ВОСПРОИЗВЕСТИ' if context.data.play_inside_app else 'СЛУШАТЬ НА ЯНДЕКС.МУЗЫКЕ') %}
+  {% set need_logo = not context.data.not_available and context.data.play_inside_app %}
+  {
+    "states": [
+      {
+        "state_id": 1,
+        "blocks": [
+          {
+            "type": "div-separator-block",
+            "size": "xs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-universal-block",
+            "title": "{{ music_answer.title | html_escape }}",
+            "title_style": "title_s",
+            "side_element":{
+              "size": "m",
+              "position": "left",
+              "element":{
+                "image_url": "{{ context.data.coverUri }}",
+                "type": "div-image-element"
+              }
+            },
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-separator-block",
+            "has_delimiter": 1,
+            "size": "xxs",
+            "action":{
+              "url": "{{ action_url }}",
+              "log_id": "{{ context.data.log_id }}"
+            }
+          },
+          {
+            "type": "div-table-block",
+            "rows": [
+              {
+                "type": "row_element",
+                "bottom_padding": "s",
+                "top_padding": "s",
+                "cells": [
+                  {
+                    "text": "{{ font_color('#1348c0', action_text) }}",
+                    "text_style": "button",
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% if need_logo %}
+                  ,
+                  {
+                    "horizontal_alignment": "right",
+                    "image_position": "right",
+                    "image_size": "m",
+                    "image": {
+                      "ratio": 6.2,
+                      "image_url": "{{ yandex_music_logo }}",
+                      "type": "div-image-element"
+                    },
+                    "action":{
+                      "url": "{{ action_url }}",
+                      "log_id": "{{ context.data.log_id }}"
+                    }
+                  }
+                  {% endif %}
+                ]
+              }
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }
+            {% if need_logo %}
+            , {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }
+            {% endif %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+  }
+{%- endmacro %}
+
+{% card music__track %}
+  {{ render_track_card(form.answer) }}
+{% endcard %}
+
+{% card music__album %}
+  {{ render_track_card(form.answer) }}
+{% endcard %}
+
+{% card music__artist %}
+  {{ render_artist_card(form.answer) }}
+{% endcard %}
+
+{% card music__playlist %}
+  {{ render_playlist_card(form.answer) }}
+{% endcard %}

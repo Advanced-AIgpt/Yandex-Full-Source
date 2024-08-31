@@ -1,0 +1,161 @@
+{% from "common/macros.nlg" import inability, format_time %}
+
+{% macro format_time(time, case='acc', absolute=False, add_preposition=False) %}
+  {% if absolute %}
+    {% if add_preposition %}
+      в
+    {% endif %}
+    {% tx %} {{ time | human_time_raw_text_and_voice(case=case) | attr('text') }} {% etx %}
+    {% vc %} {{ time | human_time_raw_text_and_voice(case=case) | attr('voice') }} {% evc %}
+  {% else %}
+    {% if add_preposition %}
+      на
+    {% endif %}
+    {% set v = time | render_units_time(case=case) %}
+    {% vc %}{{ v.voice }}{% evc %}{% tx %}{{ v.text }}{% etx %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_timer(time, absolute=False, specification=None, remaining=None) -%}
+  {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %}
+  {% if specification == 'sleep' %}
+    сна
+  {% endif %}
+  {{ format_time(time, 'acc', absolute=absolute, add_preposition=True) }}
+  {% if remaining %}
+    , осталось меньше {{ format_time(remaining|ceil_seconds(sleep_timer), 'gen') }}
+  {% endif %}
+{%- endmacro %}
+
+{% macro render_available_timer(timer) -%}
+{% set time = timer|get_item('duration') or timer|get_item('time') %}
+{% set absolute = time == timer|get_item('time') %}
+{% set specification = timer|get_item('specification') %}
+{% set remaining = timer|get_item('remaining') %}
+  {{ render_timer(time, absolute, specification, remaining) }}
+{%- endmacro %}
+
+{% macro render_timer_from_form_and_context(form, context) %}
+{% set absolute = is_active_attention('timer__abs_time') %}
+  {{ render_timer(form.time, absolute, form.specification) }}
+{% endmacro %}
+
+{% macro render_timer_number(num) -%}
+  {% vc %}номер {{ num }}{% evc %}{% tx %}{{ num }}.{% etx %}
+{%- endmacro %}
+
+{% macro render_timer_list_raw(available_timers, shift=0) -%}
+  {% for timer in available_timers %}
+    {{ render_timer_number(loop.index + shift) }}
+    {{ render_available_timer(timer) }}
+    .
+    {% if not loop.last %}
+      \n
+    {% endif %}
+  {% endfor %}
+{%- endmacro %}
+
+{% macro render_timer_list(available_timers) -%}
+  {% for paused, group in available_timers|groupby("paused") %}
+    {% set shift = 0 if loop.first else loop.previtem[1]|length %}
+    {% if group|length == 1 %}
+      {% if paused %}
+        {% if loop.first %}
+          На данный момент стоит на паузе
+        {% else %}
+          \n{% vc %}-{% evc %}
+          А также стоит на паузе
+        {% endif %}
+      {% else %}
+          На данный момент запущен
+      {% endif %}
+      {% if group|length != available_timers|length %}
+        {{ render_timer_number(1 + shift) }}
+      {% endif %}
+      {{ render_available_timer(group[0]) }}
+      .
+    {% else %}
+      {% if paused %}
+        {% if loop.first %}
+          На данный момент стоят на паузе следующие таймеры
+          \n{% vc %}-{% evc %}
+        {% else %}
+          \n{% vc %}-{% evc %}
+          А также стоят на паузе следующие таймеры
+          \n{% vc %}-{% evc %}
+        {% endif %}
+      {% else %}
+        На данный момент запущены следующие таймеры
+        \n{% vc %}-{% evc %}
+      {% endif %}
+      {{ render_timer_list_raw(group, shift) }}
+    {% endif %}
+  {% endfor %}
+{%- endmacro %}
+
+{% macro render_error(code, time=None, specification=None) -%}
+  {% if code == 'no_timers_available' %}
+    {% if specification == 'sleep' %}
+      Таймер сна в данный момент не установлен
+    {% else %}
+      {% chooseline %}
+        У вас нет установленных {% tx %}таймеров{% etx %}{% vc %}т+аймеров{% evc %}
+        Я ничего не засекала
+      {% endchooseline %}
+      {% if time %}
+        на {{ format_time(time, 'acc') }}
+      {% endif %}
+    {% endif %}
+  {% elif code == 'unsupported_operation' %}
+    {% if is_elari_watch() %}
+      Я скоро научусь это делать. Время пролетит незаметно.
+    {% else %}
+      {{ inability() }}
+    {% endif %}
+  {% elif code == 'already_playing' %}
+    {% tx %}Таймер{% etx %}{% vc %}т+аймер{% evc %} уже запущен.
+  {% elif code == 'already_paused' %}
+    {% tx %}Таймер{% etx %}{% vc %}т+аймер{% evc %} уже остановлен.
+  {% elif code == 'too_many_timers' %}
+    Сейчас уже установлено 25 {% tx %}таймеров{% etx %}{% vc %}т+аймеров{% evc %}, я больше не могу.
+  {% elif code == 'invalid_time' %}
+    Я не поняла, на какое время нужно поставить таймер
+    {% if specification == 'sleep' %}
+      сна
+    {% endif %}
+    .
+  {% else %}
+    Что-то пошло не так, давайте попробуем позже?
+  {% endif %}
+{%- endmacro %}
+
+{% macro no_such_timer() %}
+  У меня нет такого {% tx %}таймера{% etx %}{% vc %}т+аймера{% evc %}.
+{% endmacro %}
+
+{% macro suggest_show_timers() %}
+  {% chooseline %}
+    Давайте я вам список {% tx %}таймеров{% etx %}{% vc %}т+аймеров{% evc %} открою.
+    Давайте посмотрим на ваши {% tx %}таймеры{% etx %}{% vc %}т+аймеры{% evc %}.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_error__timererror %}
+  {{ render_error(context.error.data.code, form.time, form.specification) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__timer__set_timer %}
+  Поставить таймер на {{format_time(context.timer__set_timer.data.time)}}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__timer__set_timer %}
+  Поставить таймер на {{format_time(context.timer__set_timer.data.time)}}
+{% endphrase %}
+
+{% phrase render_suggest_caption__timer__show_timers %}
+  Посмотреть все таймеры
+{% endphrase %}
+
+{% phrase render_suggest_uri__timer__show_timers %}
+  {{ context.timer__show_timers.data.uri }}
+{% endphrase %}

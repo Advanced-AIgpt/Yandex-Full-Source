@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+import "tasklet/services/yav/proto/yav.proto";
+
+package alice.tasklet.create_wiki_changelog;
+
+message Context {
+    option (.tasklet.context) = true;
+    yav_service.YavService yav = 1 [(.tasklet.inject) = true];
+    .ci.CiService ci = 2 [(.tasklet.inject) = true];
+}
+
+message Resource {
+    string name = 1;
+    int64 resource_id = 2;
+}
+
+message Config {
+    string ticket = 1;
+    string project = 2;
+    string wiki_path = 3;
+    repeated Resource resources = 4;
+}
+
+message State {
+    bool success = 1;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message Output {
+    State state = 1;
+}
+
+message CreateWikiChangelog {
+    option (.tasklet.tasklet_interface) = true;
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+    Context ctx = 3;
+}

@@ -1,0 +1,34 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/weather_nowcast.nlg" %}
+{% from "get_weather/get_weather__common.nlg" import render_precipitation, geo_changed_attention %}
+
+
+{% phrase render_result %}
+  {% set weather %}
+    {{ render_precipitation(form) | capitalize_first + '.' }}
+  {% endset %}
+
+  {% if is_active_attention("geo_changed") %}
+    {{ geo_changed_attention(form, weather) | capitalize_first }}
+  {% else %}
+    {{ weather }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase weather__precipitation__text %}
+  {% text %}
+    {{ render_precipitation(form) | capitalize_first + '.' }}
+  {% endtext %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__weather__open_uri %}
+  {% if form.weather_nowcast_alert is not none %}
+    Открыть карту осадков
+  {% else %}
+    Посмотреть подробный прогноз
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__weather__open_uri %}
+  {{ form.uri }}
+{% endphrase %}

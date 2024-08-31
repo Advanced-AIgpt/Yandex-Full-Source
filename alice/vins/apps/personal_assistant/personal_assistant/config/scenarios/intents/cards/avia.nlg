@@ -1,0 +1,209 @@
+{% from "avia/common.nlg" import render_date, render_point_from, render_point_to, month_name %}
+
+{% macro render_dates(date_forward, date_backward) %}
+    {% if date_backward %}
+        {{ render_date(date_forward) }} – {{ render_date(date_backward) }}
+    {% else %}
+        {{ render_date(date_forward) }}
+    {% endif %}
+{% endmacro %}
+
+{% macro date_text(date) %}
+        {{ datetime(year=date.get('years'), month=date.get('months'), day=date.get('days')).isoweekday() | render_short_weekday_name }}, {{ render_date(date) }}
+{% endmacro %}
+
+{% macro render_direction_card(form, data) %}
+{% set is_month_query = form.date_forward  and (not form.date_forward.get('days'))  and (not form.date_forward.get('weeks')) and form.date_forward.get('months') %}
+{% set date_part %}
+    {% if is_month_query %}
+        в {{ month_name(form.date_forward.get('months')) | inflect('abl') }}
+    {% elif form.min_price_date %}
+        {{ date_text(data.min_price_date) }}
+    {% endif %}
+{% endset %}
+{
+    "states": [{
+        "state_id": 1,
+        "action": {
+                "log_id": "avia_direction_card_whole",
+                "url": "{{ data.dynamic_link }}"
+            },
+        "blocks": [{
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "title": "{{ data.geo_from }} — {{ data.geo_to }}",
+            "text": "<font color=\"{{ '#919CB5' }}\"> {{ date_part }} </font>",
+            "text_style": "text_m",
+            "title_style": "title_m",
+            "type": "div-universal-block"
+        },
+        {% if data.min_price %}
+        {
+            "title": "от {{ data.min_price }} ₽",
+            "title_style": "numbers_s",
+            "type": "div-universal-block"
+        },
+        {% endif %}
+        {
+            "has_delimiter": 1,
+            "delimiter_color": "{{ '#33919CB5' }}",
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "action": {
+                "log_id": "avia_direction_card_footer",
+                "url": "{{ data.dynamic_link }}"
+            },
+            "text": "<font color=\"{{ '#6839CF' }}\">ВСЕ ВАРИАНТЫ<\/font>",
+            "type": "div-footer-block"
+        }]
+    }],
+    "background": [{
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+    }]
+}
+{% endmacro %}
+
+
+{% macro render_direction_with_dates_card(data) %}
+{% set link_text = 'ЕЩЕ ВАРИАНТЫ' if data.min_price else 'УЗНАТЬ ЦЕНЫ' %}
+{% set date_forward_text = date_text(data.date_forward) %}
+{
+    "states": [{
+        "state_id": 1,
+        "action": {
+                "log_id": "avia_direction_card_whole",
+                "url": "{{ data.serp_link }}"
+            },
+        "blocks": [{
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "title": "{{ data.geo_from }} — {{ data.geo_to }}",
+            "text": "<font color=\"{{ '#919CB5' }}\">{{ date_forward_text }} {% if data.date_backward %} — {{ date_text(data.date_backward) }} {% endif %} </font>",
+            "text_style": "text_m",
+            "title_style": "title_m",
+            "type": "div-universal-block"
+        },
+        {% if data.min_price %}
+        {
+            "title": "от {{ data.min_price }} ₽",
+            "title_style": "numbers_s",
+            "type": "div-universal-block"
+        },
+        {% endif %}
+        {
+            "has_delimiter": 1,
+            "delimiter_color": "{{ '#33919CB5' }}",
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "action": {
+                "log_id": "avia_direction_card_footer",
+                "url": "{{ data.serp_link }}"
+            },
+            "text": "<font color=\"{{ '#6839CF' }}\">ВСЕ ВАРИАНТЫ<\/font>",
+            "type": "div-footer-block"
+        }]
+    }],
+    "background": [{
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+    }]
+}
+{% endmacro %}
+
+{% card avia_direction %}
+    {{ render_direction_card(form, context.data) }}
+{% endcard %}
+
+
+{% card avia_direction_with_dates %}
+    {{ render_direction_with_dates_card(context.data) }}
+{% endcard %}
+
+{% macro render_country_card(data, form) %}
+{
+    "states": [{
+        "state_id": 1,
+        "blocks": [{
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "title": "{{ data.geo_from }} — {{ data.geo_to }}",
+            {% if form.date_forward and form.date_forward.get('days') %}
+                "text": "<font color=\"{{ '#919CB5' }}\"> {{ date_text(form.date_forward) }} {% if form.date_backward %} — {{ date_text(form.date_backward) }} {% endif %} </font>",
+            {% endif %}
+            "text_style": "text_m",
+            "title_style": "title_m",
+            "type": "div-universal-block",
+            "action": {
+                "url": "{{ data.more_link }}",
+                "log_id": "avia_country_more"
+            }
+        }, {
+            "size": "xxs",
+            "type": "div-separator-block"
+        }, {
+            "type": "div-table-block",
+            "rows": [
+              {% for city in data.cities %}
+              {
+                "type": "row_element",
+                "bottom_padding": "m",
+                "cells": [{
+                    "action": {
+                      "url": "{{ city.link }}",
+                      "log_id": "avia_country_city_title"
+                    },
+                    "text": "<font color=\"{{ '#919CB5' }}\"> {{ city.title }} </font>",
+                    "horizontal_alignment": "left"
+                }, {
+                    {% if city.min_price %}
+                        "text": "<font color=\"{{ '#4ca6ff' }}\"> от {{ city.min_price }} ₽  </font>",
+                    {% else %}
+                        "text": "<font color=\"{{ '#4ca6ff' }}\"> УЗНАТЬ ЦЕНЫ </font>",
+                    {% endif %}
+                    "horizontal_alignment": "right",
+                    "action": {
+                      "url": "{{ city.link }}",
+                      "log_id": "avia_country_city_price"
+                    }
+                }]
+              } {{ "," if not loop.last }}
+            {% endfor %}
+            ],
+            "columns": [{
+                "weight": 1,
+                "left_padding": "zero"
+            }, {
+                "weight": 0,
+                "right_padding": "zero"
+            }]
+        }, {
+            "has_delimiter": 1,
+            "delimiter_color": "{{ '#33919CB5' }}",
+            "size": "xs",
+            "type": "div-separator-block"
+        }, {
+            "action": {
+              "url": "{{ data.more_link }}",
+              "log_id": "avia_country_footer"
+            },
+            "text": "<font color=\"{{ '#6839CF' }}\"> ЕЩЕ ВАРИАНТЫ <\/font>",
+            "type": "div-footer-block"
+        }]
+    }],
+    "background": [{
+        "color": "{{ '#ffffff' }}",
+        "type": "div-solid-background"
+    }]
+}
+{% endmacro %}
+
+
+{% card avia_country %}
+    {{ render_country_card(context.data, form) }}
+{% endcard %}

@@ -1,0 +1,189 @@
+labels:
+  level: '( На дорогах (10|[0-9]) балл(а|ов)?\.)?'
+  weather: '( Сейчас (?:(\+|-)\d\d?)|0, [\d\w ]+\.)?'
+  hi:  '(Привет|Приветствую|Здравствуйте|Салют|Приветик|Рада вас видеть|Доброго дня|Привет-привет).*'
+  teach_me: '(Я еще не научилась этому|Я пока это не умею|Я еще не умею это|Я не могу пока|Меня пока не научили этому|Когда-нибудь я смогу это сделать|Надеюсь\, я скоро смогу это делать|Я не знаю\, как это сделать|Так делать я еще не умею|Программист Алексей обещал это вскоре запрограммировать|К сожалению\, этого я пока не умею).*'
+
+app_info:
+  app_id: 'yandex.auto.old'
+  app_version: '1.2.3'
+  os_version: '4.4'
+  platform: 'android'
+
+test_autoapp_greeting:
+  привет:
+    text: '{hi}{weather}{level}'
+
+test_autoapp_navi_build_route:
+  поехали в питер:
+    directives:
+      - name: yandexnavi
+        sub_name: yandexnavi_build_route_on_map
+        type: client_action
+        payload:
+          application: yandexnavi
+          intent: build_route_on_map
+          params:
+            confirmation: '1'
+            lat_to: 59.939095
+            lon_to: 30.315868
+  поехали:
+    directives:
+      - name: yandexnavi
+        sub_name: yandexnavi_external_confirmation
+        type: client_action
+        payload:
+          application: yandexnavi
+          intent: external_confirmation
+          params:
+            app: 'yandexnavi'
+            confirmed: "1"
+
+test_autoapp_navi_map_search:
+  шарикоподшипниковсая 17:
+    directives:
+      - type: client_action
+        name: yandexnavi
+        sub_name: yandexnavi_map_search
+        payload:
+          application: yandexnavi
+          intent: map_search
+          params:
+            text: "шарикоподшипниковская 17"
+            ll: "37.587937,55.733771"
+
+
+test_autoapp_navi_go_home:
+  additional_options:
+    favourites:
+      - lat: 55.610112
+        lon: 37.739348
+        title: "Home"
+  dialog:
+    поехали домой:
+      directives:
+        - type: client_action
+          name: yandexnavi
+          sub_name: yandexnavi_build_route_on_map
+          payload:
+            application: yandexnavi
+            intent: build_route_on_map
+            params:
+              confirmation: "1"
+              lat_to: 55.610112
+              lon_to: 37.739348
+
+test_autoapp_navi_add_point:
+  geo:
+    lat: 55.756133
+    lon: 37.625151
+  dialog:
+    поставь дтп средний ряд:
+      directives:
+        - type: client_action
+          name: yandexnavi
+          sub_name: yandexnavi_add_point
+          payload:
+            application: yandexnavi
+            intent: add_point
+            params:
+              category: "0"
+              comment: "Дтп средний ряд"
+              lat: "55.756133"
+              force_publish: "1"
+              lon: "37.625151"
+
+test_autoapp_media_select:
+  additional_options:
+    radiostations: ["Авторадио", "Максимум", "Монте-Карло"]
+  dialog:
+    включи авторадио:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_media_select
+          payload:
+            application: car
+            intent: media_select
+            params:
+              radio: "Авторадио"
+    включи радио жара:
+      text: '{teach_me}'
+      directives: []
+    включи альтернативу:
+      text: '{teach_me}'
+      directives: []
+    включи музыку:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_launch
+          payload:
+            application: car
+            intent: launch
+            params:
+              app: yandexradio
+    включи яндекс радио:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_launch
+          payload:
+            application: car
+            intent: launch
+            params:
+              app: yandexradio
+    включи радио:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_media_select
+          payload:
+            application: car
+            intent: media_select
+            params:
+              radio: "Монте-Карло"
+    включи фм радио:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_media_select
+          payload:
+            application: car
+            intent: media_select
+            params:
+              radio: "Монте-Карло"
+
+test_autoapp_media_control:
+ flags:
+   skip:
+     reason: moved to Commands scenario
+ dialog:
+   сделай погромче:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_volume_up
+          payload:
+            application: car
+            intent: volume_up
+            params: {}
+   сделай потише:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_volume_down
+          payload:
+            application: car
+            intent: volume_down
+            params: {}
+   поставь на паузу:
+      directives:
+        - type: client_action
+          name: car
+          sub_name: car_media_control
+          payload:
+            application: car
+            intent: media_control
+            params:
+              action: pause

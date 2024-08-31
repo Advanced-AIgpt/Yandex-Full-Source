@@ -1,0 +1,201 @@
+{% nlgimport "common/suggests.nlg" %}
+
+{% nlgimport "get_weather/get_weather__ask.nlg" %}
+{% nlgimport "cards/weather.nlg" %}
+
+{% from "get_weather/get_weather__common.nlg" import temp, min_max_temp, format_date, render_day_part, geo_changed_attention %}
+{% from "get_weather/get_weather__today.nlg" import weather_today %}
+
+{% macro render_weather(date, city, temperature, condition) %}
+  {{ date }} {{ city }} {{ temperature }}
+  {% if condition %}
+    , {{ condition | lower}}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_now_phrase() %}
+  {%- chooseitem -%}
+    сейчас
+  {%- or -%}
+    в настоящее время
+  {%- endchooseitem -%}
+{% endmacro %}
+
+{% macro weather_current() %}
+  {% set date %}
+    {{ render_now_phrase() }}
+  {% endset %}
+
+  {% set city=form.forecast_location | city_prepcase %}
+  {% set condition=form.weather_forecast.condition %}
+
+  # render result
+  {{ render_weather(date, city, temp(form.weather_forecast.temperature), condition) }}.
+{% endmacro %}
+
+{% macro render_day(day, is_capitalized) %}
+  {% set (min, max)=day.temperature %}
+  {% set condition=day.condition %}
+  {% set date=format_date(day.date, day.tz) %}
+
+  {% if is_capitalized %}
+    {% set date=date|capitalize %}
+  {% endif %}
+
+  {{ render_weather(date, "", min_max_temp(min, max), condition) }}
+{% endmacro %}
+
+{% macro range_attention() %}
+  {% if is_active_attention("incomplete_forecast") %}
+    \nНа остальные дни у меня пока нет прогноза.
+  {% endif %}
+{% endmacro %}
+
+{% macro weather_range() %}
+  {% if is_active_attention("no_weather_for_next_weekend") %}
+    Я так далеко не заглядываю, но знаю погоду на ближайшие выходные.
+  {% endif %}
+  {{ form.forecast_location | city_prepcase | capitalize_first }}
+  {% for day in form.weather_forecast.days %}
+    {{ render_day(day, loop.index0) }}.\n
+  {% endfor %}
+  {{ range_attention() }}
+{% endmacro %}
+
+{% macro weather_for_date() %}
+  {% set (min, max)=form.weather_forecast.temperature %}
+
+  {% set date -%}
+    {{ format_date(form.weather_forecast.date, form.weather_forecast.tz) }}
+
+    {{ render_day_part(form.day_part) }}
+  {% endset %}
+
+  {% set city=form.forecast_location | city_prepcase %}
+  {% set condition=form.weather_forecast.condition %}
+
+  # render result
+  {{ render_weather(date, city, min_max_temp(min, max), condition) }}.
+{% endmacro %}
+
+{% macro render_all() %}
+  {% set weather %}
+    {% if form.weather_forecast.type == "weather_for_date" %}
+      {{ weather_for_date() }}
+    {% elif form.weather_forecast.type == "weather_current" %}
+      {{ weather_current() }}
+    {% elif form.weather_forecast.type == "weather_for_range" %}
+      {{ weather_range() }}
+    {% elif form.weather_forecast.type == "weather_today" %}
+      {{ weather_today(form) }}
+    {% else %}
+      Что-то пошло не так. Пока ничего не могу сказать про погоду.
+    {% endif %}
+  {% endset %}
+
+  {% if is_active_attention("geo_changed") %}
+    {{ geo_changed_attention(form, weather) }}
+  {% else %}
+    {{ weather }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ render_all() | capitalize_first }}
+{% endphrase %}
+
+{% phrase render_error__noweather %}
+  Нет данных о погоде
+  {% if form.forecast_location and form.forecast_location.city %}
+    {{ form.forecast_location | city_prepcase }}
+  {% else %}
+    в этом месте
+  {% endif %}
+  на это число.
+{% endphrase %}
+
+
+# suggest
+{% phrase render_suggest_caption__forecast_verbose %}
+  {% if "error" in context and context.error.error_type == "noweather" %}
+    Прогноз погоды
+  {% else %}
+    Подробнее
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_suggest_uri__forecast_verbose %}
+  {% if context.forecast_verbose.data %}
+    {{ context.forecast_verbose.data.url }}
+  {% else %}
+    {{ form.weather_forecast.uri }}
+  {% endif %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__forecast_today %}
+  На сегодня
+{% endphrase %}
+
+{% phrase render_suggest_utterance__forecast_today %}
+  {% chooseline %}
+    А на сегодня?
+    А сегодня?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__forecast_tomorrow %}
+  На завтра
+{% endphrase %}
+
+{% phrase render_suggest_utterance__forecast_tomorrow %}
+  {% chooseline %}
+    А на завтра?
+    А что насчёт завтра?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__forecast_aftertomorrow %}
+  На послезавтра
+{% endphrase %}
+
+{% phrase render_suggest_utterance__forecast_aftertomorrow %}
+  {% chooseline %}
+    А на послезавтра?
+    А что насчёт послезавтра?
+    А что будет послезавтра?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__forecast_weekend %}
+  На выходные
+{% endphrase %}
+
+{% phrase render_suggest_utterance__forecast_weekend %}
+  {% chooseline %}
+    А на выходные?
+    А какая на выходные?
+    А в выходные?
+  {% endchooseline %}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__nowcast_when_starts %}
+  Когда начнется дождь?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__nowcast_when_starts %}
+  Когда начнется дождь?
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__nowcast_when_ends %}
+  Когда закончится дождь?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__nowcast_when_ends %}
+  Когда закончится дождь?
+{% endphrase %}

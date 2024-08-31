@@ -1,0 +1,36 @@
+action: scenario
+name: tts.fast-events
+debug_directives: false
+steps:
+    - action: proxy.session
+      uuid: ffffffffffffffff919b525400123456
+      steps:
+        - action: proxy.synchronize_state
+          description: System.SynchronizeState
+          experiments:
+            - disregard_uaas
+          app_id: uniproxy.test
+          app_version: 1.2.3
+          platform: android
+          os_version: "5.0"
+          device_manufacturer: Yandex
+          device_model: Station
+
+        - action: proxy.send_event
+          namespace: TTS
+          name: ListVoices
+
+        - action: proxy.wait_for_reply
+          mode: first
+          checks:
+            - check: proxy.check.event_name
+              namespace: TTS
+              name: Voices
+
+        - action: proxy.send_event
+          namespace: TTS
+          name: SpeechStarted
+
+        - action: proxy.send_event
+          namespace: TTS
+          name: SpeechFinished

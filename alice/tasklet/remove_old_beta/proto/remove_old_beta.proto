@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+import "ci/tasklet/common/proto/service.proto";
+import "search/priemka/yappy/proto/structures/patch.proto";
+import "tasklet/services/ci/proto/ci.proto";
+import "tasklet/api/tasklet.proto";
+import "tasklet/services/yav/proto/yav.proto";
+
+package alice.tasklet.remove_old_beta;
+
+message Context {
+    option (.tasklet.context) = true;
+
+    yav_service.YavService yav = 1 [(.tasklet.inject) = true];
+}
+
+message Patch {
+    string name = 1;
+    int64 resource_id = 2;
+}
+
+message Config {
+    string template_name = 1;
+    string current_version = 2;
+    int32 age_to_delete = 3;
+
+    int32 retries = 4;
+    int32 sleep_time = 5;
+    float backoff = 6;
+
+    string token = 7;
+    string yappy_token = 8;
+    int32 wait_for_beta = 9;
+}
+
+message Input {
+    ci.TaskletContext context = 1;
+
+    Config config = 2;
+}
+
+message State {
+    bool success = 1;
+}
+
+message Output {
+    State state = 1;
+}
+
+message RemoveOldBeta {
+    option (.tasklet.tasklet_interface) = true;
+
+    Input input = 1 [(.tasklet.input) = true];
+    Output output = 2 [(.tasklet.output) = true];
+
+    Context ctx = 3;
+}

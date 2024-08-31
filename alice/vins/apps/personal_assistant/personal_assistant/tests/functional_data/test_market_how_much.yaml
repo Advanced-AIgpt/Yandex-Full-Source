@@ -1,0 +1,411 @@
+labels:
+  found: '.*(Посмотрела на Маркете|Заглянула на Маркет|Это средняя цена по данным
+    Яндекс Маркета|Нашла на Маркете).*'
+  not_found: '(Я не изучала спрос на это|Открываю Яндекс|Интересный вопрос\. Сейчас
+    найдём|Даже не знаю\. Спросим Яндекс\?|Давайте поищем в Яндексе|Ищу ответ)'
+  how_much__vulgar_query_result: '.*(Не стоит|Не хочу|Нет настроения|что-нибудь другое).*'
+  not_found_elari_watch: 'Я не изучала спрос на это.|Даже не знаю.'
+  clarification: '.*Я (с радостью )?подскажу (вам)? цену — только назовите (нужный
+    )?товар.*'
+
+test_market_how_much_popular_goods_found:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько стоит лего:
+      bass:
+        form_name: 'personal_assistant.scenarios.how_much'
+        blocks:
+        - type: text_card
+          phrase_id: how_much__popular_goods
+        - type: div_card
+          card_template: market_popular_goods
+        form:
+          request:
+            value: 'лего'
+          popular_good:
+            value:
+              prices:
+                avg: 3800
+                min: 590
+              url: 'https://market.yandex.ru'
+              total_count: 2355
+              results:
+              - picture: 'http://avatars.mds.yandex.net/'
+                title: 'Электромеханический конструктор LEGO Technic 42065 Скоростной
+                  вездеход'
+                url: 'https://market.yandex.ru/product/1720274640?clid=888&lr=213'
+                prices:
+                  default: 3500
+                  avg: 4365
+                  min: 3390
+                type: 'model'
+                id: 1720274640
+              category_name: 'Конструкторы'
+          gl_filters:
+            value:
+              '7893318':
+              - '3732937'
+          category:
+            value:
+              hid: 10470548
+              nid: 59749
+
+      # блок ассертов
+      text: '{found}'
+      cards:
+      - simple_text
+      - div_card
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          query:
+            value: 'лего'
+
+test_market_how_much_model_found:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько стоит Xiaomi Mi Body Fat Scale 2:
+      bass:
+        form_name: 'personal_assistant.scenarios.how_much'
+        blocks:
+        - type: text_card
+          phrase_id: how_much__model
+        - type: div_card
+          card_template: market_model_offers
+        form:
+          request:
+            value: 'xiaomi mi body fat scale 2'
+          model:
+            value:
+              prices:
+                avg: 2782
+                default: 2273
+                min: 2273
+              url: 'http://market.yandex.ru/product/1972357401'
+              results:
+              - picture: 'http://avatars.mds.yandex.net/'
+                prices:
+                  value: 2273
+                shop: 'GoodPrice'
+                title: 'Напольные весы Xiaomi Mi Body Fat Scale 2'
+                type: 'offer'
+                url: 'http://market.yandex.ru/offer/ware_md5'
+                ware_id: 'ware_md5'
+              title: 'Весы Xiaomi Mi Body Fat Scale 2'
+              id: 1972357401
+              picture: "http://avatars.mds.yandex.net/"
+
+      # блок ассертов
+      text: '{found}'
+      cards:
+      - simple_text
+      - div_card
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'xiaomi mi body fat scale 2'
+
+test_market_how_much_goods_not_found:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    dialog:
+      сколько стоит ывдлоарывлдо:
+        bass:
+          form_name: 'personal_assistant.scenarios.how_much'
+          blocks:
+          - type: text_card
+            phrase_id: how_much__empty_serp
+          - type: suggest
+            suggest_type: how_much__yandex_search
+            data: 'viewport://?someurl'
+          - type: command
+            command_type: open_uri
+            command_sub_type: market_serp
+            data:
+              uri: 'viewport://?someurl'
+          form:
+            request:
+              value: 'ывдлоарывлдо'
+
+      # блок ассертов
+        text: '{not_found}'
+        voice: '{not_found}'
+        cards:
+        - text_with_button
+        buttons:
+          type: 'text_with_button'
+          title: 'Найти в Яндексе'
+          payload:
+            uri: 'viewport://?someurl'
+        suggests:
+        - type: how_much__yandex_search
+          payload:
+            uri: 'viewport://?someurl'
+        vins_form:
+          name: 'personal_assistant.scenarios.how_much'
+          slots:
+            request:
+              value: 'ывдлоарывлдо'
+        directives:
+        - name: open_uri
+          sub_name: market_serp
+          type: client_action
+          payload:
+            uri: 'viewport://?someurl'
+
+    app_info:
+      ignore:
+      - dexp
+      - watch
+      - irbis
+      - navigator_ios
+      - speaker
+      - navigator_android
+      - auto
+
+test_market_how_much_dont_want_to_answer:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    # some disputable inquiries of erotic or illegal character
+    почем рабы:
+      bass:
+        form_name: 'personal_assistant.scenarios.how_much'
+        blocks:
+        - type: text_card
+          phrase_id: how_much__vulgar_query_result
+
+      # блок ассертов
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'рабы'
+      text: '{how_much__vulgar_query_result}'
+      cards:
+      - simple_text
+
+test_market_how_much_no_experiment:
+  experiments: ['how_much_disable', 'mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько стоит лего:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+        slots:
+          query:
+            value: 'сколько стоит лего'
+
+test_market_how_much_ellipsis:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько стоят микроволновки:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+    а фен?:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much__ellipsis'
+        slots:
+          request:
+            value: 'фен'
+    а холодильник:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much__ellipsis'
+        slots:
+          request:
+            value: 'холодильник'
+
+test_market_how_much_ellipsis_classifiacation_boundary:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько стоит дрель:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+    а будильник:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much__ellipsis'
+        slots:
+          request:
+            value: 'будильник'
+
+test_market_how_much_ellipsis_ask_slot:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test_activate:
+    почем:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+      text: '{clarification}'
+    фен:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much__ellipsis'
+
+  test_non_activate:
+    сколько цена:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+      text: '{clarification}'
+    билет на поезд:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+
+# DIALOG-2259
+test_market_how_much_should_not_activate:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test:
+    сколько нот в пентатонике:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+
+  test_ellipsis_1:
+    сколько стоят микроволновки:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+    сколько нот в пентатонике:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+
+  test_ellipsis_2:
+    сколько стоит аккустическая гитара:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+    а струны для аккустической гитары:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much__ellipsis'
+    а сколько струн на гитаре:
+      vins_form:
+        name: 'personal_assistant.scenarios.search'
+
+# MALISA-182 - Дописать тесты на Сколько стоит
+test_market_activations:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  test1:
+    сколько стоят микроволновки:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'микроволновки'
+
+  test2:
+    цена на дрон:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'дрон'
+
+  test3:
+    Алиса, подскажи цены на кухонные комбайны:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'кухонные комбайны'
+
+  test4:
+    стульчик для кормления цена:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'стульчик для кормления'
+
+  test5:
+    цена 5 айфона:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: '5 айфона'
+
+  test6:
+    горнолыжные ботинки цены:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'горнолыжные ботинки'
+
+  test7:
+    почем лимоны:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'лимоны'
+
+  test8:
+    за сколько можно купить соковыжималку:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'соковыжималку'
+
+  test9:
+    сколько денег можно потратить на кроссовки для бега?:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'кроссовки для бега'
+
+  test10:
+    сколько денег стоит пульверизатор?:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'пульверизатор'
+
+  test11:
+    стоимость зеркала заднего вида на ладу:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'зеркала заднего вида на ладу'
+
+  test12:
+    какова стоимость резиновой лодки?:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'резиновой лодки'
+
+  test13:
+    корм для кроликов какая стоимость:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'корм для кроликов'
+
+  test14:
+    купальник цена:
+      vins_form:
+        name: 'personal_assistant.scenarios.how_much'
+        slots:
+          request:
+            value: 'купальник'
+
+test_market_how_much_goods_not_found_for_elari_watch:
+  experiments: ['mm_disable_protocol_scenario=MarketHowMuch']
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  test:
+    сколько стоят презервативы:
+      bass:
+        form_name: 'personal_assistant.scenarios.how_much'
+        blocks:
+        - type: text_card
+          phrase_id: how_much__empty_serp
+        form:
+          request:
+            value: 'презервативы'
+
+      text: '{not_found_elari_watch}'
+      voice: '{not_found_elari_watch}'

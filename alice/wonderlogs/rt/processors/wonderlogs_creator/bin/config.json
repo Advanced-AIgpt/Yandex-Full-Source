@@ -1,0 +1,104 @@
+{
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "/logs/current-wonderlogs-creator.log",
+                "MinLevel": "Debug",
+                "ExcludeCategories": ["RpcProxyClient", "Rpc", "Bus", "Api", "Concurrency", "RpcClient", "Dns"]
+            }
+        ]
+    },
+    "ProcessorConfig": {
+        "ShardsCount": 64,
+        "CompressionCodec": "zstd_6",
+        "OutputQueue": "//home/alice/test/big-rt/qyt/wonderlogs-creator/wonderlogs",
+        "SleepMilliseconds": 1000
+    },
+    "Suppliers": [
+        {
+            "YtSupplier": {
+                "QueueConsumer": "wonderlogs-creator",
+                "QueuePath": "//home/alice/test/big-rt/qyt/uuid-message-ids",
+                "ChunkSize": 500,
+                "Cluster": "markov",
+                "DelayAfterEmptyReadMs": 100,
+                "FlushChunkIntervalMs": 100
+            },
+            "Alias": "megamind-resharder"
+        }
+    ],
+    "StateManagerConfigs": {
+        "UuidMessageId": {
+            "StateManagerConfig": {
+                "StateCacheConfig": {
+                    "PinnedEpochsCount": 5
+                }
+            },
+            "StateTable": "//home/alice/test/big-rt/states/wonderlogs-creator/uuid-message-ids"
+        },
+        "UniproxyPrepared": {
+            "StateTable": "//home/alice/test/big-rt/states/uniproxy-creator/uniproxy-prepared"
+        },
+        "MegamindPrepared": {
+            "StateTable": "//home/alice/test/big-rt/states/megamind-creator/megamind-prepared"
+        }
+    },
+    "ConsumingSystem": {
+        "MaxShards": 64,
+        "MaxShardsToCheck": 16,
+        "Shards": {
+            "Range": {
+                "Begin": 0,
+                "End": 64
+            }
+        },
+        "MainPath": "//home/alice/test/big-rt/cs/wonderlogs-creator/main",
+        "Cluster": "markov"
+    },
+    "HttpServer": {
+        "Port": 3450
+    },
+    "YtClientConfig": {
+        "YtConfigLayers": [
+            {
+                "DirectLookupReplicas": {
+                    "GetInSyncTimeoutSec": 2,
+                    "ReplicasListRefreshPeriodSec": 30
+                }
+            },
+            {
+                "Retrying": {
+                    "RetryingExecutorConfig": {
+                        "Attempts": 10,
+                        "SlowdownCoeff": 2,
+                        "MinIntervalMs": 100
+                    },
+                    "ErrorCodesMinIntervalMs": {
+                        "108": 2000
+                    },
+                    "RetryableErrorCodes": [
+                        1,
+                        2,
+                        3,
+                        100,
+                        101,
+                        105,
+                        108,
+                        116,
+                        1701,
+                        1702,
+                        1707,
+                        1714,
+                        1722,
+                        1723
+                    ]
+                }
+            }
+        ],
+        "TransactionKeeper": {
+            "ShareTransactionMultiplier": 0,
+            "CommitPeriodMs": 500
+        }
+    },
+    "MaxInflightBytes": 1000000
+}

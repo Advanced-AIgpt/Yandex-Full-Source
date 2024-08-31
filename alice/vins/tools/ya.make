@@ -1,0 +1,9 @@
+RECURSE(
+    load_testing
+    nirvana
+    nlu
+    pa
+    train
+    vins_tools
+    vins_tools/wizard_mocker
+)

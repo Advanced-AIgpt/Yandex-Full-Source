@@ -1,0 +1,29 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "taxi_new/macros.nlg" import no_active_orders, no_driver_yet, need_phone_device with context %}
+
+{% phrase render_suggest_caption__taxi_call_to_driver_action %}
+  Позвонить водителю
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_call_to_driver_action %}
+  {{ context.taxi_call_to_driver_action.data.uri }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if is_active_attention("no_phone_number") %}
+    К сожалению, мне не дают номер телефона водителя.
+  {% elif is_active_attention("no_driver_yet") %}
+    {{ no_driver_yet() }}
+  {% elif is_active_attention("no_active_orders") %}
+    {{ no_active_orders() }}
+  {% elif is_active_attention("need_phone_device") %}
+    {{ need_phone_device() }}
+  {% else %}
+    {% chooseline %}
+      Набираю.
+      Секундочку.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

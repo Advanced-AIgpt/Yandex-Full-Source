@@ -1,0 +1,47 @@
+action: scenario
+name: system.fast-events
+debug_directives: false
+steps:
+    - action: proxy.session
+      uuid: ffffffffffffffff919b525400123456
+      steps:
+        - action: proxy.synchronize_state
+          description: System.SynchronizeState
+          experiments:
+            - disregard_uaas
+          app_id: uniproxy.test
+          app_version: 1.2.3
+          platform: android
+          os_version: "5.0"
+          device_manufacturer: Yandex
+          device_model: Station
+
+        - action: proxy.send_event
+          namespace: System
+          name: EchoRequest
+          payload:
+              some_key: some_value
+              other_key: other_value
+
+        - action: proxy.aggregate_replies
+          messages:
+            - message: System.EchoResponse
+              checks:
+                - check: proxy.check.event_payload
+                  key: some_key
+                  value: some_value
+                - check: proxy.check.event_payload
+                  key: other_key
+                  value: other_value
+
+        - action: proxy.send_event
+          namespace: System
+          name: ExceptionEncountered
+
+        - action: proxy.send_event
+          namespace: System
+          name: UserInactivityReport
+
+        - action: proxy.send_event
+          namespace: System
+          name: ResetUserInactivity

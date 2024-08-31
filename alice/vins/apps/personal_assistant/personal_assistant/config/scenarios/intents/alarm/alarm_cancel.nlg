@@ -1,0 +1,59 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "alarm/alarm__common.nlg" %}
+{% from "alarm/alarm__common.nlg" import render_error, render_alarm_time, render_alarm_list %}
+
+{% macro render_available_alarms(available_alarms) %}
+  {% if available_alarms|length == 1 %}
+    Сейчас установлен только один будильник
+    {{ render_alarm_time(available_alarms[0].date, available_alarms[0].time) }}, выключить его?
+  {% else %}
+    Сейчас установлено несколько будильников:
+    \n{% vc %}-{% evc %}
+    {{ render_alarm_list(available_alarms) }}
+    \n{% vc %}-{% evc %}
+    Какой из них вы хотите выключить?
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_active_attention('alarm__is_android') %}
+    {% chooseline %}
+      Давайте я вам список будильников открою.
+      Давайте посмотрим на ваши будильники.
+    {% endchooseline %}
+  {% elif is_active_attention('alarm__invalid_id') %}
+    У меня нет такого будильника.
+    {{ render_available_alarms(form.available_alarms) }}
+  {% elif is_active_attention('alarm__no_alarms_for_time')
+      or is_active_attention('alarm__multiple_alarms') %}
+    {{ render_available_alarms(form.available_alarms) }}
+  {% else %}
+    {% if form.alarm_id == 'all' %}
+      Хорошо, выключила все будильники.
+    {% else %}
+      Хорошо, выключила будильник {{ render_alarm_time(form.date, form.time) }}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_no_alarms_available_phrase() %}
+  {% chooseitem 8 %}
+    У вас нет включенных будильников.
+  {% or 5 %}
+    У вас нет включенных будильников. Счастливый вы человек!
+  {% or 2 %}
+    Будильников не обнаружено. Сон в безопасности.
+  {% or 5 %}
+    У вас нет включенных будильников. Наверное, вам все завидуют.
+  {% endchooseitem %}
+{% endmacro %}
+
+{% phrase render_error__alarmerror %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    Я не умею отключать будильник на этом устройстве.
+  {% elif context.error.data.code == 'no_alarms_available' %}
+    {{ render_no_alarms_available_phrase() }}
+  {% else %}
+    {{ render_error(context.error.data.code, date=form.date, time=form.time) }}
+  {% endif %}
+{% endphrase %}

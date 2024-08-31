@@ -1,0 +1,115 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "cards/call.nlg" %}
+{% from "scenarios/intents/common.nlg" import calls_not_supported %}
+
+{% macro elari_watch_call_emergency() %}
+  {% chooseline %}
+    Если что-то случилось, нажми и держи яркую кнопку. Родители получат сигнал.
+    Звонить я пока не умею. Если что-то не так, нужно долго держать яркую кнопку.
+    Пока не умею. Но если срочно нужна помощь, нажми и держи яркую кнопку.
+  {% endchooseline %}
+  {% chooseline %}
+    А телефон {{ form.recipient_info.title | inflect('gen') }} — {{ form.recipient_info.phone }}, можно позвонить с телефона.
+    Телефон {{ form.recipient_info.title | inflect('gen') }} — {{ form.recipient_info.phone }}, можно звонить с телефона.
+    Телефон {{ form.recipient_info.title | inflect('gen') }} — {{ form.recipient_info.phone }}, можно набрать с телефона.
+    Телефон {{ form.recipient_info.title | inflect('gen') }} — {{ form.recipient_info.phone }}, можно позвонить с телефона.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro elari_watch_calls_not_supported() %}
+  {% chooseline %}
+    Я научусь звонить с часов, но пока не умею.
+    С этим в часах пока не помогу. Но только пока.
+    Я бы и рада, но ещё не научилась. Всё будет.
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% with %}
+    {% set calls_not_supported_by_client = not form.recipient_info %}
+
+    {% if is_active_attention("permission_read_contacts_denied") %}
+      {% chooseline %}
+        Чтобы звонить, приложению нужен доступ к контактам — включите его в настройках.
+      {% endchooseline %}
+    {% endif %}
+
+    {% if is_active_attention("calls_not_supported_on_device") %}
+      {# even for non-phone type clients react to emergency calls #}
+      {% if form.recipient_info.type == "emergency" or recipient_info %}
+        {% if is_elari_watch() %}
+          {{ elari_watch_call_emergency() }}
+        {% else %}
+          {% chooseline %}
+            Телефон {{ form.recipient_info.title | inflect('gen') }} — {{ form.recipient_info.phone }}, звоните скорее со своего телефона.
+            {{ form.recipient_info.title | capitalize_first }} — номер {{ form.recipient_info.phone }}, наберите на телефоне.
+            {{ form.recipient_info.phone }} — номер {{ form.recipient_info.title | inflect('gen') }}, наберите скорее со своего телефона.
+            Я волнуюсь за вас, {{ form.recipient_info.title }} - номер {{ form.recipient_info.phone }}, звоните скорее с телефона.
+            Звоните с телефона в {{ form.recipient_info.title | inflect('acc') }} по номеру {{ form.recipient_info.phone }} скорее, я за вас переживаю.
+          {% endchooseline %}
+        {% endif %}
+      {% else %}
+        {% if is_elari_watch() %}
+          {{ elari_watch_calls_not_supported() }}
+        {% else %}
+          {{ calls_not_supported() }}
+        {% endif %}
+      {% endif %}
+    {% elif calls_not_supported_by_client %}
+      {# this is different from "...not_supported_by_device" in the sense that device technically *can* make calls #}
+      {% chooseline %}
+        Пока что я умею звонить только в экстренные службы.
+      {% endchooseline %}
+    {% else %}
+      {% if form.recipient_info %}
+        {{ confirm_call() }}
+      {% endif %}
+    {% endif %}
+  {% endwith %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__call__call %}
+  Позвонить
+{% endphrase %}
+
+{% phrase render_suggest_uri__call__call %}
+  {{ form.recipient_info.phone_uri }}
+{% endphrase %}
+
+{% macro call_suggest_impl() %}
+  {% chooseline %}
+    Позвонить в
+    Вызвать
+    Вызывай
+    Вызови
+    Позвони в
+  {% endchooseline %}
+  {{ context.call__emergency_service.data.title | inflect('acc') }}
+{% endmacro %}
+
+{% phrase render_suggest_caption__call__emergency_service %}
+  {{ call_suggest_impl() }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__call__emergency_service %}
+  {{ call_suggest_impl() }}
+{% endphrase %}
+
+{% phrase ask__recipient %}
+  {% chooseline %}
+    Куда нужно позвонить?
+    Куда будем звонить?
+    Куда вам нужно позвонить?
+  {% endchooseline %}
+{% endphrase %}
+
+{% macro confirm_call() %}
+  {% with title = form.recipient_info.title %}
+    {% chooseline %}
+      Набираю {{ title|inflect('acc') }}
+      Звоню {{ title|inflect('dat') }}
+      Уже набираю {{ title|inflect('acc') }}
+      Сейчас позвоним {{ title|inflect('dat') }}
+    {% endchooseline %} ...
+  {% endwith %}
+{% endmacro %}

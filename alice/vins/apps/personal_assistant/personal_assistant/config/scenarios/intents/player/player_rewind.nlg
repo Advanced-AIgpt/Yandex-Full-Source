@@ -1,0 +1,21 @@
+{% nlgimport "player/player__common.nlg" %}
+{% from "video/video__common.nlg" import attentions_general with context %}
+{% from "player/player__common.nlg" import alicesdk_player_response with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention('rewind_position_before_begin') %}
+    Не могу перемотать так далеко назад
+  {% elif is_active_attention('rewind_position_after_end') %}
+    Не могу перемотать так далеко вперед
+  {% elif is_active_attention('cannot_rewind_tv_stream') %}
+    Не могу перемотать эфирную программу
+  {% elif is_active_attention('cannot_rewind_camera_stream') %}
+    Не могу перемотать трансляцию с камеры
+  {% else %}
+    {% if has_alicesdk_player() %}
+      {{ alicesdk_player_response('Перематываю') }}
+    {% else %}
+      {{ attentions_general(form, context, 'say nothing') }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

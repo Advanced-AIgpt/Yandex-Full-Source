@@ -1,0 +1,68 @@
+{% nlgimport "cards/serp_gallery.nlg" %}
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "search/search__common.nlg" %}
+{% from "scenarios/intents/common.nlg" import tts_pause_raw %}
+{% from "search/search__common.nlg" import render_serp_invitation_message %}
+
+{% phrase serp_gallery_porno_warning %}
+  {% chooseline %}
+    Нашла вот такое. Только вслух читать не буду, давайте как-нибудь сами.
+    Без проблем, смотрите. Только зачитывать не буду, хорошо?
+  {% endchooseline %}
+{% endphrase %}
+
+{% phrase serp_invitation_message %}
+  {% if form.answer.readable_tts_url and form.answer.tts_url %}
+    {% chooseline %}
+      Вот что нашлось. Начнем с
+      У меня много ответов. Один из них — на
+      Нашла много всего. Начну с
+      Нашла ответ на
+      Есть ответ! Нашла здесь:
+    {% endchooseline %}
+    {% vc %} {{ form.answer.tts_url }}. {% evc %}
+    {% tx %} {{ form.answer.readable_tts_url }}. {% etx %}
+  {% else %}
+    {{ render_serp_invitation_message() }}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_voice_suggest(suggest) %}
+  {% if suggest == 'personal_assistant.scenarios.serp_gallery__switch_to_next' %}
+    перейти к следующему
+  {% elif suggest == 'personal_assistant.scenarios.serp_gallery__item_continuation' %}
+    продолжить
+  {% endif %}
+{% endmacro %}
+
+{% macro render_voice_suggests(suggests) %}
+  {% if suggests and suggests|length >= 1 %}
+    {{ tts_pause_raw(500) }}
+    {{ render_voice_suggest(suggests[0]) }}
+    {% if suggests|length >= 2 %}
+      или {{ render_voice_suggest(suggests[1]) }}
+    {% endif %}
+    ?
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {% if is_smart_speaker() %}
+    {% text %} Продолжение поиска {% endtext %}
+  {% endif %}
+  {% voice %}
+    {% if is_active_attention('serp_gallery_stop') %}
+      Хорошо, не буду.
+    {% elif is_active_attention('serp_gallery_cant_do_it') %}
+      Я не могу этого сделать.
+    {% else %}
+      {% if form.answer.tts_url and not form.answer.readable_tts_url %}
+        {{ form.answer.tts_url }}: {{ tts_pause_raw(500) }}
+      {% endif %}
+      {% if form.answer.tts %}
+        {{ form.answer.tts }}
+      {% endif %}
+    {% endif %}
+    {{ render_voice_suggests(form.voice_suggests) }}
+  {% endvoice %}
+{% endphrase %}

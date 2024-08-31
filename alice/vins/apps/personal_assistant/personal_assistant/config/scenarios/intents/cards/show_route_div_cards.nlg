@@ -1,0 +1,157 @@
+{% from "cards/common.nlg" import open_uri_action_for_item_in_list, font_color with context  %}
+
+{% macro render_footer_text(key) %}
+  {% if key == 'car' %}
+    МАРШРУТ НА АВТО
+  {% elif key == 'public_transport' %}
+    МАРШРУТ НА ТРАНСПОРТЕ
+  {% elif key == 'pedestrian' %}
+    МАРШРУТ ПЕШКОМ
+  {% endif %}
+{% endmacro %}
+
+{% macro render_time_text(key, time) %}
+  {{ time|human_seconds_short }}
+  {% if key != 'public_transport' %}
+    , {{ route_card_dist(key) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_show_route_gallery_item(data, item_number) %}
+{% set image_url = data|get_item('image_url') %}
+{% set maps_url = data|get_item('maps_url') %}
+{% set icon = data|get_item('icon') %}
+{% set time = data|get_item('time') %}
+{% set key = data|get_item('text_key') %}
+{
+   "height":{
+      "type":"numeric",
+      "value":284,
+      "unit":"dp"
+   },
+   "alignment_horizontal":"left",
+   "frame":{
+      "style":"border",
+      "color":"{{ '#dcdee0' }}"
+   },
+   "action": {
+      "url": "{{ open_uri_action_for_item_in_list(maps_url, 'show_route_whole_card', item_number) }}",
+      "log_id": "show_route_gallery_card"
+   },
+   "children":[
+      {
+         "type":"div-image-block",
+         "image":{
+            "type":"div-image-element",
+            "ratio":1.45,
+            "image_url":"{{ image_url }}"
+         }
+      },
+      {
+         "type":"div-table-block",
+         "rows":[
+            {
+               "cells":[
+                  {
+                     "image":{
+                        "type":"div-image-element",
+                        "image_url": "{{ icon }}"
+                     },
+                     "vertical_alignment":"bottom",
+                     "image_size":"l"
+                  },
+                  {
+                     "text":"{{ render_time_text(key, time) }}",
+                     "vertical_alignment":"bottom",
+                     "text_style":"title_l"
+                  }
+               ],
+               "top_padding":"s",
+               "bottom_padding":"s",
+               "type":"row_element"
+            }
+         ],
+         "columns":[
+            {
+               "right_padding":"s",
+               "left_padding":"zero",
+               "weight":0
+            },
+            {
+               "left_padding":"zero",
+               "weight":0
+            }
+         ]
+      },
+      {
+         "type":"div-separator-block",
+         "size":"xxs",
+         "has_delimiter":1
+      },
+      {
+         "text":"{{ font_color("#6839CF", render_footer_text(key)) }}",
+         "type":"div-footer-block",
+         "action": {
+            "url": "{{ open_uri_action_for_item_in_list(maps_url, 'show_route_button', item_number) }}",
+            "log_id": "show_route_gallery_card_text"
+         }
+      }
+   ],
+   "width":{
+      "type":"numeric",
+      "value":272,
+      "unit":"dp"
+   },
+   "background":[
+      {
+         "type":"div-solid-background",
+         "color":"{{ '#ffffff' }}"
+      }
+   ],
+   "type":"div-container-block",
+   "alignment_vertical":"top",
+   "direction":"vertical"
+}
+{% endmacro %}
+
+{% macro route_card_dist(key) %}
+  {% if key == 'car' %}
+    {{ form.route_info.car.length.value | human_meters_short }}
+  {% elif key == 'pedestrian' %}
+    {{ form.route_info.pedestrian.walking_dist.value | human_meters_short }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_show_route_gallery(data) %}
+{
+   "states":[
+      {
+         "state_id": 1,
+         "blocks":[
+            {
+               "type":"div-gallery-block",
+               "items":[
+                 {% for item in data.show_route_data %}
+                   {% if loop.index0 %}
+                    ,
+                   {% endif %}
+                   {{ render_show_route_gallery_item(item, loop.index) }}
+                 {% endfor %}
+               ]
+            }
+         ]
+      }
+   ],
+   "background":[
+    {
+       "type":"div-solid-background",
+       "color":"{{ '#ffffff' }}"
+    }
+   ]
+}
+{% endmacro %}
+
+
+{% card show_route_gallery %}
+	{{ render_show_route_gallery(context.data) }}
+{% endcard %}

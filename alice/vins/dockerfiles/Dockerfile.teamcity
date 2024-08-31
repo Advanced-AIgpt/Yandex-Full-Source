@@ -1,0 +1,50 @@
+FROM registry.yandex.net/vins/base:1.9
+
+ARG SERVER_URL=https://teamcity.yandex-team.ru
+ARG CONFIG_DIR=/data/teamcity_agent/conf
+ARG ENV_NAME=vins-env
+
+ENV KERAS_BACKEND=tensorflow
+ENV CONFIG_FILE=${CONFIG_DIR}/buildAgent.properties
+ENV AGENT_HOME=/opt/buildagent
+ENV JAVA_HOME=/usr/local/java8
+
+COPY . code
+
+RUN \
+    # setup vins binary deps
+    sh code/env_scripts/setup-env.sh \
+    # setup teamcity
+    && apt-get -qq install --no-install-recommends -y yandex-jdk8 \
+    && wget -q --output-document=buildagent.zip ${SERVER_URL}/update/buildAgent.zip \
+    && unzip -qq buildagent.zip -d ${AGENT_HOME} \
+    && rm -rf buildagent.zip \
+    && chmod u+x ${AGENT_HOME}/bin/*.sh \
+    && mkdir -p ${CONFIG_DIR} \
+    && echo "serverUrl=${SERVER_URL}" > ${CONFIG_FILE} \
+    \
+    # install vins
+    && pip install -U virtualenv \
+    && virtualenv --system-site-packages ${ENV_NAME} \
+    ## support of old openstack venv path
+    && mkdir -p '/venvs/' \
+    && ln -s "${PWD}/${ENV_NAME}" /venvs/vins-dm \
+    ## install requirements
+    && source ${ENV_NAME}/bin/activate \
+    && pip install -U pip \
+    && hash -r \
+    && cd code/ \
+    && sh env_scripts/setup-venv.sh --no-resources \
+    && cd .. \
+    && deactivate \
+    \
+    # cleanup
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf env_scripts/
+
+
+# run
+COPY docker_scripts/teamcity.sh /
+RUN chmod u+x /teamcity.sh
+EXPOSE 9090
+ENTRYPOINT ["/teamcity.sh"]

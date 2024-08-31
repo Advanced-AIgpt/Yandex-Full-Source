@@ -1,0 +1,115 @@
+[
+    {
+        "action": "set_timeout",
+        "timelimit": 7
+    },
+    {
+        "action": "load_library",
+        "filename": "uniclient__common.json"
+    },
+    {
+        "action": "from_library",
+        "use": "send_synchronize_state"
+    },
+    {
+        "action": "send_message",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Recognize"
+                },
+                "payload": {
+                    "lang": "ru-RU",
+                    "topic": "dialogeneral",
+                    "application": "test",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key",
+                    "punctuation": false,
+                    "advancedASROptions": {
+                        "partial_results": true
+                    }
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_stream_id",
+            "new_message_id",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_send_data",
+        "filename": "data/whathaveyoudone.opus",
+        "chunk_size": 24000,
+        "chunk_duration": 0.5,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Result",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "endOfUtt": false,
+                    "responseCode": "OK"
+                }
+            }
+        },
+        "normalized_sample": [
+            [ "что ты", "что ты сделал", "что ты сделал для науки" ]
+        ]
+    },
+    {
+        "action": "async_recv_message",
+        "id": 0,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Result",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "endOfUtt": false,
+                    "responseCode": "OK"
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Result"
+                },
+                "payload": {
+                    "responseCode": "OK",
+                    "endOfUtt": true
+                }
+            }
+        },
+        "normalized_sample": [
+            [ "что ты сделал для науки?", "что ты сделал для науки.", "что ты сделал для науки!", "что ты сделал для науки" ]
+        ],
+        "recognition_sample": [
+            [ "что ты сделал для науки" ]
+        ]
+    }
+]

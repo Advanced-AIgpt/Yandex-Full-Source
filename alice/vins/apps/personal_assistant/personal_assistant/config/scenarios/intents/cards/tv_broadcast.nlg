@@ -1,0 +1,695 @@
+{% from "json_macro.jinja" import json_list %}
+{% from "cards/common.nlg" import open_uri_action with context %}
+{% from "tv_broadcast/tv_broadcast.nlg" import add_dot with context %}
+
+{% set thumb_bg = "http://avatars.mds.yandex.net/get-bass/934837/tv_thumb_bg/orig" %}
+{% set white_btn = "http://avatars.mds.yandex.net/get-bass/469429/white_btn/orig" %}
+{% set violet_btn = "http://avatars.mds.yandex.net/get-bass/895508/violet_btn/orig" %}
+
+{% macro format_date(date, tz=None) -%}
+  {{ date | parse_dt | human_day_rel(tz) }}
+{%- endmacro %}
+
+{%- macro crop_title(title, len) -%}
+  {% if (title.strip() | length <= len) %}
+    {{ title }}
+  {% else %}
+    {{ title.strip()[:len-1].strip() }}…
+  {% endif %}
+{%- endmacro -%}
+
+{% macro get_title(event, len, short = false) %}
+    {% set episodeTitle = event.episodeTitle or '' %}
+
+    {% set seasonTitle = event.seasonName or event.seasonNumber or '' %}
+    {% if seasonTitle | int %}
+        {% set seasonTitle = 'Сезон ' + seasonTitle | string %}
+    {% endif %}
+    {% if seasonTitle %}
+        {% set seasonTitle = add_dot(seasonTitle).strip() + ' ' %}
+    {% endif %}
+
+    {% set programTitle = event.title if (event.title and (event.title != episodeTitle) and (event.programId != event.episodeId)) else '' %}
+    {% if programTitle and (seasonTitle or episodeTitle) %}
+        {% set programTitle = add_dot(programTitle).strip() + ' ' %}
+    {% endif %}
+
+    {% if short %}
+        {{ crop_title(seasonTitle + episodeTitle, len) }}
+    {% else %}
+        {{ crop_title(programTitle + seasonTitle + episodeTitle, len) }}
+    {% endif %}
+{% endmacro %}
+
+{% macro time_left(time1, time2) %}
+  {% set diff = time1 | seconds_diff(time2) | human_seconds_short %}
+  {% if diff.startswith('1 ч') %}
+    остался
+  {% elif diff.endswith('1 мин') and (diff | length <= 6) and (diff != '11 мин') %}
+    осталась
+  {% else %}
+    осталось
+  {% endif %}
+  {{ diff }}
+{% endmacro %}
+
+{% card schedule_card %}
+{
+    "states": [{
+        "state_id": 1,
+        "blocks": [{
+            "type": "div-separator-block",
+            "size": "xxs"
+        }, {
+            "type": "div-tabs-block",
+            "has_delimiter": 0,
+            "inactive_tab_color": "{{ '#919CB5' }}",
+            "active_tab_color": "{{ '#FFFFFF' }}",
+            "active_tab_bg_color": "{{ '#6839CF' }}",
+            "items": [
+                {
+                    "content": {
+                        "children": [{
+                            "type": "div-separator-block",
+                            "size": "xs"
+
+                        }, {
+                            "type": "div-table-block",
+                            "rows": [
+                                {% for channel in form.answer.schedule[:5] %}
+                                {
+                                    "type": "row_element",
+                                    "bottom_padding": "xs",
+                                    "cells": [{
+                                        "horizontal_alignment": "center",
+                                        "image": {
+                                            "image_url": "https:{{ channel.channel.logo }}",
+                                            "ratio": 1.333,
+                                            "type": "div-image-element"
+                                        },
+                                        "image_size": "l"
+                                    }, {
+                                        "text": "<font color=\"{{ '#919CB5' }}\">{{ channel.events[0].start | parse_dt | format_datetime('%H:%M') }}</font>",
+                                        "text_style": "text_m"
+                                    }, {
+                                        "text": "<font color=\"{{ '#333333' }}\">{{ get_title(channel.events[0], 26).strip() | html_escape }}</font>",
+                                        "text_style": "text_m",
+                                        "action": {
+                                            "url": "{{ channel.events[0].schedule_url }}&utm_medium=schedule",
+                                            "log_id": "tv_schedule/event_schedule"
+                                        }
+                                    }, {
+                                        {% if channel.channel.stream_info and channel.channel.stream_info.program.eventId == channel.events[0].eventId %}
+                                        "horizontal_alignment": "center",
+                                        "image": {
+                                            "image_url": "{{ violet_btn }}",
+                                            "ratio": 1,
+                                            "type": "div-image-element"
+                                        },
+                                        "image_size": "l",
+                                        "action": {
+                                            "url": "{{ channel.channel.stream_info.channel.stream_url }}",
+                                            "log_id": "tv_schedule/event_play"
+                                        }
+                                        {% endif %}
+                                    }]
+                                }
+                                {{ "," if not loop.last }}
+                                {% endfor %}
+                            ],
+                            "columns": [{
+                                "left_padding": "zero",
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "weight": 1,
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "right_padding": "zero"
+                            }]
+                        }],
+                        "direction": "vertical",
+                        "height": {
+                            "type": "predefined",
+                            "value": "wrap_content"
+                        },
+                        "type": "div-container-block",
+                        "width": {
+                            "type": "predefined",
+                            "value": "match_parent"
+                        }
+                    },
+                    "title": {
+                        "text": "Все"
+                    }
+                },
+                {% for channel in form.answer.schedule[:20] %}
+                {
+                    "content": {
+                        "children": [{
+                            "type": "div-separator-block",
+                            "size": "xs"
+
+                        }, {
+                            "type": "div-table-block",
+                            "rows": [
+                                {% for event in channel.events[:5] %}
+                                {
+                                    "type": "row_element",
+                                    "bottom_padding": "xs",
+                                    "cells": [{
+                                        "horizontal_alignment": "center",
+                                        "image": {
+                                            "image_url": "https:{{ channel.channel.logo }}",
+                                            "ratio": 1.333,
+                                            "type": "div-image-element"
+                                        },
+                                        "image_size": "l"
+                                    }, {
+                                        "text": "<font color=\"{{ '#919CB5' }}\">{{ event.start | parse_dt | format_datetime('%H:%M') }}</font>",
+                                        "text_style": "text_m"
+                                    }, {
+                                        "text": "<font color=\"{{ '#333333' }}\">{{ get_title(event, 26).strip() | html_escape }}</font>",
+                                        "text_style": "text_m",
+                                        "action": {
+                                            "url": "{{ event.schedule_url }}&utm_medium=schedule",
+                                            "log_id": "tv_schedule/event_schedule"
+                                        }
+                                    }, {
+                                        {% if channel.channel.stream_info and channel.channel.stream_info.program.eventId == event.eventId %}
+                                        "horizontal_alignment": "center",
+                                        "image": {
+                                            "image_url": "{{ violet_btn }}",
+                                            "ratio": 1,
+                                            "type": "div-image-element"
+                                        },
+                                        "image_size": "l",
+                                        "action": {
+                                            "url": "{{ channel.channel.stream_info.channel.stream_url }}",
+                                            "log_id": "tv_schedule/event_play"
+                                        }
+                                        {% endif %}
+                                    }]
+                                }
+                                {{ "," if not loop.last }}
+                                {% endfor %}
+                            ],
+                            "columns": [{
+                                "left_padding": "zero",
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "weight": 1,
+                                "right_padding": "xs"
+                            }, {
+                                "left_padding": "zero",
+                                "right_padding": "zero"
+                            }]
+                        }],
+                        "direction": "vertical",
+                        "height": {
+                            "type": "predefined",
+                            "value": "wrap_content"
+                        },
+                        "type": "div-container-block",
+                        "width": {
+                            "type": "predefined",
+                            "value": "match_parent"
+                        }
+                    },
+                    "title": {
+                        "text": "{{ channel.channel.title | html_escape }}"
+                    }
+                }
+                {{ "," if not loop.last }}
+                {% endfor %}
+            ]
+        }, {
+            "type": "div-separator-block",
+            "size": "xs",
+            "has_delimiter": 1
+        }, {
+            "type": "div-footer-block",
+            "text": "<font color=\"{{ '#0A4DC3' }}\">ВСЕ ПЕРЕДАЧИ</font>",
+            "text_style": "button",
+            "action": {
+                "url": "{{ form.answer.schedule_url }}&utm_medium=schedule",
+                "log_id": "tv_schedule/all_schedule"
+            }
+        }]
+    }]
+}
+{% endcard %}
+
+{% card channel_card %}
+{% set channel = form.answer.schedule[0] %}
+    {
+    "states": [{
+        "state_id": 1,
+        "blocks": [{
+            "type": "div-separator-block",
+            "size": "xs"
+        }, {
+            "type": "div-table-block",
+            "rows": [{
+                "type": "row_element",
+                "bottom_padding": "xs",
+                "cells": [{
+                    "horizontal_alignment": "center",
+                    "image": {
+                        "image_url": "https:{{ channel.channel.logo }}",
+                        "ratio": 1.333,
+                        "type": "div-image-element"
+                    },
+                    "image_size": "l"
+                }, {
+                    "text": "<font color=\"{{ '#333333' }}\">{{ channel.channel.title | html_escape }}</font>",
+                    "text_style": "title_m"
+                }, {
+                    {% if form.answer.channel.stream_info %}
+                    "horizontal_alignment": "center",
+                        "image": {
+                            "image_url": "{{ violet_btn }}",
+                            "ratio": 1,
+                            "type": "div-image-element"
+                        },
+                        "image_size": "l",
+                        "action": {
+                            "url": "{{ form.answer.channel.stream_info.channel.stream_url }}",
+                            "log_id": "tv_channel/channel_play"
+                        }
+                    {% endif %}
+                }]
+            }],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "right_padding": "zero"
+            }]
+        }, {
+            "type": "div-table-block",
+            "rows": [
+                {% for event in channel.events[:7] %}
+                {
+                    "type": "row_element",
+                    "bottom_padding": "xs",
+                    "cells": [{
+                        "text": "<font color=\"{{ '#919CB5' }}\">{{ event.start | parse_dt | format_datetime('%H:%M') }}</font>",
+                        "text_style": "text_m"
+                    }, {
+                        "text": "<font color=\"{{ '#333333' }}\">{{ get_title(event, 31).strip() | html_escape }}</font>",
+                        "text_style": "text_m",
+                        "action": {
+                            "url": "{{ event.schedule_url }}&utm_medium=channel",
+                            "log_id": "tv_channel/event_schedule"
+                        }
+                    }]
+                }
+                {{ "," if not loop.last }}
+                {% endfor %}
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "xs"
+            }]
+        }, {
+            "type": "div-separator-block",
+            "size": "xxs",
+            "has_delimiter": 1
+        }, {
+            "type": "div-footer-block",
+            "text": "<font color=\"{{ '#0A4DC3' }}\">ВСЕ ПЕРЕДАЧИ</font>",
+            "text_style": "button",
+            "action": {
+                "url": "{{ form.answer.schedule_url }}&utm_medium=channel",
+                "log_id": "tv_channel/all_schedule"
+            }
+        }]
+    }]
+}
+{% endcard %}
+
+{% card program_card %}
+{% set program = form.answer.program %}
+{
+    "states": [{
+        "state_id": 1,
+        "blocks": [{
+            "type": "div-separator-block",
+            "size": "xs"
+        }, {
+            "type": "div-universal-block",
+            "title": "<font color=\"{{ '#919CB5' }}\">{{ program.type | capitalize_first | html_escape if program.type else "" }}
+                {% if program.ageRestriction %}
+                    {{ ' ' + program.ageRestriction | string + '+'}}
+                {% endif %}
+            </font>",
+            "text": "<font color=\"{{ '#333333' }}\">{{ program.title | html_escape }}</font>",
+            "title_style": "text_m",
+            "text_style": "title_m",
+            "title_max_lines": 1,
+            "side_element": {
+                "element": {
+                    "type": "div-image-element",
+                    "image_url": "http:{{ program.logo }}",
+                    "ratio": 1
+                },
+                "position": "right",
+                "size": "s"
+            },
+            "text_max_lines": 2
+        }, {
+            "type": "div-universal-block",
+            "text": "<font color=\"{{ '#333333' }}\">{{ program.description | html_escape if program.description else "" }}</font>",
+            "text_max_lines": 4,
+            "text_style": "text_m"
+        }, {
+            "type": "div-separator-block",
+            "size": "xs",
+            "has_delimiter": 1
+        },
+        {% for channel in form.answer.schedule[:5] %}
+        {
+            "type": "div-separator-block",
+            "size": "s"
+        }, {
+            "type": "div-table-block",
+            "rows": [{
+                "type": "row_element",
+                "bottom_padding": "xs",
+                "cells": [{
+                    "horizontal_alignment": "center",
+                    "image": {
+                        "image_url": "http:{{ channel.channel.logo }}",
+                        "ratio": 1.333,
+                        "type": "div-image-element"
+                    },
+                    "image_size": "l"
+                }, {
+                    "text": "<font color=\"{{ '#333333' }}\">{{ channel.channel.title | html_escape }}</font>",
+                    "text_style": "text_m"
+                }, {
+                {% if channel.channel.stream_info %}
+                "horizontal_alignment": "center",
+                    "image": {
+                        "image_url": "{{ violet_btn }}",
+                        "ratio": 1,
+                        "type": "div-image-element"
+                    },
+                    "image_size": "l",
+                    "action": {
+                      "url": "{{ channel.channel.stream_info.channel.stream_url }}",
+                      "log_id": "tv_program/channel_play"
+                    }
+                {% endif %}
+                }]
+            }],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "right_padding": "zero"
+            }]
+        }, {
+            "type": "div-table-block",
+            "rows": [
+                {% for event in channel.events[:5] %}
+                {
+                    "type": "row_element",
+                    "bottom_padding": "s",
+                    "cells": [{
+                        "text": "<font color=\"{{ '#919CB5' }}\">{{ event.start | parse_dt | format_datetime('%H:%M') }}</font>",
+                        "text_style": "text_m"
+                    }, {
+                        "text": "<font color=\"{{ '#919CB5' }}\">{{ format_date(event.start, form.answer.tz).strip() }}</font>",
+                        "text_style": "text_m"
+                    }, {
+                        "text": "<font color=\"{{ '#333333' }}\">{{ get_title(event, 24, short = true).strip() | html_escape }}</font>",
+                        "text_style": "text_m",
+                        "action": {
+                            "url": "{{ event.schedule_url }}&utm_medium=program_schedule",
+                            "log_id": "tv_program/event_schedule"
+                        }
+                    }]
+                }
+                {{ "," if not loop.last }}
+                {% endfor %}
+            ],
+            "columns": [{
+                "left_padding": "zero",
+                "right_padding": "xxs"
+            }, {
+                "left_padding": "zero",
+                "right_padding": "xs"
+            }, {
+                "left_padding": "zero",
+                "weight": 1,
+                "right_padding": "zero"
+            }]
+        }, {
+            "type": "div-separator-block",
+            "size": "xxs",
+            "has_delimiter": 1
+        },
+        {% endfor %}
+        {
+            "type": "div-footer-block",
+            "text": "<font color=\"{{ '#0A4DC3' }}\">ВСЁ РАСПИСАНИЕ</font>",
+            "text_style": "button",
+            "action": {
+                "url": "{{ form.answer.schedule_url }}&utm_medium=program_schedule",
+                "log_id": "tv_program/all_schedule"
+            }
+        }]
+    }]
+}
+{% endcard %}
+
+{% macro gallery_params(background, url, name) %}
+  "width": {
+    "type": "numeric",
+    "value": 213
+  },
+  "height": {
+    "value": 120,
+    "type": "numeric"
+  },
+  "direction": "vertical",
+  "alignment_horizontal": "left",
+  "type": "div-container-block",
+  "frame": {
+    "style": "only_round_corners"
+  },
+  "background": [{
+    "type": "div-image-background",
+    {% if background %}
+    "image_url": "https:{{ background }}"
+    {% else %}
+    "image_url": "{{ thumb_bg }}"
+    {% endif %}
+    {% if background %}
+  }, {
+    "type": "div-gradient-background",
+    "start_color": "{{ '#50000000' }}",
+    "end_color": "{{ '#50000000' }}"
+    {% endif %}
+  }],
+  "action": {
+    "log_id": "tv_gallery/{{ name }}",
+    "url": "{{ url }}"
+  }
+{% endmacro %}
+
+{% macro gallery(inner_part, tail_url = "", tail_text = "") %}
+{
+    "states": [{
+        "state_id": 1,
+        "blocks": [{
+            "type": "div-gallery-block",
+            "padding_between_items": {
+                "value": 8,
+                "type": "numeric",
+                "unit": "dp"
+            },
+            {% if tail_url %}
+            "tail" : {
+              "text": "{{ tail_text }}",
+              "icon": {
+              },
+              "action": {
+                "url": "{{ tail_url }}",
+                "log_id": "tv_gallery/tail"
+              }
+            },
+            {% endif %}
+            "items": [
+                {{ inner_part }}
+            ]
+        }]
+    }]
+}
+{% endmacro %}
+
+{% card gallery_card %}
+  {% set inner_part %}
+    {% for channel in form.answer.schedule[:20] %}
+      {% if channel.events | length > 0 %}
+        {% set event = channel.events[0] %}
+        {% set has_stream=(channel.channel.stream_info and (channel.channel.stream_info.program.eventId == event.eventId)) %}
+        {
+          "children": [{
+            "type": "div-separator-block",
+            "size": "xs"
+          }, {
+            "type": "div-universal-block",
+            "title": "<font color=\"{{ '#ffffff' }}\">{{ channel.channel.title | html_escape }}</font>",
+            "title_style": "text_m"
+          }, {
+            "type": "div-separator-block",
+            "size": "match_parent"
+          }, {
+            "type": "div-universal-block",
+            {% if has_stream %}
+              "title": "<font color=\"{{ '#ffffff' }}\">{{ crop_title(event.title, 17).strip() | html_escape }}</font>",
+              "text": "<font color=\"{{ '#ffffff' }}\">{{ time_left(form.answer.user_time, event.finish) }}</font>",
+            {% else %}
+              "title": "<font color=\"{{ '#ffffff' }}\">{{ crop_title(event.title, 26).strip() | html_escape }}</font>",
+              "text": "<font color=\"{{ '#ffffff' }}\">{{ format_date(event.start, form.answer.tz).strip() }} в {{ event.start | parse_dt | format_datetime('%H:%M') }}</font>",
+            {% endif %}
+            "title_style": "text_m",
+            "text_style": "card_header",
+            "title_max_lines": 1,
+            "text_max_lines": 1
+            {% if has_stream %}
+            , "side_element": {
+              "element": {
+                "type": "div-image-element",
+                "image_url": "{{ white_btn }}"
+              },
+              "position": "right",
+              "size": "s"
+            }
+            {% endif %}
+          }
+          {% if not has_stream %}
+          , {
+            "type": "div-separator-block",
+            "size": "xs"
+          }
+          {% endif %}
+          ],
+          {% if has_stream %}
+            {{ gallery_params(event.thumb, channel.channel.stream_info.channel.stream_url, "genre_gallery") }}
+          {% else %}
+            {{ gallery_params(event.thumb, event.schedule_url + "&utm_medium=program_genre", "genre_gallery") }}
+          {% endif %}
+        }
+        {{ "," if not loop.last }}
+      {% endif %}
+    {% endfor %}
+  {% endset %}
+  {% set tail_url = form.answer.schedule_url + "&utm_medium=program_genre" if form.answer.schedule | length >= 20 else "" %}
+  {% set tail_text = "Больше программ" if form.answer.schedule | length >= 20 else "" %}
+  {{ gallery(inner_part, tail_url, tail_text) }}
+{% endcard %}
+
+{% card stream_channel_card %}
+  {% set channel = form.answer.channel %}
+  {% set stream_info = channel.stream_info %}
+  {% set inner_part %}
+    {
+      "children": [{
+        "type": "div-separator-block",
+        "size": "xs"
+      }, {
+        "type": "div-universal-block",
+        "title": "<font color=\"{{ '#ffffff' }}\">{{ channel.title | html_escape }}</font>",
+        "title_style": "text_m"
+      }, {
+        "type": "div-separator-block",
+        "size": "match_parent"
+      }, {
+        "type": "div-universal-block",
+        "title": "<font color=\"{{ '#ffffff' }}\">{{ crop_title(stream_info.program.title, 17).strip() | html_escape }}</font>",
+        "text": "<font color=\"{{ '#ffffff' }}\">{{ time_left(form.answer.user_time, stream_info.program.finish) }}</font>",
+        "title_style": "text_m",
+        "text_style": "card_header",
+        "title_max_lines": 1,
+        "text_max_lines": 1,
+        "side_element": {
+          "element": {
+            "type": "div-image-element",
+            "image_url": "{{ white_btn }}"
+          },
+          "position": "right",
+          "size": "s"
+        }
+      }],
+      {{ gallery_params(stream_info.program.thumb, stream_info.channel.stream_url, "channel_stream") }}
+    }
+  {% endset %}
+  {{ gallery(inner_part) }}
+{% endcard %}
+
+{% card stream_gallery_card %}
+  {% set inner_part %}
+    {% for event in form.answer.stream_list[:20] %}
+    {
+      "children": [{
+        "type": "div-separator-block",
+        "size": "xs"
+      }, {
+        "type": "div-universal-block",
+        "title": "<font color=\"{{ '#ffffff' }}\">{{ event.channel.title | html_escape }}</font>",
+        "title_style": "text_m"
+      }, {
+        "type": "div-separator-block",
+        "size": "match_parent"
+      }, {
+        "type": "div-universal-block",
+        "title": "<font color=\"{{ '#ffffff' }}\">{{ crop_title(event.program.title, 17).strip() | html_escape }}</font>",
+        "text": "<font color=\"{{ '#ffffff' }}\">{{ time_left(form.answer.user_time, event.program.finish) }}</font>",
+        "title_style": "text_m",
+        "text_style": "card_header",
+        "title_max_lines": 1,
+        "text_max_lines": 1,
+        "side_element": {
+          "element": {
+            "type": "div-image-element",
+            "image_url": "{{ white_btn }}"
+          },
+          "position": "right",
+          "size": "s"
+        }
+      }],
+      {{ gallery_params(event.program.thumb, event.channel.stream_url, "stream_gallery") }}
+    }
+    {{ "," if not loop.last }}
+    {% endfor %}
+  {% endset %}
+  {% set tail_url = form.answer.common_stream_url if form.answer.stream_list | length >= 20 else "" %}
+  {% set tail_text = "Больше каналов" if form.answer.stream_list | length >= 20 else "" %}
+  {{ gallery(inner_part, tail_url, tail_text) }}
+{% endcard %}

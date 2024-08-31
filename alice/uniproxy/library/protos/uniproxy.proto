@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+import "mssngr/router/lib/protos/message.proto";
+import "alice/megamind/protos/scenarios/notification_state.proto";
+import "alice/megamind/protos/scenarios/directives.proto";
+import "alice/megamind/protos/speechkit/directives.proto";
+
+
+package NUniproxy;
+
+/* for sending notification you need fill:
+    Uid, SubscriptionId, Ring, Notification
+    OR
+    Uid, Directives
+
+    DeviceId is optional
+    AppId is optional (e.g. 'ru.mobile.search')
+*/
+message TPushMessage {
+    string Uid = 1;
+    NAlice.TNotification Notification = 2 [deprecated = true];
+    int64 SubscriptionId = 3 [deprecated = true];
+    int32 Ring = 4 [deprecated = true];
+    int64 VersionId = 5 [deprecated = true];
+    string DeviceId = 6;
+    repeated NAlice.NScenarios.TDirective Directives = 7 [deprecated = true];
+    string AppId = 8;
+    repeated NAlice.NSpeechKit.TDirective SkDirectives = 9;
+    repeated string PushIds = 10;
+    // for logging. See more at alice/protos/api/notificator/api.proto::TChangeStatus
+    uint64 StartTime = 11;
+}
+
+
+message TLocationEntry {
+    int64 HostNo = 1;
+
+    string Uuid = 2;                // obsolete
+
+    bytes ClientId = 3;             // obsolete
+
+    string Environment = 4;         // override environment for this entry
+
+    string Component = 5;           // override component name for this entry
+
+    string CustomHost = 6;          // override host, HostNo, Environment and Component fields are ignored
+
+    int64 Timestamp = 7;
+}
+
+
+message TLocation {
+    repeated TLocationEntry Locations = 1;
+};
+
+
+message TSubwayDestination {
+    bytes Guid = 1;
+    bytes Uuid = 2;         /* obsolete */
+    bytes ClientId = 3;     /* obsolete */
+    string Uid = 4;         /* obsolete */
+    string DeviceId = 5;
+}
+
+message TSubwayMessage {
+    repeated TSubwayDestination Destinations = 1;
+    repeated bytes Guids = 3;
+    oneof TMessageType {
+        NMessengerProtocol.TOutMessage MessengerMsg = 2;
+        TPushMessage QuasarMsg = 4;
+    }
+}
+
+message TSubwayMessageBatch {
+    int64 Status = 1;
+    string Error = 2;
+    repeated TSubwayMessage Messages = 3;
+}
+
+
+message TSubwayResponse {
+    int64 Status = 1; 
+    string Message = 2;
+
+    repeated bytes MissingGuids = 4;
+    int64 Timestamp = 5;
+    string Hostname = 6;
+    repeated string MissingUids = 7;  /* deprecated */
+    repeated string MissingDevices = 8;
+}

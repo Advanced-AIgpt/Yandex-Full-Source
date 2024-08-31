@@ -1,0 +1,270 @@
+labels:
+  call_prefix: '(Набираю|Звоню||Уже набираю|Сейчас позвоним).*'
+  arbitrary_calls_not_supported: 'Пока что я умею звонить только в экстренные службы\.'
+  calls_not_supported_on_device: '.*\b(со?( своего)? телефона|на телефоне)\b.*'
+  multiple_contacts_found: '.*несколько.*контактов.*'
+  multiple_phones_found: '.+акой номер.*'
+  no_recipient: 'Куда.+звонить\?'
+
+
+test_basic:
+  dialog:
+    позвони в скорую:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: '103'
+
+      button_actions:
+      - name: 'open_uri'
+        title: 'Позвонить'
+        payload:
+          uri: '103'
+
+    а теперь в полицию: '{call_prefix}...'
+    а пожарным: '{call_prefix}...'
+    а в службу спасения: '{call_prefix}...'
+  app_info:
+    ignore:
+    - pa_android
+    - watch
+    - pa_ios
+    - irbis
+    - speaker
+    - auto
+    - desktop_alice
+    - dexp
+    - navigator_android
+    - navigator_ios
+
+
+test_cannot_call:
+  app_info:
+    app_id: 'telegram'
+    app_version: '0'
+    os_version: '0'
+    platform: 'telegram'
+
+  dialog:
+    вызови скорую:
+      voice: '{calls_not_supported_on_device}'
+
+
+test_call_arbitrary_unsupported:
+  dialog:
+    позвони киске:
+      voice: '{arbitrary_calls_not_supported}'
+      directives:
+        exact_match: true
+        data: []
+  app_info:
+    ignore:
+    - irbis
+    - speaker
+    - auto
+    - desktop_alice
+    - watch
+    - dexp
+
+
+test_call_arbitrary_multiple_contacts:
+  experiments: [phone_call_contact]
+  app_info:
+    app_id: 'com.yandex.launcher'
+    app_version: '2.2.1'
+    os_version: '8.0'
+    platform: 'android'
+
+  dialog:
+  - request: 'позвони антону'
+    response:
+      voice: ''
+      directives:
+      - name: 'find_contacts'
+        sub_name: 'phone_find_contacts'
+        type: 'client_action'
+        payload: !Any
+  - request:
+      type: 'server_action'
+      name: 'update_form'
+      payload:
+        resubmit: true
+        form_update:
+          name: 'personal_assistant.scenarios.call'
+          slots:
+          - name: 'contact_search_results'
+            type: 'contact_search_results'
+            value:
+            - account_type: com.google
+              name: Антон Иванов
+              last_time_contacted: 1521726480000
+              times_contacted: 20
+              phone_type_id: 2
+              phone: "+77777777777"
+              phone_type_name: TYPE_MOBILE
+              contact_id: 1
+            - account_type: com.google
+              name: Антон Никифоров
+              last_time_contacted: 1522143878400
+              times_contacted: 20
+              phone_type_id: 2
+              phone: "+78888888888"
+              phone_type_name: TYPE_MOBILE
+              contact_id: 2
+    response:
+      voice: '{multiple_contacts_found}'
+
+  - request: 'первому'
+    response:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: 'tel:+78888888888'
+
+
+test_call_arbitrary_single_contact:
+  experiments: [phone_call_contact]
+  app_info:
+    app_id: 'com.yandex.launcher'
+    app_version: '2.2.1'
+    os_version: '8.0'
+    platform: 'android'
+
+  dialog:
+  - request: 'позвони антону'
+    response:
+      voice: ''
+      directives:
+      - name: 'find_contacts'
+        sub_name: 'phone_find_contacts'
+        type: 'client_action'
+        payload: !Any
+  - request:
+      type: 'server_action'
+      name: 'update_form'
+      payload:
+        resubmit: true
+        form_update:
+          name: 'personal_assistant.scenarios.call'
+          slots:
+          - name: 'contact_search_results'
+            type: 'contact_search_results'
+            value:
+            - account_type: com.google
+              name: Антон Иванов
+              last_time_contacted: 1521726480000
+              times_contacted: 20
+              phone_type_id: 2
+              phone: "+77777777777"
+              phone_type_name: TYPE_MOBILE
+              contact_id: 1
+    response:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: 'tel:+77777777777'
+
+
+test_call_arbitrary_multiple_phones:
+  experiments: [phone_call_contact]
+  app_info:
+    app_id: 'com.yandex.launcher'
+    app_version: '2.2.1'
+    os_version: '8.0'
+    platform: 'android'
+
+  dialog:
+  - request: 'позвони антону'
+    response:
+      voice: ''
+      directives:
+      - name: 'find_contacts'
+        sub_name: 'phone_find_contacts'
+        type: 'client_action'
+        payload: !Any
+  - request:
+      type: 'server_action'
+      name: 'update_form'
+      payload:
+        resubmit: true
+        form_update:
+          name: 'personal_assistant.scenarios.call'
+          slots:
+          - name: 'contact_search_results'
+            type: 'contact_search_results'
+            value:
+            - account_type: com.google
+              name: Антон Петров
+              last_time_contacted: 1522143878400
+              times_contacted: 20
+              phone_type_id: 2
+              phone: "+78888888888"
+              phone_type_name: TYPE_MOBILE
+              contact_id: 1
+            - account_type: com.google
+              name: Антон Петров
+              last_time_contacted: 1522143878400
+              times_contacted: 20
+              phone_type_id: 3
+              phone: "+79999999999"
+              phone_type_name: TYPE_WORK
+              contact_id: 1
+    response:
+      voice: '{multiple_phones_found}'
+
+  - request: 'на рабочий'
+    response:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: 'tel:+79999999999'
+
+
+test_call_number:
+  experiments: [phone_call_contact]
+  app_info:
+    app_id: 'com.yandex.launcher'
+    app_version: '2.2.1'
+    os_version: '8.0'
+    platform: 'android'
+
+  dialog:
+  - request: 'позвони по номеру +7(921)205-58-59'
+    response:
+      voice: '{call_prefix}...'
+      directives:
+      - name: 'open_uri'
+        sub_name: 'phone_call'
+        type: 'client_action'
+        payload:
+          uri: 'tel:7(921)2055859'
+
+
+test_no_recipient:
+  flags:
+    skip:
+      reason: bass not ready yet (bug by @igoshkin)
+
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '0'
+    os_version: '0'
+    platform: 'android'
+
+  dialog:
+    позвони:
+      voice: '{no_recipient}'
+
+

@@ -1,0 +1,29 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "timer/timer__common.nlg" %}
+{% from "timer/timer__common.nlg" import suggest_show_timers %}
+{% from "reminders/reminders__common.nlg" import format_how_long %}
+
+{% phrase render_result %}
+  {% if is_active_attention('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% else %}
+    {% if is_active_attention('timer__is_paused') %}
+      Таймер на паузе, осталось
+      {{ format_how_long(form.how_long, aggressive=False) }}
+    {% elif form.specification == "sleep" %}
+      {% chooseline %}
+        Я усну через
+        Устройство выключится через
+        До отключения ещё
+      {% endchooseline %}
+      {{ format_how_long(form.how_long) }}
+    {% else %}
+      {% chooseline %}
+        Часики тикают. Осталось меньше
+        До конца таймера осталось меньше
+        Не переживайте, до звонка таймера меньше
+      {% endchooseline %}
+      {{ format_how_long(form.how_long, aggressive=False, case='gen') }}
+    {% endif %}
+  {% endif %}
+{% endphrase %}

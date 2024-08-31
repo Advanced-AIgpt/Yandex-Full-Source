@@ -1,0 +1,101 @@
+PY2_LIBRARY()
+
+OWNER(g:alice)
+
+PEERDIR(
+    alice/vins/core
+    alice/vins/sdk
+    contrib/python/validators
+    contrib/python/Pillow
+)
+
+INCLUDE(${ARCADIA_ROOT}/alice/vins/apps/personal_assistant/resources.inc)
+
+PY_SRCS(
+    TOP_LEVEL
+    personal_assistant/__init__.py
+    personal_assistant/api/__init__.py
+    personal_assistant/api/personal_assistant.py
+    personal_assistant/analytics.py
+    personal_assistant/app.py
+    personal_assistant/autoapp_directives_translator.py
+    personal_assistant/bass_result.py
+    personal_assistant/bass_session_state.py
+    personal_assistant/blocks/__init__.py
+    personal_assistant/blocks/analytics_info.py
+    personal_assistant/blocks/attention.py
+    personal_assistant/blocks/autoaction_delay_ms.py
+    personal_assistant/blocks/base.py
+    personal_assistant/blocks/card.py
+    personal_assistant/blocks/client_features.py
+    personal_assistant/blocks/command.py
+    personal_assistant/blocks/commit_candidate.py
+    personal_assistant/blocks/debug_info.py
+    personal_assistant/blocks/features_data.py
+    personal_assistant/blocks/frame_action.py
+    personal_assistant/blocks/player_features.py
+    personal_assistant/blocks/scenario_data.py
+    personal_assistant/blocks/sensitive.py
+    personal_assistant/blocks/silent_response.py
+    personal_assistant/blocks/special_button.py
+    personal_assistant/blocks/stack_engine.py
+    personal_assistant/blocks/stop_listening.py
+    personal_assistant/blocks/suggest.py
+    personal_assistant/blocks/user_info.py
+    personal_assistant/callback.py
+    personal_assistant/clients.py
+    personal_assistant/general_conversation.py
+    personal_assistant/hardcoded_responses.py
+    personal_assistant/intents.py
+    personal_assistant/item_selection.py
+    personal_assistant/meta.py
+    personal_assistant/navi_callbacks.py
+    personal_assistant/nlg_filters.py
+    personal_assistant/nlg_globals.py
+    personal_assistant/ontology/__init__.py
+    personal_assistant/ontology/onto.py
+    personal_assistant/ontology/onto_synthesis_engine.py
+    personal_assistant/pa_bot.py
+    personal_assistant/view_state/lib/extract_active_video_items.py
+    personal_assistant/setup_feature_updater.py
+    personal_assistant/setup_features.py
+    personal_assistant/skills.py
+    personal_assistant/soft_force_intents.py
+    personal_assistant/stroka_callbacks.py
+    personal_assistant/transition_model.py
+    personal_assistant/transition_model_rules.py
+    personal_assistant/is_allowed_intent/__init__.py
+    personal_assistant/is_allowed_intent/config_loader.py
+    personal_assistant/is_allowed_intent/predicate_registrant.py
+    personal_assistant/is_allowed_intent/predicates.py
+    personal_assistant/is_allowed_intent/resolver.py
+    personal_assistant/voice_enroll.py
+)
+
+END()
+
+RECURSE_FOR_TESTS(
+    ut
+    ut/functional/auto
+    ut/functional/desktop_alice
+    ut/functional/dexp
+    ut/functional/implicit
+    ut/functional/irbis
+    ut/functional/navigator_android
+    ut/functional/navigator_ios
+    ut/functional/pa_android
+    ut/functional/pa_ios
+    ut/functional/speaker
+    ut/functional/watch
+    ut/integration/auto
+    ut/integration/desktop_alice
+    ut/integration/dexp
+    ut/integration/implicit
+    ut/integration/irbis
+    ut/integration/navigator_android
+    ut/integration/navigator_ios
+    ut/integration/pa_android
+    ut/integration/pa_ios
+    ut/integration/speaker
+    ut/integration/watch
+)

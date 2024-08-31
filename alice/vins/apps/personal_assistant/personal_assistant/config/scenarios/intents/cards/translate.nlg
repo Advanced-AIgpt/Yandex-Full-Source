@@ -1,0 +1,548 @@
+{% from "cards/common.nlg" import logged_action_url with context %}
+
+{% macro render_pronounce_icon(data) %}
+  {% if data | get_item("pronounce_icon") %}
+    {
+      "type" : "div-buttons-block",
+      "items": [
+        {
+          "action": {
+            "url":
+              "{{
+                logged_action_url([
+                  server_action_directive(
+                    "update_form",
+                    {
+                      "form_update":
+                      {
+                        "name": form.raw_form.name,
+                        "slots": [
+                          {
+                            "name": "text",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.text
+                          },
+                          {
+                            "name": "input_lang_src",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.input_lang_src
+                          },
+                          {
+                            "name": "input_lang_dst",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.input_lang_dst
+                          },
+                          {
+                            "name": "result",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.result
+                          },
+                          {
+                            "name": "voice",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.voice
+                          },
+                          {
+                            "name": "text_to_translate",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.text_to_translate
+                          },
+                          {
+                            "name": "lang_src",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.lang_src
+                          },
+                          {
+                            "name": "lang_dst",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.lang_dst
+                          },
+                          {
+                            "name": "translate_service",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.translate_service
+                          },
+                          {
+                            "name": "speed",
+                            "type": "num",
+                            "optional": true,
+                            "value": form.speed
+                          },
+                          {
+                            "name": "repeat_voice",
+                            "type": "bool",
+                            "optional": true,
+                            "value": true
+                          },
+                          {
+                            "name": "suggest_langs",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.suggest_langs
+                          },
+                          {
+                            "name": "suggest_speed",
+                            "type": "string",
+                            "optional": true,
+                            "value": form.suggest_speed
+                          }
+                        ]
+                      },
+                      "resubmit": true
+                    }
+                  )
+                ])
+              }}",
+            "log_id": "translate_pronounce_repeat"
+          },
+          "image": {
+            "image_url": "{{ data | get_item("pronounce_icon") }}",
+            "type": "div-image-element"
+          }
+        }
+      ]
+    },
+  {% endif %}
+{% endmacro %}
+
+{% macro render_dict_card(context) %}
+{
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "action": {
+        "log_id": "whole_card",
+        "url": "{{ context.data[0] | get_item("translate_url") }}"
+      },
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-container-block",
+          "children": [
+            {
+              "size": "xs",
+              "type": "div-separator-block"
+            },
+            { 
+              "title": "<font color=\"{{ '#7F7F7F' }}\">{{ form.lang_src | upper | html_escape }} — {{ form.lang_dst | upper | html_escape }}<\/font>",
+              "title_style": "card_header",
+              "type": "div-universal-block"
+            },
+            {
+              "rows": [
+                {
+                  "cells": [
+                    {
+                      "text": "{{ form.text_to_translate | html_escape }}",
+                      "text_style": "text_m_medium",
+                      "horizontal_alignment": "left",
+                      "vertical_alignment": "bottom"
+                    }
+                    {% if context.data[0] | get_item("ts") %}
+                      ,{
+                        "text": "<font color=\"{{ '#7F7F7F' }}\">{{ context.data[0] | get_item("ts") }}<\/font>",
+                        "text_style": "text_m",
+                        "horizontal_alignment": "left",
+                        "vertical_alignment": "bottom"
+                      }
+                    {% endif %}
+                  ],
+                  "type": "row_element"
+                }
+              ],
+              "columns": [
+                {
+                  "left_padding": "zero",
+                  "right_padding": "zero"
+                }
+                {% if context.data[0] | get_item("ts") %}
+                  ,{
+                    "left_padding": "xs"
+                  }
+                {% endif %}
+              ],
+              "type": "div-table-block"
+            },
+            {% if context.data[0] | get_item("tr_0") %}
+              {
+                "rows": [
+                  {% for definition in context.data %}
+                    {% if loop.index0 %}
+                      ,
+                    {% endif %}
+                    {
+                      "cells": [
+                        {
+                          "text": "<font color=\"{{ '#7F7F7F' }}\">{{ definition | get_item("pos") | html_escape }}<\/font>",
+                          "text_style": "text_s",
+                          "horizontal_alignment": "left",
+                          "vertical_alignment": "bottom"
+                        },
+                        {
+                          "text": "{{ definition | get_item("tr_0") | html_escape }}",
+                          "text_style": "title_m",
+                          "horizontal_alignment": "left",
+                          "vertical_alignment": "bottom"                      
+                        }
+                      ],
+                      "type": "row_element"
+                    }
+                    {% if definition|get_item("mean_0") %}
+                      ,{
+                        "cells": [
+                          {
+                          },
+                          {
+                            "text": "<font color=\"{{ '#7F7F7F' }}\">{{ definition | get_item("mean_0") | html_escape }}<\/font>",
+                            "horizontal_alignment": "left",
+                            "vertical_alignment": "bottom"
+                          }
+                        ],
+                        "type": "row_element"
+                      }
+                    {% endif %}
+                    {% if definition|get_item("tr_1") %}
+                      ,{
+                        "cells": [
+                          {
+                          },
+                          {
+                            "text": "{{ definition | get_item("tr_1") | html_escape }}",
+                            "text_style": "title_m",
+                            "horizontal_alignment": "left",
+                            "vertical_alignment": "bottom"
+                          }
+                        ],
+                        "type": "row_element"
+                      }
+                    {% endif %}
+                    {% if definition|get_item("mean_1") %}
+                      ,{
+                        "cells": [
+                          {
+                          },
+                          {
+                            "text": "<font color=\"{{ '#7F7F7F' }}\">{{ definition | get_item("mean_1") | html_escape }}<\/font>",
+                            "horizontal_alignment": "left",
+                            "vertical_alignment": "bottom"
+                          }
+                        ],
+                        "type": "row_element"
+                      }
+                    {% endif %}
+                  {% endfor %}
+                ],
+                "columns": [
+                  {
+                    "left_padding": "zero"
+                  },
+                  {
+                    "left_padding": "zero"
+                  }
+                ],
+                "type": "div-table-block"
+              },
+            {% else %}
+              {
+                "rows": [
+                  {
+                    "cells": [
+                      {
+                        "text": "{{ form.result | html_escape }}",
+                        "text_style": "title_m",
+                        "horizontal_alignment": "left",
+                        "vertical_alignment": "bottom"
+                      }
+                      {% if context.data[0] | get_item("pos") %}
+                        ,{
+                          "text": "<font color=\"{{ '#7F7F7F' }}\">{{ context.data[0] | get_item("pos") | html_escape }}<\/font>",
+                          "text_style": "text_s",
+                          "horizontal_alignment": "left",
+                          "vertical_alignment": "bottom"
+                        }
+                      {% endif %}
+                    ],
+                    "type": "row_element"
+                  }
+                ],
+                "columns": [
+                  {
+                    "left_padding": "zero",
+                    "right_padding": "zero"
+                  }
+                  {% if context.data[0] | get_item("pos") %}
+                    ,{
+                      "left_padding": "xs"
+                    }
+                  {% endif %}
+                ],
+                "type": "div-table-block"
+              },
+            {% endif %}
+            {{ render_pronounce_icon(context.data[0]) }}
+            {
+              "has_delimiter": 1,
+              "size": "xs",
+              "type": "div-separator-block"
+            },
+            {
+              "text": "<font color=\"{{ '#0A4CD3' }}\">ОТКРЫТЬ В ПЕРЕВОДЧИКЕ<\/font>",
+              "type": "div-footer-block"
+            }
+          ],
+          "direction": "vertical",
+          "width": {
+            "type": "predefined",
+            "value": "match_parent"
+          },
+          "height": {
+            "type": "predefined",
+            "value": "wrap_content"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endmacro %}
+
+{% macro render_translate_card(context) %}
+{
+  "background": [
+    { 
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "action": {
+        "log_id": "whole_card",
+        "url": "{{ context.data | get_item("translate_url") }}"
+      },
+      "state_id": 1,
+      "blocks": [
+        {
+          "type": "div-container-block",
+          "children": [
+            {
+              "size": "xs",
+              "type": "div-separator-block"
+            },
+            {
+              "title": "<font color=\"{{ '#7F7F7F' }}\">{{ form.lang_src | upper | html_escape }} — {{ form.lang_dst | upper | html_escape }}<\/font>",
+              "title_style": "card_header",
+              "type": "div-universal-block"
+            },
+            {
+              "title": "{{ form.text_to_translate | html_escape }}",
+              "title_style": "text_m_medium",
+              "type": "div-universal-block"
+            },
+            {
+              "title": "{{ form.result | html_escape }}",
+              "title_style": "title_m",
+              "type": "div-universal-block"
+              {% if context.data | get_item("translit") %}
+              ,"text": "<font color=\"{{ '#7F7F7F' }}\">{{ context.data | get_item("translit") | html_escape }}<\/font>",
+              "text_style": "text_s"
+              {% endif %}
+            },
+            {{ render_pronounce_icon(context.data) }}
+            {
+              "has_delimiter": 1,
+              "size": "xs",
+              "type": "div-separator-block"
+            },
+            {
+              "action": {
+                "log_id": "whole_card",
+                "url": "{{ context.data | get_item("translate_url") }}"
+              },
+              "text": "<font color=\"{{ '#0A4CD3' }}\">ОТКРЫТЬ В ПЕРЕВОДЧИКЕ<\/font>",
+              "type": "div-footer-block"
+            }
+          ],
+          "direction": "vertical",
+          "width": {
+            "type": "predefined",
+            "value": "match_parent"
+          },
+          "height": {
+            "type": "predefined",
+            "value": "wrap_content"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endmacro %}
+
+{% macro render_fact_card(context) %}
+{
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "action": {
+        "log_id": "whole_card",
+        "url": "{{ context.data | get_item("ref_url") }}"
+      },
+      "state_id": 1,
+      "blocks": [
+        {
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        {
+          {% if context.data | get_item("img") %}
+            "side_element": {
+              "element": {
+                "image_url": "{{ context.data | get_item("img") }}",
+                "ratio": 1,
+                "type": "div-image-element"
+              },
+              "position": "right",
+              "size": "m"
+            },
+          {% endif %}
+          "text": "<font color=\"{{ '#7F7F7F' }}\">{{ context.data | get_item("def") | html_escape }}<\/font>",
+          "text_style": "text_s",
+          "text_max_lines": 5,
+          "title": "{{ form.result }}",
+          "title_style": "title_s",
+          "type": "div-universal-block"
+        },
+        {
+          "title": "<font color=\"{{ '#7F7F7F' }}\">{{ context.data | get_item("ref_name") | html_escape }}<\/font>",
+          "title_style": "text_s",
+          "type": "div-universal-block"
+        }
+      ]
+    }
+  ]
+}
+{% endmacro %}
+
+{% macro render_translator_card(context) %}
+{
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "action": {
+        "log_id": "whole_card",
+        "url": "{{ context.data | get_item("translator_url") }}"
+      },
+      "state_id": 1,
+      "blocks": [
+        { 
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        { 
+          "title": "{{ form.result | html_escape }}",
+          "title_style": "text_l",
+          "type": "div-universal-block"
+        },
+        { 
+          "has_delimiter": 1,
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        { 
+          "action": {
+            "log_id": "whole_card",
+            "url": "{{ context.data | get_item("translator_url") }}"
+          },
+          "text": "<font color=\"{{ '#0A4CD3' }}\">ОТКРЫТЬ ПЕРЕВОДЧИК<\/font>",
+          "type": "div-footer-block"
+        }
+      ]
+    }
+  ]
+}
+{% endmacro %}
+
+{% macro render_open_search_card(context) %}
+{
+  "backrgound": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ],
+  "states": [
+    {
+      "action": {
+        "log_id": "whole_card",
+        "url": "{{ context.data | get_item("search_url") }}"
+      },
+      "state_id": 1,
+      "blocks": [
+        {
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        {
+          "title": "Давайте поищем в Яндексе",
+          "title_style": "text_l",
+          "type": "div-universal-block"
+        },
+        {
+          "has_delimiter": 1,
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        {
+          "text": "<font color=\"{{ '#0A4CD3' }}\">ПОИСКАТЬ В ЯНДЕКСЕ<\/font>",
+          "type": "div-footer-block"
+        }
+      ]
+    }
+  ]
+}
+{% endmacro %}
+
+{% card dict_card %}
+  {{ render_dict_card(context) }}
+{% endcard %}
+
+{% card translate_card %}
+  {{ render_translate_card(context) }}
+{% endcard %}
+
+{% card fact_card %}
+  {{ render_fact_card(context) }}
+{% endcard %}
+
+{% card translator_card %}
+  {{ render_translator_card(context) }}
+{% endcard %}
+
+{% card open_search_card %}
+  {{ render_open_search_card(context) }}
+{% endcard %}

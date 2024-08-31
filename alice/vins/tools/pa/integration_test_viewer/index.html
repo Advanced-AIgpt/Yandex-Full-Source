@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html ng-app="viewerApp">
+<head>
+    <title>Alice integration tests viewer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.5/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-bootstrap/2.5.0/ui-bootstrap-tpls.js"></script>
+    <script src="viewer.js"></script>
+    <script src="data.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css"/>
+    <link rel="stylesheet" href="viewer.css"/>
+</head>
+<body ng-controller="ViewerController">
+<div class="container">
+    <div class="page-header">
+        <h2 ng-show="status == 'updated'">
+            <span ng-show="(tests | filter:{success: false}).length > 0"><span class="glyphicon glyphicon-remove"></span> Some tests have failed</span>
+            <span ng-show="(tests | filter:{success: false}).length == 0"><span class="glyphicon glyphicon-ok"></span> All tests successful</span>
+            <small>Test run: {{last_updated | date:'medium'}}</small>
+        </h2>
+        <h2 ng-show="status == 'error'">
+            <span class="glyphicon glyphicon-remove"></span> Some tests have failed
+            <small>Failed update time: {{last_updated | date:'medium'}}</small>
+        </h2>
+    </div>
+    <uib-accordion ng-show="status == 'updated'" close-others="false">
+        <div uib-accordion-group ng-repeat="test in tests | filter:{success: false}" class="panel-test-failed panel-default" heading="{{test.name}}">
+            <h5>Failed</h5>
+            <table class="table table-condensed table-hover">
+                <tr ng-repeat="turn in test.turns" ng-class="{'danger': !turn.success }">
+                    <td class="col-xs-4">{{turn.request}}</td>
+                    <td class="col-xs-8">{{turn.exception || turn.response}}</td>
+                </tr>
+            </table>
+        </div>
+        <div uib-accordion-group ng-repeat="test in tests | filter:{success: true, successful_attempt: '!0'}" class="panel-test-flaky panel-default" heading="{{test.name}}">
+            <h5>Succeeded after {{test.successful_attempt}} attempt</h5>
+            <table class="table table-condensed table-hover">
+                <tr ng-repeat="turn in test.turns">
+                    <td class="col-xs-4">{{turn.request}}</td>
+                    <td class="col-xs-8">{{turn.response}}</td>
+                </tr>
+            </table>
+        </div>
+    </uib-accordion>
+</div>
+</body>
+</html>

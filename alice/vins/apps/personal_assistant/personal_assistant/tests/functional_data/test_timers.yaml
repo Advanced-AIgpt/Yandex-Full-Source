@@ -1,0 +1,1332 @@
+labels:
+  show_timers: ".*список таймеров.*|.*ваши таймеры.*"
+  timer_1: "таймер на 20 минут, осталось меньше 7 минут"
+  timer_2: "таймер на 5 часов, осталось меньше 3 часов"
+  timer_3: "таймер на 15 часов, осталось меньше 4 часов"
+  sleep_timer: "таймер сна на 20 минут, осталось меньше 7 минут"
+  timers_list: "На данный момент запущен 1. {timer_1}.\nА также стоят на паузе следующие таймеры\n2. {timer_2}.\n3. {timer_3}."
+  timers_list_with_sleep: "На данный момент запущены следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\n3. {sleep_timer}."
+  cannot_cancel: ".*пока не умею удалять.*"
+  cannot_pause: ".*пока не умею ставить на паузу.*"
+  cannot_resume: ".*пока не умею снимать с паузы.*"
+  cannot_show: "К сожалению, у меня нет доступа к таймерам на данном устройстве"
+  timer_ask: "На какое время поставить таймер."
+  elari_watch_not_supported: "Я скоро научусь это делать. Время пролетит незаметно."
+  sleep_timer_ask_time: '(Пожалуйста, повторите, через сколько мне нужно отключиться\?|Что-то я отвлеклась. Повторите, через сколько мне нужно отключиться\?|Ой, отвлеклась. Повторите, через сколько мне нужно отключиться\?)'
+  sleep_timer_set: '(Хорошо|Окей|Поняла|Готово).*'
+  timer_how_long: 'Часики тикают. Осталось меньше|До конца таймера осталось меньше|Не переживайте, до звонка таймера меньше'
+  sleep_timer_how_long: 'Я усну через|Устройство выключится через|До отключения ещё'
+
+test_timer_set:
+  поставь таймер на 20 часов и 6 минут:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+      slots:
+        time:
+          value:
+            minutes: 6
+            hours: 20
+    text: "{} 20 часов 6 минут{}"
+
+  поставь таймер на 18 часов и 55 минут:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+      slots:
+        time:
+          value:
+            minutes: 55
+            hours: 18
+    text: "{} 18 часов 55 минут{}"
+
+  поставь таймер на 100 секунд:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+      slots:
+        time:
+          value:
+            seconds: 100
+    text: "{} 100 секунд{}"
+
+  поставь таймер на 2 с половиной минуты:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+      slots:
+        time:
+          value:
+            minutes: 2.5
+    bass:
+      form:
+        time:
+          value:
+            minutes: 2
+            seconds: 30
+    text: "{} 2 минуты 30 секунд{}"
+
+  поставь таймер на 2 15:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+      slots:
+        time:
+          value:
+            minutes: 2
+            seconds: 15
+    text: "{} 2 минуты 15 секунд{}"
+
+  можешь таймер засечь:
+    vins_form:
+      name: personal_assistant.scenarios.timer_set
+    bass:
+      form:
+        time:
+          optional: false
+    text: "{timer_ask}"
+    should_listen: true
+
+test_sleep_timer_set:
+  experiments: [sleep_timers]
+  app_info:
+    ignore:
+    - watch
+
+  dialog:
+    выключись в 20 0 0:
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_set
+        slots:
+          time:
+            value:
+              minutes: 0
+              hours: 20
+      bass:
+        blocks:
+        - type: attention
+          attention_type: timer__abs_time
+        form:
+          specification:
+            value: "sleep"
+      text: "{} 20:00{}"
+      voice: "{} #acc 8 вечера{}"
+
+    выключи музыку через десять минут:
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_set
+        slots:
+          time:
+            value:
+              minutes: 10
+              minutes_relative: true
+      bass:
+        form:
+          specification:
+            value: "sleep"
+      text: "{}10 минут{}"
+      voice: "{}10 минут{}"
+
+    поставь таймер сна на четверть часа:
+      vins_form:
+        name: personal_assistant.scenarios.timer_set
+        slots:
+          time:
+            value:
+              hours: 0.25
+      bass:
+        form:
+          specification:
+            value: "sleep"
+          time:
+            value:
+              minutes: 15
+      text: "{}15 минут{}"
+      voice: "{}15 минут{}"
+
+    поставь таймер сна:
+      vins_form:
+        name: personal_assistant.scenarios.timer_set
+      bass:
+        form:
+          time:
+            optional: false
+          specification:
+            value: "sleep"
+      text: "{timer_ask}сна?"
+      should_listen: true
+
+    поставь таймер сна на минуту: "{sleep_timer_set}"
+
+    перестань играть в 20 23:
+      bass:
+        form:
+          specification:
+            value: "sleep"
+      text: "{sleep_timer_set}"
+
+    выключись через пять минут:
+      bass:
+        form:
+          specification:
+            value: "sleep"
+      text: "{sleep_timer_set}"
+
+test_sleep_timer_set_ellipsis:
+  experiments: [sleep_timers]
+  app_info:
+    ignore:
+    - watch
+
+  dialog:
+    выключи музыку через:
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_set
+      bass:
+        form:
+          time:
+            optional: false
+      text: "{sleep_timer_ask_time}"
+      voice: "{sleep_timer_ask_time}"
+      should_listen: true
+
+    сейчас:
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_set__ellipsis
+        slots:
+          now:
+            value: "сейчас"
+      bass:
+        blocks:
+        - type: silent_response
+        - type: command
+          command_type: player_pause
+
+
+test_timer_cancel:
+  выключи таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+    bass:
+      form:
+        time:
+          value:
+            minutes: 7
+    text: "{} 7 минут{}"
+
+  отмени таймер на 5 минут:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+      slots:
+        time:
+          value:
+            minutes: 5
+    bass:
+      form:
+        time:
+          value:
+            minutes: 5
+    text: "{} 5 минут{}"
+
+
+test_sleep_timer_cancel:
+  выключи таймер сна:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+      slots:
+        specification:
+          value: "sleep"
+    bass:
+      form:
+        time:
+          value:
+            minutes: 7
+    text: "Хорошо, удалила таймер сна на 7 минут."
+    voice: "Хорошо, удалила т+аймер сна на #acc 7 минут."
+
+
+test_sleep_timer_cancel_2:
+  выключи таймер сна:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+      slots:
+        specification:
+          value: "sleep"
+    bass:
+      blocks:
+      - type: error
+        error:
+          msg: msg
+          type: timererror
+        data:
+          code: no_timers_available
+    text: "Таймер сна в данный момент не установлен"
+    voice: "Таймер сна в данный момент не установлен"
+
+
+test_timer_pause:
+  останови таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause
+    bass:
+      form:
+        time:
+          value:
+            minutes: 7
+    text: "{} 7 минут{}"
+
+  поставь на паузу таймер на 15 секунд:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause
+      slots:
+        time:
+          value:
+            seconds: 15
+    bass:
+      form:
+        time:
+          value:
+            seconds: 15
+    text: "{} 15 секунд{}"
+
+
+test_timer_resume:
+  возобнови таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_resume
+    bass:
+      form:
+        time:
+          value:
+            minutes: 7
+    text: "{} 7 минут{}"
+
+  сними с паузы таймер на 15 секунд:
+    vins_form:
+      name: personal_assistant.scenarios.timer_resume
+      slots:
+        time:
+          value:
+            seconds: 15
+    bass:
+      form:
+        time:
+          value:
+            seconds: 15
+    text: "{} 15 секунд{}"
+
+
+test_timer_show:
+  покажи таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+    text: "На данный момент запущен таймер на 20 минут, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер на #acc 20 минут, осталось меньше #gen 7 минут."
+
+test_timer_show_2:
+  сколько осталось до конца таймера:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+    text: "На данный момент запущен таймер на 20 минут, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер на #acc 20 минут, осталось меньше #gen 7 минут."
+
+test_timer_show_3:
+  сколько таймеров стоит:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+    text: "На данный момент запущен таймер на 20 минут, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер на #acc 20 минут, осталось меньше #gen 7 минут."
+
+test_timer_show_4:
+  сколько таймеров у меня стоит:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+    text: "На данный момент запущен таймер на 20 минут, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер на #acc 20 минут, осталось меньше #gen 7 минут."
+
+test_timer_show_5:
+  какой таймер установлен:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+
+test_timer_show_6:
+  какой таймер включен:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+
+test_timer_sleep_show:
+  покажи таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            specification: "sleep"
+            timer_id: 111
+    text: "На данный момент запущен таймер сна на 20 минут, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер сна на #acc 20 минут, осталось меньше #gen 7 минут."
+
+test_timer_sleep_show_2:
+  покажи таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - time:
+              hours: 20
+            remaining:
+              minutes: 7
+            paused: false
+            specification: "sleep"
+            timer_id: 111
+    text: "На данный момент запущен таймер сна в 20:00, осталось меньше 7 минут."
+    voice: "На данный момент запущен т+аймер сна в #acc 8 вечера, осталось меньше #gen 7 минут."
+
+test_timer_sleep_show_3:
+  покажи таймер сна:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+      slots:
+        specification:
+          value: "sleep"
+    bass:
+      blocks:
+      - type: error
+        error:
+          msg: msg
+          type: timererror
+        data:
+          code: no_timers_available
+    text: "Таймер сна в данный момент не установлен"
+    voice: "Таймер сна в данный момент не установлен"
+
+test_timers_show_list_with_sleep:
+  покажи мои таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            specification: "sleep"
+            timer_id: 111
+    text: "{timers_list_with_sleep}"
+
+
+test_timers_show_list_test_resume:
+  покажи мои таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    text: "{timers_list}"
+
+  сними с паузы второй:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__resume
+      slots:
+        timer_id:
+          value: 2
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    bass:
+      form:
+        time:
+          value:
+            hours: 5
+    text: "{} 5 часов{}"
+
+
+test_timers_show_list_test_cancel:
+  покажи таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    text: "{timers_list}"
+
+  выключи третий:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__cancel
+      slots:
+        timer_id:
+          value: 3
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    bass:
+      form:
+        time:
+          value:
+            hours: 15
+    text: "{} 15 часов{}"
+
+test_timers_show_list_test_pause:
+  таймеры покажи:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    text: "{timers_list}"
+
+  поставь на паузу первый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__pause
+      slots:
+        timer_id:
+          value: 1
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    bass:
+      form:
+        time:
+          value:
+            minutes: 20
+    text: "{} 20 минут{}"
+
+
+test_timers_multiple_timers_for_time_test_pause:
+  поставь на паузу таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+      blocks:
+      - type: attention
+        attention_type: timer__no_timer_specified
+    text: "На данный момент запущены следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\nКакой из них поставить на паузу?"
+
+  первый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause__ellipsis
+      slots:
+        timer_id:
+          value: 1
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+    bass:
+      form:
+        time:
+          value:
+            minutes: 20
+    text: "{} 20 минут{}"
+
+test_timers_multiple_timers_for_time_test_pause_2:
+  поставь на паузу таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+      blocks:
+      - type: attention
+        attention_type: timer__no_timer_specified
+    text: "На данный момент запущены следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\nКакой из них поставить на паузу?"
+
+  второй:
+    vins_form:
+      name: personal_assistant.scenarios.timer_pause__ellipsis
+      slots:
+        timer_id:
+          value: 2
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+    bass:
+      form:
+        time:
+          value:
+            hours: 5
+    text: "{} 5 часов{}"
+
+test_timers_multiple_timers_for_time_test_cancel:
+  отмени таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+      blocks:
+      - type: attention
+        attention_type: timer__no_timer_specified
+    text: "На данный момент запущены следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\nКакой из них вы хотите удалить?"
+
+  первый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel__ellipsis
+      slots:
+        timer_id:
+          value: 1
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+    bass:
+      form:
+        time:
+          value:
+            minutes: 20
+    text: "{} 20 минут{}"
+
+test_timers_multiple_timers_for_time_test_resume:
+  возобнови таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_resume
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: true
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+      blocks:
+      - type: attention
+        attention_type: timer__no_timer_specified
+    text: "На данный момент стоят на паузе следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\nКакой из них вы хотите запустить?"
+
+  первый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_resume__ellipsis
+      slots:
+        timer_id:
+          value: 1
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: true
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+    bass:
+      form:
+        time:
+          value:
+            minutes: 20
+    text: "{} 20 минут{}"
+
+
+test_android:
+  flags:
+    skip:
+      value: true
+      reason: 'There is no "timer_new" directive'
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '7.33'
+    os_version: '8.0'
+    platform: 'android'
+
+  dialog:
+    - request: установи таймер на 7 минут
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.timer_set
+          slots:
+            time:
+              value:
+                minutes: 7
+        bass:
+          blocks:
+          - type: command
+            command_type: timer_new
+          - type: attention
+            attention_type: timer__need_confirmation
+        text: ""
+
+    - request:
+        type: server_action
+        name: update_form
+        payload:
+          resubmit: true
+          form_update:
+            name: personal_assistant.scenarios.timer_set
+            slots:
+            - type: units_time
+              optional: false
+              name: time
+              value:
+                minutes: 7
+            - type: boolean
+              optional: true
+              name: confirmation
+              value: true
+      response:
+        text: "{} 7 минут{}"
+
+    - request: отмени таймер
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.timer_cancel
+        bass:
+          blocks:
+          - type: command
+            command_type: show_timers
+          - type: attention
+            attention_type: timer__is_mobile
+        text: "{show_timers}"
+
+    - request: останови таймер
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.timer_pause
+        bass:
+          blocks:
+          - type: command
+            command_type: show_timers
+          - type: attention
+            attention_type: timer__is_mobile
+        text: "{show_timers}"
+
+    - request: возобнови таймер
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.timer_resume
+        bass:
+          blocks:
+          - type: command
+            command_type: show_timers
+          - type: attention
+            attention_type: timer__is_mobile
+        text: "{show_timers}"
+
+    - request: покажи мои таймеры
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.timer_show
+        bass:
+          blocks:
+          - type: command
+            command_type: show_timers
+          - type: attention
+            attention_type: timer__is_mobile
+          - type: suggest
+            suggest_type: timer__set_timer
+            data:
+              time:
+                minutes: 10
+          - type: suggest
+            suggest_type: timer__show_timers
+            data:
+              uri: "dialog-action://?directives=%5B%7B%22name%22%3A%22show_timers%22%2C%22type%22%3A%22client_action%22%7D%5D"
+        text: "{show_timers}"
+        button_actions:
+        - name: open_uri
+          title: 'Посмотреть все таймеры'
+          payload:
+            uri: "dialog-action://?directives=%5B%7B%22name%22%3A%22show_timers%22%2C%22type%22%3A%22client_action%22%7D%5D"
+        suggests:
+        - caption: 'Поставить таймер на 10 минут'
+          utterance: 'Поставить таймер на 10 минут'
+
+test_older_android:
+  app_info:
+    app_id: 'ru.yandex.searchplugin'
+    app_version: '7.33'
+    os_version: '7.1'
+    platform: 'android'
+
+  dialog:
+    отмени таймер:
+      vins_form:
+        name: personal_assistant.scenarios.timer_cancel
+      bass:
+        blocks:
+        - type: error
+          error:
+            msg: msg
+            type: timererror
+          data:
+            code: unsupported_operation
+      text: "{cannot_cancel}"
+
+    останови таймер:
+      vins_form:
+        name: personal_assistant.scenarios.timer_pause
+      bass:
+        blocks:
+        - type: error
+          error:
+            msg: msg
+            type: timererror
+          data:
+            code: unsupported_operation
+      text: "{cannot_pause}"
+
+    возобнови таймер:
+      vins_form:
+        name: personal_assistant.scenarios.timer_resume
+      bass:
+        blocks:
+        - type: error
+          error:
+            msg: msg
+            type: timererror
+          data:
+            code: unsupported_operation
+      text: "{cannot_resume}"
+
+    покажи мои таймеры:
+      vins_form:
+        name: personal_assistant.scenarios.timer_show
+      bass:
+        blocks:
+        - type: error
+          error:
+            msg: msg
+            type: timererror
+          data:
+            code: unsupported_operation
+        - type: suggest
+          suggest_type: onboarding__what_can_you_do
+      text: "{cannot_show}"
+      suggests:
+      - caption: 'Что ты умеешь?'
+        utterance: 'Что ты умеешь?'
+
+test_stop_buzzing:
+  device_state:
+    timers:
+      active_timers:
+      - currently_playing: false
+        timer_id: '123'
+      - currently_playing: true
+        timer_id: '123'
+  dialog:
+    хватит:
+      vins_form:
+        name: personal_assistant.scenarios.timer_stop_playing
+      text: ''
+
+test_stop_buzzing_2:
+  device_state:
+    timers:
+      active_timers:
+      - currently_playing: false
+        timer_id: '123'
+      - currently_playing: true
+        timer_id: '123'
+  dialog:
+    выключи таймер:
+      vins_form:
+        name: personal_assistant.scenarios.timer_stop_playing
+      text: ''
+
+test_stop_buzzing_3:
+  device_state:
+    timers:
+      active_timers:
+      - currently_playing: false
+        timer_id: '123'
+      - currently_playing: true
+        timer_id: '123'
+  dialog:
+    останови таймер:
+      vins_form:
+        name: personal_assistant.scenarios.timer_stop_playing
+      text: ''
+
+test_stop_buzzing_4:
+  device_state:
+    timers:
+      active_timers:
+      - currently_playing: false
+        timer_id: '123'
+      - currently_playing: true
+        timer_id: '123'
+  dialog:
+    стоп:
+      vins_form:
+        name: personal_assistant.scenarios.timer_stop_playing
+      text: ''
+
+test_stop_buzzing_fail:
+  experiments: [vins_pause_commands_relevant_again]
+  dialog:
+    хватит:
+      vins_form:
+        name: personal_assistant.handcrafted.fast_cancel
+
+test_list_cancel:
+  отмени таймер:
+    vins_form:
+      name: personal_assistant.scenarios.timer_cancel
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: false
+            timer_id: 112
+      blocks:
+      - type: attention
+        attention_type: timer__no_timer_specified
+    text: "На данный момент запущены следующие таймеры\n1. {timer_1}.\n2. {timer_2}.\nКакой из них вы хотите удалить?"
+  никакой:
+    vins_form:
+      name: personal_assistant.scenarios.common.cancel_list
+    text: ""
+
+
+test_list_cancel_fail:
+  поставь таймер на 7:
+    text: "{}7 минут{}"
+  никакой:
+    vins_form:
+      name: personal_assistant.general_conversation.general_conversation
+    text: "{}"
+
+
+test_no_such_timer:
+  покажи таймеры:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show
+    bass:
+      form:
+        available_timers:
+          value:
+          - duration:
+              minutes: 20
+            remaining:
+              minutes: 7
+            paused: false
+            timer_id: 111
+          - duration:
+              hours: 5
+            remaining:
+              hours: 3
+            paused: true
+            timer_id: 112
+          - duration:
+              hours: 15
+            remaining:
+              hours: 4
+            paused: true
+            timer_id: 113
+    text: "{timers_list}"
+  отмени четвертый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__cancel
+    bass:
+      blocks:
+      - type: attention
+        attention_type: timer__invalid_id
+    text: "У меня нет такого таймера. {timers_list}\nКакой из них вы хотите удалить?"
+  возобнови пятый:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__resume
+    bass:
+      blocks:
+      - type: attention
+        attention_type: timer__invalid_id
+    text: "У меня нет такого таймера. {timers_list}\nКакой из них вы хотите запустить?"
+  поставь на паузу шестой:
+    vins_form:
+      name: personal_assistant.scenarios.timer_show__pause
+    bass:
+      blocks:
+      - type: attention
+        attention_type: timer__invalid_id
+    text: "У меня нет такого таймера. {timers_list}\nКакой из них поставить на паузу?"
+
+test_elari_watch:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  bass:
+    blocks:
+    - type: error
+      error:
+        msg: msg
+        type: timererror
+      data:
+        code: unsupported_operation
+  dialog:
+    включи таймер: '{elari_watch_not_supported}'
+
+
+test_timer_how_long:
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    "сколько осталось до таймера":
+      vins_form:
+        name: personal_assistant.scenarios.timer_how_long
+      bass:
+        form:
+          how_long:
+            value:
+              seconds: 700
+          specification:
+            value: "normal"
+      text: "{timer_how_long} 11 минут 40 секунд"
+
+test_timer_how_long_2:
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    "сколько времени осталось":
+      vins_form:
+        name: personal_assistant.scenarios.timer_how_long
+      bass:
+        form:
+          how_long:
+            value:
+              seconds: 700
+          specification:
+            value: "normal"
+      text: "{timer_how_long} 11 минут 40 секунд"
+
+test_timer_how_long_paused:
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    "сколько осталось до таймера":
+      vins_form:
+        name: personal_assistant.scenarios.timer_how_long
+      bass:
+        form:
+          how_long:
+            value:
+              seconds: 700
+          specification:
+            value: "normal"
+        blocks:
+        - type: attention
+          attention_type: timer__is_paused
+      text: "Таймер на паузе, осталось 11 минут 40 секунд"
+
+test_timer_how_long_sleep:
+  experiments: [sleep_timers]
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    "сколько осталось до таймера сна":
+      vins_form:
+        name: personal_assistant.scenarios.timer_how_long
+        slots:
+          specification:
+            value: "sleep"
+      bass:
+        form:
+          how_long:
+            value:
+              seconds: 700
+          specification:
+            value: "sleep"
+      text: "{sleep_timer_how_long} 12 минут"
+
+test_sleep_timer_how_long:
+  experiments: [sleep_timers]
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    "сколько времени до сна":
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_how_long
+      bass:
+        form:
+          how_long:
+            value:
+              seconds: 700
+          specification:
+            value: "sleep"
+      text: "{sleep_timer_how_long} 12 минут"
+
+
+# ALICE-2587
+test_quater:
+  experiments: [sleep_timers]
+  app_info:
+    ignore:
+    - watch
+  dialog:
+    выключись через четверть часа:
+      vins_form:
+        name: personal_assistant.scenarios.sleep_timer_set
+        slots:
+          time:
+            value:
+              minutes: 15
+              minutes_relative: true
+      bass:
+        form:
+          specification:
+            value: "sleep"

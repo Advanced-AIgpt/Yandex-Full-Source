@@ -1,0 +1,102 @@
+{
+    "ShardingConfig": {
+        "ShardingAlgorithm": "by_uuid",
+        "Splitter": {
+            "LogfellerSplitter": "\n"
+        },
+        "SkipUsersPercent": 99,
+        "OutputCodec": "zstd_6",
+        "OutputQueue": "//home/alice/test/big-rt/qyt/megamind-request-response",
+        "ShardsCount": 64
+    },
+    "TvmConfig": {
+        "CacheDir": "./tvm_cache/",
+        "DstServices": [
+            {
+                "Alias": "logbroker",
+                "Id": 2001059
+            }
+        ],
+        "SrcIdEnvName": "RESHARDER_TVM_ID",
+        "SrcSecretEnvName": "RESHARDER_TVM_SECRET"
+    },
+    "Logs": {
+        "Rules": [
+            {
+                "FilePath": "/logs/current-megamind-resharder.log"
+            }
+        ]
+    },
+    "Suppliers": [
+        {
+            "Alias": "megamind-analytics-log-vla",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "vla.logbroker.yandex.net",
+                "SrcTopic": "/megamind/analytics-log"
+            }
+        },
+        {
+            "Alias": "megamind-analytics-log-sas",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "sas.logbroker.yandex.net",
+                "SrcTopic": "/megamind/analytics-log"
+            }
+        },
+        {
+            "Alias": "megamind-analytics-log-man",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "man.logbroker.yandex.net",
+                "SrcTopic": "/megamind/analytics-log"
+            }
+        },
+        {
+            "Alias": "megamind-analytics-log-iva",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "iva.logbroker.yandex.net",
+                "SrcTopic": "/megamind/analytics-log"
+            }
+        },
+        {
+            "Alias": "megamind-analytics-log-myt",
+            "LbSupplier": {
+                "ConfigManagerGrpcHost": "cm.logbroker.yandex.net:1111",
+                "LogbrokerClientId": "/megamind/wonderlogs",
+                "LogbrokerTvmAlias": "logbroker",
+                "SrcServer": "myt.logbroker.yandex.net",
+                "SrcTopic": "/megamind/analytics-log"
+            }
+        }
+    ],
+    "ConsumingSystem": {
+        "Cluster": "markov",
+        "MainPath": "//home/alice/test/big-rt/cs/megamind-resharder/main",
+        "OffsetsTable": "//home/alice/test/big-rt/cs/megamind-resharder/offsets",
+        "LaunchShardProcessorInFiber": true,
+        "MasterBalancing": {
+            "MasterPath": "//home/alice/test/big-rt/cs/megamind-resharder/master"
+        },
+        "MaxShardsAutoResolveRatio": 0.661,
+        "MaxShardsToCheckAutoResolveRatio": 0.04,
+        "WorkerMinorName": "worker_megamind_resharder_log",
+        "ThreadLabelPrefix": "thread_megamind_resharder_log",
+        "MaxShardsToCheck": 2
+    },
+    "StatelessShardProcessorConfig": {
+        "CommitPeriodMs": 300
+    },
+    "HttpServer": {
+        "Port": 3446
+    }
+}

@@ -1,0 +1,28 @@
+; supervisor config file
+
+[unix_http_server]
+file={{ BSCONFIG_IDIR }}/supervisor.sock   ; (the path to the socket file)
+chmod=0700                       ; sockef file mode (default 0700)
+
+[supervisord]
+logfile=/logs/supervisord.log
+logfile_maxbytes=50MB
+logfile_backups=2
+pidfile={{ BSCONFIG_IDIR }}/supervisord.pid
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+
+[program:yaldi]
+command = {{ BSCONFIG_IDIR }}/run.sh
+autostart = true
+autorestart = true
+stderr_logfile=/logs/{{orthogonal_tags['a_itype']}}.err
+stderr_logfile_maxbytes=50MB
+stderr_logfile_backups=2
+stdout_logfile=/logs/{{orthogonal_tags['a_itype']}}.out
+stdout_logfile_maxbytes=1GB
+stdout_logfile_backups=2

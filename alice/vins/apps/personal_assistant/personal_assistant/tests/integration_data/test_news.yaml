@@ -1,0 +1,316 @@
+experiments: [alice_news_no_promo, mm_disable_protocol_scenario=News]
+
+labels:
+  br: '\n\n'
+  title: '.+'
+  text: '.+'
+  half_sec: '\.sil<\[500\]>'
+  second: '\.sil<\[1000\]>'
+
+  text_answer: '({title}{br}){{4,6}}{title}'
+  text_wizard_answer: '({title}{br}?)+'
+
+  voice_story: '({title}{half_sec} )?{text}'
+  voice_news: '({voice_story}{br}{second} ){{4,6}}{voice_story}'
+  voice_wizard_news: '({voice_story}({br}{second} )?)+'
+
+  default_before: '(Вот последние новости|В эфире новости|Всегда мечтала стать ведущей, вот последние новости|Новости сами себя не прочтут\. А, нет\. Прочтут|Вот последние новости к этому часу\. Надеюсь, хороших будет больше)\.'
+  top_before: '(Вот последние новости|В эфире главные новости|Вот подборка главных новостей|Всегда мечтала стать ведущей, вот последние новости|Новости сами себя не прочтут\. А, нет\. Прочтут|Вот главные новости к этому часу\. Надеюсь, хороших будет больше)\.'
+
+  default_after: '((Вот и всё|До следующего выпуска|На этом все|С вами были Новости|В эфире были Новости)\. (Хорошего дня|До следующего выпуска|Следующий выпуск хоть сейчас|Оставайтесь с нами)|С вами были новости к этому часу, спасибо за внимание)[.!]'
+  top_after: '((Рассказала о главном|До следующего выпуска|Это были главные новости последней минуты)[.,] (Хорошего дня|хотя могу ещё)|(В эфире были главные новости|С вами были главные новости к этому часу), спасибо за внимание)\.'
+
+  voice_before_news: '({default_before}|{top_before})'
+  voice_after_news: '({default_after}|{top_after})'
+
+  nonews: 'К сожалению, я не смогла найти новостей по данному запросу\.'
+  voice_answer: '{voice_before_news}{second} {voice_news}{second} {voice_after_news}'
+  voice_wizard_answer: '{voice_before_news}{second} {voice_wizard_news}{second} {voice_after_news}'
+  voice_continuous_answer: '{voice_news}{second} {voice_after_news}'
+
+  open_details: 'Открываю Яндекс.Новости\.\.\.'
+
+test_basic:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      voice: '{voice_answer}'
+  app_info:
+    ignore:
+    - watch
+
+test_additional_commands:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    последние новости:
+      text: '{text_answer}'
+      voice: '{voice_answer}'
+    открой поподробнее: '{open_details}'
+  app_info:
+    ignore:
+    - dexp
+    - pa_android
+    - irbis
+    - pa_ios
+    - watch
+    - auto
+    - navigator_ios
+    - navigator_android
+    - speaker
+    - desktop_alice
+
+test_rubrics:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    новости футбола:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: 'football'
+      text: '{text_answer}'
+      voice: '{voice_answer}'
+    покажи новости армии:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: 'army'
+      text: '{text_answer}'
+      voice: '{voice_continuous_answer}'
+    какие новости в мире?:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: 'world'
+      text: '{text_answer}'
+      voice: '{voice_continuous_answer}'
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - pa_ios
+
+test_geo:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости москвы:
+      text: '{text_answer}'
+      voice: '{voice_answer}'
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: null
+          where:
+            value: 'москвы'
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - pa_ios
+
+test_ellipsis:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      text: '{text_answer}'
+      voice: '{voice_answer}'
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: null
+          where:
+            value: null
+    а в москве?:
+      text: '{text_answer}'
+      voice: '{voice_continuous_answer}'
+      vins_form:
+        slots:
+          topic:
+            value: null
+          where:
+            value: 'москве'
+    а футбола?:
+      text: '{text_answer}'
+      voice: '{voice_continuous_answer}'
+      vins_form:
+        slots:
+          topic:
+            value: 'football'
+          where:
+            value: null
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - pa_ios
+    - auto
+    - navigator_ios
+    - navigator_android
+    - desktop_alice
+
+test_ellipsis_details:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      text: '{text_answer}'
+      voice: '{voice_answer}'
+    а в москве?:
+      text: '{text_answer}'
+      voice: '{voice_continuous_answer}'
+    подробнее: '{open_details}'
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - pa_ios
+    - auto
+    - navigator_ios
+    - navigator_android
+    - desktop_alice
+    - dexp
+    - irbis
+    - speaker
+
+test_nonews:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    какие новости хиромантии:
+      text: '{nonews}'
+      voice: '{nonews}'
+  app_info:
+    ignore:
+    - watch
+    - pa_android
+    - pa_ios
+    - auto
+    - navigator_ios
+    - navigator_android
+    - desktop_alice
+
+test_nonews_open_uri:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    какие новости хиромантии:
+      directives:
+      - name: 'open_uri'
+        sub_name: 'personal_assistant.scenarios.search'
+        type: 'client_action'
+        payload:
+          uri: "viewport://?lr=213&noreask=1&text=%D0%BD%D0%BE%D0%B2%D0%BE%D1%81%D1%82%D0%B8%20%D1%85%D0%B8%D1%80%D0%BE%D0%BC%D0%B0%D0%BD%D1%82%D0%B8%D0%B8%20%D0%B2%20%D0%BC%D0%BE%D1%81%D0%BA%D0%B2%D0%B5&viewport_id=serp"
+  app_info:
+    ignore:
+    - dexp
+    - irbis
+    - navigator_android
+    - watch
+    - auto
+    - speaker
+    - navigator_ios
+    - desktop_alice
+    - pa_android
+    - pa_ios
+
+test_more_news_text:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: null
+      text: '{text_answer}'
+    дальше:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+        slots:
+          topic:
+            value: null
+      text: '{text_answer}'
+    покажи новости армии:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+        slots:
+          topic:
+            value: 'army'
+      text: '{text_answer}'
+    следующий выпуск новостей:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+        slots:
+          topic:
+            value: 'army'
+      text: '{text_answer}'
+    следующая новость:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+        slots:
+          topic:
+            value: 'army'
+      text: '{text_answer}'
+  app_info:
+    ignore:
+    - watch
+    - pa_ios
+    - pa_android
+
+test_more_news_voice:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+  dialog:
+    покажи новости:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+      voice: '{voice_answer}'
+    дальше:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+      voice: '{voice_continuous_answer}'
+    покажи новости армии:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news'
+      voice: '{voice_continuous_answer}'
+    следующий выпуск новостей:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+      voice: '{voice_continuous_answer}'
+    следующая новость:
+      vins_form:
+        name: 'personal_assistant.scenarios.get_news__more'
+      voice: '{voice_continuous_answer}'
+  app_info:
+    ignore:
+    - watch

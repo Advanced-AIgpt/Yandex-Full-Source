@@ -1,0 +1,43 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "timer/timer__common.nlg" %}
+{% from "timer/timer__common.nlg" import render_error, render_timer_list, no_such_timer, suggest_show_timers %}
+{% from "timer/timer__common.nlg" import render_timer_from_form_and_context with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention('timer__is_mobile') %}
+    {{ suggest_show_timers() }}
+  {% elif is_active_attention('timer__no_timers_for_time')
+      or is_active_attention('timer__multiple_timers_for_time')
+      or is_active_attention('timer__no_timer_specified')
+      or is_active_attention('timer__invalid_id') %}
+    {% if is_active_attention('timer__invalid_id') %}
+      {{ no_such_timer() }}
+    {% endif %}
+    {{ render_timer_list(form.available_timers) }}\n{% vc %}-{% evc %}
+    {% if form.available_timers|length > 1 %}
+      Какой из них вы хотите запустить?
+    {% else %}
+      Вы хотите его запустить?
+    {% endif %}
+  {% else %}
+    Хорошо, сняла с паузы
+    {% if form.timer_id == 'all' %}
+      все {% tx %}таймеры{% etx %}{% vc %}т+аймеры{% evc %}.
+    {% else %}
+      {{ render_timer_from_form_and_context(form, context) }}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__timererror %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {% chooseline %}
+      Нет, {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} я пока не умею снимать с паузы. Но это временно.
+      Я пока не умею снимать с паузы {% tx %}таймеры{% etx %}{% vc %}т+аймеры{% evc %} на этом устройстве, но когда-нибудь научусь.
+    {% endchooseline %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    Не понимаю какой {% tx %}таймер{% etx %}{% vc %}т+аймер{% evc %} вы хотите снять с паузы.
+  {% else %}
+    {{ render_error(context.error.data.code, form.time, form.specification) }}
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,190 @@
+{% macro render_instance(ent_instance) -%}
+  {{ context.onto_synth.random_nlu_phrase(ent_instance) }}
+{%- endmacro %}
+
+{% macro polite() %}
+  {% maybe 0.3 %}
+    {% chooseline %}
+      пожалуйста
+      плиз
+      если не трудно
+    {% endchooseline %}
+  {% endmaybe %}
+{% endmacro %}
+
+{% macro query1() %}
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    поставить
+    запусти
+    запустить
+    послушаем
+    послушать
+    прочитай
+    прочитать
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+  {{ polite() }}
+  {% chooseline %}
+    сказку
+    аудиосказку
+  {% endchooseline %}
+  '{{ form.name | inflect('nom') }}'(fairy_tale)
+{% endmacro %}
+
+{% macro query2() %}
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    запусти
+    послушаем
+    прочитай
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+  {{ polite() }}
+  {% chooseline %}
+      сказку
+      аудиосказку
+  {% endchooseline %}
+  {% chooseitem %}
+    про
+    '{{ form.theme | inflect('acc') }}'(fairy_tale)
+      {% or %}
+    о
+    '{{ form.theme | inflect('abl') }}'(fairy_tale)
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro query3() %}
+  {{ polite() }}
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    запусти
+    послушаем
+    прочитай
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+  '{{ form.attributes | inflect('acc') }}'(fairy_tale)
+  {% chooseline %}
+      сказку
+      аудиосказку
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro query4() %}
+  {{ polite() }}
+  {% chooseline %}
+    сказку
+    аудиосказку
+  {% endchooseline %}
+  '{{ form.name | inflect('nom') }}'(fairy_tale)
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    поставить
+    запусти
+    запустить
+    послушаем
+    послушать
+    прочитай
+    прочитать
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro query5() %}
+  {{ polite() }}
+  {% chooseline %}
+      сказку
+      аудиосказку
+  {% endchooseline %}
+  {% chooseitem %}
+    про
+    '{{ form.theme | inflect('acc') }}'(fairy_tale)
+      {% or %}
+    о
+    '{{ form.theme | inflect('abl') }}'(fairy_tale)
+  {% endchooseitem %}
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    запусти
+    послушаем
+    прочитай
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro query6() %}
+  '{{ form.attributes | inflect('acc') }}'(fairy_tale)
+  {% chooseline %}
+      сказку
+      аудиосказку
+  {% endchooseline %}
+  {% chooseline %}
+    давай
+    расскажи
+    поставь
+    запусти
+    послушаем
+    прочитай
+    давай все таки
+    давай послушаем
+    давай расскажи
+    давай поставь
+    давай прочитай
+  {% endchooseline %}
+{% endmacro %}
+
+{% phrase render_query %}
+  {% maybe 0.2 %}
+    {% chooseline %}
+      привет
+      добрый вечер
+      доброе утро
+      добрый день
+      хай
+      здарова
+    {% endchooseline %}
+  {% endmaybe %}
+  {% chooseitem %}
+    {{ query1() }}
+  {% or %}
+    {{ query2() }}
+  {% or %}
+    {{ query3() }}
+  {% or %}
+    {{ query4() }}
+  {% or %}
+    {{ query5() }}
+  {% or %}
+    {{ query6() }}
+  {% endchooseitem %}
+{% endphrase %}

@@ -1,0 +1,361 @@
+labels:
+  call_prefix: '(Набираю|Звоню||Уже набираю|Сейчас позвоним).*'
+  elari_watch_not_supported: 'Я научусь звонить с часов, но пока не умею.|С этим в
+    часах пока не помогу. Но только пока.|Я бы и рада, но ещё не научилась. Всё будет.'
+  elari_watch_not_supported_emergency: '.*яркую кнопку.*'
+
+test_basic:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    вызови скорую:
+      vins_form:
+        slots:
+          recipient:
+            value: ambulance
+
+      bass:
+        form:
+          recipient_info:
+            value:
+              phone: '103'
+              phone_uri: 'tel:103'
+              title: 'скорая помощь'
+              type: 'emergency'
+
+        blocks:
+        - type: suggest
+          suggest_type: call__emergency_service
+          data:
+            phone: '102'
+            phone_uri: 'tel:102'
+            title: 'полиция'
+
+        - type: suggest
+          suggest_type: call__emergency_service
+          data:
+            phone: '112'
+            phone_uri: 'tel:112'
+            title: 'служба спасения'
+
+        - type: suggest
+          suggest_type: call__call
+
+        - type: command
+          command_type: open_uri
+          command_sub_type: phone_call
+          data:
+            uri: 'tel:103'
+
+      text: '{call_prefix}...'
+      voice: '{call_prefix}...'
+
+      directives:
+      - name: open_uri
+        sub_name: phone_call
+        type: client_action
+        payload:
+          uri: 'tel:103'
+
+      button_actions:
+      - name: 'open_uri'
+        title: 'Позвонить'
+        payload:
+          uri: 'tel:103'
+
+      suggests:
+      - caption: 'Позвонить в полицию'
+        utterance: 'Позвони в полицию'
+
+      - caption: 'Вызови службу спасения'
+        utterance: 'Вызвать службу спасения'
+
+  app_info:
+    ignore:
+    - auto
+    - pa_ios
+    - dexp
+    - navigator_ios
+    - speaker
+    - navigator_android
+    - irbis
+    - pa_android
+    - watch
+    - desktop_alice
+
+test_formfilling:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  позвони:
+    vins_form:
+      slots:
+        recipient:
+          value: null
+    bass:
+      form:
+        recipient:
+          optional: false
+
+    voice: 'Куда нужно позвонить?'
+
+  в милицию:
+    vins_form:
+      slots:
+        recipient:
+          value: police
+
+    bass:
+      form:
+        recipient_info:
+          value:
+            title: 'милиция'
+            type: 'emergency'
+
+    text: '{call_prefix}...'
+    voice: '{call_prefix}...'
+
+  ой нет в скорую:
+    vins_form:
+      slots:
+        recipient:
+          value: ambulance
+
+    bass:
+      form:
+        recipient_info:
+          value:
+            title: 'скорая'
+            type: 'emergency'
+
+    text: '{call_prefix}...'
+    voice: '{call_prefix}...'
+
+test_calls_not_supported:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони в мчс:
+      vins_form:
+        slots:
+          recipient:
+            value: fire_department
+
+      bass:
+        form:
+          recipient_info:
+            value:
+              phone: '101'
+              phone_uri: 'call://101'
+              title: 'пожарная служба'
+              type: emergency
+
+        blocks:
+        - type: attention
+          attention_type: calls_not_supported_on_device
+
+      text: 'Телефон пожарной службы — 101, звоните скорее со своего телефона.'
+      voice: 'Телефон пожарной службы — 101, звоните скорее со своего телефона.'
+
+      directives:
+        exact_match: true
+        data: []
+  app_info:
+    ignore:
+    - watch
+
+test_contact_no_client_support:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  позвони антону:
+    vins_form:
+      slots:
+        recipient:
+          type: 'fio'
+          value:
+            name: 'антон'
+
+    bass:
+      form:
+        recipient_info:
+          value: null
+
+      blocks:
+      - type: attention
+        attention_type: calls_not_supported_by_client
+
+    text: 'Пока что я умею звонить только в экстренные службы.'
+    voice: 'Пока что я умею звонить только в экстренные службы.'
+
+test_elari_watch:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    позвони маме:
+      bass:
+        form:
+          recipient_info:
+            value: null
+
+        blocks:
+        - type: attention
+          attention_type: calls_not_supported_on_device
+      text: '{elari_watch_not_supported}'
+    звони в полицию:
+      bass:
+        form:
+          recipient_info:
+            value:
+              title: Полиция
+              type: emergency
+              phone: 02
+        blocks:
+        - type: attention
+          attention_type: calls_not_supported_on_device
+      text: '{elari_watch_not_supported_emergency}'
+
+test_contact_name_normalization_lena:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони лене:
+      vins_form:
+        slots:
+          recipient:
+            type: 'fio'
+            value:
+              name: 'лена'
+
+test_contact_name_normalization_sergey:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони сергею:
+      vins_form:
+        slots:
+          recipient:
+            type: 'fio'
+            value:
+              name: 'сергей'
+
+test_contact_name_normalization_anya_moskva:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони ане москва:
+      vins_form:
+        slots:
+          recipient:
+            type: 'string'
+            value: 'аня москва'
+
+test_right_intent_vizov:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    вызов сао надежда:
+      vins_form:
+        slots:
+          recipient:
+            type: 'string'
+            value: 'сао надежда'
+
+test_right_intent_zvonok_v:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    звонок в мегафон:
+      vins_form:
+        slots:
+          recipient:
+            type: 'string'
+            value: 'мегафон'
+
+test_right_intent_nachat_zvonok_s:
+  dialog:
+    начать звонок с олег пахомов:
+      vins_form:
+        slots:
+          recipient:
+            type: 'fio'
+            value:
+              name: 'олег'
+              surname: 'пахомов'
+
+test_right_intent_svyajis_s:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    свяжись с максом:
+      vins_form:
+        slots:
+          recipient:
+            type: 'fio'
+            value:
+              name: 'макс'
+
+test_right_intent_zvyakni:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    звякни саше:
+      vins_form:
+        slots:
+          recipient:
+            type: 'fio'
+            value:
+              name: 'саша'
+
+test_no_messagings:
+  flags:
+    skip:
+      value: true
+      reason: 'Scenario in irrelevant list'
+
+  dialog:
+    позвони путину:
+      vins_form:
+        name: 'personal_assistant.scenarios.call'
+    набери васю:
+      vins_form:
+        name: 'personal_assistant.scenarios.call'

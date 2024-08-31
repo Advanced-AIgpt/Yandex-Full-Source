@@ -1,0 +1,518 @@
+{% nlgimport "common.nlg" %}
+{% from "common.nlg" import operator_symbol %}
+
+{% macro print_if_exists(dict, key, prefix, suffix) %}
+  {% if key in dict %}
+    {{ prefix + dict[key] + suffix }}
+  {% endif %}
+{% endmacro %}
+
+{% macro fancy_outlet_phone(phone) %}
+  {{ print_if_exists(phone, "countryCode", "+", "") }}
+  {{ print_if_exists(phone, "cityCode", "(", ")") }}
+  {{ print_if_exists(phone, "number", "", "") }}
+  {{ print_if_exists(phone, "extNumber", " доб. ", "") }}
+{% endmacro %}
+
+{% macro fancy_outlet_address(outlet) %}
+  {{ print_if_exists(outlet, "postcode", "", ",") }}
+  {{ print_if_exists(outlet, "city", "", ",") }}
+  {{ print_if_exists(outlet, "street", "", ",") }}
+  {{ print_if_exists(outlet, "house", "д. ", "") }}
+
+  {% if phones in outlet and len(outlet.phones) > 0 %}
+    тел.
+    {% for phone in outlet.phones %}
+      {{ fancy_outlet_phone(phone) }}
+    {% endfor %}
+  {% endif %}
+{% endmacro %}
+
+{% macro get_to_preposition(city) -%}
+{# from https://a.yandex-team.ru/arc/trunk/arcadia/alice/vins/apps/personal_assistant/personal_assistant/config/scenarios/intents/avia/common.nlg#L1 #}
+    {% set prep %}
+        {% if city[0] in 'вВфФ' %}
+            во
+        {% else %}
+            в
+        {% endif %}
+    {% endset %}
+
+    {{ prep }}
+{%- endmacro %}
+
+{% macro need_all() %}
+  Чтобы я мог посмотреть статус вашего заказа, мне нужно знать его номер,
+  а также номер телефона, или адрес электронной почты, на которые этот заказ был оформлен.
+{% endmacro %}
+
+{% macro deliver_to(data) %}
+  {% if "buyerAddress" in data and "street" in data.buyerAddress %}
+    {{ get_to_preposition(data.buyerAddress.city) }}
+    {{ data.buyerAddress.city | inflect('acc') }} на
+    {{ data.buyerAddress.street | inflect('acc') }}
+  {% elif "buyerAddress" in data and "street" not in data.buyerAddress %}
+    {{ get_to_preposition(data.buyerAddress.city) }}
+    {{ data.buyerAddress.city | inflect('acc') }} {# Внезапно, в Зеленограде есть куча адресов без улиц #}
+  {% elif "outlet" in data and "name" in data.outlet %}
+    {{ get_to_preposition(data.outlet.name) }}
+    {{ data.outlet.name | inflect("acc") }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase need_order_id_and_phone_or_email %}
+  {{ need_all() }}
+{% endphrase %}
+
+{% phrase need_phone_or_email %}
+  Чтобы я мог посмотреть информацию об этом заказе ({{ form.order_id }}), мне нужно знать
+  номер телефона или адрес электронной почты, к которым этот заказ был привязан.
+{% endphrase %}
+
+{% phrase need_order_id %}
+  {% if form.phone and form.phone != "" %}
+    К сожалению, я не могу ничего узнать только по номеру телефона. Назовите, пожалуйста,
+    номер заказа.
+  {% elif form.email and form.email != "" %}
+    К сожалению, я не могу ничего узнать только по адресу электронной почты. Назовите, пожалуйста,
+    номер заказа.
+  {% else %}
+    {{ need_all() }}
+  {% endif %}
+{% endphrase %}
+
+{% phrase order_not_found %}
+  {% if context.data.phoneNumber and context.data.phoneNumber != "" and
+      context.data.email and context.data.email != "" %}
+    К сожалению, ни с почтой {{ context.data.email }}, ни с телефоном {{ context.data.phoneNumber }} заказ с номером
+    {{ context.data.orderId }} не связан.
+  {% elif context.data.phoneNumber and context.data.phoneNumber != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с номером телефона {{ context.data.phoneNumber }}.
+  {% elif context.data.email and context.data.email != "" %}
+    К сожалению, заказ {{ context.data.orderId }} не связан с электронной почтой {{ context.data.email }}.
+  {% else %}
+    К сожалению, среди ваших заказов мне не удалось найти заказ с таким номером.
+  {% endif %}
+{% endphrase %}
+
+{% phrase respond_with_order_list %}
+  О каком заказе вы хотите узнать?
+  \n\n
+  {% for order in context.data.orders %}
+    Заказ {{ order.id }} ({{ order.created_at }})\n
+  {% endfor %}
+{% endphrase %}
+
+{% phrase render_suggest_caption__select_order %}
+  Заказ {{ context.select_order.data.id }}
+{% endphrase %}
+
+{% phrase render_suggest_utterance__select_order %}
+  Заказ {{ context.select_order.data.id }}
+{% endphrase %}
+
+{% phrase order_cancelled %}
+  Заказ {{ context.data.orderId }} был отменен.
+{% endphrase %}
+
+{% phrase order_has_cancellation_request %}
+  Я вижу, что для заказа {{ context.data.orderId }} создан запрос на отмену.
+{% endphrase %}
+
+{% phrase order_delivered %}
+  Заказ {{ context.data.orderId }} уже доставлен.
+{% endphrase %}
+
+{% phrase order_pending %}
+  Мы ожидаем ответа от партнеров по этому заказу.
+{% endphrase %}
+
+{% phrase order_unpaid %}
+  Заказ {{ context.data.orderId }} еще не был оплачен. Вы можете его оплатить его из личного кабинета.
+{% endphrase %}
+
+{% phrase order_in_pickup %}
+  Заказ {{ context.data.orderId }} уже ждет вас в пункте выдачи.
+{% endphrase %}
+
+{% phrase status_not_implemented %}
+  Я не знаю как вам сказать, в каком статусе находится ваш заказ.
+{% endphrase %}
+
+{% phrase call_operator %}
+  {% if not is_webim_v1() %}
+    К сожалению ситуация с вашим заказом требует вмешательства человека. Подождите, пожалуйста, я позову моего коллегу —
+    он со всем разберется.
+    {{ default_redirect() }}
+  {% else %}
+    К сожалению ситуация с вашим заказом требует вмешательства человека. Разрешите мне позвать моего коллегу —
+    он со всем разберется.
+  {% endif %}
+{% endphrase %}
+
+{% phrase cancel_operator_redirect %}
+  Хорошо, я не буду вас переводить на оператора. Задайте другой вопрос, пожалуйста.
+{% endphrase %}
+
+{% phrase render_suggest_caption__call_operator %}
+  Позови человека
+{% endphrase %}
+
+{% phrase render_suggest_utterance__call_operator %}
+  Позови человека
+{% endphrase %}
+
+{% phrase operator_redirect_after_change_address %}
+  В таком случае, я не смогу вам помочь. Подождите, пожалуйста, немного пока я позову моего коллегу —
+  он со всем разберется. {{ default_redirect() }}
+{% endphrase %}
+
+{% phrase operator_redirect_after_continuation %}
+  В таком случае, я не смогу вам помочь. Подождите, пожалуйста, немного пока я позову моего коллегу —
+  он со всем разберется. {{ default_redirect() }}
+{% endphrase %}
+
+{% phrase delivery_today_fine %}
+  {% set dt = datetime.strptime(context.data.delivery_dates.toDate, "%d-%m-%Y") %}
+  {% set dateTo = dt.strftime('%d.%m.%Y') %}
+  {% set rescheduled_not_by_user = context.data.was_rescheduled and not context.data.was_rescheduled_by_user %}
+
+  {% if rescheduled_not_by_user %}
+    Проверил информацию по вашему заказу. Нам очень жаль, что мы не смогли доставить этот заказ вовремя.
+    Доставка состоится
+    {% if "toTime" in context.data.delivery_dates %}
+      сегодня ({{ dateTo }}) c {{ context.data.delivery_dates.fromTime }} до {{ context.data.delivery_dates.toTime }}.
+    {% else %}
+      сегодня ({{ dateTo }}).
+    {% endif %}
+  {% else %}
+    Все в порядке.
+  {% endif %}
+
+  {% if context.data.delivery_type == 'DELIVERY' %}
+    {% if "buyerAddress" in data %}
+      Курьер уже направляется к вам {{ deliver_to(context.data) }}.
+    {% else %}
+      Курьер уже направляется к вам.
+    {% endif %}
+    {% if not rescheduled_not_by_user and "toTime" in context.data.delivery_dates %}
+      Он будет у вас между {{ context.data.delivery_dates.fromTime }} и {{ context.data.delivery_dates.toTime }}.
+    {% endif %}
+    Обычно курьеры звонят за 30-60 минут до приезда.
+    Пожалуйста, не убирайте телефон далеко.
+  {% elif context.data.delivery_type == 'PICKUP' %}
+    {% if "outlet" in context.data and "name" in context.data.outlet %}
+      Курьер уже везёт ваш заказ {{ get_to_preposition(context.data.outlet.name) }}
+      {{ context.data.outlet.name | inflect("acc") }}.
+    {% else %}
+      Курьер уже везёт ваш заказ в пункт выдачи.
+    {% endif %}
+    Как только заказ будет на месте, вам придёт SMS,
+    и вы сможете его забрать. Про сроки хранения заказа в разных пунктах выдачи можно прочитать
+    {% if is_webim() %}
+      [в Справке для покупателей](https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% else %}
+      в Справке для покупателей (https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% endif %}
+  {% elif context.data.delivery_type == 'POST' %}
+    Ваша посылка сегодня прибудет к вам в отделение почты.
+  {% elif context.data.delivery_type == 'DIGITAL' %}
+    Сегодня вам придет письмо с вашей покупкой на ваш адрес электронной почты.
+  {% else %}
+    Ваш в товар в пути. И должен добраться до вас.
+  {% endif %}
+{% endphrase %}
+
+{% phrase delivery_today_courier_in_traffic %}
+  {% set dt = datetime.strptime(context.data.delivery_dates.toDate, "%d-%m-%Y") %}
+  {% set dateTo = dt.strftime('%d.%m.%Y') %}
+  {% set rescheduled_not_by_user = context.data.was_rescheduled and not context.data.was_rescheduled_by_user %}
+
+  {% if rescheduled_not_by_user %}
+    Проверил информацию по вашему заказу. Я виже, что доставка была перенесена на
+    {% if "toTime" in context.data.delivery_dates %}
+      сегодня ({{ dateTo }}) c {{ context.data.delivery_dates.fromTime }} до {{ context.data.delivery_dates.toTime }}.
+    {% else %}
+      сегодня ({{ dateTo }}).
+    {% endif %}
+  {% endif %}
+
+  Мне очень жаль, что у нас не получилось доставить заказ вовремя. Возможно, курьер задержался в пути.
+  {% if context.data.deliveryServiceContact != "" %}
+    Вы можете позвонить в службу доставки, которая везёт ваш заказ по номеру телефона
+    {{ context.data.deliveryServiceContact }}
+    и узнать причину задержки курьера.
+  {% endif %}
+
+  {% if context.data.delivery_type == 'DELIVERY' %}
+    {% if "buyerAddress" in context.data %}
+      По нашим данным, он уже направляется к вам {{ deliver_to(context.data) }}.
+    {% else %}
+      По нашим данным, он уже направляется к вам.
+    {% endif %}
+    Обычно курьеры звонят за 30-60 минут до приезда.
+    Пожалуйста, не убирайте телефон далеко.
+  {% elif context.data.delivery_type == 'PICKUP' %} {# should not be activated for anything but DELIVERY but just in case #}
+    {% if "outlet" in context.data and "name" in context.data.outlet %}
+      Курьер уже везёт ваш заказ {{ get_to_preposition(context.data.outlet.name) }}
+      {{ context.data.outlet.name | inflect("acc") }}.
+    {% else %}
+      Курьер уже везёт ваш заказ в пункт выдачи.
+    {% endif %}
+    Как только заказ будет на месте, вам придёт SMS,
+    и вы сможете его забрать. Про сроки хранения заказа в разных пунктах выдачи можно прочитать
+    {% if is_webim() %}
+      [в Справке для покупателей](https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% else %}
+      в Справке для покупателей (https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% endif %}
+  {% elif context.data.delivery_type == 'POST' %}
+    Ваша посылка сегодня прибудет к вам в отделение почты.
+  {% elif context.data.delivery_type == 'DIGITAL' %}
+    Сегодня вам придет письмо с вашей покупкой на ваш адрес электронной почты.
+  {% else %}
+    Ваш в товар в пути. И должен добраться до вас.
+  {% endif %}
+{% endphrase %}
+
+{% phrase wanna_wait_question %}
+  Готовы ли вы подождать?
+{% endphrase %}
+
+{% phrase delivery_future %}
+  {% set dt = datetime.strptime(context.data.delivery_dates.toDate, "%d-%m-%Y") %}
+  {% set dateTo = dt.strftime('%d.%m.%Y') %}
+  {% set rescheduled_not_by_user = context.data.was_rescheduled and not context.data.was_rescheduled_by_user %}
+
+  {% if not rescheduled_not_by_user %}
+    Все в порядке.
+  {% else %}
+    Проверил информацию по вашему заказу. Мы получили от партнёра по доставке сообщение, что дата доставки сместилась.
+  {% endif %}
+
+  Ваш заказ мы планируем доставить вам {{ deliver_to(context.data) }}
+  {% if "toTime" in context.data.delivery_dates %}
+    {{ dateTo }} c {{ context.data.delivery_dates.fromTime }} до {{ context.data.delivery_dates.toTime }}.
+  {% else %}
+    {{ dateTo }}.
+  {% endif %}
+  {% if context.data.delivery_type == 'DELIVERY' %}
+    Курьер позвонит вам в день доставки для согласования времени визита.
+  {% elif context.data.delivery_type == 'PICKUP' %}
+    Когда заказ будет на месте, вы получите SMS об этом.
+  {% elif context.data.delivery_type == 'POST' %}
+    Когда заказ будет в отделении Почты России, вы получите извещение.
+  {% elif context.data.delivery_type == 'DIGITAL' %}
+    Вы получите ваш заказ в цифровом виде на электронную почту.
+  {% endif %}
+{% endphrase %}
+
+{% phrase delivery_past %}
+  {% set dt = datetime.strptime(context.data.delivery_dates.toDate, "%d-%m-%Y") %}
+  {% set dateTo = dt.strftime('%d.%m.%Y') %}
+
+  Проверил информацию по вашему заказу. Мне очень жаль, что у нас не получилось доставить заказ вовремя.
+  Доставка состоится сегодня.
+
+  {% if context.data.delivery_type == 'DELIVERY' %}
+    {% if "buyerAddress" in context.data %}
+      Курьер уже направляется к вам {{ deliver_to(context.data) }}.
+    {% else %}
+      Курьер уже направляется к вам.
+    {% endif %}
+    Обычно курьеры звонят за 30-60 минут до приезда.
+    Пожалуйста, не убирайте телефон далеко.
+  {% elif context.data.delivery_type == 'PICKUP' %}
+    {% if "outlet" in context.data and "name" in context.data.outlet %}
+      Курьер уже везёт ваш заказ {{ get_to_preposition(context.data.outlet.name) }}
+      {{ context.data.outlet.name | inflect("acc") }}.
+    {% else %}
+      Курьер уже везёт ваш заказ в пункт выдачи.
+    {% endif %}
+    Как только заказ будет на месте, вам придёт SMS,
+    и вы сможете его забрать. Про сроки хранения заказа в разных пунктах выдачи можно прочитать
+    {% if is_webim() %}
+      [в Справке для покупателей](https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% else %}
+      в Справке для покупателей (https://yandex.ru/support/pokupki/order/get.html{{'#'}}get__points-hold).
+    {% endif %}
+  {% elif context.data.delivery_type == 'POST' %}
+    Ваша посылка сегодня прибудет к вам в отделение почты.
+  {% elif context.data.delivery_type == 'DIGITAL' %}
+    Сегодня вам придет письмо с вашей покупкой на ваш адрес электронной почты.
+  {% else %}
+    Ваш в товар в пути. И должен добраться до вас.
+  {% endif %}
+{% endphrase %}
+
+{% phrase wanna_wait_reschedule %}
+  Мне очень жаль, что у нас не получилось доставить заказ вовремя. Готовы ли вы подождать доставки заказа?
+{% endphrase %}
+
+{% phrase delivery_today_order_lost %}
+  Проверил информацию по вашему заказу. К сожалению, служба доставки пока не может назвать нам точную дату доставки.
+  Как только у нас появится эта информация, мы вам отправим SMS сообщение.
+{% endphrase %}
+
+{% phrase wanna_wait_to_find %}
+  Готовы ли вы подождать SMS?
+{% endphrase %}
+
+{% phrase delivery_cancel %}
+  Мне очень жаль, но с этим заказом что-то пошло совсем не так. Я обязательно сообщу об этом своим коллегам-людям,
+  чтобы они разобрались, что случилось и сделали так, чтобы подобные случаи не повторялись, но этот заказ, к сожалению,
+  придётся отменить.
+  {% if context.data.was_logged_in %}
+    Вы можете отменить его самостоятельно в личном кабинете, либо я могу это сделать за вас.
+  {% endif %}
+  \n\n
+  Хотите, чтобы я отменил заказ {{ context.data.orderId }}?
+{% endphrase %}
+
+{% phrase delivery_future_lost %}
+  Кажется, мои коллеги-люди не успели вовремя передать ваш заказ в службу доставки. Мы обязательно разберёмся с этим и
+  будем готовы связаться с вами в ближайшее время.
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_contact %}
+  Да, подожду
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_contact %}
+  Да, подожду
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_contact %}
+  {{ operator_symbol() }} Нет, не хочу ждать этот заказ
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_contact %}
+  {{ operator_symbol() }} Нет, не хочу ждать этот заказ
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_cancel %}
+  Да, отмени
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_cancel %}
+  Да, отмени
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_cancel %}
+  Нет, не надо
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_cancel %}
+  Нет, не надо
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_rescheduled %}
+  Да, доставьте по тому же адресу
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_rescheduled %}
+  Да, доставьте по тому же адресу
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_change_address %}
+  {{ operator_symbol() }} Да, но адрес нужно изменить
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_change_address %}
+  {{ operator_symbol() }} Да, но адрес нужно изменить
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_rescheduled %}
+  Нет, не буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_rescheduled %}
+  Нет, не буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_suspended %}
+  Да, буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_suspended %}
+  Да, буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_suspended %}
+  {{ operator_symbol() }} Нет, не буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_suspended %}
+  {{ operator_symbol() }} Нет, не буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_caption__not_delivered %}
+  {{ operator_symbol() }} Мне не привезли этот заказ!
+{% endphrase %}
+
+{% phrase render_suggest_utterance__not_delivered %}
+  {{ operator_symbol() }} Мне не привезли этот заказ!
+{% endphrase %}
+
+{% phrase render_suggest_caption__not_cancelled %}
+  Почему вы отменили мой заказ?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__not_cancelled %}
+  Почему вы отменили мой заказ?
+{% endphrase %}
+
+{% phrase render_suggest_caption__dont_wanna_call %}
+  {{ operator_symbol() }} Не хочу никуда звонить
+{% endphrase %}
+
+{% phrase render_suggest_utterance__dont_wanna_call %}
+  {{ operator_symbol() }} Не хочу никуда звонить
+{% endphrase %}
+
+{% phrase render_suggest_caption__yes_wait %}
+  Да, буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__yes_wait %}
+  Да, буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_caption__no_wait %}
+  {{ operator_symbol() }} Нет, не буду ждать
+{% endphrase %}
+
+{% phrase render_suggest_utterance__no_wait %}
+  {{ operator_symbol() }} Нет, не буду ждать
+{% endphrase %}
+
+{% phrase thank_you %}
+  Спасибо вам за понимание! Я передам коллегам-людям, чтобы они быстрее доставили ваш заказ.
+{% endphrase %}
+
+{% phrase thank_you_lost %}
+  Спасибо вам за понимание! Я передам коллегам-людям, чтобы они быстрее разобрались с вашей ситуацией.
+{% endphrase %}
+
+{% phrase ask_yes_no %}
+  Простите, я вас не понял. Пожалуйста, воспользуйтесь подсказкой, или ответьте «Да» или «Нет».
+{% endphrase %}
+
+{% phrase render_suggest_caption__where_is_pickup_location %}
+  Где этот пункт выдачи?
+{% endphrase %}
+
+{% phrase render_suggest_utterance__where_is_pickup_location %}
+  Где этот пункт выдачи?
+{% endphrase %}
+
+{% phrase pickup_location %}
+  {{ context.data.outlet.name }} расположен по адресу: \n\n
+  {{ fancy_outlet_address(context.data.outlet) }}
+  \n\n
+  {{ print_if_exists(context.data.outlet, "notes", "", "") }}
+{% endphrase %}
+
+{% phrase no_pickup_location %}
+  Простите, что-то пошло не так. Для заказа {{ context.data.orderId }} у меня не записано пункта самовывоза.
+{% endphrase %}

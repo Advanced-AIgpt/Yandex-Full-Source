@@ -1,0 +1,22 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "convert/convert__ask.nlg" %}
+
+{% from "convert/convert_common.nlg" import source_gen, when_with_na, render_sum  with context %}
+
+{% phrase render_result %}
+  {% set tz = form.source_timezone or (form.search_response | get_item('timezone') | get_item('name')) or (context.onto[form.source] and context.onto[form.source].timezone) or 'UTC' %}
+  {% set parsed_dt = parse_dt(form.source_date) if form.source_date else None %}
+
+  {% if not form.source or not form.source_date %}
+    Мне нечего ответить.
+  {% else %}
+    {% if form.amount_from %}
+      Это по курсу {{ source_gen() }} {{ when_with_na(parsed_dt, tz) }}.
+    {% else %}
+      Это курс {{ source_gen() }} {{ when_with_na(parsed_dt, tz) }}
+      {% if form.amount_base == 1 and form.type_from %}
+        , цена за {{ render_sum(None, form.type_from, 'acc', 1) }}
+      {% endif %}.
+    {% endif %}
+  {% endif %}
+{% endphrase %}

@@ -1,0 +1,388 @@
+{% from "get_weather_nowcast/get_weather_nowcast_text_cases.nlg" import render_case, render_error, render_precipitation_type, render_hours %}
+
+
+{% macro temp(grad) %}
+  {% if grad > 0 %}
+    +{{ grad }}
+  {% else %}
+    {{ grad }}
+  {% endif %}
+{% endmacro %}
+
+{% macro min_max_temp(min, max) %}
+  {% if min == max %}
+    {{ temp(min) }}
+  {% elif min < 0 and max < 0 %}
+    от {{ temp(max) }} до {{ temp(min) }}
+  {% else %}
+    от {{ temp(min) }} до {{ temp(max) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro format_date(date, tz=None) -%}
+  {{ date | parse_dt | human_day_rel(tz) }}
+{%- endmacro %}
+
+{% macro render_smart_joined(separator) %}
+    {% for item in varargs if item -%}
+        {% if not loop.first %}{{ separator }}{% endif %}{{ item }}
+    {%- endfor %}
+{% endmacro %}
+
+{% macro render_day_part(day_part) %}
+  {% if day_part == "morning" %}
+    утром
+  {% elif day_part == "day" %}
+    днём
+  {% elif day_part == "evening" %}
+    вечером
+  {% elif day_part == "night" %}
+    ночью
+  {% endif %}
+{% endmacro %}
+
+{% macro __render_already_going(precipitation_type, prec_type_asked, same_types_case, different_types_case, default_case) %}
+    {% if (prec_type_asked and prec_type_asked != None) and (precipitation_type and precipitation_type != None)
+            and (prec_type_asked != 'precipitation' and prec_type_asked != 'no_precipitation') %} 
+        {% if render_precipitation_type(precipitation_type) == render_precipitation_type(prec_type_asked) %}
+            {{ same_types_case }}
+        {% else %}
+            {{ different_types_case }}
+        {% endif %}
+    {% else %}
+        {{ default_case }}
+    {% endif %}
+{% endmacro %}
+
+{% macro render_tomorrow(day_part, precipitation_change_hours, timestr, tz, next=False) %}
+    {% if (timestr is none) or (tz is none) %}
+      {% if not next %}
+        {% if precipitation_change_hours >= 18 %}завтра{% endif %}
+      {% endif %}
+    {% else %}
+      {% set dt = datetime.strptime(timestr, "%Y-%m-%d-%H:%M:%S") %}
+      {% set change_time = add_hours(dt=dt, hours=precipitation_change_hours) %}
+      {% set date = format_date(change_time.strftime('%Y-%m-%d'), tz) %}
+      {% set local_hour = dt.hour %}
+
+      {% if date == "завтра" %}
+        {% if day_part == "night" %}
+          {% if local_hour < 5 %}
+            завтра
+          {% endif %}
+        {% else %}
+          завтра
+        {% endif %}
+      {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro render_continues(next_change, change) %}
+  {% if change == next_change %}
+    продлится
+    {% chooseline %}
+       менее часа
+       не больше часа
+    {% endchooseline %}
+  {% else %}
+    {{ 'продлится около ' + render_hours(next_change - change, case='gen') }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_change(form, type, state, skip_tomorrow_part) %}
+  {% if form.precipitation_change_hours == 0 %}
+    {% if form.precipitation_current == 0 %}
+      {{ render_case(type=type, case='no_rain', state=state) }}
+    {% else %}
+      {% if form.precipitation_next_change_hours is not none %}
+        {% if form.expected_change == "prec_ends" %}
+          {{ render_precipitation_type(type, case='nom') }}
+          {{ ' не прекратится в ближайшие 24 часа' }}
+        {% else %}
+          {% set prec_type_asked = form.prec_type_asked %}
+          {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') }}
+            {{ ' уже идёт и не прекратится в ближайшие 24 часа' }}
+          {% endset %}
+          {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            {{ 'сейчас нет, зато идёт' }}
+            {{ render_precipitation_type(type, case='nom') + '.' }}
+            {{ 'Он не прекратится в ближайшие 24 часа' }}
+          {% endset %}
+          {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') }}
+            {{ ' не прекратится в ближайшие 24 часа' }}
+          {% endset %}
+          {% if form.expected_change == "prec_starts" %}
+            {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+          {% else %}
+            {{ same_types_case }}
+          {% endif %}
+        {% endif %}
+      {% else %}
+        {{ render_case(type=type, case='only_rain', state=state) }}
+      {% endif %}
+    {% endif %}
+  {% else %}
+    {% if form.precipitation_current == 0 %}
+      {{ render_precipitation_type(type, case='nom') + ' начнётся через ' + render_hours(form.precipitation_change_hours) }}
+      {% if form.precipitation_next_change_hours is not none %}
+        {% if form.precipitation_next_change_hours == 0 %}
+          {{ ' и не закончится в ближайшие сутки' }}
+        {% elif form.precipitation_next_change_hours <= 5 %}
+          {{ ' и ' + render_continues(form.precipitation_next_change_hours, form.precipitation_change_hours) }}
+        {% else %}
+          {{ ' и закончится ' }}
+          {% if not skip_tomorrow_part %}
+            {{ render_tomorrow(form.precipitation_next_day_part, form.precipitation_next_change_hours, form.date, form.tz, next=True) }}
+          {% endif %}
+          {{ render_day_part(form.precipitation_next_day_part) }}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      {% if form.precipitation_next_change_hours is not none %}
+        {% if form.expected_change == "prec_ends" %}
+          {{ render_precipitation_type(type, case='nom') + ' закончится через ' + render_hours(form.precipitation_change_hours)}}
+        {% else %}
+          {% set prec_type_asked = form.prec_type_asked %}
+          {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') + ' уже идёт. ' }}
+            {{ render_continues(form.precipitation_change_hours, 0) | capitalize_first }}
+          {% endset %}
+          {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            {{ 'сейчас нет, зато идёт' }}
+            {{ render_precipitation_type(type, case='nom') + '.' }}
+            {{ render_continues(form.precipitation_change_hours, 0) | capitalize_first }}
+          {% endset %}
+          {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') }}
+            {{ render_continues(form.precipitation_change_hours, 0) }}
+          {% endset %}
+          {% if form.expected_change == "prec_starts" %}
+            {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+          {% else %}
+            {{ same_types_case }}
+          {% endif %}
+        {% endif %}
+      {% else %}
+        {{ render_precipitation_type(type, case='nom') + ' кончится через ' + render_hours(form.precipitation_change_hours)}}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation_change_day_part(form, type, state, skip_tomorrow_part) %}
+
+  {% if form.precipitation_current == 0 %}
+    {% if form.precipitation_next_change_hours is not none %}
+      {{ render_precipitation_type(type, case='nom') + ' начнётся ' }}
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(form.precipitation_day_part, form.precipitation_change_hours, form.date, form.tz) }}
+      {% endif %}
+      {{ render_day_part(form.precipitation_day_part) }}
+      {% if form.precipitation_next_change_hours == 0 %}
+          {{ ' и не закончится в ближайшие сутки' }}
+      {% elif form.precipitation_day_part == form.precipitation_next_day_part %}
+          {{ ' и продлится около ' + render_hours(form.precipitation_next_change_hours - form.precipitation_change_hours, case='gen') }}
+      {% else %}
+        {{ ' и закончится ' }}
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(form.precipitation_next_day_part, form.precipitation_next_change_hours, form.date, form.tz, next=True) }}
+        {% endif %}
+        {{ render_day_part(form.precipitation_next_day_part) }}
+      {% endif %}
+    {% else %}
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(form.precipitation_day_part, form.precipitation_change_hours, form.date, form.tz) }}
+      {% endif %}
+      {{ render_day_part(form.precipitation_day_part) }}
+      {{ 'может быть ' + render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% else %}
+    {% if form.precipitation_next_change_hours is not none %}
+      {% if form.expected_change == "prec_ends" %}
+        {{ render_precipitation_type(type, case='nom') + ' закончится ' }}
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(form.precipitation_day_part, form.precipitation_change_hours, form.date, form.tz) }}
+        {% endif %}
+        {{ render_day_part(form.precipitation_day_part) }}
+      {% else %}
+        {% set prec_type_asked = form.prec_type_asked %}
+        {% set same_types_case %}
+            {{ render_precipitation_type(type, case='nom') + 'уже идёт. Закончится ' }}
+        {% endset %}
+        {% set different_types_case %}
+            {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+            {{ 'сейчас нет, зато идёт' }}
+            {{ render_precipitation_type(type, case='nom') + '.' }}
+            {{ 'Он закончится' }}
+        {% endset %}
+        {% set default_case %}
+            {{ render_precipitation_type(type, case='nom') + ' закончится ' }}
+        {% endset %}
+        {% if form.expected_change == "prec_starts" %}
+          {{ __render_already_going(type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+        {% else %}
+          {{ same_types_case }}
+        {% endif %}
+        {% if not skip_tomorrow_part %}
+          {{ render_tomorrow(form.precipitation_day_part, form.precipitation_change_hours, form.date, form.tz) }}
+        {% endif %}
+        {{ render_day_part(form.precipitation_day_part) }}
+      {% endif %}
+    {% else %}
+      {% if not skip_tomorrow_part %}
+        {{ render_tomorrow(form.precipitation_day_part, form.precipitation_change_hours, form.date, form.tz) }}
+      {% endif %}
+      {{ render_day_part(form.precipitation_day_part) }}
+      {{ render_precipitation_type(type, case='nom') + ' закончится' }}
+    {% endif %}
+  {% endif %}
+
+{% endmacro %}
+
+{% macro render_precipitation_for_day_part(form, type, state) %}
+  {{ render_day_part(form.day_part) }}
+
+  {% if form.precipitation_current == 0 %}
+    {% if form.precipitation_for_day_part == 0 %}
+      {{ 'без ' + render_precipitation_type(type, case='gen') }}
+    {% else %}
+      {{ 'может быть ' + render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% else %}
+    {% if form.precipitation_for_day_part == 0 %}
+      {{ render_precipitation_type(type, case='nom') + ' закончится' }}
+    {% else %}
+      {{ 'может быть ' + render_precipitation_type(type, case='nom') }}
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_debug(form) %}
+  day_part: {{ form.day_part }}
+  weather_nowcast_alert: {{ form.weather_nowcast_alert }}
+  precipitation_for_day_part: {{ form.precipitation_for_day_part }}
+  precipitation_change_hours: {{ form.precipitation_change_hours }}
+  precipitation_next_day_part: {{ form.precipitation_next_day_part }}
+  precipitation_next_change_hours: {{ form.precipitation_next_change_hours }}
+  precipitation_current: {{ form.precipitation_current }}
+  day_part: {{ form.day_part }}
+  debug: {{ form.precipitation_debug }}
+{% endmacro %}
+
+{% macro render_nowcast_alert(weather_nowcast_alert, precipitation_current, precipitation_type, expected_change, prec_type_asked) %}
+  {% if expected_change == "prec_starts" and precipitation_current == 1 %}
+    {% set same_types_case %}
+        {{ "Вы не поверите — он уже идёт. По моим данным, " + weather_nowcast_alert | decapitalize_first }}
+    {% endset %}
+    {% set different_types_case %}
+        {{ render_precipitation_type(prec_type_asked, case='gen') | capitalize_first }}
+        {{ 'сейчас нет, зато идёт' }}
+        {{ render_precipitation_type(precipitation_type, case='nom') + '.' }}
+        {{ "По моим данным, " + weather_nowcast_alert | decapitalize_first }}
+    {% endset %}
+    {% set default_case %}
+        {{ weather_nowcast_alert }}
+    {% endset %}
+    {{ __render_already_going(precipitation_type, prec_type_asked, same_types_case, different_types_case, default_case) }}
+  {% elif expected_change == "prec_starts" and precipitation_current == 0 %}
+    {{ weather_nowcast_alert }}
+  {% elif expected_change == "prec_ends" and precipitation_current == 1 %}
+    {{ weather_nowcast_alert }}
+  {% elif expected_change == "prec_ends" and precipitation_current == 0 %}
+    {{ "Но он сейчас не идёт. По моим данным, " + weather_nowcast_alert | decapitalize_first }}
+  {% else %}
+    {{ weather_nowcast_alert }}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_precipitation(form, skip_tomorrow_part=false) %}
+  {% if form.precipitation_type %}
+     {% set type = form.precipitation_type %}
+  {% else %}
+     {% set type = 0 %}
+  {% endif %}
+
+  {% if form.set_number %}
+    {% set state = form.set_number %}
+  {% else %}
+    {% set state = 1 %}
+  {% endif %}
+
+  {% if form.prec_type_asked %}
+    {% set asked_type = form.prec_type_asked %}
+  {% else %}
+    {% set asked_type = 0 %}
+  {% endif %}
+
+  {% if form.weather_nowcast_alert is not none %}
+    {{ render_nowcast_alert(form.weather_nowcast_alert, form.precipitation_current, type, form.expected_change, asked_type) }}
+  {% elif form.precipitation_for_day_part is not none %}
+    {% if form.day_part is not none %}
+      {{ render_precipitation_for_day_part(form, type=type, state=state) }}
+    {% else %}
+      {% if form.precipitation_debug is not none %}
+        {{ render_error("Не знаю часть дня") }}
+      {% else %}
+        {{ render_error() }}
+      {% endif %}
+    {% endif %}
+  {% elif (form.precipitation_change_hours is none) or (form.precipitation_current is none) %}
+    {% if form.precipitation_debug is not none %}
+      {{ render_error("Не знаю час смены погоды. change_hours = " + (form.precipitation_change_hours | string) + ". current = " + (form.precipitation_current | string)) }}
+    {% else %}
+      {{ render_error() }}
+    {% endif %}
+  {% else %}
+    {% if form.precipitation_change_hours <= 5 %}
+      {{ render_precipitation_change(form, type=type, state=state, skip_tomorrow_part=skip_tomorrow_part) }}
+    {% elif form.precipitation_day_part %}
+      {{ render_precipitation_change_day_part(form, type=type, state=state, skip_tomorrow_part=skip_tomorrow_part) }}
+    {% else %}
+      {% if form.precipitation_debug is not none %}
+        {{ render_error("Не знаю часть дня перемены погоды") }}
+      {% else %}
+        {{ render_error() }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if form.precipitation_debug is not none %}
+    . {{ render_debug(form) }}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro geo_changed_attention(form, weather) %}
+  {% set forecast=weather|capitalize_first %}
+  {% set original=form.where or "рядом с вами" %}
+  {% set new=form.forecast_location | city_prepcase %}
+
+  {% if form.raw_form.get_slot_by_name('where').value_type == 'geo_id' %}
+    {{ forecast }}
+  {% else %}
+    {% chooseitem %}
+      Прямо сейчас я не могу уточнить погоду {{ original }}. Зато я
+      могу рассказать вам о погоде {{ new }}.
+      {{ forecast }} Надеюсь, вам это помогло.
+    {% or %}
+      С погодой {{ original }} что-то пошло не так. Её нет.
+      Давайте я расскажу вам о погоде {{ new }}. {{ forecast }}
+    {% or %}
+      Кажется, {{ original }} сейчас нет никакой погоды.
+      А {{ new }} есть! {{ forecast }}
+    {% or %}
+      {{ original }} нет никакой погоды, зато {{ new }} её
+      навалом. {{ forecast }} Надеюсь, {{ original }} всё хорошо.
+    {% or %}
+      Я ничего пока не знаю о погоде {{ original }}, зато знаю всё о
+      погоде {{ new }}. {{ forecast }}
+    {% or %}
+      Первое правило погоды {{ original }} — никому не рассказывать
+      о погоде {{ original }}. А теперь о погоде {{ new }}. {{ forecast }}
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+

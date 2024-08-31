@@ -1,0 +1,23 @@
+{% from "common/error.nlg" import render_error %}
+{% from "alarm/alarm__common.nlg" import render_error %}
+{% from "reminders/reminders__common.nlg" import format_how_long %}
+
+{% phrase render_result %}
+  {% chooseline %}
+    Я включу будильник через
+    Будильник сработает через
+    Расслабьтесь, до будильника ещё
+    Можно ещё поспать, до будильника
+  {% endchooseline %}
+  {{ format_how_long(form.how_long) }}
+{% endphrase %}
+
+{% phrase render_error__alarmerror %}
+  {% if context.error.data.code == 'no_alarms_available' %}
+    Включенных будильников не обнаружено. Спите спокойно!
+  {% elif context.error.data.code == 'no_alarms_in_nearest_future' %}
+    У вас нет будильников на ближайшие 24 часа. Отдыхайте!
+  {% else %}
+    {{ render_error(context.error.data.code) }}
+  {% endif %}
+{% endphrase %}

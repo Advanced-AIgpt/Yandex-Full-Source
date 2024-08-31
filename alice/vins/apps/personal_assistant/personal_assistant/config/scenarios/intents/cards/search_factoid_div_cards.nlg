@@ -1,0 +1,200 @@
+{% from "cards/common.nlg" import font_color, open_uri_action with context %}
+
+{% macro search_fact_card(title, text, image, search_url, source_url, image_search_url=None, market_url=None, source_name=None) -%}
+{% set action_url = search_url %}
+{% set minimal_ratio = 0.75 %} {# from DIALOG-828 #}
+{% with source_type = context.data|get_item('serp_data.source'),
+        phone_uri = context.data|get_item('phone_uri'),
+        action_url = search_url %}
+{
+    "states": [
+        {
+            "state_id": 1,
+            "blocks": [
+                { "size": "xs", "type": "div-separator-block" },
+                {
+                  {% if not title %}
+                    {% set title, text = text, '' %}
+                  {% endif %}
+
+                  "title": "{{ font_color('#000000', title|html_escape) }}",
+                  {% if title|length < 18 %}
+                    "title_style": "numbers_s",
+                  {% elif not text and title|length > 50 %}
+                    "title_style": "text_s",
+                  {% else %}
+                    "title_style": "title_s",
+                  {% endif %}
+                  {% if text %}
+                    "text": "{{ font_color('#7F7F7F', text|html_escape) }}",
+                    "text_style": "text_s",
+                  {% endif %}
+                  {% if image|get_item('src') %}
+                    "side_element": {
+                        "element": {
+                            "image_url": "{{ image|get_item('src') }}",
+                            {% with ratio = image|get_item('w', 1)/image|get_item('h', 1) %}
+                              "ratio": {{ ratio if ratio > minimal_ratio else minimal_ratio }},
+                            {% endwith %}
+                            "type": "div-image-element"
+                        },
+                        "size": "m",
+                        "position": "right"
+                    },
+                  {% endif %}
+
+                  "type": "div-universal-block"
+                }
+                {% if source_url %}
+                  {% set action_url = source_url %}
+                  ,
+                  {
+                      "title": "{{ font_color('#7F7F7F', source_name or source_url|hostname) }}",
+                      "title_style": "text_s",
+                      "type": "div-universal-block"
+                  }
+                {% endif %}
+                {% if phone_uri %}
+                  {% set action_url = phone_uri %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'ПОЗВОНИТЬ') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(phone_uri, 'phone_call__button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% else %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'ОТКРЫТЬ В ПОИСКЕ') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(search_url, 'open_serp__button', 'open_factoid_search_button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+                {% if image_search_url %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'ПОСМОТРЕТЬ ПОХОЖИЕ КАРТИНКИ') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(image_search_url, 'open_serp__button', 'open_factoid_similar_images_button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+                {% if market_url %}
+                  ,
+                  {
+                    "size": "xs",
+                    "type": "div-separator-block",
+                    "has_delimiter": 1
+                  },
+                  {
+                    "text": "{{ font_color('#0A4DC3', 'ИСКАТЬ НА ЯНДЕКС.МАРКЕТЕ') }}",
+                    "type": "div-footer-block",
+                    "action": {
+                        "url": "{{ open_uri_action(market_url, 'open_serp__button', 'open_factoid_search_in_market_button') }}",
+                        "log_id": "whole_card"
+                    }
+                  }
+                {% endif %}
+        ],
+        "action": {
+            "url": "{{ open_uri_action(action_url, 'whole_card', 'search_factoid_whole_card') }}",
+            "log_id": "whole_card"
+        }
+      }
+    ],
+    "background": [
+      {
+        "color": "{{ '#FFFFFF' }}",
+        "type": "div-solid-background"
+      }
+    ]
+}
+{% endwith %}
+{%- endmacro %}
+
+{% card search_fact %}
+{% set data = context.data %}
+{% if data|get_item("snippet_type") == "calories_fact" %}
+  {{ search_fact_card(
+          title=data|get_item("text"),
+          text=data|get_item("serp_data.data.question.0.text") + " - Пищевая ценность",
+          image=data|get_item("image"),
+          search_url=form.search_results|get_item("serp.url"),
+          source_url=data|get_item("url"),
+          source_name=data|get_item("hostname"))
+  }}
+{% elif data|get_item("snippet_type") == "entity-fact" and data|get_item("serp_data.base_info.title") and data|get_item("serp_data.requested_facts.item.0.name") %}
+  {{ search_fact_card(
+          title=data|get_item("text"),
+          text=data|get_item("serp_data.base_info.title") + ' - ' + data|get_item("serp_data.requested_facts.item.0.name"),
+          image=data|get_item("image"),
+          search_url=form.search_results|get_item("serp.url"),
+          source_url=data|get_item("url"),
+          source_name=data|get_item("hostname"))
+  }}
+{% else %}
+  {% with headline = data|get_item('serp_data.headline'),
+          title = data|get_item("title") %}
+    {% if headline and title == headline %}
+      {% set title = '' %}
+    {% endif %}
+    {{ search_fact_card(
+            title=data|get_item("text"),
+            text=title,
+            image=data|get_item("image"),
+            search_url=form.search_results|get_item("serp.url"),
+            source_url=data|get_item("url"),
+            source_name=data|get_item("hostname"))
+    }}
+  {% endwith %}
+{% endif %}
+
+{% endcard %}
+
+{% card search_object %}
+  {% set data = context.data %}
+  {{ search_fact_card(
+          title=data|get_item("title"),
+          text=data|get_item("text"),
+          image=data|get_item("image"),
+          search_url=form.search_results|get_item("serp.url"),
+          source_url=data|get_item("url"))
+  }}
+{% endcard %}
+
+{% card image_search_object %}
+  {% set data = context.data %}
+  {{ search_fact_card(
+          title=data|get_item("title"),
+          text=data|get_item("text"),
+          image=data|get_item("image"),
+          search_url=data|get_item("serp_url"),
+          image_search_url=data|get_item("image_serp_url"),
+          source_url=data|get_item("url"),
+          market_url=data|get_item("market_deals")
+     )
+  }}
+{% endcard %}

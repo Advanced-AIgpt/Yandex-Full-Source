@@ -1,0 +1,214 @@
+{% macro render_instance(ent_instance) %}
+  {{ context.onto_synth.random_nlu_phrase(ent_instance) }}
+{% endmacro %}
+
+{% macro simple_abs_date() %}
+    {% chooseline %}
+      12 января
+      22 февраля
+      3 марта
+      14 апреля
+      15 мая
+      16 июня
+      17 июля
+      18 августа
+      19 сентября
+      20 октября
+      21 ноября
+      22 декабря
+      1.07.2013
+      21.09.2017
+      19.09.2009
+      15.02
+      23.05
+      04.12
+    {% endchooseline %}
+{% endmacro %}
+
+{% macro when() %}
+  {% set when_length = form.when | length %}
+  {% if form.when is relative_datetime_raw or form.when.weekday and when_length == 1 %}
+    {% if form.when.weekday and when_length == 1 %}
+      {% set when_tense = form.tense %}
+    {% else %}
+      {% set when_tense = form.when | choose_tense %}
+    {% endif %}
+
+    {% if form.tense != when_tense %}
+      SKIP
+    {% else %}
+      {{ form.when | render_datetime_raw | attr('text') }}
+    {% endif %}
+  {% else %}
+    {{ simple_abs_date() }}
+  {% endif %}
+{% endmacro %}
+
+{% macro checkdate() %}
+  {% chooseitem %}
+    {{ simple_abs_date() }}
+  {% or %}
+    {% chooseline %}
+      понедельник
+      вторник
+      среда
+      четверг
+      пятница
+      суббота
+      воскресенье
+      первое
+      десятое
+      пятнадцатое
+      тридцатое
+    {% endchooseline %}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro where() %}
+  в {{ form.where | inflect('abl') }}
+{% endmacro %}
+
+{% macro agreed_tense(query_target) %}
+  {% if form.tense == 0 %}
+    # present tense
+  {% elif form.tense == 1 %}
+    будет
+  {% elif form.tense == -1 %}
+    {% set first_word = query_target.split()[0].strip() %}
+
+    {% if first_word.endswith(('о', 'ье', 'ое',)) or not first_word.isalpha() %}
+      было
+    {% elif first_word.endswith('а') %}
+      была
+    {% else %}
+      был
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro agreed_question_word(query_target, this) %}
+  {% set first_word = query_target.split()[0] %}
+
+  {% if this %}
+    это
+  {% endif %}
+  {% if first_word == 'число' %}
+    {% chooseline %}
+      какое
+      которое
+    {% endchooseline %}
+  {% elif first_word == 'дата' %}
+      {% chooseline %}
+        какая
+        которая
+      {% endchooseline %}
+  {% else %}
+      {% chooseline %}
+        какой
+        который
+      {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro query1(when) %}
+  # какая сегодня дата в Магадане?
+
+  # <what> <CD> <copula> <QT>
+  # <what> <copula> <CD> <QT>
+  # а QT <CD> <what> <copula>
+  # <what> <QT>
+  # <what> <QT> <copula> <CD>
+  # <CD> <what> <QT>
+  # <CD> <QT>
+  # <what> <QT> <copula> <CD>
+  # <what> <CD> <copula> <QT> <LOC>
+  # <what> <copula> <CD> <QT> <LOC>
+  # а QT <CD> <what> <copula> <LOC>
+  # <what> <QT> <LOC>
+  # <what> <QT> <copula> <CD> <LOC>
+  # <CD> <what> <QT> <LOC>
+  # <CD> это <what> <copula> <QT> <LOC>
+  # <CD> <QT> <LOC>
+  # <what> <QT> <copula> <CD> <LOC>
+  # что за <QT> <copula> <CD>
+  # что <CD> <copula> за <QT>
+  # что за <QT> <copula> <CD> <LOC>
+  # что <CD> <copula> за <QT> <LOC>
+  # <CD> это что <copula> за <QT>
+  # <CD> это <what> <QT>
+
+  {% set subject = render_instance(form.query_target) %}
+  {% set agreed_tense = agreed_tense(subject) | markup('tense') %}
+  {% set where = where() | markup('where') %}
+
+  {% set body = subject | markup('query_target') %}
+
+  {% chooseitem 1 %}
+    {% set question_word = agreed_question_word(subject, False) %}
+    {{ [agreed_tense] | shuffle([where], [when, body, question_word]) | join }}
+  {% or 0.5 %}
+    {% set question_word = agreed_question_word(subject, True) %}
+    {{ when }}
+    {{ [agreed_tense] | shuffle([where], [body, question_word]) | join }}
+  {% or 0.2 %}
+    {% set body %}
+      что за {{body}}
+    {% endset %}
+    {{ [agreed_tense] | shuffle([where], [when, body]) | join }}
+  {% or 0.2 %}
+    {% set body %}
+      что {{when}} за {{body}}
+    {% endset %}
+    {{ [agreed_tense] | shuffle([where], [body]) | join }}
+  {% endchooseitem %}
+{% endmacro %}
+
+{% macro query2(when) %}
+  # <CD> <copula> <check_date>
+  # <CD> <LOC> <check_date>
+  # <CD> это <copula> <check_date>
+
+  {% maybe %}
+    {% chooseline %}
+      верно ли, что
+      правда, что
+      правда ли, что
+    {% endchooseline %}
+  {% endmaybe %}
+
+  {% set where = where() | markup('where') %}
+  {% set check_date = checkdate() %}
+  {% set agreed_tense = agreed_tense(check_date) | markup('tense') %}
+  {% set check_date = check_date | markup('check_date') %}
+
+  {{ when }}
+  {% chooseitem %}
+    {{ [agreed_tense] | shuffle([where], [check_date]) | join }}
+  {% or %}
+    это
+    {{ [agreed_tense] | shuffle([where], [check_date]) | join }}
+  {% endchooseitem %}
+  ?
+{% endmacro %}
+
+{% phrase render_query %}
+  {% set when = when() | markup('calendar_date') %}
+
+  {% if 'SKIP' in when %}
+    SKIP
+  {% else %}
+    {% maybe %}
+      {% chooseline %}
+        привет
+        скажи
+        а
+      {% endchooseline %}
+    {% endmaybe %}
+
+    {% chooseitem %}
+      {{ query1(when) }}
+    {% or %}
+      {{ query2(when) }}
+    {% endchooseitem %}
+  {% endif %}
+{% endphrase %}

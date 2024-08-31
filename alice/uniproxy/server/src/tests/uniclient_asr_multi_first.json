@@ -1,0 +1,85 @@
+[
+    {
+        "action": "set_timeout",
+        "timelimit": 7
+    },
+    {
+        "action": "load_library",
+        "filename": "uniclient__common.json"
+    },
+    {
+        "action": "from_library",
+        "use": "send_synchronize_state"
+    },
+    {
+        "action": "send_message",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Recognize"
+                },
+                "payload": {
+                    "lang": "ru-RU",
+                    "topic": "desktopgeneral+dialog-general-gpu",
+                    "application": "test",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key",
+                    "advancedASROptions": {
+                        "partial_results": false 
+                    },
+                    "asr_balancer": "yaldi.alice.yandex.net"
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_stream_id",
+            "new_message_id",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_send_data",
+        "filename": "data/en-mat.ogg",
+        "chunk_size": 8000,
+        "chunk_duration": 0.1,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Result"
+                },
+                "payload": {
+                    "messagesCount": 3,
+                    "responseCode": "OK",
+                    "endOfUtt": true,
+                    "metainfo": {
+                        "topic": "desktopgeneral"
+                    }
+                }
+            }
+        },
+        "recognition_sample": [
+            [ "what the fuck" ]
+        ],
+        "normalized_sample": [
+            [ "what the f***" ]
+        ]
+    }
+]

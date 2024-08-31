@@ -1,0 +1,21 @@
+# registry.yandex.net/vins/base
+
+FROM registry.yandex.net/ubuntu:trusty
+MAINTAINER vins@yandex-team.ru
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+RUN groupadd -r vins && useradd -r -g vins -m -d /home/vins vins
+WORKDIR /home/vins
+
+COPY ./docker_scripts/base_image_preparation.sh base_image_preparation.sh
+COPY ./core/requirements.txt core-requirements.txt
+
+RUN ./base_image_preparation.sh \
+    && pip install --disable-pip-version-check --no-cache-dir -r ./core-requirements.txt \
+    && rm base_image_preparation.sh core-requirements.txt \
+    && mkdir /home/vins/.keras \
+    && echo '{"epsilon":1e-07,"floatx":"float32","image_data_format":"channels_last","backend":"tensorflow"}' > /home/vins/.keras/keras.json

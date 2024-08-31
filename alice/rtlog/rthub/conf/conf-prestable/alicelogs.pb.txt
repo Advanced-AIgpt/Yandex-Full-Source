@@ -1,0 +1,109 @@
+Channel {
+    Input {
+        Source {
+            Ident: "alicelogs@beta"
+            LogType: "vins"
+            Client: "alicelogs@beta@rthub"
+            BatchSize: 1000
+            Timeout: 30000
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@beta"
+            LogType: "uniproxy"
+            Client: "alicelogs@beta@rthub"
+            BatchSize: 1000
+            Timeout: 30000
+        }
+    }
+    Input {
+        Source {
+            Ident: "alicelogs@beta"
+            LogType: "bass"
+            Client: "alicelogs@beta@rthub"
+            BatchSize: 1000
+            Timeout: 30000
+        }
+    }
+    Yql {
+        Path: "Parse"
+        InputProto: "NRobot.TSerializedMessage"
+        OutputProto: "NRTLog.TRecord"
+    }
+    Output {
+        Name: "events"
+        Yql: {
+            Path: "SelectEventItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TEventItem"
+        }
+        Ydb: {
+            Endpoint: "$(YDB_ENDPOINT)"
+            Database: "$(YDB_DB)"
+            RotatingTable: {
+                Prefix: "$(YDB_DB)/events_"
+                RecreateAfter: "1d"
+                DropAfter: "5d"
+            }
+        }
+    }
+    Output {
+        Name: "events_index"
+        Yql: {
+            Path: "SelectEventIndexItems"
+            InputProto: "NRTLog.TRecord"
+            OutputProto: "NRTLog.TEventIndexItem"
+        }
+        Ydb: {
+            Endpoint: "$(YDB_ENDPOINT)"
+            Database: "$(YDB_DB)"
+            RotatingTable: {
+                Prefix: "$(YDB_DB)/events_index_"
+                RecreateAfter: "1d"
+                DropAfter: "5d"
+            }
+        }
+    }
+}
+Limits {
+    WorkerThreadsCount: 5
+    InputInflightLimit {
+        ItemsSizeInBytes: 10000000
+    }
+    MaxOutputMessageSize: 12000000
+    MaxMessageSize: 100000000
+}
+LogBroker: "iva.logbroker.yandex.net"
+LogBroker: "man.logbroker.yandex.net"
+LogBroker: "myt.logbroker.yandex.net"
+LogBroker: "sas.logbroker.yandex.net"
+LogBroker: "vla.logbroker.yandex.net"
+InstanceStateFilePath: "./alicelogs"
+UseProcesses: true
+RecyclePeriodMinutes: 40
+ExecutionTimeoutMillis: 20000
+InitialExecutionTimeoutMillis: 60000
+LogbrokerBalancerUrl: "http://man1-4518.search.yandex.net:30845"
+LogbrokerBalancerUrl: "http://myt1-3194.search.yandex.net:30845"
+LogbrokerBalancerUrl: "http://sas1-2491.search.yandex.net:30845"
+
+Environment {
+    Variable {
+        Name: "YDB_ENDPOINT"
+        Value: "ydb-ru-prestable.yandex.net:2135"
+    }
+    Variable {
+        Name: "YDB_DB"
+        Value: "/ru-prestable/alice/beta/alicelogs"
+    }
+}
+
+DeadLetterQueue {
+    Queue: {
+        Ident: "alicelogs@beta"
+        LogType: "dead-letter-queue"
+        MaxPartitions: 5
+        PartitionsPerDc: 1
+    }
+}

@@ -1,0 +1,248 @@
+service: speechkit_ops
+title: Yet Another Alert Generator
+ci:
+  release-title-source: flow
+  secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7
+  runtime:
+    sandbox:
+      owner: VOICESERV_RELEASERS
+      tags:
+        - ARCADIA-CI-TASK
+
+  triggers:
+    - on: pr
+      flow: run-check-flow
+
+  releases:
+    manual-verify-and-release:
+      title: Alerts - manual run
+      flow: run-and-apply-flow
+      stages:
+        build:
+          title: Build
+        verify:
+          title: Verify
+        apply:
+          title: Apply
+
+    automatic-apply-trunk:
+      title: Alerts - apply on merge
+      flow: auto-apply-flow
+      auto: true
+      filters:
+        - sub-paths:
+           - 'data/**'
+      stages:
+        build:
+          title: Build
+        apply:
+          title: Apply
+
+  flows:
+    run-and-apply-flow:
+      title: Alerts - verify and apply flow
+      jobs:
+        start-build:
+          title: Start Build
+          task: dummy
+          stage: build
+
+        build-client:
+          title: Build client
+          task: common/arcadia/ya_make
+          needs: start-build
+          input:
+            targets: alice/tools/yasm/client/bin
+            arts: alice/tools/yasm/client/bin/yasm-client
+            result_rt: ARCADIA_PROJECT_BINARY
+            result_rd: "Yet Another Alert Generator client (arc#${context.target_revision.hash})"
+            test: true
+            result_single_file: true
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+
+        pack-config:
+          title: Pack configs
+          needs: start-build
+          task: common/arcadia/ya_package_2
+          input:
+            build_type: testing
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: True
+            run_medium_tests: True
+            run_long_tests: False
+            ignore_fail_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: YA_PACKAGE
+            packages: alice/tools/yasm/package.json
+            raw_package: True
+            compress_package_archive: False
+
+        start-verify:
+          title: Start Verify
+          task: dummy
+          stage: verify
+          needs:
+            - build-client
+            - pack-config
+
+        run-test:
+          title: Test Launch
+          task: projects/alice/RunYAAG
+          needs: start-verify
+          input:
+            config:
+              test_run: True
+              binary_resource_id: ${(tasks.build-client.resources[?type == 'ARCADIA_PROJECT_BINARY'])[0].id}
+              package_resource_id: ${(tasks.pack-config.resources[?type == 'YA_PACKAGE'])[0].id}
+
+        start-apply:
+          title: Start Apply
+          task: dummy
+          stage: apply
+          needs: run-test
+          manual:
+            enabled: True
+#            approvers: SPEECHKIT_OPS
+            prompt: "Is this diff okay?"
+
+        run-apply:
+          title: Commit
+          task: projects/alice/RunYAAG
+          needs: start-apply
+          input:
+            config:
+              test_run: False
+              binary_resource_id: ${(tasks.build-client.resources[?type == 'ARCADIA_PROJECT_BINARY'])[0].id}
+              package_resource_id: ${(tasks.pack-config.resources[?type == 'YA_PACKAGE'])[0].id}
+
+    run-check-flow:
+      title: Alerts - calculate alerts diff
+      jobs:
+        start-build:
+          title: Start Build
+          task: dummy
+          stage: build
+
+        build-client:
+          title: Build client
+          task: common/arcadia/ya_make
+          needs: start-build
+          attempts: 3
+          input:
+            targets: alice/tools/yasm/client/bin
+            arts: alice/tools/yasm/client/bin/yasm-client
+            result_rt: ARCADIA_PROJECT_BINARY
+            result_rd: "Yet Another Alert Generator client (arc#${context.target_revision.hash})"
+            test: true
+            result_single_file: true
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+
+        pack-config:
+          title: Pack configs
+          needs: start-build
+          task: common/arcadia/ya_package_2
+          attempts: 3
+          input:
+            build_type: testing
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: True
+            run_medium_tests: True
+            run_long_tests: False
+            ignore_fail_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: YA_PACKAGE
+            packages: alice/tools/yasm/package.json
+            raw_package: True
+            compress_package_archive: False
+
+        start-verify:
+          title: Start Verify
+          task: dummy
+          stage: verify
+          needs:
+            - build-client
+            - pack-config
+
+        run-test:
+          title: Test Launch
+          task: projects/alice/RunYAAG
+          needs: start-verify
+          attempts: 3
+          input:
+            config:
+              test_run: True
+              binary_resource_id: ${(tasks.build-client.resources[?type == 'ARCADIA_PROJECT_BINARY'])[0].id}
+              package_resource_id: ${(tasks.pack-config.resources[?type == 'YA_PACKAGE'])[0].id}
+
+        all-done:
+          title: OK to merge
+          task: dummy
+          stage: apply
+          needs: run-test
+          manual:
+            enabled: True
+#            approvers: ALICE_OPERATION
+            prompt: "Is this diff okay?"
+
+    auto-apply-flow:
+      title: Apply alerts in trunk
+      jobs:
+        start-build:
+          title: Start Build
+          task: dummy
+          stage: build
+
+        build-client:
+          title: Build client
+          task: common/arcadia/ya_make
+          needs: start-build
+          attempts: 3
+          input:
+            targets: alice/tools/yasm/client/bin
+            arts: alice/tools/yasm/client/bin/yasm-client
+            result_rt: ARCADIA_PROJECT_BINARY
+            result_rd: "Yet Another Alert Generator client (arc#${context.target_revision.hash})"
+            test: true
+            result_single_file: true
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+
+        pack-config:
+          title: Pack configs
+          needs: start-build
+          task: common/arcadia/ya_package_2
+          attempts: 3
+          input:
+            build_type: testing
+            use_aapi_fuse: True
+            use_arc_instead_of_aapi: True
+            aapi_fallback: True
+            arc_secret: sec-01eyzmpjy2qcp91f0vkhrqfsx7#arc.token
+            run_tests: True
+            run_medium_tests: True
+            run_long_tests: False
+            ignore_fail_tests: False
+            checkout_arcadia_from_url: arcadia-arc:/#${context.target_revision.hash}
+            resource_type: YA_PACKAGE
+            packages: alice/tools/yasm/package.json
+            raw_package: True
+            compress_package_archive: False
+
+        run-apply:
+          title: Commit
+          task: projects/alice/RunYAAG
+          needs:
+            - build-client
+            - pack-config
+          stage: apply
+          attempts: 3
+          input:
+            config:
+              test_run: False
+              binary_resource_id: ${(tasks.build-client.resources[?type == 'ARCADIA_PROJECT_BINARY'])[0].id}
+              package_resource_id: ${(tasks.pack-config.resources[?type == 'YA_PACKAGE'])[0].id}

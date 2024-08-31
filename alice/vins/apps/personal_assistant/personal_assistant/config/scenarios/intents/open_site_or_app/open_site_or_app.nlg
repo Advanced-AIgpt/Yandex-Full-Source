@@ -1,0 +1,191 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "open_site_or_app/open_site_or_app__ask.nlg" %}
+{% from "common.nlg" import opening_sites_or_apps_not_supported, elari_watch_not_supported %}
+
+{% macro render_nothing_found(target_type) %}
+  {% if target_type == 'app' %}
+    {% chooseline %}
+      Что за программа такая, не могу найти...
+      Вы уверены, что такая программа есть? Я вот, например, не уверена.
+      Столько про разные приложения знаю, а конкретно это — не нашла.
+      Как-то не получилось такое приложение найти.
+    {% endchooseline %}
+  {% elif target_type == 'site' %}
+    {% chooseline %}
+      Искала, искала, но не нашла такой сайт.
+      Я думала, такой сайт есть, а оказалось — нет. Упс.
+      Разные сайты знаю, а конкретно такой — не нашёлся.
+      Давайте как-то по-другому поищем, такой сайт я не нашла.
+      Попробуем переформулировать? А то такой сайт не находится...
+    {% endchooseline %}
+  {% else %}
+    {% chooseline %}
+      Ни приложения такого, ни сайта мне найти не удалось. Но, может быть, в другой раз получится.
+      Это сайт, приложение или котик? Сайта или приложения такого не нашла, а котиков могу найти, если нужно.
+      Сначала поискала приложения, потом сайты — нет, ничего не нашлось. Но вы не переживайте, поищем что-нибудь другое.
+    {% endchooseline %}
+  {% endif %}
+{% endmacro %}
+
+{% macro render_navigation_results(navigation_results) %}
+  {% text %}
+    {% if navigation_results.text %}
+      {{ navigation_results.text | capitalize_first }}
+    {% elif navigation_results.tts %}
+      {{ navigation_results.tts | capitalize_first }}
+    {% else %}
+      Открываю
+    {% endif %}
+  {% endtext %}
+  {% voice %}
+    Открываю
+  {% endvoice %}
+{% endmacro %}
+
+{% macro render_porno_attention() %}
+  {% chooseline %}
+    Это сайт 18+, я стесняюсь такое сама открывать. Вам решать.
+    Там на сайте такое... в общем, сами открывайте, если вам больше восемнадцати.
+    Там сайт для взрослых, вам должно быть больше восемнадцати.
+    Я могла бы покраснеть, да интерфейс не позволит. 18+ в общем, сами открывайте.
+    Уберите детей от экранов и сами отойдите, если вам нет восемнадцати.
+    Люди такое делают, что никакой нейронке в голову не придет. Сами такое открывайте.
+  {% endchooseline %}
+{% endmacro %}
+
+{% macro render_unknown_app_attention(app) %}
+  {% if app == "appstore" %}
+    {% if is_android() %}
+      Если речь о магазине приложений, я его не могу пока запустить. Придётся самостоятельно.
+    {% else %}
+      {% chooseline %}
+        Где продуктовый магазин знаю, где магазин приложений — пока не знаю.
+        Google Play, AppStore, я в них запуталась. Разберусь и научусь.
+      {% endchooseline %}
+    {% endif %}
+  {% elif app == "browser" %}
+    Я не знаю, каким браузером вы обычно пользуетесь. Но можете сказать, например, "Запусти Яндекс Браузер"
+  {% elif app == "calendar" %}
+    {% if is_android() %}
+      На Android много разных календарей, не могу выбрать нужный.
+    {% elif is_desktop() %}
+      На Windows есть стандартный календарь? Буду знать, но запускать пока не умею.
+    {% else %}
+      {% chooseline %}
+        Я тут как девушка сижу, а не как календарь. Но обещаю научиться.
+        Нет, этого я пока не умею. Но это временно.
+      {% endchooseline %}
+    {% endif %}
+  {% elif app == "camera" %}
+    {% if is_ios() %}
+      Мне в Apple запретили вашу камеру трогать. Я вечно горизонт заваливаю.
+    {% elif is_android() %}
+      Я в Андроид с камерой не умею работать, там как-то сложно всё.
+    {% elif is_desktop() %}
+      На Windows мне ни разу камеру запустить не удалось. Вот и сейчас тоже.
+    {% else %}
+      {% chooseline %}
+        Нет, этого я пока не умею. Но это временно.
+        Фотография — пока не моя сильная сторона. Ничего не выйдет.
+      {% endchooseline %}
+    {% endif %}
+  {% elif app == "clock" %}
+    {% if is_ios() %}
+      На iOS я честно пыталась, не получается. Расскажу программистам, может научат.
+    {% elif is_android() %}
+      Такое на Android я пока еще не умею.
+    {% elif is_desktop() %}
+      В вашей операционной системе я пока такое не умею. Надо изучить вопрос.
+    {% else %}
+      Программист Алексей обещал запрограммировать это к зиме. Зима близко, жду.
+    {% endif %}
+  {% elif app == "contacts" %}
+    Вы готовы мне доверить свои контакты? Как приятно, но пока я не готова.
+  {% elif app == "gallery" %}
+    {% if is_android() %}
+      Боюсь я в вашу галерею заглядывать, мало ли какие там фотки. Шутка. Пока просто не умею.
+    {% elif is_desktop() %}
+      Не могу найти подходящего приложения в Windows, много разных, я их путаю.
+    {% else %}
+      Мне ужасно интересно, что у вас там за фотки, но вдруг я не смогу {%tx%}развидеть{%etx%}{%vc%}разв+идеть{%evc%}?
+    {% endif %}
+  {% elif app == "mail" %}
+    Не уверена, какое почтовое приложение вы хотите открыть, уточните. Например, скажите — "Открой Яндекс Почту"
+  {% elif app == "phone" %}
+    {% if is_android() %}
+      Мне Android так и не рассказал, как в нём телефон запустить. Научусь попозже.
+    {% elif is_desktop() %}
+      Позвонить на Windows? Это же, вроде, не телефон. Но я разберусь попозже.
+    {% else %}
+      Я разберусь, какие бывают телефонные приложения, и научусь открывать нужное.
+    {% endif %}
+  {% elif app == "settings" %}
+    Я что-то нажала и всё исчезло. Боюсь я в настройки лезть. Давайте пока сами.
+  {% elif app == "sms" %}
+    {% if is_desktop() %}
+      Приложение SMS для Windows? Не знала, что такие бывают. Передам разработчикам.
+    {% else %}
+      Приложений для сообщений много разных, научусь определять нужное и буду запускать.
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_navigator_warning() %}
+  {% chooseline %}
+    Я, конечно, могу это сделать, но рекомендую вам не отвлекаться от дороги.
+  {% endchooseline %}
+{% endmacro %}
+
+
+{% macro render_automotive_warning() %}
+    К сожалению я не могу это открыть. Если вы сейчас не едете по дороге — можете сделать это вручную.
+{% endmacro %}
+
+
+{% phrase ask__target %}
+  {% if is_elari_watch() %}
+    {{ elari_watch_not_supported() }}
+  {% else %}
+    {% if form.target_type == 'app' %}
+      Какое приложение вам открыть?
+    {% elif form.target_type == 'site' %}
+      Какой сайт вы хотите открыть?
+    {% else %}
+      Что именно вы хотите открыть?
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% macro render_open_site_or_app() %}
+  {% if is_active_attention("nav_not_supported_on_device") %}
+    {% if is_auto() %}
+      {{ render_automotive_warning() }}
+    {% else %}
+      {{ opening_sites_or_apps_not_supported() }}
+    {% endif %}
+  {% elif is_active_attention("porno") %}
+    {{ render_porno_attention() }}
+  {% elif is_active_attention("unknown_app") %}
+    {{ render_unknown_app_attention(form.target) }}
+  {% elif not form.navigation_results %}
+    {{ render_nothing_found(form.target_type) }}
+  {% elif is_navigator() or is_active_attention("ask_confirmation") %}
+    {{ render_navigator_warning() }}
+  {% else %}
+    {{ render_navigation_results(form.navigation_results) }}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ render_open_site_or_app() }}
+{% endphrase %}
+
+
+{% phrase render_suggest_caption__open_site_or_app__open %}
+  Открыть
+{% endphrase %}
+
+{% phrase render_suggest_uri__open_site_or_app__open %}
+  {{ context.open_site_or_app__open.data.uri }}
+{% endphrase %}

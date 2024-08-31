@@ -1,0 +1,95 @@
+{
+    "objects": {
+        "general_conversations_quantiles": {
+            "label": "Quantiles (balancer)",
+            "gen_chart": [
+                {
+                    "type": "quantiles",
+                    "active": true,
+                    "colors": ["#ff0000", "#ffa500", "#ffff00", "#008000", "#42aaff", "#0000ff"],
+                    "quantiles": [50, 75, 90, 95, 99, 999],
+                    "host": "ASEARCH",
+                    "signal": "quant(balancer_report-report-requests-processing_time_hgram,{quantile})",
+                    "tag": "itype=balancer;ctype=prod;prj=general-conversation",
+                    "title": "q{quantile}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "general_conversations_requests": {
+            "label": "Requests (balancer)",
+            "normalize": true,
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "colors": ["#37bff2", "#169833", "#f6ab31"],
+                    "locations": ["man", "sas", "vla"],
+                    "host": "ASEARCH",
+                    "signal": "sum(balancer_report-report-requests-fail_summ,balancer_report-report-requests-succ_summ)",
+                    "tag": "itype=balancer;ctype=prod;geo={loc};prj=general-conversation",
+                    "title": "balancer_{loc}"
+                },
+                {
+                    "type": "per_location",
+                    "alertName": "alice.uniproxy-context_load_failures_{loc}",
+                    "colors": ["#f50622", "#0047fc", "#37f23e"],
+                    "locations": ["man", "sas", "vla"],
+                    "host": "ASEARCH",
+                    "signal": "sum(balancer_report-report-requests_to_{loc}-fail_summ,balancer_report-report-requests_to_{loc}-succ_summ)",
+                    "tag": "itype=balancer;ctype=prod;prj=general-conversation",
+                    "title": "backends_{loc}"
+                }
+            ],
+            "size": [
+                2,
+                3
+            ]
+        },
+        "general_conversations_unanswers": {
+            "label": "Unanswers (balancer), %: man(red), sas(green), vla(blue)",
+            "gen_chart": [
+                {
+                    "type": "per_location",
+                    "colors": ["#ff0000", "#008000", "#0000ff"],
+                    "locations": ["man", "sas", "vla"],
+                    "alertName": "alice.balancer.general_conversation-5xx_{loc}",
+                    "host": "ASEARCH",
+                    "signal": "or(perc(balancer_report-report-requests-outgoing_5xx_summ,sum(balancer_report-report-requests-outgoing_1xx_summ,balancer_report-report-requests-outgoing_2xx_summ,balancer_report-report-requests-outgoing_3xx_summ,balancer_report-report-requests-outgoing_4xx_summ,balancer_report-report-requests-outgoing_5xx_summ)),0)",
+                    "tag": "itype=balancer;ctype=prod;geo={loc};prj=general-conversation",
+                    "title": "{loc}"
+                }
+            ],
+            "size": [
+                4,
+                3
+            ]
+        },
+        "general_conversations_5xx_man": {
+            "alert": "alice.balancer.general_conversation-5xx_man",
+            "label": "5xx man",
+            "size": [
+                2,
+                1
+            ]
+        },
+        "general_conversations_5xx_sas": {
+            "alert": "alice.balancer.general_conversation-5xx_sas",
+            "label": "5xx sas",
+            "size": [
+                2,
+                1
+            ]
+        },
+        "general_conversations_5xx_vla": {
+            "alert": "alice.balancer.general_conversation-5xx_vla",
+            "label": "5xx vla",
+            "size": [
+                2,
+                1
+            ]
+        }
+    }
+}

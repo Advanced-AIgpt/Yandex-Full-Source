@@ -1,0 +1,110 @@
+[
+    {
+        "action": "set_timeout",
+        "timelimit": 15
+    },
+    {
+        "action": "load_library",
+        "filename": "uniclient__common.json"
+    },
+    {
+        "action": "from_library",
+        "use": "send_synchronize_state"
+    },
+    {
+        "action": "send_message",
+        "message": {
+            "event": {
+                "header": {
+                    "namespace": "ASR",
+                    "name": "Recognize"
+                },
+                "payload": {
+                    "lang": "ru-RU",
+                    "topic": "dialogeneral",
+                    "application": "test",
+                    "format": "audio/opus",
+                    "key": "developers-simple-key",
+                    "advancedASROptions": {
+                        "partial_results": false
+                    },
+                    "music_request2": {
+                    }
+                }
+            }
+        },
+        "apply_to_message": [
+            "new_stream_id",
+            "new_message_id",
+            "old_uuid"
+        ]
+    },
+    {
+        "action": "async_send_data",
+        "filename": "data/music_record.ogg",
+        "chunk_size": 8000,
+        "chunk_duration": 0.1,
+        "finalize": {
+            "action": "send_message",
+            "message": {
+                "streamcontrol": {
+                    "action": 0,
+                    "reason": 0
+                }
+            },
+            "apply_to_message": [
+                "old_stream_id",
+                "old_message_id"
+            ]
+        }
+    },
+    {
+        "action": "async_recv_message",
+        "id": 0,
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "Result",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "responseCode": "OK"
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "MusicResult",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "result": "music"
+                }
+            }
+        }
+    },
+    {
+        "action": "recv_message",
+        "sample": {
+            "directive": {
+                "header": {
+                    "name": "MusicResult",
+                    "namespace": "ASR"
+                },
+                "payload": {
+                    "result": "success",
+                    "data": {
+                        "engine": "YANDEX",
+                        "match": {
+                            "title": "Lendo Calendo"
+                        }
+                    }
+                }
+            }
+        }
+    }
+]

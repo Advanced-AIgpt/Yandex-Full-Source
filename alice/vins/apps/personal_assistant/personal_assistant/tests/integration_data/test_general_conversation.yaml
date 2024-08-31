@@ -1,0 +1,182 @@
+labels:
+  gc_get_time: '^(?=.*([Чч]ас|\d: \d\d|минут|а у вас|[Пп]ол.*ого))((?!понедельник|вторник|среда|четверг|пятница|суббота|воскресенье).)*$'
+  deactivate_answer: 'Мне нравится с вами болтать\. А вам\?|Кажется, неплохо поговорили\. Что думаете\?|Люблю болтать\. Как вам беседа\?|Говорите со мной чаще\. Как вам беседа\?'
+  listen_music: 'Хотите послушать музыку\?'
+  not_listen_music: '^((?!Хотите послушать музыку).)*$'
+  dont_understand: "Не придумала, что на это ответить\\. Такие дела\\.|Думала, что бы такое\
+    \ ответить, да не придумала\\.|Интересная мысль, чтобы обсудить её не со мной\\\
+    .|Может быть, о чём-нибудь другом\\?|Это не моя тема, но вы не переживайте, дело\
+    \ наверняка не во мне\\.|Я еще не научилась говорить об этом\\.|В смысле\\?|Не\
+    \ стоит вскрывать эту тему, поверьте мне\\.|Не хочу говорить об этом\\.|Нет настроения\
+    \ говорить об этом\\.|Давайте про что-нибудь другое\\.|Скукотень\\. Давайте что-нибудь\
+    \ другое обсудим\\.|Очень интересно\\. Но давайте теперь о другом\\.|Я бы, может,\
+    \ и поддержала этот разговор\\. Но не хочу\\.|Я понимаю вопрос, но тема не моя\\\
+    . Это нормально\\.|Вы, кстати, понимаете, с кем вы это пытаетесь обсуждать\\?|Я\
+    \ не в настроении это обсуждать\\."
+
+test_base_pure_gc:
+  dialog:
+  - request: давай поболтаем
+    response:
+      vins_form:
+        name: personal_assistant.scenarios.pure_general_conversation
+      blocks:
+      - type: text_card
+        phrase_id: disclaimer
+      suggests:
+      - caption: "Хватит болтать ❌"
+        utterance: "Хватит болтать."
+
+  - request: как тебя зовут
+    response:
+      vins_form:
+        name: personal_assistant.handcrafted.what_is_your_name
+      suggests:
+      - caption: "Хватит болтать ❌"
+        utterance: "Хватит болтать."
+
+  - request: сколько времени
+    response:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+      text: '{gc_get_time}'
+      suggests:
+      - caption: "Хватит болтать ❌"
+        utterance: "Хватит болтать."
+
+  - request: ты любишь макарошки
+    response:
+      vins_form:
+        name: personal_assistant.general_conversation.general_conversation
+      suggests:
+      - caption: "Хватит болтать ❌"
+        utterance: "Хватит болтать."
+
+  - request: хватит болтать
+    response:
+      text: '{deactivate_answer}'
+      vins_form:
+        name: personal_assistant.scenarios.pure_general_conversation_deactivate
+
+  - request: сколько времени
+    response:
+      vins_form:
+        name: personal_assistant.scenarios.get_time
+
+
+test_proactivity_gc_force:
+  experiments: ['gc_proactivity', 'mm_gc_proactivity', 'gc_proactivity_boost_100', 'gc_force_proactivity']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+
+  test_proactivity_gc_force:
+    dialog:
+    - request: ааа
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        text: '{listen_music}'
+        suggests:
+        - caption: "Давай"
+          utterance: "Давай"
+
+    - request: хочу
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.music_play
+        text: 'Кажется, вы не авторизованы на Яндекс Музыке, проверьте настройки.'
+
+    - request: ааа
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        text: '{listen_music}'
+        suggests:
+        - caption: "Давай"
+          utterance: "Давай"
+
+
+test_proactivity_gc_force_soft:
+  experiments: ['gc_proactivity', 'mm_gc_proactivity', 'gc_proactivity_boost_100', 'gc_force_proactivity_soft']
+  app_info:
+    app_id: 'ru.yandex.quasar.vins_test'
+    app_version: '1.0'
+    os_version: '6.0.1'
+    platform: 'android'
+
+  test_proactivity_gc_force_soft:
+    dialog:
+    - request: ааа
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        text: '{listen_music}'
+        suggests:
+        - caption: "Давай"
+          utterance: "Давай"
+
+    - request: хочу
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.music_play
+        text: 'Кажется, вы не авторизованы на Яндекс Музыке, проверьте настройки.'
+
+    - request: ааа
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        text: '{not_listen_music}'
+
+
+test_protocol_gc:
+  experiments: ['mm_gc_protocol']
+
+  test_pure_gc_as_always:
+    dialog:
+    - request: давай поболтаем
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.pure_general_conversation
+        blocks:
+        - type: text_card
+          phrase_id: disclaimer
+        suggests:
+        - caption: "Хватит болтать ❌"
+
+    - request: как тебя зовут
+      response:
+        vins_form:
+          name: personal_assistant.handcrafted.what_is_your_name
+        suggests:
+        - caption: "Хватит болтать ❌"
+
+    - request: сколько времени
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        text: '{gc_get_time}'
+        suggests:
+        - caption: "Хватит болтать ❌"
+
+    - request: ты любишь макарошки
+      response:
+        vins_form:
+          name: personal_assistant.general_conversation.general_conversation
+        suggests:
+        - caption: "Хватит болтать ❌"
+
+    - request: хватит болтать
+      response:
+        text: '{deactivate_answer}'
+        vins_form:
+          name: personal_assistant.scenarios.pure_general_conversation_deactivate
+
+    - request: сколько времени
+      response:
+        vins_form:
+          name: personal_assistant.scenarios.get_time
+
+

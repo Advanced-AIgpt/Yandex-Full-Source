@@ -1,0 +1,171 @@
+{% from "json_macro.jinja" import json_enumerate_items %}
+{% from "cards/common.nlg" import font_color, logged_action_url with context %}
+
+{% macro make_action_url(button, card_id, analytics_tag, item_number) -%}
+  {%- if button | get_item('url') -%}
+    {% set payload = dict(skill_card_id=card_id, skill_id=form.skill_id, action_uri=button.url) %}
+    {%- if item_number is defined -%}
+      {% do payload.update(dict(item_number=item_number)) %}
+    {%- endif -%}
+    {{ logged_action_url([
+           client_action_directive(name='open_uri', sub_name=[analytics_tag, card_id | default('_None')] | join('_'), payload={'uri': button.url}),
+       ], payload)
+    }}
+  {%- elif button | get_item('payload') -%}
+    {% set directives = [
+        server_action_directive('on_external_button', {'button_data': button.payload})
+    ] %}
+
+    {% if button | get_item('text') %}
+      {% do directives.append(client_action_directive(name='type_silent', sub_name='external_skill_type_silent', payload={'text': button.text})) %}
+    {% endif %}
+
+    {% set payload = dict(skill_card_id=card_id, skill_id=form.skill_id, button_payload=button.payload) %}
+    {%- if item_number is defined -%}
+      {% do payload.update(dict(item_number=item_number)) %}
+    {%- endif -%}
+    {{ logged_action_url(directives, payload) }}
+
+  {%- elif button | get_item('text') -%}
+    {% set payload = dict(skill_card_id=card_id, skill_id=form.skill_id, button_payload=button.payload) %}
+    {%- if item_number is defined -%}
+      {% do payload.update(dict(item_number=item_number)) %}
+    {%- endif -%}
+    {{ logged_action_url([
+           client_action_directive(name='type', sub_name='external_skill_type', payload={'text': button.text}),
+       ], payload)
+    }}
+  {%- endif -%}
+{%- endmacro %}
+
+
+{% card BigImage %}
+{% set data = context.data %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "image": {
+            "image_url": "{{ data.image_url|html_escape }}",
+            "type": "div-image-element",
+            "ratio": 2.24
+          },
+          "type": "div-image-block"
+        },
+        {% with title=data|get_item('title')|html_escape,
+                description=data|get_item('description')|html_escape %}
+          {% if title or description %}
+            {
+              "size": "xxs",
+              "type": "div-separator-block"
+            },
+            {
+            {% if title %}
+              "title": "{{ title }}",
+            {% endif %}
+            {% if description %}
+              "text": "{{ font_color('#818181', description) }}",
+            {% endif %}
+              "type": "div-universal-block"
+            },
+          {% endif %}
+        {% endwith %}
+        {
+          "size": "xs",
+          "type": "div-separator-block"
+        }
+      ]
+      {% if data | get_item('button') %},
+        "action": {
+          "url": "{{ make_action_url(data.button, data | get_item('card_id'), 'big_image_whole_card') | trim }}",
+          "log_id": "big_image_whole_card"
+        }
+      {% endif %}
+  }],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endcard %}
+
+
+{% card ItemsList %}
+{% set data = context.data %}
+{
+  "states": [
+    {
+      "state_id": 1,
+      "blocks": [
+        {
+          "size": "xs",
+          "type": "div-separator-block"
+        },
+        {% if data | get_item('header') %}
+        {
+          "title": "{{ data.header.text | html_escape }}",
+          "title_style": "title_s",
+          "type": "div-universal-block"
+        },
+        {% endif %}
+        {% call(item_number, item) json_enumerate_items(data['items']) %}
+          {
+            "title": "{{ item.title | html_escape }}",
+            {% if item | get_item('description') %}
+              "text": "{{ font_color('#818181', item.description | html_escape) }}",
+            {% endif %}
+
+            {% if item | get_item('button') %}
+            "action": {
+              "url": "{{ make_action_url(item.button, data | get_item('card_id'), 'button_list_item', item_number) | trim }}",
+              "log_id": "list_item"
+            },
+            {% endif %}
+
+            {% if item | get_item('image_url') %}
+            "side_element": {
+              "element": {
+                "image_url": "{{ item.image_url }}",
+                "ratio": 1,
+                "type": "div-image-element"
+              },
+              "size": "m",
+              "position": "left"
+            },
+            {% endif %}
+
+            "type": "div-universal-block"
+          }
+        {% endcall %}
+        {% if data | get_item('footer') %}
+          ,{
+            "size": "xs",
+            "type": "div-separator-block",
+            "has_delimiter": 1
+          },
+          {
+            "text": "{{ font_color('#0A4DC3', data.footer.text | upper | html_escape ) }}",
+            "type": "div-footer-block"
+            {% if data.footer | get_item('button') %}
+            ,"action": {
+               "url": "{{ make_action_url(data.footer.button, data | get_item('card_id'), 'external_card_footer') | trim }}",
+               "log_id": "external_card_footer"
+            }
+            {% endif %}
+          }
+        {% endif %}
+      ]
+    }
+  ],
+  "background": [
+    {
+      "color": "{{ '#FFFFFF' }}",
+      "type": "div-solid-background"
+    }
+  ]
+}
+{% endcard %}

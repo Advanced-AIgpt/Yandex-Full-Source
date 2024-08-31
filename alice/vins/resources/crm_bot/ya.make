@@ -1,0 +1,280 @@
+UNION()
+
+OWNER(olegtitov)
+
+PEERDIR(
+    alice/nlu/data/ru/entities/custom-crm_bot
+)
+
+FROM_SANDBOX(
+    1750439709
+    PREFIX
+    crm_bot_model_directory
+    OUT
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_activate
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_activate__continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_apply
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_get
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved_b
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved_c
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved_ca
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved_cb
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_bb_not_recieved_cc
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_greet
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_overdue
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_problem_promocode
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_problem_ya_plus
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_promocode
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_return_policy
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_sbrf_thankyou
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_sbrf_thankyou_get
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_sbrf_thankyou_how_to
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_sbrf_thankyou_not_available
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_sbrf_thankyou_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bonus_ya_plus
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bye
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.bye_narrow
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.call_me
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.cashback
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.cashback_problems
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.choose_for_me
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_call_center
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_cancel
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_delivery_price
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_delivery_rescheduled
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_issue_status
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_other
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_packaging
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.complaints_personel
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.credit
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.credit_conditions
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.credit_how_to
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.credit_not_available
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_cityname
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_courier_contacts
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_deadline
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_deadline__have_order_already
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_free
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_incomplete_package
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_nooption
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_options
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_options__deadline_button
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_options__price_button
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_price
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_price_differs_in_cart
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_procedure
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_tracking
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.delivery_wrong_package
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.feedback_negative
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.feedback_negative_bad_classifier
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.feedback_negative_bad_content
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.feedback_positive
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.feedback_positive__continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.file_input__continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.garbage
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.hello
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.help_me_configure
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_auth
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_auth_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_edit
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_order_connect
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_register
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_register_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.lk_sbrf_auth
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.operator_redirect
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.operator_redirect_verbose_continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_alice
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_accident
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_accident__already_paid
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_deadline
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_deadline__redirect
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__bought_cheaper
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__changed_mind
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__data
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__placed_other_order
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__reason
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me__refused_delivery
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_for_me_finish
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_we_did
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_we_did__continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_cancel_we_did__data
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_change
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_change_goods
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_error
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_for_me
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__after_a_while
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__after_a_while__no_sc
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__after_a_while__not_fixable
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__after_a_while__rejected
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__after_a_while__thanks
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_got_defective__right_after
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_how_to
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_prolong_storage
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_complications
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_complications__fill_problems
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_complications__no_auth
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_complications__problems_other
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_fine
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_fine__14days
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_fine__7days
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_fine__forbidden
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_return_policy
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status__change_address
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status__continuation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status__data
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status__not_delivered
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.order_status__where_is_pickup_location
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.other_b2b
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_a
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_aa
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_ab
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_ac
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_b
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_c
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_ca
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_caa
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_cab
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_cb
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_cc
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_cd
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_ce
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_issues_cf
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_legal_entity
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_options
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_options_offline
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_options_online
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_options_online_how_to
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_cancellation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_cancellation__card
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_cancellation__credit
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_cancellation__sbrf_thanks
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_return
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_return__card
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_return__credit
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_return__sbrf_thanks
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_policy_after_return__when_arrived
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.payment_return_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.pickup_box_ya
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.pickup_box_ya_problem
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.pickup_location_find
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.pickup_location_schedule
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.preorder_approve
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.preorder_consultation
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.propositions
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.sbrf_certificate
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search__cant_find
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search__other
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search__problems
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search__where
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_details
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_details__no_info
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_details_button
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_is_legal
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_warranty
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_warranty_duration
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_warranty_duration__no_info
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_warranty_location
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.search_warranty_paper
+    crm_bot_model_directory/classifiers/scenarios/crm_bot.scenarios.swear
+)
+
+FROM_SANDBOX(
+    1750441615
+    PREFIX
+    crm_bot_model_directory
+    OUT
+    crm_bot_model_directory/classifiers/scenarios/model_meta_data
+)
+
+COPY(
+    custom_entities.trie
+    FROM alice/nlu/data/ru/entities/custom-crm_bot
+    DESTINATION crm_bot_model_directory/custom_entities/all
+)
+
+FROM_SANDBOX(
+    1750446254
+    PREFIX
+    crm_bot_model_directory
+    OUT
+    crm_bot_model_directory/metric_learning/metric_learning_info.json
+    crm_bot_model_directory/metric_learning/pokupki/checkpoint
+    crm_bot_model_directory/metric_learning/pokupki/checkpoint-1100.data-00000-of-00001
+    crm_bot_model_directory/metric_learning/pokupki/checkpoint-1100.index
+    crm_bot_model_directory/metric_learning/pokupki/checkpoint-1300.data-00000-of-00001
+    crm_bot_model_directory/metric_learning/pokupki/checkpoint-1300.index
+)
+
+FROM_SANDBOX(
+    1750449654
+    PREFIX
+    crm_bot_model_directory
+    OUT
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.bonus_bb_activate__continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.bonus_bb_activate__continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.choose_for_me/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.choose_for_me/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_negative/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_negative/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_positive/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_positive/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_positive__continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.feedback_positive__continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.file_input__continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.file_input__continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.operator_redirect_verbose_continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.operator_redirect_verbose_continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_accident/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_accident/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_deadline/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_deadline/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me__data/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me__data/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me_finish/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_for_me_finish/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did__continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did__continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did__data/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_cancel_we_did__data/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status__continuation/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status__continuation/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status__data/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.order_status__data/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_aa/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_aa/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_ab/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_ab/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_caa/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.payment_issues_caa/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.search/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.search/model_description
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.search__where/model.mmap
+    crm_bot_model_directory/tagger/tagger.data/crm_bot.scenarios.search__where/model_description
+)
+
+FROM_SANDBOX(
+    1166784498
+    PREFIX
+    crm_bot_model_directory
+    OUT
+    crm_bot_model_directory/tagger/tagger.info
+)
+
+END()
+

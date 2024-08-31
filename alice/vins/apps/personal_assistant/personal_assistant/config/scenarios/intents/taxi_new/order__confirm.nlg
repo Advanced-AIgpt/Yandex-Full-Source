@@ -1,0 +1,50 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "taxi_new/suggests.nlg" %}
+
+{% from "show_route/show_route_common.nlg" import render_nogeo with context %}
+{% from "taxi_new/macros.nlg" import ya_go %}
+
+{% phrase render_error__nogeo %}
+  {{ render_nogeo(form, context.error) }}
+{% endphrase %}
+
+{% phrase render_suggest_caption__taxi_order__open_app %}
+  Открыть Яндекс Go
+{% endphrase %}
+
+{% phrase render_suggest_uri__taxi_order__open_app %}
+  {{ context.taxi_order__open_app.data.uri }}
+{% endphrase %}
+
+{% phrase render_result %}
+  {% if form.status == "Ok" %}
+    {% if is_active_attention('first_order') %}
+      Ищу для вас машину.
+      Когда она найдётся, вы
+      {% tx %}получите{% etx %}
+      {% vc %}пол+учите{% evc %}
+      пуш-уведомление.
+      {% tx %}Надеюсь, вы их не отключили.{% etx %}
+      {% vc %}Надеюсь, вы их н+е отключ+или.{% evc %}\n
+      Если что, не стесняйтесь и спрашивайте: «Где моё такси?».\n
+      {% if is_active_attention("phonish_attention") %}
+        Кстати, вы можете отслеживать заказ в приложении {{ ya_go() }},
+        только авторизуйтесь в нем с помощью яндекс аккаунта, к которому привязано устройство.
+      {% endif %}
+    {% else %}
+      Ищу для вас машину.
+      Если что, не стесняйтесь и спрашивайте: «Где моё такси?».\n
+    {% endif %}
+  {% elif form.status == "NotConfirmed" %}
+    {% chooseline %}
+      Окей. Отменила заказ.
+      Как скажете. Отменила.
+      Окей. Заказ отменён.
+    {% endchooseline %}
+  {% elif form.status == "OpenApp" %}
+    {% chooseline %}
+      Открываю.
+      Секундочку.
+    {% endchooseline %}
+  {% endif %}
+{% endphrase %}

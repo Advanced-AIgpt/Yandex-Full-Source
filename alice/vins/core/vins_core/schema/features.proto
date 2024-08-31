@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package features;
+
+
+message SparseFeatureValue {
+    bytes value = 1;
+    float weight = 2;
+}
+
+message SparseFeatures {
+    repeated SparseFeatureValue data = 1;
+}
+
+message SparseSeqFeatures {
+    repeated SparseFeatures data = 1;
+}
+
+message DenseFeatures {
+    repeated float data = 1;
+}
+
+message DenseSeqFeatures {
+    int32 shape_x = 1;
+    int32 shape_y = 2;
+    repeated float data = 3;
+}
+
+message DenseSeqIdFeatures {
+    repeated int32 data = 1;
+}
+
+message EmptyFeatures {}
+
+message Utterance {
+    string text = 1;
+    string input_source = 2;
+    bytes payload = 3;
+}
+
+message Sample {
+    repeated string tokens = 1;
+    repeated string tags = 2;
+    float weight = 3;
+    Utterance utterance = 4;
+    bytes annotations_bag = 5;
+}
+
+message IntentScore {
+    string name = 1;
+    float score = 2;
+}
+
+message ClassificationStage {
+    string name = 1;
+    repeated IntentScore scores = 2;
+}
+
+message TaggerSlot {
+    int32 start = 1;
+    int32 end = 2;
+    bool is_continuation = 3;
+    string value = 4;
+}
+
+message TaggerScore {
+    string intent = 1;
+    float score = 2;
+    repeated TaggerSlot slots = 3;
+}
+
+message TaggerStage {
+    string name = 1;
+    repeated TaggerScore scores = 2;
+}
+
+message SampleFeatures {
+    Sample sample = 1;
+    map<string, SparseFeatures> sparse_features = 2;
+    map<string, SparseSeqFeatures> sparse_seq_features = 3;
+    map<string, DenseFeatures> dense_features = 4;
+    map<string, DenseSeqFeatures> dense_seq_features = 5;
+    map<string, DenseSeqIdFeatures> dense_seq_id_features = 6;
+    repeated ClassificationStage classification_scores = 7;
+    repeated TaggerStage tagger_scores = 8;
+}
+
+message SampleFeaturesList {
+    repeated SampleFeatures sample_features = 1;
+}

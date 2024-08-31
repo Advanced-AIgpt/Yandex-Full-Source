@@ -1,0 +1,38 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "alarm/alarm__common.nlg" %}
+{% from "alarm/alarm__common.nlg" import render_error, render_alarm_time, render_alarm_list with context %}
+
+{% phrase render_result %}
+  {% if is_active_attention('alarm__is_android') %}
+    {% chooseline %}
+      Хорошо, открываю список будильников.
+      Вот список будильников.
+      Хорошо, посмотрим на ваши будильники.
+    {% endchooseline %}
+  {% else %}
+    {% if form.available_alarms %}
+      {% if form.available_alarms|length == 1 %}
+        У вас установлен будильник {{ render_alarm_time(form.available_alarms[0].date, form.available_alarms[0].time) }}.
+      {% else %}
+        {% if form.date %}
+          Сейчас установлено несколько будильников на
+          {% if form.date.weekdays and form.date.weekdays|length > 1 %}
+            эти даты:
+          {% else %}
+            эту дату:
+          {% endif %}
+        {% elif form.time %}
+          Сейчас установлено несколько будильников на это время:
+        {% else %}
+          У вас установлены следующие будильники:
+        {% endif %}
+        \n{% vc %}-{% evc %}
+        {{ render_alarm_list(form.available_alarms) }}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+{% endphrase %}
+
+{% phrase render_error__alarmerror %}
+  {{ render_error(context.error.data.code, form.date, form.time) }}
+{% endphrase %}

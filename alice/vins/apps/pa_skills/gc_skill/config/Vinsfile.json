@@ -1,0 +1,165 @@
+{
+  "project": {
+    "name": "personal_assistant",
+    "includes": [
+      {
+        "path": "gc_skill/config/Microintents.json",
+        "type": "file"
+      }
+    ],
+    "intents": [
+      {
+        "intent": "general_conversation.general_conversation",
+        "total_fallback": true,
+        "dm": {
+          "path": "gc_skill/config/general_conversation.json"
+        },
+        "nlg": {
+          "path": "gc_skill/config/general_conversation.nlg"
+        }
+      },
+      {
+        "intent": "general_conversation.general_conversation_dummy",
+        "dm": {
+          "path": "gc_skill/config/general_conversation_dummy.json"
+        },
+        "nlg": {
+          "path": "gc_skill/config/general_conversation.nlg"
+        }
+      }
+    ]
+  },
+  "nlu": {
+    "feature_extractors": [
+      {
+        "type": "dssm_embeddings",
+        "id": "dssm_embeddings",
+        "resource": "resource://dssm_embeddings/tf_model"
+      }
+    ],
+    "intent_classifiers": [
+      {
+        "model": "knn",
+        "name": "handcrafted",
+        "params": {
+          "convert_to_prob": false,
+          "metric_function": "euclidean",
+          "normalize": false,
+          "num_neighbors": 1
+        },
+        "features": [
+          "dssm_embeddings"
+        ],
+        "fallback_threshold": 0.85
+      },
+      {
+        "model": "s3_lookup",
+        "name": "banlist",
+        "params": {
+          "source": "pa_banlist.json",
+          "update_period": 300,
+          "regexp": true,
+          "invert": false
+        },
+        "fallback_threshold": 0
+      }
+    ],
+    "utterance_tagger": {
+      "model": "nlu_exact_matching"
+    },
+    "transition_model": {
+      "model_name": "gc_skill",
+      "disable_intents": [
+        "personal_assistant.handcrafted.let_us_talk",
+        "personal_assistant.handcrafted.goto_blogger_external_skill"
+      ]
+    },
+    "samples_extractor": {
+      "pipeline": [
+        {
+          "name": "misspell"
+        },
+        {
+          "name": "normalizer",
+          "normalizer": "normalizer_ru"
+        },
+        {
+          "name": "strip_activation",
+          "min_tokens_after_short_strip": 2,
+          "min_tokens_after_long_strip": 1,
+          "apply_to_text_input": true,
+          "custom_front_activations": [
+            "алиса",
+            "алиска",
+            "алисочка",
+            "алис",
+            "алиса алиса",
+            "алиса алиса алиса",
+            "алиска алиска",
+            "алиса алисочка",
+            "хей алиса",
+            "хэй алиса",
+            "эй алиса",
+            "ok алиса",
+            "окей алиса",
+            "слушай алиса",
+            "расскажи алиса",
+            "скажи алиса",
+            "хай алиса",
+            "алло алиса",
+            "привет алиса",
+            "привет алис",
+            "здравствуй алиса",
+            "здравствуйте алиса"
+          ],
+          "custom_back_activations": [
+            "алиса",
+            "алиска",
+            "алисочка",
+            "алис"
+          ]
+        }
+      ]
+    },
+    "custom_templates": {
+      "blogger_name": "gc_skill/config/blogger_name.txt"
+    },
+    "compiled_model": {
+      "path": "resource://gc_skill_model_directory",
+      "archive": "DirectoryView",
+      "sha256": "cddb4a6c6d3c81e70fa8af3df55eb7d9e3e27a56059e9f5129935a97c760c2a7"
+    },
+    "fst": {
+      "resource": "resource://fst",
+      "parsers": [
+        "units_time",
+        "datetime",
+        "date",
+        "time",
+        "geo",
+        "num",
+        "fio",
+        "datetime_range",
+        "poi_category_ru",
+        "currency",
+        "float",
+        "calc",
+        "weekdays",
+        "soft",
+        "site",
+        "album",
+        "artist",
+        "track",
+        "films_100_750",
+        "films_50_filtered",
+        "swear"
+      ]
+    }
+  },
+  "nlg": {
+    "includes": [
+      "",
+      "gc_skill/config"
+    ]
+  }
+}

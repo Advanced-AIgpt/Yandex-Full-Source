@@ -1,0 +1,46 @@
+labels:
+  not_supported_on_device: '.*на мобильном.*|.*нужно приложение.*'
+  elari_watch_not_supported: 'В часах такое провернуть сложновато.|Я бы и рада, но
+    здесь не могу. Эх.|Здесь точно не получится.'
+
+experiments: [taxi_nlu, taxi, disable_taxi_new]
+
+test_taxi_no_ask:
+  dialog:
+    закажи такси:
+      vins_form:
+        name: personal_assistant.scenarios.taxi_order
+      bass:
+        blocks:
+        - type: attention
+          attention_type: taxi_not_supported_on_device
+      text: '{not_supported_on_device}'
+  app_info:
+    ignore:
+    - watch
+
+test_elari_watch:
+  app_info:
+    app_id: 'ru.yandex.iosdk.elariwatch.test'
+    app_version: '1.0'
+    os_version: '4.0'
+    platform: 'android'
+  dialog:
+    закажи такси: '{elari_watch_not_supported}'
+
+correct_find_poi_after_taxi:
+  experiments: [taxi_nlu, taxi, disable_taxi_new]
+  case1:
+    закажи такси на ленинградское шоссе дом 74:
+      vins_form:
+        name: personal_assistant.scenarios.taxi_order
+      bass:
+        form:
+          resolved_location_to:
+            value:
+              city: Москва
+              street: ленинградское шоссе
+              house: 74
+    Где поесть рядом?:
+      vins_form:
+        name: personal_assistant.scenarios.find_poi

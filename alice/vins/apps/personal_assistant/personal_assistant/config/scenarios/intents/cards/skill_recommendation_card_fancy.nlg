@@ -1,0 +1,259 @@
+{% from "cards/common.nlg" import font_bold, font_color, get_skill_click_action with context %}
+
+
+{% macro get_log_id(item) -%}
+  {{ "skill_recommendation__" + item.recommendation_source + "__" + item.recommendation_type + "__" + item.idx }}
+{%- endmacro %}
+
+
+{% macro render_skill_recommendation_card_fancy() %}
+  {
+    "states":[
+      {
+        "state_id": 1,
+        "blocks":[
+          {
+            "type":"div-gallery-block",
+            "items":[
+              {% for item in context.data.cases %}
+                {% if loop.index0 %}
+                  ,
+                {% endif %}
+                {{ render_fancy_skills_card_item(context.data, item, loop.index) }}
+              {% endfor %}
+            ]
+          }
+        ]
+      }
+    ],
+    "background":[
+      {
+        "type":"div-solid-background",
+        "color":"{{ '#ffffff' }}"
+      }
+    ]
+  }
+{% endmacro %}
+
+
+{% macro render_fancy_skills_card_item(data, item, item_number) %}
+    {% set log_id = get_log_id(item) %}
+    {% set action_url = get_skill_click_action(log_id, item.activation, item_number, item.recommendation_source) %}
+    {
+      "type":"div-container-block",
+      "alignment_vertical":"top",
+      "alignment_horizontal":"left",
+      "direction":"vertical",
+      "height":{
+        "type":"numeric",
+        "value":132,
+        "unit":"dp"
+      },
+      "width":{
+        "type":"numeric",
+        "value":132,
+        "unit":"dp"
+      },
+      "frame":{
+        "style":"border",
+        "color":"{{ '#dcdee0' }}"
+      },
+      "action": {
+        "url": "{{ action_url }}",
+        "log_id": "{{ log_id }}"
+      },
+      "children":[
+        {
+          "rows": [
+            {
+              "cells": [
+                {
+                  "image":{
+                    "image_url":"{{ item.logo_fg_image }}",
+                    "type": "div-image-element"
+                  },
+                  "image_size": "l"
+                }
+              ],
+              "type": "row_element",
+              "top_padding": "s",
+              "left_padding": "s"
+            }
+          ],
+          "columns": [
+            {
+              "left_padding": "zero"
+            }
+          ],
+          "type": "div-table-block"
+        },
+        {
+          "type":"div-separator-block",
+          "size":"match_parent"
+        },
+        {
+          "type": "div-universal-block",
+          "text": "{{ font_color('#ffffff', item.activation | html_escape) }}",
+          "text_max_lines": 3,
+          "text_style": "text_s"
+        },
+        {
+          "type":"div-separator-block",
+          "size":"xxs"
+        }
+      ],
+      "background":[
+        {% if item.logo_bg_image %}
+          {
+            "type": "div-image-background",
+            "image_url": "{{ item.logo_bg_image }}"
+          },
+        {% else %}
+          {
+            "type":"div-solid-background",
+            "color":"{{ item.logo_bg_color }}"
+          },
+        {% endif %}
+        {
+          "type": "div-gradient-background",
+          "start_color": "{{ '#00000000' }}",
+          "end_color": "{{ '#99000000' }}"
+        }
+      ]
+    }
+{%- endmacro %}
+
+
+{% macro render_skill_recommendation_card_amelie() %}
+    {
+      "states":[
+        {
+          "state_id": 1,
+          "blocks":[
+            {
+              "type":"div-gallery-block",
+              "items":[
+                {% for item in context.data.cases %}
+                  {% if loop.index0 %}
+                    ,
+                  {% endif %}
+                  {% if item.look == 'external' or not item.logo_amelie_bg_url %}
+                    {{ render_amelie_card_item_wide(context.data, item, loop.index) }}
+                  {% else %}
+                    {{ render_amelie_card_item(context.data, item, loop.index) }}
+                  {% endif %}
+                {% endfor %}
+              ]
+            }
+          ]
+        }
+      ],
+      "background":[
+        {
+          "type":"div-solid-background",
+          "color":"{{ '#ffffff' }}"
+        }
+      ]
+    }
+{% endmacro %}
+
+
+{% macro render_amelie_card_item(data, item, item_number) %}
+    {% set log_id = get_log_id(item) %}
+    {% set action_url = get_skill_click_action(log_id, item.activation, item_number, item.recommendation_source) %}
+    {% set logo_bg = item.logo_amelie_bg_url if item.logo_amelie_bg_url else 'https://avatars.mds.yandex.net/get-dialogs/1530877/logo-bg-image-tallw/logo-bg-image-tall-x2' %}
+    {
+      "type":"div-container-block",
+      "alignment_vertical":"top",
+      "alignment_horizontal":"left",
+      "direction":"vertical",
+      "height":{
+        "type":"numeric",
+        "value":144,
+        "unit":"sp"
+      },
+      "width":{
+        "type":"numeric",
+        "value":91,
+        "unit":"sp"
+      },
+      "action": {
+        "url": "{{ action_url }}",
+        "log_id": "{{ log_id }}"
+      },
+      "children":[
+        {
+          "type":"div-separator-block",
+          "size":"xxs"
+        },
+        {
+          "type": "div-universal-block",
+          "title": "{{ font_bold(font_color('#ffffff', item.activation | end_without_terminal | capitalize_first | html_escape)) }}",
+          "title_max_lines": 3,
+          "title_style": "text_s"
+        }
+      ],
+      "background":[
+        {
+          "type": "div-image-background",
+          "image_url": "{{ logo_bg }}"
+        }
+      ]
+    }
+{%- endmacro %}
+
+
+{% macro render_amelie_card_item_wide(data, item, item_number) %}
+    {% set log_id = get_log_id(item) %}
+    {% set action_url = get_skill_click_action(log_id, item.activation, item_number, item.recommendation_source) %}
+    {% set logo_bg = item.logo_amelie_bg_wide_url if item.logo_amelie_bg_wide_url else 'https://avatars.mds.yandex.net/get-dialogs/1530877/logo-bg-image-tallw/logo-bg-image-tallw-x3' %}
+    {% set logo_fg = item.logo_amelie_fg_url if item.logo_amelie_fg_url else item.logo | replace('mobile-logo-x', 'logo-icon40x40_x') %}
+    {
+      "type":"div-container-block",
+      "alignment_vertical":"top",
+      "alignment_horizontal":"left",
+      "direction":"vertical",
+      "height":{
+        "type":"numeric",
+        "value":144,
+        "unit":"sp"
+      },
+      "width":{
+        "type":"numeric",
+        "value":189,
+        "unit":"sp"
+      },
+      "action": {
+        "url": "{{ action_url }}",
+        "log_id": "{{ log_id }}"
+      },
+      "children":[
+        {
+          "type":"div-separator-block",
+          "size":"xxs"
+        },
+        {
+          "type": "div-universal-block",
+          "title": "{{ font_bold(font_color('#000000', item.activation | end_without_terminal | capitalize_first | html_escape)) }}",
+          "title_max_lines": 3,
+          "title_style": "text_s",
+          "text": "{{ font_color('#000000', item.description | capitalize_first | html_escape) }}",
+          "text_max_lines": 4,
+          "text_style": "text_s",
+          "side_element": {
+            "element": {
+              "image_url":"{{ logo_fg }}",
+              "type": "div-image-element"
+            },
+            "position": "right"
+          }
+        }
+      ],
+      "background":[
+        {
+          "type": "div-image-background",
+          "image_url": "{{ logo_bg }}"
+        }
+      ]
+    }
+{%- endmacro %}

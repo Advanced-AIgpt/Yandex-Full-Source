@@ -1,0 +1,62 @@
+{% nlgimport "common/suggests.nlg" %}
+{% nlgimport "alarm/alarm__common.nlg" %}
+{% from "alarm/alarm__common.nlg" import render_error, render_alarm_time, elari_watch_not_supported %}
+
+{% macro alarm_set_render_result() %}
+  {% if is_active_attention('alarm__need_confirmation') %}
+  {% elif is_active_attention('alarm__already_set') %}
+    Будильник {{ render_alarm_time(form.date, form.time) }} уже установлен.
+  {% elif is_active_attention('alarm__snooze') %}
+    {% if form.date %}
+      Хорошо, перенесла будильник {{ render_alarm_time(form.date, form.time) }}.
+    {% else %}
+      {% chooseline %}
+        Хорошо. Следующий будильник —
+        Окей. Разбужу вас
+        Ну ладно. Следующий будильник —
+      {% endchooseline %}
+      {{ render_alarm_time(form.date, form.time, time_preposition='в') }}.
+    {% endif %}
+  {% else %}
+    {% chooseitem %}
+      Ваш будильник: {{ render_alarm_time(form.date, form.time) }}. Завела!
+    {% or %}
+      Нет проблем. Ставлю будильник {{ render_alarm_time(form.date, form.time) }}.
+    {% or %}
+      Сделано. Будильник {{ render_alarm_time(form.date, form.time) }}. Отдыхайте.
+    {% or %}
+      Принято! Поставила будильник {{ render_alarm_time(form.date, form.time) }}.
+    {% endchooseitem %}
+  {% endif %}
+{% endmacro %}
+
+{% phrase render_result %}
+  {{ alarm_set_render_result() }}
+{% endphrase %}
+
+{% macro render_error_impl__alarmerror() %}
+  {% if context.error.data.code == 'unsupported_operation' %}
+    {% if is_elari_watch() %}
+      {{ elari_watch_not_supported() }}
+    {% else %}
+      {% chooseline %}
+        Я вас обязательно разбужу. Когда научусь.
+        Меня ещё этому не научили.
+        Здесь пока не умею.
+        Ещё не время. Шутка, пока не умею.
+        Я этому научусь. Пока времени нет.
+      {% endchooseline %}
+    {% endif %}
+  {% elif context.error.data.code == 'bad_arguments' %}
+    Я могу поставить будильник на ближайшие 24 часа. А еще могу поставить повторяющийся будильник на выбранный день недели.
+  {% elif context.error.data.code == 'setting_failed' %}
+    Простите, не получилось поставить будильник.
+  {% else %}
+    {{ render_error(context.error.data.code) }}
+  {% endif %}
+{% endmacro %}
+
+{# this overrides similar phrase in alarm__common #}
+{% phrase render_error__alarmerror %}
+  {{ render_error_impl__alarmerror() }}
+{% endphrase %}
